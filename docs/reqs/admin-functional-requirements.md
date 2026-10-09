@@ -1,8 +1,8 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.5: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on
+**Status:** Draft v0.6: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on; admin web portal in MVP with a limited set of mobile quick actions
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
-**Platforms:** The same Flutter app as the customer and crew, with screens chosen by the user's role. A web portal with the same admin functions comes in V2.
+**Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
 
 ## How this document was built
@@ -45,11 +45,25 @@ Rules followed:
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADM-ACC-01 | In MVP the admin functions are used in the mobile app. A web portal with the same functions comes in V2. | Owner (item l) |
+| ADM-ACC-01 | All admin functions are available on a web portal, in MVP. A limited set of simple admin actions is also available in the mobile app (ADM-ACC-07). | Owner (item l, revised) |
 | ADM-ACC-02 | Admin screens are available only to users with the Admin role. | Derived |
 | ADM-ACC-03 | Crew members have one of three roles: **Manager**, **Member**, **Trainee**. The Admin role is separate from these. | Owner (item c) |
-| ADM-ACC-04 | Admins and crew use the same app as customers. Each has their own login, and the role set for it in the backend decides what they can see and do. | Owner |
+| ADM-ACC-04 | Customers and crew use the mobile app. Admins use the web portal and the mobile quick actions. Each person has their own login, and the role set for it in the backend decides what they can see and do. | Owner |
 | ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The first admin has the user ID `priveopapa`. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents. | Owner |
+
+### 1a. Web portal and mobile quick actions
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-ACC-06 | An admin signs in to the web portal with the same user ID and password as in the app (ADM-ACC-05). The wrong-password lock applies (CRW-ACC-07 in the crew file). | Owner and Derived |
+| ADM-ACC-07 | The mobile app gives the admin a limited set of **quick actions**: (a) phone push alerts (ADM-ACC-09); (b) confirm or reject a payment, that is, set its status (ADM-PAY-02); (c) see the Needs scheduling list and the day's schedule, read-only; (d) mark a visit skipped by operations, and choose the outcome of a Missed job (ADM-OPS-01, ADM-CNC-03); (e) skip, un-skip, pause and end a pause for a customer's vehicle, on behalf of the customer (ADM-CUS-09); (f) other simple actions that are not complex transactions: search and view customers, view and update complaints (status and notes), view feedback, ratings and check-in results, view capacity, view the crew list and add crew exceptions, and view add-on requests. | Owner |
+| ADM-ACC-08 | Everything else is **web portal only**: creating and editing customers, vehicles, subscriptions and schedule settings (the plan, service cutoff time and interior care day; skip, un-skip and pause are also on mobile, ADM-ACC-07); creating add-on requests; onboarding crew, roles, Trainee pairing, working hours, deactivation, password resets and crew and customer session management (ADM-CRW-21, ADM-CUS-21); services and working slots; running, reviewing, editing, freezing and unfreezing the scheduler; preferences; reference data and settings (societies, vehicle catalogue, plans, add-ons, checklists, reason lists, feedback and check-in categories, payment, support and invoice settings); GST invoice generation; and audit views. | Owner |
+| ADM-ACC-09 | Admin alerts (ADM-SCH-24) reach the admin in three ways: a phone push in the mobile app, a notification bell with an unread count in the web portal, and an email for each alert. The admin can switch the emails off. The bell and the phone push cannot be switched off. | Owner |
+| ADM-ACC-10 | The web portal and the mobile app use the same backend and the same rules. A change made in one shows in the other at once, and the last change wins, as in ADM-CUS-10. | Derived |
+| ADM-ACC-11 | The list of mobile quick actions is expected to shrink. Actions that turn out to be complex for a phone are removed from the mobile app and stay on the web portal. | Owner |
+| ADM-ACC-12 | The web portal keeps the admin signed in with an HttpOnly, secure cookie, not with tokens in browser storage, and every change request carries CSRF protection. A web session ends after 30 minutes of inactivity, and the admin signs in again. | Owner |
+| ADM-ACC-13 | In the mobile app an admin stays signed in until they log out, their password is changed, or they have not used the app for 24 hours, and then they sign in again. The 30-minute inactivity time-out applies only to the web portal (ADM-ACC-12). Because the admin password is set at seed time, a lost admin phone is also handled by "Sign out of all devices" (ADM-ACC-14). | Owner |
+| ADM-ACC-14 | The admin has a **Sign out of all devices** action, on the web portal and in the mobile app. It ends every session of the admin's own login, on the web and on phones, at once, including the one in use. The admin then signs in again where needed. The action is recorded with the time. | Owner |
 
 ---
 
@@ -76,6 +90,7 @@ Rules followed:
 | ADM-CUS-18 | The admin can resend the welcome email. | Derived |
 | ADM-CUS-19 | The admin can correct a customer's email. The customer's password is cleared, a new welcome email is sent, and the customer verifies the new email and sets a new password. The change is audited (ADM-CUS-16). | Owner |
 | ADM-CUS-20 | The admin can reset a customer's password by clearing it. The customer then gets an emailed code at the next sign-in, as for a first sign-in. The change is audited (ADM-CUS-16). | Derived |
+| ADM-CUS-21 | The admin can manage a customer's signed-in sessions. The admin sees each active session with its device name, platform, app version and last-active time, and can sign out one session or all of the customer's sessions. The customer is signed out at once and sees the sign-in screen the next time the app contacts the server. Each sign-out is recorded with the admin and the time (ADM-CUS-16). Changing a customer's email or clearing their password (ADM-CUS-19, ADM-CUS-20) also ends all their sessions. | Owner |
 
 ### 2.3 Update plan and schedule settings (item g)
 
@@ -127,6 +142,7 @@ Rules followed:
 | ADM-CRW-14 | Trainees count as zero capacity. They appear in the crew list but add nothing to capacity, and the scheduler does not assign visits to them directly. A Trainee gets the jobs of the Member they are paired with (ADM-CRW-19). | Owner |
 | ADM-CRW-19 | Every Trainee is paired with a Member of the same society. The admin chooses the Member when onboarding the Trainee and can change it later. A Member can have more than one Trainee, and a Trainee has exactly one Member. Changing a Trainee's role to Member, or a Member's role while Trainees are paired with them, requires pairing to be fixed first. | Owner and Derived |
 | ADM-CRW-20 | A Manager can also perform the actions in section 3a of the crew file for crew in their society: see the society's schedule, mark a job Could not complete or skipped, reassign a job, add exceptions, and edit crew working hours. These are recorded with the Manager's name and the time, like admin actions (ADM-SCH-19). | Owner |
+| ADM-CRW-21 | The admin can manage a crew member's signed-in sessions. For a crew member the admin sees each active session with its device name, platform, app version and last-active time. The admin can sign out one session or all of that crew member's sessions. The crew member is signed out at once and sees the sign-in screen the next time the app contacts the server. Sessions also end when the crew member is deactivated or their password is reset (CRW-ACC-11). Each sign-out is recorded with the admin and the time. | Owner |
 | ADM-CRW-15 | The admin can deactivate a crew member who has left. A deactivated crew member no longer counts in capacity or the scheduler, and cannot sign in. Their past visits and records stay. | Derived (in MVP) |
 
 ### 3.2 Exceptions (item f)
@@ -225,7 +241,7 @@ Scheduling turns the customers' services and the crew's capacity into a plan of 
 | ADM-SCH-21 | If a customer skips or pauses after a schedule is frozen, the change applies to the frozen schedule automatically, without unfreezing: the visit is removed, and the admin is notified with a push notification. | Owner |
 | ADM-SCH-22 | If a customer changes a cutoff time after a schedule is frozen, the new cutoff time is saved as a request to the admin. The app does not move the assigned visit. The admin gets a push notification showing the customer, the vehicle, the old and new cutoff time, and the assigned crew member and time. | Owner |
 | ADM-SCH-23 | The admin then chooses how to deal with the request: run the scheduler to fit it in, or change the schedule by hand, and then freeze again. Changing a frozen schedule needs the secret code (ADM-SCH-17). | Owner |
-| ADM-SCH-24 | The admin cannot switch these notifications off. The other admin notifications in MVP are: a visit the crew could not complete (ADM-CNC-04), a visit auto-assigned after a freeze (ADM-SCH-27), a visit that needs scheduling (ADM-SCH-28), and a subscription that became Inactive automatically (ADM-SUB-03). | Owner and Derived |
+| ADM-SCH-24 | The admin cannot switch these alerts off, except the emails (ADM-ACC-09). The other admin notifications in MVP are: a visit the crew could not complete (ADM-CNC-04), a visit auto-assigned after a freeze (ADM-SCH-27), a visit that needs scheduling (ADM-SCH-28), and a subscription that became Inactive automatically (ADM-SUB-03). | Owner and Derived |
 
 ### 7.2a Freeze cutoff time
 
@@ -353,8 +369,8 @@ These are the admin features the customer requirements already depend on. You co
 10. A customer can change their own services and schedule settings. The admin can change them too, and the last change wins.
 11. Payment statuses are Due, Over due, Initiated and Received. The admin can set any of them. Received closes the record.
 12. Admin actions on payments, complaints and schedules are recorded with who and when.
-13. Customers, crew and admins use the same app. The role on each person's login decides what they see and do.
-14. A web portal for all admin functions comes in V2.
+13. Customers and crew use the mobile app. Admins use the web portal, and a limited set of quick actions in the mobile app. The role on each person's login decides what they see and do.
+14. Every admin function is on the web portal. Only the simple quick actions in ADM-ACC-07 are in the mobile app, and that list is expected to shrink.
 15. A visit skipped by operations is added to the end of the plan: one day of extension for each day skipped.
 16. The customer's 9 PM deadline applies to customers only. The admin is not bound by it.
 17. A crew member cannot be moved to another society for now.
@@ -395,6 +411,7 @@ For your reference when you write the data model. This is a reading of the requi
 - **Feedback category, positive rating tag, check-in category**: name, description, active flag.
 - **Vehicle catalogue**: make, model, variant, vehicle category, active flag.
 - **Crew login**: as in the crew file. The admin generates and resets the password and sees whether the login is locked.
+- **Session**: login (customer, crew or admin), device name, platform, app version, signed-in time, last-active time, ended time and reason (log out, password reset, deactivation, admin sign-out, inactivity). Used for session management by the admin and for "Sign out of all devices".
 - **Checklist**: service, ordered items (name, active flag), minimum photos, minimum videos.
 - **Could-not-complete reason**: name, active flag.
 - **Could-not-complete record**: as in the crew file, with the admin outcome, handled by and when.
@@ -446,8 +463,8 @@ Answered during the review: Deep Spa is a separately bought add-on for existing 
 
 | Area | Item |
 |---|---|
-| Platform | Web portal with all admin functions (item l) |
 | Crew | Moving a crew member to another society |
+| Security | Two-factor sign-in for admins; an IP allowlist or AWS WAF rules in front of the web portal |
 
 ### To be specified later by the owner
 

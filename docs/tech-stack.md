@@ -7,7 +7,7 @@
 
 | Area | Choice | Why it fits |
 |---|---|---|
-| Mobile app | Flutter, iOS and Android, one app for customer, crew and admin | `AUTH-10`, `ADM-ACC-04`. Role on the login decides the screens |
+| Mobile app | Flutter, iOS and Android, one app for customer and crew, plus a limited set of admin quick actions | `AUTH-10`, `ADM-ACC-04`, `ADM-ACC-07`. Role on the login decides the screens |
 | App state and navigation | Riverpod, go_router, feature folders | Role-based routing, the vehicle switcher (`HOME-07`), testable state |
 | API | Python, FastAPI, one service that also runs the scheduler | The scheduler needs OR-Tools. One codebase for the REST API, cron jobs, invoices and scheduling |
 | Database | PostgreSQL | Relational rules: capacity, audit, billing, unique sign-in identifiers |
@@ -16,7 +16,7 @@
 | Push notifications | Firebase Cloud Messaging on both platforms (APNs through FCM on iOS) | `NOTIF-01`, `NOTIF-02`, `ADM-SCH-24`, `CRW-NOT` |
 | Media | S3 object storage with signed upload URLs | Photos under 10 MB and videos under 25 MB (rule 17), uploaded straight from the phone |
 | Offline uploads | Local queue in the app, background upload with retry | `CRW-SVC-10`: uploads must survive a poor connection |
-| Admin web (V2) | Flutter web, reusing the app's feature code and models | `ADM-ACC-01`, V2 portal. Design admin screens to work on tablet and desktop |
+| Admin web portal (MVP) | A separate React web app in TypeScript, calling the same FastAPI service. A typed client is generated from the API's OpenAPI schema. The portal shares the API with the mobile app, not UI code | `ADM-ACC-01`, `ADM-ACC-08`. Data tables, filters, drag and drop for the schedule board, charts |
 
 ## 2. Supporting choices (decided)
 
@@ -43,6 +43,7 @@
 | Web framework | FastAPI with Pydantic v2 | Auto-generated OpenAPI used to produce the Dart client or models |
 | Database access | SQLAlchemy 2 and Alembic migrations | |
 | Authentication | Short-lived JWT access tokens plus refresh tokens. Customers by email: an emailed code on first sign-in, then email and password. Crew by mobile number and password. Admins by user ID and password. Passwords hashed with Argon2 | `CRW-ACC-02`, `AUTH-11` to `AUTH-17`. One login field takes an email, a mobile number or a user ID. Role claim decides access. Rate limit and lockout (`CRW-ACC-07`). The admin shows a crew password once and it is never stored readable |
+| Sessions | A server-side session record for each sign-in, with device details and last-active time. Short-lived access tokens, with the refresh token tied to the session so it can be ended at once | `ADM-ACC-14`, `ADM-CRW-21`, `ADM-ACC-13`, `CRW-ACC-11`. Inactivity sign-out (30 minutes on web, 24 hours for admin on mobile) is enforced on the server |
 | Authorisation | Role checks on every route: customer, crew (with Manager, Member, Trainee), admin | `CRW-MGR`, `ADM-ACC-02`. A Manager acts only within their own society |
 | Scheduler | Google OR-Tools (CP-SAT) behind an internal module | `ADM-SCH`: maximise crew capacity, keep manual changes on re-run, flag cutoff misses, suggest improvements |
 | Background jobs | AWS EventBridge Scheduler triggering ECS tasks, or an in-process scheduler (APScheduler) on one instance | Monthly Due payments, Over due, 7-day auto-Inactive, renewal reminders, check-in pushes |
@@ -83,6 +84,25 @@
 3. **Hand-over of crew passwords.** They are shown once to the admin and given out in person, so a lost password means a reset. Consider a short-lived "must be handed over" reminder in the admin screen.
 4. **iOS background upload.** Crew uploads may pause when the app is closed. The queue must resume on open, and the job must stay not complete until everything has uploaded (`CRW-SVC-10`).
 5. **Scheduler scale.** OR-Tools CP-SAT is fine for one society and a week. Test with realistic volumes before choosing ECS task sizes.
-6. **API compatibility.** One app serves three roles, so older app versions stay in use. Version the API and plan for forced-update behaviour.
+6. **API compatibility.** The mobile app serves customers, crew and the admin quick actions, so older app versions stay in use. Version the API and plan for forced-update behaviour. The web portal can always be updated at once.
 7. **Flutter, Dart and package versions.** Pin them when the project is created.
-8. **Open owner choices:** none. Sections 1 and 2 are decided.
+8. **Admin web portal security.** The portal holds every admin power, behind one user ID and password. Decided for the first release: HttpOnly cookies with CSRF protection and short sessions (`ADM-ACC-12`). Not yet decided and listed as V2: two-factor sign-in for admins, and an IP allowlist or AWS WAF rules in front of the portal. These are the main risk of the single admin login, so revisit them soon after launch.
+9. **Open owner choices:** none. Sections 1, 2 and 5 are decided.
+
+## 5. Admin web portal: supporting choices (decided)
+
+| Area | Choice | Notes |
+|---|---|---|
+| Framework | React with TypeScript, built with Vite | An internal tool, so no server-side rendering is needed |
+| Data fetching | TanStack Query | Caching, refetch after changes, optimistic updates |
+| Tables | TanStack Table, with server-side filtering and paging | Payments, complaints, customers, crew, add-on requests, feedback |
+| Forms | React Hook Form with Zod validation | Customer creation, working-hours grid, settings |
+| Routing | React Router | |
+| UI kit | Tailwind CSS with shadcn/ui components | Accessible, consistent, quick to build |
+| Schedule board | dnd-kit for drag and drop between crew and times | `ADM-SCH-12`, `ADM-SCH-13` |
+| Charts | Recharts | Capacity against demand, feedback and check-in summaries |
+| API client | Generated from OpenAPI (openapi-typescript or Orval) | Keeps the web portal and API in step |
+| Hosting | Static build on S3 behind CloudFront, same AWS account | Cross-origin calls to the API need CORS rules |
+| Alerts | Notification bell fed by an API endpoint with server-sent events or polling, plus Resend emails | `ADM-ACC-09` |
+| Testing | Vitest and React Testing Library, Playwright for key flows | |
+| CI/CD | GitHub Actions: lint, test, build, deploy to S3 and invalidate CloudFront | |

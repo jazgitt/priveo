@@ -2,7 +2,7 @@
 
 **Status:** Draft v0.1: owner decisions of 9 Oct 2026
 **Scope:** Phase 1, Part 3 (Crew), MVP. Customer requirements are in `customer-app-functional-requirements.md`. Admin requirements are in `admin-functional-requirements.md`.
-**Platforms:** The same Flutter app as the customer and admin, with screens chosen by the user's role.
+**Platforms:** The same Flutter mobile app as the customer, with screens chosen by the user's role. Admins use a web portal, with a limited set of quick actions in the app.
 **Language:** English only
 
 ## How this document was built
@@ -45,7 +45,7 @@ Rules followed:
 
 | ID | Requirement | Status |
 |---|---|---|
-| CRW-ACC-01 | Crew use the same app as customers and admins. The role set on their login in the backend decides which screens they see. | Owner |
+| CRW-ACC-01 | Crew use the same mobile app as customers. The role set on their login in the backend decides which screens they see. | Owner |
 | CRW-ACC-02 | There is one welcome and login screen for everyone. The screen has one field that takes an email, a mobile number or a user ID. An email belongs to a customer, a 10-digit mobile number to a crew member, and anything else is looked up as an admin user ID. A customer gets an emailed code on first sign-in and then uses a password. A crew member or admin is asked for a password. | Owner |
 | CRW-ACC-03 | A crew member's login ID is their mobile number. They cannot change it. | Owner |
 | CRW-ACC-04 | When the admin onboards a crew member, the password is generated automatically in this format: the first 3 letters of their name, then 4 random digits, then `$` (for example `Raj4821$`). | Owner |
@@ -55,6 +55,8 @@ Rules followed:
 | CRW-ACC-08 | A deactivated crew member cannot sign in (ADM-CRW-15). Their past visits and records stay. | Derived |
 | CRW-ACC-09 | Log out. | Derived |
 | CRW-ACC-10 | A mobile number can belong to only one crew member (ADM-CRW-06). A customer's email or contact mobile number has no effect on crew sign-in. | Owner |
+| CRW-ACC-11 | The mobile app keeps a crew member signed in until they log out, the admin resets their password (CRW-ACC-06), the admin signs them out (ADM-CRW-21), or they are deactivated (CRW-ACC-08). Each of these ends the session at once. | Owner |
+| CRW-ACC-12 | A crew member who has been signed out sees the sign-in screen, and any job in progress that had unsent photos or videos keeps them on the phone to upload after the next sign-in (CRW-SVC-10). | Derived |
 
 **Known risk:** the password format is easy to guess (a name prefix, 4 digits and a fixed symbol), and crew cannot change it. The admin reset is the only remedy. This is recorded as a risk, not changed.
 
@@ -161,7 +163,7 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 
 ## 8. Business rules
 
-1. Crew, customers and admins use one app. The role on the login decides what each person sees.
+1. Crew and customers use one mobile app. Admins mainly use a web portal. The role on the login decides what each person sees.
 2. A crew member signs in with their mobile number and the generated password. They cannot change either. The admin can reset the password.
 3. The crew member's role is to do the service. They see only the jobs assigned to them, and only once the admin freezes the schedule.
 4. Once a visit is assigned, the customer sees the assigned crew member and time. The crew sees the slot and also the customer's cutoff time as the finish-by time. No crew member sees a customer's name or mobile number.

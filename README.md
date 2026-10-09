@@ -1,6 +1,6 @@
 # Priveo Car Concierge
 
-A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa add-on that existing customers buy separately. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. One Flutter app on iOS and Android serves customers, crew and admins, and the role on each login decides which screens appear.
+A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa add-on that existing customers buy separately. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. A Flutter app on iOS and Android serves customers and crew, with a small set of admin quick actions. Admins do their full work on a React web portal. The role on each login decides what appears.
 
 This repository currently holds the product requirements and the prototype material they were built from. There is no application code yet.
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Priveo Car Concierge: a subscription car-care service for housing societies. One Flutter app (iOS and Android) serves customers, crew and admins, with screens chosen by the role on the login. See `README.md` for the product summary.
+Priveo Car Concierge: a subscription car-care service for housing societies. A Flutter app (iOS and Android) serves customers and crew, with a small set of admin quick actions. Admins use a React web portal. Screens are chosen by the role on the login. See `README.md` for the product summary.
 
 ## State of the repo
 
@@ -8,7 +8,7 @@ Requirements and prototype material only. There is no application code, build or
 
 ## Tech stack (decided by the owner)
 
-Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. Resend for email (verification codes, password reset codes, welcome email). FCM for push. S3 signed uploads for media with an offline upload queue in the app. Flutter web for the V2 admin portal. Details, supporting choices and risks are in `docs/tech-stack.md`. All choices there are decided; the risks section lists what to watch.
+Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. Resend for email (verification codes, password reset codes, welcome email). FCM for push. S3 signed uploads for media with an offline upload queue in the app. A React web portal for admin, with every admin function in MVP, and a limited set of admin quick actions in the Flutter app. Details, supporting choices and risks are in `docs/tech-stack.md`. All choices there are decided; the risks section lists what to watch.
 
 ## Layout
 
