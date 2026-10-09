@@ -1,5 +1,7 @@
 import type { Register } from 'claude-code'
 
+import { PANE, registerPane } from './status-pane'
+
 const REQS = [
   'docs/reqs/customer-app-functional-requirements.md',
   'docs/reqs/admin-functional-requirements.md',
@@ -141,7 +143,7 @@ async function syncCheck($: any, now: Parsed[]): Promise<string> {
 const STATUS_FILE = 'docs/feature-status.json'
 const STAGES = [
   ['draft', 'Draft', 'Draft'],
-  ['approved', 'Approved', 'Approved'],
+  ['backlog', 'Backlog', 'Backlog'],
   ['ready', 'Ready for Dev', 'Ready'],
   ['dev', 'In Dev', 'InDev'],
   ['unit', 'Unit Tested >95%', 'Unit>95'],
@@ -154,7 +156,7 @@ export type Store = { version: 1; features: Record<string, Feature> }
 
 const ALIAS: Record<string, Stage> = {
   draft: 'draft',
-  approved: 'approved',
+  backlog: 'backlog',
   ready: 'ready',
   dev: 'dev',
   indev: 'dev',
@@ -177,7 +179,7 @@ export function hash(raw: string): string {
   return `${(h >>> 0).toString(16)}-${s.length}`
 }
 
-// First run (no previous store): every ID is Approved. After that: a new ID or a changed row is Draft.
+// First run (no previous store): every ID is Backlog. After that: a new ID or a changed row is Draft.
 export function reconcile(prev: Store | undefined, all: Parsed[]) {
   const features: Record<string, Feature> = {}
   const toDraft: string[] = []
@@ -186,7 +188,7 @@ export function reconcile(prev: Store | undefined, all: Parsed[]) {
     for (const r of p.rows) {
       const h = hash(r.raw)
       const old = prev?.features[r.id]
-      if (!prev) features[r.id] = { stage: 'approved', hash: h, bugs: 0 }
+      if (!prev) features[r.id] = { stage: 'backlog', hash: h, bugs: 0 }
       else if (!old) {
         features[r.id] = { stage: 'draft', hash: h, bugs: 0 }
         added.push(r.id)
@@ -267,7 +269,7 @@ function summary(store: Store): string {
 async function fstatus($: any, args: string, all: Parsed[]): Promise<string> {
   const r = await sync($, all)
   const store = r.store
-  if (!store) return `${STATUS_FILE} is unreadable. Fix or delete it (deleting re-seeds every ID as Approved).`
+  if (!store) return `${STATUS_FILE} is unreadable. Fix or delete it (deleting re-seeds every ID as Backlog).`
   const [cmd, ...rest] = args.trim().split(/\s+/).filter(Boolean)
   let text: string
   if (!cmd) text = summary(store)
@@ -301,14 +303,21 @@ async function fstatus($: any, args: string, all: Parsed[]): Promise<string> {
 }
 
 export const register: Register = on => {
+  registerPane(on, {
+    stages: STAGES,
+    tally: store => tally(store as Store),
+  })
+
   on('session.start', async ($, e, next) => {
     for (const [name, description] of [
       ['ids', 'List requirement IDs, duplicates and undefined citations'],
       ['open', 'List Open and Derived requirements and open questions'],
       ['synccheck', 'Check uncommitted requirement edits for cross-file follow-ups'],
       ['fstatus', 'Feature lifecycle: summary, list, set <stage> <IDs>, bugs <ID> <n>'],
+      ['priveo-status', 'Show requirement status in a side pane'],
     ])
       await $.command.register({ name, description })
+    void $.ui.open(PANE)
     try {
       const all = await load($)
       $.ui.status(statusText(all, (await sync($, all)).store))
