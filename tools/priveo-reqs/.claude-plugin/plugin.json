@@ -1,0 +1,1 @@
+{ "name": "priveo-reqs", "version": "0.1.0", "description": "Requirement ID checks, prototype and .env guards, and /ids, /open, /synccheck for the Priveo requirements files" }

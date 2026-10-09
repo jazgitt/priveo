@@ -16,6 +16,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 - `docs/reqs/admin-functional-requirements.md`: admin (functional requirements for the web portal and the mobile quick actions)
 - `docs/reqs/crew-functional-requirements.md`: crew
 - `docs/tech-stack.md`: technical stack (all choices decided)
+- `tools/priveo-reqs/`: a Claude Code mod for the requirements files. It checks IDs after each edit, guards `docs/prototype/` and `.env`, and adds `/ids`, `/open`, `/synccheck` and `/fstatus`. `/fstatus` tracks each requirement ID through Draft, Approved, Ready for Dev, In Dev, Unit Tested >95%, Functional Tested and Security Test, with an open-bug count, in `docs/feature-status.json`. A new or changed requirement row goes back to Draft. Load it with `claude --plugin-dir tools/priveo-reqs`. Test it with `claude plugin test tools/priveo-reqs`.
 - `docs/prototype/`: interactive prototype HTML, wireframes, vision deck, marketing images. Read-only source material. The prototype HTML is about 1 MB, so search it with grep instead of reading it whole.
 
 ## Rules for editing the requirements
