@@ -24,7 +24,7 @@ export const registerPane = (on: Parameters<Register>[0], { stages, tally }: Dep
     return ran
   }).catch(($, e, next) => next(e))
 
-  on('ui.render', { component: 'Pane', requestId: PANE.id }, async ($, e) => {
+  on('ui.render', { component: 'Pane', requestId: 'priveo-status' }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
     await read($, tick)
     let store
