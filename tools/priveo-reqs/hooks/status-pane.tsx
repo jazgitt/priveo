@@ -13,8 +13,12 @@ type Deps = {
 // Side pane (register.ts registers the command and opens it at session.start) for the feature lifecycle. Called from register.ts so the plugin keeps one hooks module.
 export const registerPane = (on: Parameters<Register>[0], { stages, tally }: Deps) => {
   on('command.run', { command: 'priveo-status' }, async $ => {
-    await $.ui.open(PANE)
-    return { text: 'Priveo status pane opened.' }
+    const opened = await $.ui.open(PANE)
+    const store = JSON.parse(await $.fs.read('docs/feature-status.json'))
+    const t = tally(store)
+    const lines = stages.filter(s => t.by[s[0]] > 0).map(s => `${s[1]} ${t.by[s[0]]}`)
+    const summary = `${Object.keys(store.features).length} requirements: ${lines.join(', ')}. Open bugs ${t.bugs}.`
+    return { text: opened.isPlaced ? `Priveo status pane opened. ${summary}` : `This screen shows no side panes. ${summary}` }
   }).catch(() => ({ text: '/priveo-status failed.' }))
 
   // Redraw after each tool call, since edits may change the status file.
