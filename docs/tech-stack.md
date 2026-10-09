@@ -215,7 +215,7 @@ Rules:
 
 | Area | Proposal | Status |
 |---|---|---|
-| Source of truth | One file, `docs/brand/tokens.json`, holding colours, type, radii and spacing for both themes. The Flutter theme and the Tailwind config are generated from it | **Open** |
+| Source of truth | One file, `docs/brand/tokens.json`, holding colours, type, radii and spacing for both themes. The Flutter theme and the Tailwind config are generated from it | Done: the file exists. Generating the themes from it happens when the apps are built |
 | Flutter app | Material 3 `ThemeData` (light and dark) built from the tokens, a `ThemeExtension` for gold, wine and status colours, and shared widgets (button, card, status chip) in `core/ui`. Theme follows the phone setting, with a manual switch in Settings | **Open** |
 | Admin web portal | Tailwind theme and shadcn/ui CSS variables from the same tokens. Light theme only (owner decision) | **Open** |
 | Golden tests | Golden tests for key screens run in both themes | **Open** |
