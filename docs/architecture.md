@@ -2,6 +2,7 @@
 
 **Status:** v0.2 DRAFT, 9 Oct 2026, for owner review. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
 **Basis:** the three requirements files in `docs/reqs/` and `docs/tech-stack.md`.
+**Build order:** see `docs/build-plan.md`. For Phase 0 it supersedes the phase table in section 8.
 
 ## 1. Principles
 
