@@ -5,15 +5,15 @@ const doc = (rows: string[]) => parse('docs/reqs/admin-functional-requirements.m
 
 test('first run approves every ID, later changes and new IDs go to Draft', () => {
   const first = reconcile(undefined, [doc(['| ADM-ACC-01 | one | Owner |', '| ADM-ACC-02 | two | Owner |'])])
-  expect(tally(first.store).by.approved).toBe(2)
+  expect(tally(first.store).by.backlog).toBe(2)
   first.store.features['ADM-ACC-01'].stage = 'dev'
   const next = reconcile(first.store, [
     doc(['| ADM-ACC-01 | one, edited | Owner |', '| ADM-ACC-02 | two | Owner |', '| ADM-ACC-03 | three | Derived |']),
   ])
   expect(next.toDraft).toEqual(['ADM-ACC-01'])
   expect(next.added).toEqual(['ADM-ACC-03'])
-  expect(next.store.features['ADM-ACC-02'].stage).toBe('approved')
-  expect(featureLine(next.store)).toBe('Draft 2 · Approved 1 · Bugs 0')
+  expect(next.store.features['ADM-ACC-02'].stage).toBe('backlog')
+  expect(featureLine(next.store)).toBe('Draft 2 · Backlog 1 · Bugs 0')
 })
 
 test('spacing changes do not move a feature to Draft', () => {
