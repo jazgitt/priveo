@@ -1,5 +1,7 @@
 import type { Register } from 'claude-code'
 
+import { PANE, registerPane } from './status-pane'
+
 const REQS = [
   'docs/reqs/customer-app-functional-requirements.md',
   'docs/reqs/admin-functional-requirements.md',
@@ -301,14 +303,21 @@ async function fstatus($: any, args: string, all: Parsed[]): Promise<string> {
 }
 
 export const register: Register = on => {
+  registerPane(on, {
+    stages: STAGES,
+    tally: store => tally(store as Store),
+  })
+
   on('session.start', async ($, e, next) => {
     for (const [name, description] of [
       ['ids', 'List requirement IDs, duplicates and undefined citations'],
       ['open', 'List Open and Derived requirements and open questions'],
       ['synccheck', 'Check uncommitted requirement edits for cross-file follow-ups'],
       ['fstatus', 'Feature lifecycle: summary, list, set <stage> <IDs>, bugs <ID> <n>'],
+      ['priveo-status', 'Show requirement status in a side pane'],
     ])
       await $.command.register({ name, description })
+    void $.ui.open(PANE)
     try {
       const all = await load($)
       $.ui.status(statusText(all, (await sync($, all)).store))
