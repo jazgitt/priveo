@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Technical Stack
 
-**Status:** v0.2, 9 Oct 2026. The owner has decided every choice in sections 1 and 2. Section 4 lists risks to watch.
+**Status:** v0.2, 9 Oct 2026. The owner has decided every choice in sections 1, 2 and 5. Section 4 lists risks to watch.
 **Basis:** the three functional requirements files in `docs/reqs/`. Requirement IDs are cited where a requirement drives a choice.
 
 ## 1. Decided
@@ -43,7 +43,7 @@
 | Web framework | FastAPI with Pydantic v2 | Auto-generated OpenAPI used to produce the Dart client or models |
 | Database access | SQLAlchemy 2 and Alembic migrations | |
 | Authentication | Short-lived JWT access tokens plus refresh tokens. Customers by email: an emailed code on first sign-in, then email and password. Crew by mobile number and password. Admins by user ID and password. Passwords hashed with Argon2 | `CRW-ACC-02`, `AUTH-11` to `AUTH-17`. One login field takes an email, a mobile number or a user ID. Role claim decides access. Rate limit and lockout (`CRW-ACC-07`). The admin shows a crew password once and it is never stored readable |
-| Sessions | A server-side session record for each sign-in, with device details and last-active time. Short-lived access tokens, with the refresh token tied to the session so it can be ended at once | `ADM-ACC-14`, `ADM-CRW-21`, `ADM-ACC-13`, `CRW-ACC-11`. Inactivity sign-out (30 minutes on web, 24 hours for admin on mobile) is enforced on the server |
+| Sessions | A server-side session record for each sign-in, with device details and last-active time. Short-lived access tokens, with the refresh token tied to the session so it can be ended at once | `ADM-ACC-14`, `ADM-CRW-21`, `ADM-ACC-13`, `CRW-ACC-11`. Inactivity sign-out (60 minutes on web, 24 hours for admin on mobile) is enforced on the server |
 | Authorisation | Role checks on every route: customer, crew (with Manager, Member, Trainee), admin | `CRW-MGR`, `ADM-ACC-02`. A Manager acts only within their own society |
 | Scheduler | Google OR-Tools (CP-SAT) behind an internal module | `ADM-SCH`: maximise crew capacity, keep manual changes on re-run, flag cutoff misses, suggest improvements |
 | Background jobs | AWS EventBridge Scheduler triggering ECS tasks, or an in-process scheduler (APScheduler) on one instance | Monthly Due payments, Over due, 7-day auto-Inactive, renewal reminders, check-in pushes |

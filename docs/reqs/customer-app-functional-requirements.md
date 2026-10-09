@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.7: prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is now a separately bought add-on
+**Status:** Draft v0.8: prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is a separately bought add-on; consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -72,7 +72,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | AUTH-17 | The app keeps the customer signed in on the phone, with no inactivity time-out. The customer signs in again only after logging out, after the password is changed or reset, after the admin signs them out (ADM-CUS-21), or on a new phone or after a reinstall. | Owner and Derived |
 | AUTH-09 | The user can go back from every onboarding screen to edit a previous step. | Defined |
 
-### 1.1 Personal details (Step 1 of 6)
+### 1.1 Personal details (Step 1 of 7)
 
 | ID | Requirement | Status |
 |---|---|---|
@@ -81,7 +81,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | ONB-26 | In the review the customer can change what they can normally change: names, mobile number, parking, vehicle photo, service cutoff time and interior day. The society, the vehicle details (make, model, variant, registration, category) and the plan are shown but can be changed only by Priveo (VEH-04, VEH-09, ADM-REF-04), so the society selection and the vehicle dropdowns (ONB-03 to ONB-11) are used when a customer adds a vehicle or, in V2, signs up publicly. | Owner |
 | ONB-02 | First and last name accept only letters, spaces and basic name characters. | Wireframe |
 
-### 1.2 Society (Step 2 of 6)
+### 1.2 Society (Step 2 of 7)
 
 | ID | Requirement | Status |
 |---|---|---|
@@ -90,7 +90,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | ONB-05 | The user selects exactly one society (radio selection). A society is required to continue. | Defined |
 | ONB-07 | If no societies are available, show "No serviced societies available at the moment." | Wireframe |
 
-### 1.3 Vehicle (Step 3 of 6)
+### 1.3 Vehicle (Step 3 of 7)
 
 This step captures the customer's first vehicle. Further vehicles are added later, see section 9.
 
@@ -102,7 +102,9 @@ This step captures the customer's first vehicle. Further vehicles are added late
 | ONB-12 | Optional RC (registration certificate) upload. Accepted: JPG, PNG, PDF, up to 5 MB. This is a document, so it keeps its own limit and not the photo limit in rule 17. | Defined (upload action is a stub) |
 | ONB-22 | Vehicle photo (required). The customer takes it with the camera or picks one from the phone's gallery. The user cannot continue without a photo. Format and size follow rule 17 (section 12); a photo that breaks them is rejected with an error. | Owner |
 
-### 1.4 Parking (Step 4 of 6)
+### 1.4 Parking (Step 4 of 7)
+
+The plan is Step 5 of 7 (ONB-23, PAY-12).
 
 | ID | Requirement | Status |
 |---|---|---|
@@ -110,18 +112,18 @@ This step captures the customer's first vehicle. Further vehicles are added late
 | ONB-14 | Parking number (required, numeric). | Defined |
 | ONB-15 | A visual parking-spot preview updates live (for example "B2 · 123"). An example format is shown for clarity. | Defined |
 
-### 1.5 Service preferences (Step 5 of 6)
+### 1.5 Service preferences (Step 6 of 7)
 
 | ID | Requirement | Status |
 |---|---|---|
 | ONB-16 | Service cutoff time (required): the time of day by which the customer wants the daily clean to be finished. The customer sets it with a time picker that allows any time of day in 30-minute steps. The customer does not choose a cleaning slot: slot assignment is done later by the admin (admin feature, Part 2). This replaces the prototype's 2-hour slot picker. The service time the customer sees in the app is this cutoff time. Once the admin has assigned the visit to a crew member, the app shows the assigned crew member and time (CAL-10). Any time can be chosen, even one the crew's working slots cannot meet. The scheduler flags such visits for the admin (ADM-SCH-07) and the customer is not warned. | Owner |
 | ONB-17 | A helper note explains that this is the time by which the clean will be done and that Priveo assigns the exact slot. | Owner |
 | ONB-18 | Weekly day selection (Monday to Sunday, single choice) for the day on which interior cleaning is added to the exterior clean. Required when the chosen plan includes interior cleaning, and hidden when it does not (ADM-SET-01). The field is called "Interior care day". | Defined (conditional on plan: Owner) |
-| ONB-20 | Both fields are mandatory. Continuing without them shows inline errors: "Please select your service cutoff time." plus, for the day field, "Please select your interior care day." | Defined |
+| ONB-20 | Both fields are mandatory where they are shown. Continuing without them shows inline errors: "Please select your service cutoff time." plus, for the day field when the plan has interior cleaning, "Please select your interior care day." | Defined |
 | ONB-21 | Preferences are saved when the user continues. | Wireframe |
 | ONB-23 | When a customer adds a vehicle, the plan is chosen in a step before Service preferences (PAY-12), because the plan decides whether the interior care day is asked. In the onboarding review the plan step shows the plan the admin chose, read-only. The onboarding therefore has one more step than before. | Owner |
 
-### 1.6 Review and confirm (Step 6 of 6)
+### 1.6 Review and confirm (Step 7 of 7)
 
 Covered in section 2.
 
@@ -140,7 +142,7 @@ Each vehicle has its own subscription and is paid for separately.
 | PAY-05 | "Confirm & pay" opens a payment screen that shows a UPI QR code for the amount and the Priveo UPI ID (copyable). The customer pays from any UPI app. In MVP this is the only payment method: no card, net banking or payment gateway. | Owner |
 | PAY-06 | The payment screen has an "I've paid" button, used when the customer pays offline or by UPI QR/ID. When the customer taps it, the payment status becomes **Initiated** and the payment goes to the admin for confirmation. | Owner |
 | PAY-07 | After "I've paid", a confirmation screen shows that the payment has been submitted (status Initiated) and is awaiting confirmation by Priveo, with the amount, the vehicle, and the service details the customer chose. "Go to home" opens Home. | Owner (replaces the prototype's "Payment received" screen) |
-| PAY-08 | The admin confirms in the admin screens that the payment was received. The status then becomes **Received** and the payment record is closed. The admin screens are not specified here (Part 2). | Owner |
+| PAY-08 | The admin confirms that the payment was received. The status then becomes **Received** and the payment record is closed (ADM-PAY-03). | Owner |
 | PAY-09 | The customer sees one of four payment statuses: **Due by dd-Mon-yy** (for example "Due by 07-Nov-26"), **Over due**, **Initiated** (the customer has marked it paid) and **Received** (the admin has confirmed it). The backend sets the status and the app only displays it. This covers the cases the app does not handle itself, such as a payment the admin cannot find. | Owner |
 | PAY-10 | A new subscription is "Activating" until the admin sets the first service date and makes it "Active" (rule 7 in section 12). | Defined (rule: Owner) |
 | PAY-12 | The plan step lists the plans offered, each with its name, price, struck-through list price and inclusions, loaded from the backend (ADM-SET-01). The customer chooses one plan when adding a vehicle (and, in V2, at public signup). For a customer the admin created, the plan is the one the admin chose and is shown on the review, not chosen. Premium Care is the only plan to start with. PAY-01 and PAY-02 describe it. | Owner |
@@ -171,13 +173,13 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | ID | Requirement | Status |
 |---|---|---|
 | CAL-01 | Monthly calendar view (Monday-first) with month title. Previous/next arrows move between months. Past months show completed and skipped days; future months show the visits expected from the subscription. The admin schedules crew one period at a time (a week by default), so the crew assignment is not known further ahead. | Owner |
-| CAL-02 | Each date has a marker: Exterior done, Exterior + Interior, Full spa, Scheduled (upcoming), Skipped. Interior days show a filled marker when done and an outlined one when upcoming. | Defined |
+| CAL-02 | Each date has a marker: Exterior done, Exterior + Interior, Full spa (a day with an add-on), Scheduled (upcoming), Skipped, Missed. Interior days show a filled marker when done and an outlined one when upcoming. | Defined |
 | CAL-03 | A legend explains the markers. | Defined |
 | CAL-04 | Today is highlighted. The selected date is highlighted. | Defined |
-| CAL-05 | Selecting a date shows a day card: service type, a status chip (Completed, Scheduled, Skipped, No visit) and a one-line summary (finish time and checks, service cutoff time, "You skipped this date"). | Defined |
+| CAL-05 | Selecting a date shows a day card: service type, a status chip (Completed, Scheduled, Skipped, Missed, No visit) and a one-line summary (finish time and checks, service cutoff time, "You skipped this date"). | Defined |
 | CAL-06 | Tapping the day card for a completed service opens Service Details. Tapping a scheduled day shows "Scheduled to be completed by <cutoff time>. Proof appears after the visit." and, once assigned, the crew member and assigned time (CAL-10). Tapping a skipped day shows "No visit on this day." | Defined |
-| CAL-07 | The calendar reflects skips, un-skips, pauses and cutoff-time changes immediately after they are confirmed. | Defined (skip) |
-| CAL-09 | A job the crew could not complete is **Missed** (CRW-CNC-04 in the crew file). The calendar shows a Missed marker for that date, and the day card shows "Missed. Rescheduled on dd-Mon-yy" once the admin has scheduled it again (ADM-CNC-03). Before that it shows "Missed". If the admin skips it instead, it shows as Skipped. No push notification is sent for Missed. | Owner |
+| CAL-07 | The calendar reflects skips, un-skips, pauses and cutoff-time changes immediately after they are confirmed. After the schedule is frozen, a change of cutoff time or add-on date is only a request: the calendar and day card keep the current value and show "Change requested, awaiting Priveo" until the admin acts (ADM-SCH-22, ADM-SCH-31). | Defined (skip); Owner (after a freeze) |
+| CAL-09 | A job the crew could not complete is **Missed** (CRW-CNC-04 in the crew file). The calendar shows a Missed marker for that date. The day card shows "Missed", and then: for a Cleaning-External job, "Missed. Covered on dd-Mon-yy" (the next day's regular visit); for a Cleaning-Internal or Deep Spa job the admin has scheduled again, "Missed. Rescheduled on dd-Mon-yy". If the admin skips it instead, it shows as Skipped. No push notification is sent for Missed. | Owner and Derived |
 | CAL-10 | When the admin has assigned a visit to a crew member (the schedule is frozen, or a late visit has been auto-assigned), the Next service card and the day card for that date show the crew member's name and the assigned time. A visit still waiting for a crew member shows as Scheduled with only the cutoff time. If the assignment changes, the new crew member and time are shown. Crew contact details are never shown. | Owner |
 | CAL-08 | On a scheduled future date, the day card has a "Change cutoff time" action that sets the cutoff time for that date. It is available until 9 PM the previous day (SCHED-01). | Owner |
 
@@ -244,7 +246,7 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 
 | ID | Requirement | Status |
 |---|---|---|
-| SCHED-01 | Every customer change to a date's schedule must be made by 9 PM the previous day: skip, un-skip, start or end of a pause, and a change of the service cutoff time for a date. | Owner |
+| SCHED-01 | Every customer change to a date's schedule must be made by 9 PM the previous day: skip, un-skip, start or end of a pause, a change of the service cutoff time for a date, and a change or cancellation of an add-on (ADD-10). | Owner |
 | SCHED-02 | After the cutoff, the controls for that date are disabled and the app shows a message to call the helpline for emergency changes, with a "Call support" button (SUP-02). | Owner |
 
 ---
@@ -280,7 +282,7 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 | NOTIF-02 | MVP events: **Service completed**, **Service skipped**, **Complaint update** (status change or new update note on a complaint), **Renewal reminder**, **Monthly check-in**. No other events notify in MVP. | Owner |
 | NOTIF-03 | A notification is sent only if the customer has that event switched on in Settings. | Owner |
 | NOTIF-04 | "Service skipped" is sent both when the customer skips a visit themselves and when a visit is skipped by operations (ADM-OPS-01). A visit the crew could not complete becomes Missed and the admin decides the outcome (ADM-CNC-03): if the admin marks it skipped by operations, this notification is sent. | Owner |
-| NOTIF-05 | "Renewal reminder" is a payment reminder with this schedule: the first reminder one week before the renewal date, when "Pay for next month" becomes available (SUB-09); the second reminder one day before; then a reminder every 2 days until the customer marks the payment Initiated, the payment status becomes Received, or the subscription is cancelled. Reminders stop as soon as the customer marks the payment Initiated. If the admin moves the payment back to Due or Over due, the reminders start again (ADM-PAY-07), with no extra notification. It has its own on/off switch in Settings, on by default. Cancelling a subscription is V2. | Owner |
+| NOTIF-05 | "Renewal reminder" is a payment reminder with this schedule: the first reminder one week before the renewal date, when "Pay for next month" becomes available (SUB-09); the second reminder one day before; then a reminder every 2 days until the customer marks the payment Initiated, the payment status becomes Received, or the subscription becomes Inactive. Reminders stop as soon as the customer marks the payment Initiated. If the admin moves the payment back to Due or Over due, the reminders start again (ADM-PAY-07), with no extra notification. It has its own on/off switch in Settings, on by default. | Owner |
 | NOTIF-06 | "Monthly check-in" is sent 4 days before the renewal date to ask the customer to complete the monthly check-in (CHK-01). It has its own on/off switch in Settings, on by default, like the other events. | Owner |
 
 ---
@@ -294,10 +296,10 @@ Each vehicle has its own subscription. The screen opens for the selected vehicle
 | SUB-01 | Plan card: plan name, status chip, a progress ring with days left in the billing cycle, billing cycle dates, monthly amount and payment method. A billing cycle is 30 calendar days (rule 26). | Defined (cycle length: Owner) |
 | SUB-09 | Every monthly payment is manual and started by the customer. From one week before the renewal date, a "Pay for next month" action on this screen opens the same payment screen as PAY-05 (UPI QR code and UPI ID) with the "I've paid" step (PAY-06). The payment then goes to the admin for confirmation like the first one. There is no AutoPay in MVP. | Owner |
 | SUB-10 | The screen shows the status of the latest payment: Due by dd-Mon-yy, Over due, Initiated or Received (PAY-09). | Owner |
-| SUB-11 | A payment that has been Over due for 7 days makes the subscription Inactive automatically (ADM-SUB-03). The admin can also set it Inactive, and can reactivate it (ADM-SUB-02, ADM-SUB-04). The customer cannot renew an Inactive subscription themselves in MVP. | Owner |
+| SUB-11 | A plan payment that has been Over due for 7 days makes the subscription Inactive automatically (ADM-SUB-03). An Over due add-on payment does not. The admin can also set it Inactive, and can reactivate it (ADM-SUB-02, ADM-SUB-04). The customer cannot renew an Inactive subscription themselves in MVP. | Owner |
 | SUB-02 | Details: car and registration, society, service cutoff time, interior day (when the plan has it). | Defined |
 | SUB-03 | "Pause service" shortcut opens the skip/pause screen. | Defined |
-| SUB-05 | Subscription states: **Active** (membership running), **Activating** (started, waiting for the admin to set the first service date and activate it), **Paused** (paused by customer), **Inactive** (stopped by the admin, or automatically when a payment has been Over due for 7 days). | Defined (Inactive: Owner) |
+| SUB-05 | Subscription states: **Active** (membership running), **Activating** (started, waiting for the admin to set the first service date and activate it), **Paused** (paused by customer), **Inactive** (stopped by the admin, or automatically when a plan payment has been Over due for 7 days). | Defined (Inactive: Owner) |
 | SUB-06 | Billing history ("View billing history") lists the subscription's payments, newest first, each with its amount, due date and status (PAY-09). | Wireframe (list: Derived) |
 | SUB-12 | For a payment the admin has generated a GST invoice for (ADM-PAY-08), billing history shows an invoice that the customer can open and save. | Owner |
 | SUB-08 | The customer can edit the default service cutoff time and the weekly interior day after signup. Each stays required where the plan has it. A change follows the cutoff rule (SCHED-01) and applies from the next date that is still before its 9 PM cutoff. A cutoff time for a single date is changed from the calendar (CAL-08). | Owner |
@@ -315,7 +317,7 @@ A customer can own more than one vehicle. Each vehicle has its own parking detai
 | VEH-03 | Parking details: society, basement, parking number, RC document status (Verified). | Defined |
 | VEH-04 | Edit parking details. Parking spot and photo are customer-editable; car details change only through support. | Stub (rule stated in the toast) |
 | VEH-06 | "My vehicles" lists all of the customer's vehicles, each with registration, make and model, and its subscription status. Tapping one opens its details (VEH-01 to VEH-04). | Owner |
-| VEH-07 | "Add vehicle" starts a flow with the same steps as onboarding for a vehicle: society, vehicle details (including the mandatory photo), parking, service preferences, review and payment (section 2). | Owner |
+| VEH-07 | "Add vehicle" starts a flow with the same steps as onboarding for a vehicle: society, vehicle details (including the mandatory photo), parking, plan, service preferences, review and payment (section 2). | Owner |
 | VEH-09 | A vehicle's society is chosen when the vehicle is added and cannot be changed afterwards. Different vehicles of the same customer can be in different societies. Changing a vehicle's society is for a later phase. | Owner |
 | VEH-08 | A newly added vehicle appears in the Home vehicle switcher (HOME-07) once its subscription is created. | Owner |
 
@@ -336,9 +338,9 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ADD-07 | An add-on request has a status: **Requested** (made, waiting to be scheduled), **Scheduled** (a crew member and time are assigned), **Completed**, **Cancelled** and **Missed** (the crew could not do it). | Derived |
 | ADD-08 | The scheduler plans the add-on as a job of its own duration (2 hours for Deep Spa) on the proposed date, in the crew's capacity and before that day's freeze cutoff (ADM-SCH-30). Once planned, the status is Scheduled and the customer sees the assigned crew member and time (CAL-10). | Owner |
 | ADD-09 | If the scheduler cannot fit the job on the proposed date, the request goes to the admin's Needs scheduling list (ADM-SCH-28) and stays **Requested**. The admin agrees a new date with the customer and sets it (ADM-ADD-03). The app never changes the date by itself. | Owner |
-| ADD-10 | Until 9 PM the day before the date, the customer can change the date or the finish-by time, or cancel the request (SCHED-01). After the cutoff the controls are disabled and the app shows the "Call support" message (SCHED-02). A cancelled add-on is not charged. Any refund of an amount already paid is handled by the admin outside the app (refunds are V2). | Owner |
+| ADD-10 | Until 9 PM the day before the date, the customer can change the date or the finish-by time, or cancel the request (SCHED-01). After the cutoff the controls are disabled and the app shows the "Call support" message (SCHED-02). If the schedule is already frozen, a change of date or time is a request and shows "Change requested, awaiting Priveo" (CAL-07). A cancelled add-on is not charged. Any refund of an amount already paid is handled by the admin outside the app (refunds are V2). | Owner |
 | ADD-11 | A scheduled add-on appears on the calendar on its date with the Full spa marker (CAL-02) and a day card. When the job is done, its proof (checklist, photos, video, crew member) opens in Service Details like any job (SVC-01 to SVC-06). The add-on job is separate from the day's plan visit: the plan visit completes without waiting for it. | Owner |
-| ADD-12 | If the crew could not do the job, it is Missed and follows the same rule as other jobs: the admin schedules it again for the next day only, or marks it skipped by operations (ADM-CNC-03). The customer sees "Missed. Rescheduled on dd-Mon-yy" as in CAL-09. | Derived |
+| ADD-12 | If the crew could not do the job, it is Missed. The admin schedules it again for the next day only, or marks it skipped by operations: a skipped Deep Spa does not extend the plan, and any refund or rebooking is handled by the admin outside the app (ADM-CNC-03, ADM-OPS-03). The customer sees "Missed. Rescheduled on dd-Mon-yy" as in CAL-09. | Derived |
 | ADD-13 | No new notification event is added in MVP. "Service completed" applies when the add-on job is done (NOTIF-02). | Derived |
 
 ---
@@ -447,7 +449,7 @@ These are behaviors a developer must implement, taken from the screens and owner
 
 1. There is no fixed rest day. Every day of the week is open for service, and the admin decides what is scheduled.
 2. The plan includes exterior cleaning 7 days a week. On the customer's chosen day the visit also includes interior cleaning. If that day is skipped, paused or skipped by operations, that week's interior cleaning is lost and not made up. Deep Spa is not part of the plan: it is an add-on bought separately (section 9a).
-3. Every customer change to a date's schedule (skip, un-skip, start or end of a pause, a new service cutoff time) must be made by 9 PM the previous day. After that the customer calls the helpline for emergency changes. Skipped visits are not charged and the crew is notified automatically.
+3. Every customer change to a date's schedule (skip, un-skip, start or end of a pause, a new service cutoff time, an add-on change or cancellation) must be made by 9 PM the previous day. After that the customer calls the helpline for emergency changes. Skipped visits are not charged and the crew is notified automatically.
 4. A pause covers a date range, with no minimum or maximum length in MVP. Paused visits are added to the end of the plan, so the renewal date moves forward by the number of visits paused. Ending a pause early recalculates it. A skip is a subset of a pause: skipped dates inside a pause are counted once, as paused days.
 5. The customer sets a service cutoff time, the time by which the daily clean must be finished, and does not choose a slot. The admin assigns the actual slot later.
 6. The vehicle category is derived from the vehicle model and drives the cleaning routine.
@@ -458,23 +460,23 @@ These are behaviors a developer must implement, taken from the screens and owner
 11. Customers can change parking details, the vehicle photo, the service cutoff time and the interior day themselves; other vehicle details change only through support. A vehicle's society cannot be changed.
 12. Prices include GST
 13. A customer can own several vehicles. Each vehicle has its own subscription, bought and paid for separately.
-14. In MVP, payment is by UPI QR code or UPI ID only. Every monthly payment is manual and started by the customer, from one week before the renewal date. The customer marks it paid (status Initiated), the admin confirms receipt (status Received), and the record is then closed. The statuses shown to the customer are Due by dd-Mon-yy, Over due, Initiated and Received, all set by the backend.
+14. In MVP, payment is by UPI QR code or UPI ID only. Every monthly payment is manual and started by the customer, from one week before the renewal date. The customer marks it paid (status Initiated), the admin confirms receipt (status Received), and the record is then closed. The statuses shown to the customer are Due by dd-Mon-yy, Over due, Initiated and Received, all set by the backend. A plan payment is created 7 days before the renewal date and is due on it. An add-on payment is due on the day the add-on is requested and goes Over due the next day if unpaid.
 15. In MVP, push notifications are sent for service completed, service skipped (by the customer or by operations), complaint updates, the renewal reminder and the monthly check-in, and only when the customer has the event switched on. All are on by default.
 16. The app is in English only.
 17. Photos and videos: the app accepts the common formats produced by the camera and gallery on Android and iOS (for example JPEG, PNG and iPhone HEIC). A photo must be under 10 MB and a video under 25 MB. This applies to the vehicle photo, complaint photos and crew service photos and videos. A vehicle photo is mandatory at signup, and the crew takes photos after every completed service. The crew does not use the vehicle photo to identify the car.
-18. A payment that has been Over due for 7 days makes the subscription Inactive automatically. The admin can set a subscription Inactive at any time and can reactivate it. An Inactive subscription has no visits and does not count in capacity.
+18. A plan payment that has been Over due for 7 days makes the subscription Inactive automatically. An Over due add-on payment does not. The admin can set a subscription Inactive at any time and can reactivate it. An Inactive subscription has no visits and does not count in capacity.
 19. A vehicle's society is fixed when the vehicle is added. Each vehicle can be in a different society.
 20. The feedback category list and the positive rating tags are configurable by the admin and loaded from the backend, not fixed in the app.
 21. A customer's feedback is used as a testimonial only with the customer's permission, which is off by default.
-22. Payment reminders: one week before the renewal date, one day before, then every 2 days until the customer marks the payment Initiated, it becomes Received, or the subscription is cancelled.
+22. Payment reminders: one week before the renewal date, one day before, then every 2 days until the customer marks the payment Initiated, it becomes Received, or the subscription becomes Inactive.
 23. The monthly check-in is a set of admin-editable categories, each rated with 1 to 5 stars, plus one optional comment. At least one category must be rated to save it. It is pushed 4 days before the renewal date and also shown as a card on Home until completed.
 24. The feedback modal needs at least a star rating or a comment before it can be sent.
-25. A visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day. The customer is not charged extra.
+25. A Cleaning-External visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day. The customer is not charged extra. A skipped Cleaning-Internal job is lost for that week and does not extend the plan. A skipped Deep Spa add-on does not extend the plan: any refund or rebooking is handled by the admin outside the app.
 26. A billing cycle is 30 calendar days. The first cycle starts on the first service date. Each later cycle starts on the previous renewal date, so the renewal date is the first day after the 30 days. Pauses (rule 4) and visits skipped by operations (rule 25) move the renewal date forward by one day for each day. A skip by the customer does not move it. The cycle dates shown in the app come from the backend and follow this rule.
-27. A job the crew could not complete is Missed. The admin either schedules that job again for the next day only, or marks it skipped by operations (rule 25). A visit is Completed when all of its jobs are done or skipped.
+27. A job the crew could not complete is Missed. A Missed Cleaning-External job is covered by the next day's regular job unless the admin skips it by operations. A Missed Cleaning-Internal or Deep Spa job is scheduled again by the admin for the next day only, or skipped by operations (rule 25). It cannot be scheduled for any other day. A visit is Completed when all of its jobs are done or skipped.
 28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement.
 29. A customer signs in with their email. The customer exists only because the admin created them. At the first sign-in they get a 6-digit code by email, set a password, and review the details the admin entered. After that they sign in with email and password, and stay signed in on the phone. Forgot password and an email change use an emailed code. There is no mobile OTP.
-30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo." It cannot be scheduled for any other day. The next day's schedule picks it up before that day's freeze cutoff time (ADM-SCH-26 in the admin file).
+30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo."
 31. Deep Spa (2 hours) is an add-on that existing customers buy separately for a vehicle with an Active subscription. The customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
 
 ---
@@ -493,7 +495,7 @@ For your reference when you write the data model. This is a reading of the scree
 - **Subscription**: one per vehicle. Customer, vehicle, plan, status (Activating, Active, Paused, Inactive), start date, renewal date, amount, default service cutoff time, interior day.
 - **Slot assignment**: subscription, assigned slot, assigned crew member, assigned by admin. Set outside the customer app and shown to the customer once assigned.
 - **Cutoff override**: subscription, date, cutoff time, for a change to a single date.
-- **Service visit**: date, type (Exterior, Exterior + Interior, Full spa), status (Scheduled, Completed, Skipped, Missed), crew member, finish time, rating.
+- **Service visit**: date, type (Exterior, Exterior + Interior), status (Scheduled, Completed, Skipped, Missed), crew member, finish time, rating.
 - **Checklist item**: visit, label, completed, completion time.
 - **Media**: visit, kind (photo, video), stage (before, during, after), timestamp.
 - **Skip / Pause**: subscription, date or date range, status.

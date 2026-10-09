@@ -12,9 +12,9 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 
 ## Layout
 
-- `docs/reqs/customer-app-functional-requirements.md`: customer app (v0.5)
-- `docs/reqs/admin-functional-requirements.md`: admin (v0.4)
-- `docs/reqs/crew-functional-requirements.md`: crew (v0.1)
+- `docs/reqs/customer-app-functional-requirements.md`: customer app
+- `docs/reqs/admin-functional-requirements.md`: admin (functional requirements for the web portal and the mobile quick actions)
+- `docs/reqs/crew-functional-requirements.md`: crew
 - `docs/tech-stack.md`: technical stack (all choices decided)
 - `docs/prototype/`: interactive prototype HTML, wireframes, vision deck, marketing images. Read-only source material. The prototype HTML is about 1 MB, so search it with grep instead of reading it whole.
 
@@ -34,7 +34,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 - Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours). Each service is a separate job. Deep Spa is not in the plan: it is an add-on that existing customers buy separately, proposing one date and a finish-by time. Scheduling does not wait for its payment in MVP.
 - A visit is Completed only when all its jobs are done or skipped.
 - Billing cycle is 30 calendar days from the first service date. Payments are manual by UPI (statuses Due, Over due, Initiated, Received). A payment Over due for 7 days makes a subscription Inactive.
-- The admin freezes the next day's schedule by 8 PM the day before. Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.
+- A schedule is frozen once, by 8 PM the day before its first day (a weekly schedule before the week starts). Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.
 - Ratings are general to the visit and not given to any crew member. No crew member sees a customer's name or mobile number.
 - Customers sign in by email: an emailed 6-digit code on first sign-in, then a password. Only customers the admin has created can sign in. Crew sign in with mobile number and password. Admins sign in with a user ID (the first is `priveopapa`) and password. Passwords are never sent by SMS or WhatsApp: the admin sees a new crew password once and hands it over. The admin password comes from `.env`, never from the repo.
 
