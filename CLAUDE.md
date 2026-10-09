@@ -17,11 +17,11 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 - `docs/reqs/crew-functional-requirements.md`: crew
 - `docs/tech-stack.md`: technical stack (all choices decided)
 - `tools/priveo-reqs/`: a Claude Code mod for the requirements files. It checks IDs after each edit, guards `docs/prototype/` and `.env`, and adds `/ids`, `/open`, `/synccheck`, `/fstatus` and `/priveo-status` (a side pane with the stage counts, open bugs and a role and area breakdown). `/fstatus` tracks each requirement ID through Draft, Backlog, Ready for Dev, In Dev, Unit Tested >95%, Functional Tested and Security Test, with an open-bug count, in `docs/feature-status.json`. A new or changed requirement row goes back to Draft. Load it with `claude --plugin-dir tools/priveo-reqs`. Test it with `claude plugin test tools/priveo-reqs`.
-- `docs/prototype/`: interactive prototype HTML, wireframes, vision deck, marketing images. Read-only source material. The prototype HTML is about 1 MB, so search it with grep instead of reading it whole.
+- `docs/prototype/`: interactive prototype HTML, vision deck, marketing images. Read-only source material. The prototype HTML is about 1 MB, so search it with grep instead of reading it whole.
 
 ## Rules for editing the requirements
 
-- **Owner decisions win.** Where the prototype or a wireframe disagrees with an owner decision, the requirements follow the owner. The prototype's known differences are listed in `README.md`. Keep that list current when a decision makes the prototype more out of date.
+- **Owner decisions win.** Where the prototype disagrees with an owner decision, the requirements follow the owner. The prototype's known differences are listed in `README.md`. Keep that list current when a decision makes the prototype more out of date.
 - **Do not decide for the owner.** If something is not stated, ask. If you must fill a gap to keep a requirement workable, mark it **Derived** or **Open** in the Status column and say so in your reply. Never mark your own assumption as **Owner**.
 - **IDs:** each requirement has an ID (customer: `AUTH-`, `ONB-`, `PAY-`, `HOME-`, `CAL-`, `SVC-`, `SKIP-`, `PAUSE-`, `SCHED-`, `SUB-`, `VEH-`, `SUP-`, `ISS-`, `CMP-`, `FDBK-`, `CHK-`, `NOTIF-` and others; admin: `ADM-<area>-NN`; crew: `CRW-<area>-NN`). Never renumber. Add new IDs at the end of their group, even if that puts them out of order in the table.
 - **Cross-references:** an ID cited in one file must exist in a file. After any edit, check that every cited ID is defined and no ID is defined twice. A one-line grep over the table rows is enough.

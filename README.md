@@ -21,24 +21,20 @@ Start with the customer document, then admin, then crew. Each file ends with its
 In [`docs/prototype/`](docs/prototype/):
 
 - `Priveo Customer App Prototype.html`: interactive customer prototype. Open it in a browser.
-- `Screen1.jpeg` to `screen4.jpeg`: wireframes of the customer flow.
 - `Car_Concierge_Vision_Deck.pdf` and the WhatsApp images: context only. They hold no screen behaviour.
 
 ### The prototype is partly out of date
 
-The requirements follow the prototype, except where the owner has decided otherwise. Owner decisions win. Do not build these from the prototype or the wireframes:
+The requirements follow the prototype, except where the owner has decided otherwise. Owner decisions win. Do not build these from the prototype:
 
-| Prototype or wireframe shows | Requirements say |
+| Prototype shows | Requirements say |
 |---|---|
 | UPI AutoPay and a "Renew automatically" switch | Every payment is manual: the customer pays by UPI QR or UPI ID and taps "I've paid", then the admin confirms |
 | A "Crew rest day" | There is no rest day. Every day is open |
 | A 2-hour cleaning slot picker | The customer sets a service cutoff time, in 30-minute steps. The admin assigns the slot |
-| One plan, with ₹4,999 in one wireframe | Several plans, chosen by the customer. Premium Care is ₹999 a month, with ₹1,499 struck through |
-| Interior cleaning 2 days a week (wireframe) | Interior cleaning once a week, on the customer's interior care day |
 | The monthly full spa on the interior day | Deep Spa is an add-on: 2 hours, bought separately by an existing customer, who proposes one date and a finish-by time |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |
 | Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by email: a code on first sign-in, then a password. Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
-| A 9-step wireframe onboarding | The plan is chosen before service preferences. See the customer file, section 1 |
 | A "My Vehicles" bottom tab | Bottom tabs are Home, Calendar, Account, Support. Vehicles sit under Account |
 | Sample renewal dates that disagree with each other | A billing cycle is 30 calendar days |
 
