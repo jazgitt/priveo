@@ -49,7 +49,7 @@ Rules followed:
 | ADM-ACC-02 | Admin screens are available only to users with the Admin role. | Derived |
 | ADM-ACC-03 | Crew members have one of three roles: **Manager**, **Member**, **Trainee**. The Admin role is separate from these. | Owner (item c) |
 | ADM-ACC-04 | Admins and crew use the same app as customers. Each has their own login, and the role set for it in the backend decides what they can see and do. | Owner |
-| ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with their mobile number and password, like crew (CRW-ACC-02 in the crew file). | Owner |
+| ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The first admin has the user ID `priveopapa`. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents. | Owner |
 
 ---
 
@@ -113,8 +113,8 @@ Rules followed:
 | ADM-CRW-02 | Details for each crew member: name, mobile number, society, role (Manager, Member or Trainee, required) and working hours. | Owner |
 | ADM-CRW-03 | The admin can change a crew member's role at any time, including assigning the Manager role to a crew member. | Owner (item c) |
 | ADM-CRW-16 | One or more crew members can be given the Manager role, when they are onboarded or later. A society can have several Managers. | Owner |
-| ADM-CRW-17 | Onboarding a crew member creates their login with the Crew role, so they can use the app as soon as they are onboarded. The login ID is the crew member's mobile number. A password is generated automatically (the first 3 letters of the name, 4 random digits and `$`), and the login details are sent to the crew member by SMS or WhatsApp. | Owner |
-| ADM-CRW-18 | The admin can reset a crew member's password. A new password is generated in the same format and sent to the crew member by SMS or WhatsApp. Crew cannot change their own password or login ID (CRW-ACC-06 in the crew file). The admin can also unlock a crew login that was locked after wrong attempts. | Derived |
+| ADM-CRW-17 | Onboarding a crew member creates their login with the Crew role, so they can use the app as soon as they are onboarded. The login ID is the crew member's mobile number. A password is generated automatically (the first 3 letters of the name, 4 random digits and `$`). Passwords are never sent by SMS or WhatsApp: the app shows the login ID and the password to the admin once, with a Copy button, and the admin gives them to the crew member outside the app (CRW-ACC-05 in the crew file). | Owner |
+| ADM-CRW-18 | The admin can reset a crew member's password. A new password is generated in the same format and shown to the admin once, as at onboarding (ADM-CRW-17). The old password stops working at once. Crew cannot change their own password or login ID (CRW-ACC-06 in the crew file). The admin can also unlock a crew login that was locked after wrong attempts. | Derived |
 | ADM-CRW-04 | Working hours are set during onboarding for every crew member, whatever their role. For each day of the week the admin marks the day as working or off and sets a start time and an end time. | Owner (item e) |
 | ADM-CRW-05 | The admin can edit working hours later. The change applies to dates from then on. | Derived |
 | ADM-CRW-06 | A mobile number can belong to only one crew member, and it cannot already belong to a customer or an admin (one role for each number). | Derived and Owner |
@@ -352,7 +352,7 @@ These are the admin features the customer requirements already depend on. You co
 For your reference when you write the data model. This is a reading of the requirements, not a design.
 
 - **User login**: person, login, role (customer, crew, admin). The role decides which screens the app shows.
-- **Admin user**: name, mobile, password (stored securely). Created by the initial database seed.
+- **Admin user**: name, user ID (the first is `priveopapa`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.
 - **Admin preferences**: scheduling period (Daily, Weekly or Monthly; default Weekly), week start day (Sunday).
 - **Cutoff request**: customer's vehicle, old cutoff time, new cutoff time, assigned crew member and time, status (open, handled), handled by and when.
 - **Society**: name, sector, city, active flag.
@@ -402,7 +402,7 @@ For your reference when you write the data model. This is a reading of the requi
 | SVC-03: checklist items with completion times | Maintain checklists for each service | ADM-CHK-01 to ADM-CHK-05 |
 | Crew file: minimum photos and videos before "Mark complete" | Set the minimums for each service | ADM-CHK-06 |
 | Crew file: Could not complete reasons and Missed visits | Manage the reasons and decide the outcome | ADM-CNC |
-| Crew file: login details and password reset | Generate, send and reset crew passwords | ADM-CRW-17, ADM-CRW-18 |
+| Crew file: login details and password reset | Generate and reset crew passwords and show them once to the admin | ADM-CRW-17, ADM-CRW-18 |
 
 ---
 

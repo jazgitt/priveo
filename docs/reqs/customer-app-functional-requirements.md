@@ -62,7 +62,7 @@ Flow: Welcome, Mobile number, OTP, Personal details, Society, Vehicle, Parking, 
 | AUTH-07 | Resend OTP becomes available when the countdown ends. Invalid OTP shows an error. Maximum 3 to 5 attempts. | Wireframe |
 | AUTH-08 | After successful verification, an existing customer goes to the dashboard (Home). A new customer continues to registration. | Wireframe |
 | AUTH-10 | Customers, crew and admins all use this same app. Each person has their own login, and the role set for it in the backend decides which screens and actions they see. This file covers the customer screens. The admin screens are in `admin-functional-requirements.md`, and the crew screens are in `crew-functional-requirements.md`. | Owner |
-| AUTH-11 | There is one welcome and mobile number screen for everyone. After the number is entered the backend decides the method from the role: a customer gets an OTP as described above, a crew member or admin is asked for a password (CRW-ACC-02 in the crew file). The rest of this section describes the customer path. | Owner |
+| AUTH-11 | There is one welcome and mobile number screen for everyone. The field takes a mobile number or, for an admin, a user ID. After it is entered the backend decides the method from the role: a customer gets an OTP as described above, a crew member or admin is asked for a password (CRW-ACC-02 in the crew file). The rest of this section describes the customer path. | Owner |
 | AUTH-09 | The user can go back from every onboarding screen to edit a previous step. | Defined |
 
 ### 1.1 Personal details (Step 1 of 6)
