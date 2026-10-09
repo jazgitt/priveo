@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Technical Stack
 
-**Status:** v0.2, 9 Oct 2026. The owner has decided every choice in sections 1, 2 and 5. Section 4 lists risks to watch.
+**Status:** v0.3, 9 Oct 2026. The owner has decided every choice in sections 1, 2 and 5. Section 6 (design system) is a draft awaiting review. Section 4 lists risks to watch.
 **Basis:** the three functional requirements files in `docs/reqs/`. Requirement IDs are cited where a requirement drives a choice.
 
 ## 1. Decided
@@ -87,7 +87,7 @@
 6. **API compatibility.** The mobile app serves customers, crew and the admin quick actions, so older app versions stay in use. Version the API and plan for forced-update behaviour. The web portal can always be updated at once.
 7. **Flutter, Dart and package versions.** Pin them when the project is created.
 8. **Admin web portal security.** The portal holds every admin power, behind one user ID and password. Decided for the first release: HttpOnly cookies with CSRF protection and short sessions (`ADM-ACC-12`). Not yet decided and listed as V2: two-factor sign-in for admins, and an IP allowlist or AWS WAF rules in front of the portal. These are the main risk of the single admin login, so revisit them soon after launch.
-9. **Open owner choices:** none. Sections 1, 2 and 5 are decided.
+9. **Open owner choices:** the vector logo files (to follow) in section 6. Sections 1, 2 and 5 are decided.
 
 ## 5. Admin web portal: supporting choices (decided)
 
@@ -106,3 +106,121 @@
 | Alerts | Notification bell fed by an API endpoint with server-sent events or polling, plus Resend emails | `ADM-ACC-09` |
 | Testing | Vitest and React Testing Library, Playwright for key flows | |
 | CI/CD | GitHub Actions: lint, test, build, deploy to S3 and invalidate CloudFront | |
+
+## 6. Design system and brand guide (DRAFT for owner review)
+
+**Source:** the design theme comes from the customer app prototype only (`docs/prototype/Priveo Customer App Prototype.html`). The wireframe images are not used for the look. Owner answers of 9 Oct 2026 are marked **Owner**. Values read from the prototype are **Derived**. Anything not in the prototype is **Open**.
+
+### 6.1 Owner decisions
+
+| Decision | Status |
+|---|---|
+| The dark and gold look of the prototype is the final brand look | Owner |
+| Brand fonts are Cormorant Garamond (display) and Manrope (body) | Owner |
+| A light mode is needed (customer and crew) | Owner |
+| The admin web portal uses a light theme | Owner |
+| The "CC" monogram is retired. The Priveo logo is the only logo | Owner |
+| The tagline "Own the Car. We'll Handle the Rest." stays in use | Owner |
+| The design theme is taken from the prototype only, not from the wireframes | Owner |
+
+### 6.2 Logo
+
+| Item | Rule | Status |
+|---|---|---|
+| Primary logo | The Priveo logo in the prototype: a stylised "P" with a car swoosh, the word PRIVEO in wide-spaced capitals with a gold "O", and "CAR CONCIERGE" in gold between two thin gold rules | Derived |
+| Colours | White and gold on black or dark backgrounds. On light backgrounds use a dark ink and gold version | Derived. The light-background version comes with the vector files |
+| Retired mark | The "CC" monogram and the "Car Concierge, Premium Vehicle Care" lockup. The Priveo logo is the only logo | Owner |
+| Master file | Only a 278 x 100 px transparent PNG is in the repo (`docs/brand/priveo-logo.png`, taken from the prototype). It is too small for the app icon, splash screen or print | Owner: use this PNG for now. The vector master (full logo and "P" mark alone) comes later and goes in `docs/brand/` |
+| App icon and splash | The "P" mark alone, gold on `ink`. The splash screen shows the full logo on `ink` | Derived |
+| Clear space and size | Clear space around the logo is at least the height of the letter "P" in the wordmark. Minimum width 96 px on screen | Derived (a suggested rule, not in the sources) |
+| Do not | Stretch it, recolour it, add effects, or place it on a busy photo without a dark overlay | Derived |
+
+### 6.3 Colour
+
+Dark theme (the prototype). Tokens are named so the same names work in light theme.
+
+| Token | Dark | Use | Status |
+|---|---|---|---|
+| `ink` | `#08080A` | Backdrop, splash | Derived |
+| `app` | `#0D0D10` | App background | Derived |
+| `card`, `card2` | `#151519`, `#1C1C21` | Cards, raised cards | Derived |
+| `line` | `#2A2925` | Borders, dividers | Derived |
+| `hair` | `rgba(201,165,92,.20)` | Fine gold outlines | Derived |
+| `text` | `#F4F0E8` | Main text | Derived |
+| `mute`, `dim`, `grey` | `#A39D92`, `#6E695F`, `#77736B` | Secondary, tertiary, disabled text | Derived |
+| `gold` (`gold-hi` `#E9D09A`, `gold-lo` `#9C7A3A`) | `#C9A55C` | Brand accent, primary button | Derived |
+| `wine` (`wine-hi` `#B0414F`) | `#7D1F2E` | Secondary accent | Derived |
+| `ok` | `#62C391` | Success, completed | Derived |
+| `warn` | `#E8A951` | Warning, due | Derived |
+| `info` | `#6A97F2` | Information, scheduled | Derived |
+| `spa` | `#BC8CF2` | Deep Spa service | Derived |
+| `error` | `#F08F9B` | Errors, over due | Derived (a light red that appears in the prototype) |
+
+Light theme. The prototype has no light theme, so this one is built from the prototype's own colours: the same gold and wine, with the neutrals inverted and the status colours darkened for contrast on white. Every light value is a proposal. The owner has decided that a light mode exists (customer, crew and the admin portal), not what it looks like.
+
+| Token | Light | Use | Status |
+|---|---|---|---|
+| `app` | `#F7F3EC` | Page background, a warm tint of the prototype's `text` colour | Owner (approved) |
+| `card` | `#FFFFFF` | Cards, inputs | Owner (approved) |
+| `line` | `#E4DDD0` | Borders, dividers | Owner (approved) |
+| `text` | `#16151A` | Main text, close to the prototype's `app` | Owner (approved) |
+| `mute` | `#6B665D` | Secondary text | Owner (approved) |
+| `gold` | `#C9A55C` for fills, `#8A6A2C` for gold text and icons | The prototype gold is too pale as text on white | Derived (fill), Owner (approved text colour) |
+| `wine` | `#7D1F2E` | Secondary accent, titles, selected state | Derived |
+| `ok`, `warn`, `info`, `spa` | `#2E9E6B`, `#C98A2B`, `#3F6FD8`, `#8A4FD0` | Status colours, darkened for white | Owner (approved) |
+| `error` | `#C0392B` | Errors, over due | Owner (approved) |
+
+Rules:
+- The primary action is the gold button in both themes, with dark text `#1B1408`. Wine is the secondary accent.
+- Status colours keep the same meaning in both themes.
+- Colour is never the only signal. A status always has a text label.
+- Text must reach 4.5:1 contrast. `dim` and `grey` on `card` in dark theme are likely below that, so they are for disabled or decorative text only. **Open:** run a contrast check before build.
+
+### 6.4 Type
+
+| Item | Rule | Status |
+|---|---|---|
+| Display | Cormorant Garamond 500, 600, 700, 500 italic. Used for screen titles and large numbers, from 20 px up. Never for small text | Owner (fonts), Derived (use) |
+| Body | Manrope 400 to 800. Used for everything else | Owner (fonts), Derived (use) |
+| Scale | 11, 12, 13, 14, 16, 18, 22, 28 px. The prototype uses 11 to 18 px in half steps; this trims it to one scale | Owner (approved) |
+| Fallbacks | Georgia, then system sans | Derived |
+| In Flutter and the portal | Bundle the font files (works offline, no network fetch on first launch). The web portal self-hosts the same files | **Open** |
+| Text size | Layouts must hold up at 130% system text size | Derived |
+
+### 6.5 Shape, depth and components
+
+| Item | Rule | Status |
+|---|---|---|
+| Corner radius | 12 px inputs and small cards, 18 px cards, 22 px sheets, 17 px buttons, 50% avatars | Derived |
+| Primary button | 56 px high, full width, 700 weight, 16 px. Gold gradient (`#EFD7A2`, `#C9A55C`, `#AD8743`) with dark text `#1B1408`, in both themes | Derived |
+| Secondary button | Transparent with a 1 px `line` border and `text` colour. A wine button (gradient `#9A2C3C` to `#7D1F2E`, light text) is used for firm actions such as confirming a skip | Derived |
+| Pressed state | Scale 0.97, brightness 0.92 | Derived |
+| Depth | Soft gold glow under the primary button (dark), 1 px hairlines on cards. No heavy shadows | Derived |
+| Sticky footer | The main action is pinned at the bottom with a fade into `app` | Derived |
+| Status chip | Small rounded chip with a colour tint and a text label. Deep Spa uses `spa`, completed uses `ok`, due uses `warn`, scheduled uses `info` | Derived |
+| Icons | Outline icons, 1.5 px stroke, one set only | Owner: Material Symbols Rounded |
+| Touch targets | At least 48 px. Crew screens use 56 px or larger, since they are used outdoors, often with wet hands | Derived |
+| Motion | Short (150 to 250 ms), no decorative animation | Derived |
+
+### 6.6 Voice
+
+| Item | Rule | Status |
+|---|---|---|
+| Tagline | "Own the Car. We'll Handle the Rest." | Owner |
+| Tone | Calm, polite, concise. Plain short sentences, English only | Derived (matches the requirements rules) |
+| Dates and money | `dd-Mon-yy`, and rupees with GST included | Owner (existing rule) |
+| Photos | Real cars in society parking, clean and well lit. No stock luxury imagery that does not match the customer's car | Derived |
+
+### 6.7 How it maps to the stack
+
+| Area | Proposal | Status |
+|---|---|---|
+| Source of truth | One file, `docs/brand/tokens.json`, holding colours, type, radii and spacing for both themes. The Flutter theme and the Tailwind config are generated from it | **Open** |
+| Flutter app | Material 3 `ThemeData` (light and dark) built from the tokens, a `ThemeExtension` for gold, wine and status colours, and shared widgets (button, card, status chip) in `core/ui`. Theme follows the phone setting, with a manual switch in Settings | **Open** |
+| Admin web portal | Tailwind theme and shadcn/ui CSS variables from the same tokens. Light theme only (owner decision) | **Open** |
+| Golden tests | Golden tests for key screens run in both themes | **Open** |
+| Brand folder | `docs/brand/` holds the logo files and tokens. `docs/prototype/` stays read-only | Derived |
+
+### 6.8 Still needed from the owner
+
+1. The vector logo files (full logo, "P" mark alone, light-background version), to be added to `docs/brand/` later. The PNG is used until then.
