@@ -8,7 +8,7 @@ Requirements and prototype material only. There is no application code, build or
 
 ## Tech stack (decided by the owner)
 
-Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. One Indian provider (MSG91 or Gupshup) for customer OTP SMS only. FCM for push. S3 signed uploads for media with an offline upload queue in the app. Flutter web for the V2 admin portal. Details, proposed supporting choices and risks are in `docs/tech-stack.md`. Choices marked Proposed there are not decided.
+Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. Resend for email (verification codes, password reset codes, welcome email). FCM for push. S3 signed uploads for media with an offline upload queue in the app. Flutter web for the V2 admin portal. Details, proposed supporting choices and risks are in `docs/tech-stack.md`. Choices marked Proposed there are not decided.
 
 ## Layout
 
@@ -36,7 +36,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 - Billing cycle is 30 calendar days from the first service date. Payments are manual by UPI (statuses Due, Over due, Initiated, Received). A payment Over due for 7 days makes a subscription Inactive.
 - The admin freezes the next day's schedule by 8 PM the day before. Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.
 - Ratings are general to the visit and not given to any crew member. No crew member sees a customer's name or mobile number.
-- One role for each mobile number. Customers sign in by OTP. Crew sign in with mobile number and password. Admins sign in with a user ID (the first is `priveopapa`) and password. Passwords are never sent by SMS or WhatsApp: the admin sees a new crew password once and hands it over. The admin password comes from `.env`, never from the repo.
+- Customers sign in by email: an emailed 6-digit code on first sign-in, then a password. Only customers the admin has created can sign in. Crew sign in with mobile number and password. Admins sign in with a user ID (the first is `priveopapa`) and password. Passwords are never sent by SMS or WhatsApp: the admin sees a new crew password once and hands it over. The admin password comes from `.env`, never from the repo.
 
 ## Working conventions
 

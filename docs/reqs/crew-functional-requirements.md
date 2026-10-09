@@ -46,7 +46,7 @@ Rules followed:
 | ID | Requirement | Status |
 |---|---|---|
 | CRW-ACC-01 | Crew use the same app as customers and admins. The role set on their login in the backend decides which screens they see. | Owner |
-| CRW-ACC-02 | There is one welcome and login screen for everyone. The screen has one field that takes a mobile number or a user ID. A 10-digit mobile number belongs to a customer or crew member, and anything else is looked up as an admin user ID. The backend decides the method from the role: a customer receives an OTP, a crew member or admin is asked for a password. | Owner |
+| CRW-ACC-02 | There is one welcome and login screen for everyone. The screen has one field that takes an email, a mobile number or a user ID. An email belongs to a customer, a 10-digit mobile number to a crew member, and anything else is looked up as an admin user ID. A customer gets an emailed code on first sign-in and then uses a password. A crew member or admin is asked for a password. | Owner |
 | CRW-ACC-03 | A crew member's login ID is their mobile number. They cannot change it. | Owner |
 | CRW-ACC-04 | When the admin onboards a crew member, the password is generated automatically in this format: the first 3 letters of their name, then 4 random digits, then `$` (for example `Raj4821$`). | Owner |
 | CRW-ACC-05 | Passwords are never sent by SMS or WhatsApp. After the admin onboards a crew member or resets their password, the admin screen shows the login ID and the generated password once, with a Copy button, and the admin gives them to the crew member outside the app. The app stores only a hash, so the password cannot be shown again. | Owner |
@@ -54,7 +54,7 @@ Rules followed:
 | CRW-ACC-07 | A wrong password shows an error. After a set number of wrong attempts the login is locked until the admin resets the password. The number of attempts is not decided. | Open |
 | CRW-ACC-08 | A deactivated crew member cannot sign in (ADM-CRW-15). Their past visits and records stay. | Derived |
 | CRW-ACC-09 | Log out. | Derived |
-| CRW-ACC-10 | A mobile number can belong to only one crew member (ADM-CRW-06). A mobile number has only one role, so it cannot also belong to a customer or an admin (ADM-CRW-06). | Owner |
+| CRW-ACC-10 | A mobile number can belong to only one crew member (ADM-CRW-06). A customer's email or contact mobile number has no effect on crew sign-in. | Owner |
 
 **Known risk:** the password format is easy to guess (a name prefix, 4 digits and a fixed symbol), and crew cannot change it. The admin reset is the only remedy. This is recorded as a risk, not changed.
 
@@ -207,7 +207,7 @@ For your reference when you write the data model. This is a reading of the requi
 ## 11. Open questions
 
 1. How many wrong passwords lock an account (CRW-ACC-07)?
-2. (Answered: one role for each mobile number.)
+2. (Answered: sign-in identifiers are unique, and customers now use email.)
 3. (Answered: the scheduler plans them with 20 and 120 minutes, ADM-SVS-10.)
 4. (Answered: a Trainee is paired with a Member and does everything a Member does.)
 5. (Answered: see CAL-09.)

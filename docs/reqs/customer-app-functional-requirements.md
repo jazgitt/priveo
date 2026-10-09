@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.5: prototype plus owner decisions of 9 Oct 2026; aligned with the crew requirements (login by role, Missed visits, admin checklists)
+**Status:** Draft v0.6: prototype plus owner decisions of 9 Oct 2026; customers sign in by email and password, and only customers the admin has created can sign in (no mobile OTP)
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -49,27 +49,35 @@ Rules followed:
 
 ## 1. Onboarding and authentication
 
-Flow: Welcome, Mobile number, OTP, Personal details, Society, Vehicle, Parking, Service preferences, Review and pay, Confirmation. Steps 4 to 9 show a progress indicator ("Step N of 6").
+Flow for a customer the admin has created: Welcome, Email, Verification code (first sign-in only), Set password (first sign-in only), then the onboarding review (Personal details, Society, Vehicle, Parking, Service preferences, Plan and review), then Home. A returning customer goes Welcome, Email, Password, Home. In MVP the admin creates the customer and fills in the details, so prospective customers do not enter them themselves (AUTH-14).
 
 | ID | Requirement | Status |
 |---|---|---|
-| AUTH-01 | Welcome screen with tagline, "Get started" for new users and "Already a member? Log in" for returning users. Both lead to the mobile number screen. | Defined |
-| AUTH-02 | The user enters a 10-digit Indian mobile number (+91 prefix fixed). Input is numeric only, grouped as `XXXXX XXXXX`. | Defined |
-| AUTH-03 | "Send code" sends a 6-digit OTP by SMS. Invalid number shows an error. | Defined |
-| AUTH-04 | Terms and Privacy Policy consent notice is shown on the mobile number screen. | Defined |
-| AUTH-05 | OTP screen shows the number the code was sent to, six single-digit boxes, a "Verify" button, and a 30-second resend countdown (00:28 in the prototype). | Defined |
-| AUTH-06 | OTP auto-fills from the SMS on the device. | Defined (iPhone shown) |
-| AUTH-07 | Resend OTP becomes available when the countdown ends. Invalid OTP shows an error. Maximum 3 to 5 attempts. | Wireframe |
-| AUTH-08 | After successful verification, an existing customer goes to the dashboard (Home). A new customer continues to registration. | Wireframe |
+| AUTH-01 | Welcome screen with tagline, "Get started" and "Already a member? Log in". Both lead to the email screen. | Defined |
+| AUTH-02 | The user enters their email address. The email is checked for a valid format and is not case sensitive. The prototype shows a mobile number here. | Owner |
+| AUTH-03 | "Continue" checks the email against the customers the admin has created (AUTH-14). If the customer has not yet set a password, a 6-digit verification code is sent to the email and the code screen opens. If a password is set, the password screen opens. An invalid email format shows an error. | Owner |
+| AUTH-04 | Terms and Privacy Policy consent notice is shown on the email screen. The customer's acceptance is recorded with the date and time at first sign-in, including for customers the admin created. | Defined (record: Derived) |
+| AUTH-05 | The code screen shows the email the code was sent to, six single-digit boxes, a "Verify" button, and a 30-second resend countdown (00:28 in the prototype). A code is valid for 10 minutes. | Defined (email: Owner; 10 minutes: Derived, check) |
+| AUTH-06 | The user can paste the code from the clipboard. The code does not auto-fill from an SMS, as the prototype shows. | Owner and Derived |
+| AUTH-07 | Resend becomes available when the countdown ends. A wrong code shows an error. After 5 wrong attempts the code is cancelled and the user must request a new one. At most 5 codes can be requested in an hour. | Wireframe (numbers: Derived, check) |
+| AUTH-08 | After a correct code, a customer with no password sets one (AUTH-12). Then, if the customer has not yet confirmed the onboarding review (ONB-25), the review opens. Otherwise Home opens. | Owner |
 | AUTH-10 | Customers, crew and admins all use this same app. Each person has their own login, and the role set for it in the backend decides which screens and actions they see. This file covers the customer screens. The admin screens are in `admin-functional-requirements.md`, and the crew screens are in `crew-functional-requirements.md`. | Owner |
-| AUTH-11 | There is one welcome and mobile number screen for everyone. The field takes a mobile number or, for an admin, a user ID. After it is entered the backend decides the method from the role: a customer gets an OTP as described above, a crew member or admin is asked for a password (CRW-ACC-02 in the crew file). The rest of this section describes the customer path. | Owner |
+| AUTH-11 | There is one welcome and sign-in screen for everyone. The field takes an email (customer), a 10-digit mobile number (crew) or a user ID (admin). The backend decides the method from what is entered: a customer gets an emailed code on first sign-in and then uses a password, and a crew member or admin is asked for a password (CRW-ACC-02 in the crew file). The rest of this section describes the customer path. | Owner |
+| AUTH-12 | After the code is verified, the customer sets a password and confirms it. A password has at least 8 characters, with a letter and a number. The customer cannot continue without one. | Owner (rules: Derived, check) |
+| AUTH-13 | A returning customer signs in with email and password. A wrong password shows an error. After 5 wrong attempts sign-in is blocked for 15 minutes, and the customer can use "Forgot password". | Owner (numbers: Derived, check) |
+| AUTH-14 | In MVP only customers the admin has created can sign in. Prospective customers do not enter their own details: the admin creates the customer with their email (ADM-CUS-01), and the customer then verifies the email, sets a password and reviews the details (ONB-25). Open public signup is V2 (section 15). | Owner |
+| AUTH-15 | If the email is not one the admin has created, the app shows "This email is not registered. Contact Priveo", with "Call support" and "WhatsApp support" buttons (SUP-02, SUP-03). No code is sent. | Owner |
+| AUTH-16 | "Forgot password": the customer enters their email and, if the admin has created it, a 6-digit code is sent. After the code is verified the customer sets a new password (AUTH-12). The old password stops working. | Owner and Derived |
+| AUTH-17 | The app keeps the customer signed in on the phone. The customer signs in again only after logging out, after the password is changed or reset, or on a new phone or after a reinstall. | Owner and Derived |
 | AUTH-09 | The user can go back from every onboarding screen to edit a previous step. | Defined |
 
 ### 1.1 Personal details (Step 1 of 6)
 
 | ID | Requirement | Status |
 |---|---|---|
-| ONB-01 | Fields: First name (required), Last name (required), Mobile number (pre-filled from login, read-only, shown with a verified indicator). | Defined |
+| ONB-01 | Fields: First name (required), Last name (required), Email (read-only, shown with a verified indicator), Mobile number (required contact number, not verified; the customer can correct it). The admin has usually filled these in already. | Defined (email, mobile: Owner) |
+| ONB-25 | **Onboarding review.** In MVP the admin creates the customer and fills in the details (ADM-CUS-01). When the customer first signs in, the onboarding steps (personal details, society, vehicle, parking, service preferences, plan and review) open with those details filled in. The customer goes through each step, completes anything the admin left empty, and confirms on the last step. Home opens only after the customer confirms. | Owner and Derived (check) |
+| ONB-26 | In the review the customer can change what they can normally change: names, mobile number, parking, vehicle photo, service cutoff time, interior day and Deep Spa day. The society, the vehicle details (make, model, variant, registration, category) and the plan are shown but can be changed only by Priveo (VEH-04, VEH-09, ADM-REF-04), so the society selection and the vehicle dropdowns (ONB-03 to ONB-11) are used when a customer adds a vehicle or, in V2, signs up publicly. | Derived (check) |
 | ONB-02 | First and last name accept only letters, spaces and basic name characters. | Wireframe |
 
 ### 1.2 Society (Step 2 of 6)
@@ -111,7 +119,7 @@ This step captures the customer's first vehicle. Further vehicles are added late
 | ONB-20 | Both fields are mandatory. Continuing without them shows inline errors: "Please select your service cutoff time." plus, for the day field, "Please select your interior care day." | Defined |
 | ONB-21 | Preferences are saved when the user continues. | Wireframe |
 | ONB-24 | **Deep Spa day** (weekday, single choice, Monday to Sunday), shown and required only when the chosen plan includes Deep Spa. One Deep Spa of 2 hours is done in each 30-day plan, on the first such weekday on or after the plan starts. The date can be skipped under SCHED-01, and a skipped Deep Spa is lost for that plan. Continuing without it shows "Please select your Deep Spa day." | Owner and Derived (check) |
-| ONB-23 | The plan is chosen in a step before Service preferences (PAY-12), because the plan decides whether the interior care day is asked. The onboarding therefore has one more step than before. | Derived (check) |
+| ONB-23 | When a customer adds a vehicle, the plan is chosen in a step before Service preferences (PAY-12), because the plan decides whether the interior care day and the Deep Spa day are asked. In the onboarding review the plan step shows the plan the admin chose, read-only. The onboarding therefore has one more step than before. | Derived (check) |
 
 ### 1.6 Review and confirm (Step 6 of 6)
 
@@ -135,7 +143,8 @@ Each vehicle has its own subscription and is paid for separately.
 | PAY-08 | The admin confirms in the admin screens that the payment was received. The status then becomes **Received** and the payment record is closed. The admin screens are not specified here (Part 2). | Owner |
 | PAY-09 | The customer sees one of four payment statuses: **Due by dd-Mon-yy** (for example "Due by 07-Nov-26"), **Over due**, **Initiated** (the customer has marked it paid) and **Received** (the admin has confirmed it). The backend sets the status and the app only displays it. This covers the cases the app does not handle itself, such as a payment the admin cannot find. | Owner |
 | PAY-10 | A new subscription is "Activating" until the admin sets the first service date and makes it "Active" (rule 7 in section 12). | Defined (rule: Owner) |
-| PAY-12 | The plan step, before Service preferences, lists the plans offered, each with its name, price, struck-through list price and inclusions, loaded from the backend (ADM-SET-01). The customer chooses one plan, for a new customer and when adding a vehicle. Premium Care is the only plan to start with. PAY-01 and PAY-02 describe it. The review screen shows the chosen plan. | Owner |
+| PAY-12 | The plan step lists the plans offered, each with its name, price, struck-through list price and inclusions, loaded from the backend (ADM-SET-01). The customer chooses one plan when adding a vehicle (and, in V2, at public signup). For a customer the admin created, the plan is the one the admin chose and is shown on the review, not chosen. Premium Care is the only plan to start with. PAY-01 and PAY-02 describe it. | Owner |
+| PAY-13 | For a customer the admin created, the status of the first payment is set by the admin (ADM-CUS-06). On the review step, if the first payment is Due or Over due, "Confirm & pay" opens the UPI screen described in PAY-05 to PAY-07. If it is Initiated or Received, the step shows the status and asks for no payment. | Derived (check) |
 | PAY-11 | Adding a vehicle later (section 9) ends in the same review and payment steps for that vehicle's own subscription. | Owner |
 
 ---
@@ -254,8 +263,8 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 
 | ID | Requirement | Status |
 |---|---|---|
-| ACC-06 | The customer can edit their first name, last name and mobile number. Names follow the same validation as onboarding (ONB-01, ONB-02). | Owner |
-| ACC-08 | A changed mobile number must be verified with an OTP sent to the new number before it takes effect, because the mobile number is the customer's primary identity. Until it is verified, the old number stays in use for login. | Owner |
+| ACC-06 | The customer can edit their first name, last name and mobile number. Names follow the same validation as onboarding (ONB-01, ONB-02). The mobile number is a contact detail and needs no verification. | Owner |
+| ACC-08 | A changed email must be verified with a 6-digit code sent to the new email before it takes effect, because the email is the customer's sign-in identity. Until it is verified, the old email stays in use. The new email must not already belong to another customer. | Owner |
 | ACC-07 | The app is in English only. There is no language selector. | Owner |
 
 ### 7.3 Settings and notifications
@@ -440,7 +449,9 @@ These are behaviors a developer must implement, taken from the screens and owner
 25. A visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day. The customer is not charged extra.
 26. A billing cycle is 30 calendar days. The first cycle starts on the first service date. Each later cycle starts on the previous renewal date, so the renewal date is the first day after the 30 days. Pauses (rule 4) and visits skipped by operations (rule 25) move the renewal date forward by one day for each day. A skip by the customer does not move it. The cycle dates shown in the app come from the backend and follow this rule.
 27. A job the crew could not complete is Missed. The admin either schedules that job again for the next day only, or marks it skipped by operations (rule 25). A visit is Completed when all of its jobs are done or skipped.
-28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement. It cannot be scheduled for any other day. The next day's schedule picks it up before that day's freeze cutoff time (ADM-SCH-26 in the admin file).
+28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement.
+29. A customer signs in with their email. The customer exists only because the admin created them. At the first sign-in they get a 6-digit code by email, set a password, and review the details the admin entered. After that they sign in with email and password, and stay signed in on the phone. Forgot password and an email change use an emailed code. There is no mobile OTP.
+30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo." It cannot be scheduled for any other day. The next day's schedule picks it up before that day's freeze cutoff time (ADM-SCH-26 in the admin file).
 
 ---
 
@@ -448,7 +459,8 @@ These are behaviors a developer must implement, taken from the screens and owner
 
 For your reference when you write the data model. This is a reading of the screens, not a design.
 
-- **Customer**: first name, last name, mobile, avatar initials. Has many vehicles.
+- **Customer**: first name, last name, email (sign-in identity, unique), mobile (contact, not verified), password (stored hashed), email verified, terms accepted date, onboarding confirmed, avatar initials. Has many vehicles.
+- **Verification code**: customer, purpose (first sign-in, forgot password, email change), code (stored hashed), expiry, wrong attempts, sent time.
 - **Society**: name, sector, city, cars serviced. Slots are managed by the admin.
 - **Vehicle**: customer, society (fixed), make, model, variant, category, registration number, RC document, photo (mandatory, the customer's own).
 - **Parking**: vehicle, basement, parking number.
@@ -504,6 +516,7 @@ All earlier questions in this file are answered and removed. None of its own are
 | Area | Item |
 |---|---|
 | Societies | "Launching soon" societies in the society list, and "Can't find your society? Request it"; changing a vehicle's society after it is added |
+| Sign-up | Open public signup and self-onboarding: any email can get a code and prospective customers enter their own details |
 | Payment | Card, net banking and payment-gateway integrations; UPI AutoPay (all monthly payments are manual until a later phase) and the "Renew automatically" switch; automatic payment confirmation (MVP relies on the admin confirming); failed or cancelled payment handling and retry; refunds; automatic receipts (admin-generated GST invoices are in MVP, SUB-12) |
 | Subscription | Cancelling a subscription; changing plan ("Change plan"); renewing an inactive subscription |
 | Support | FAQ content managed outside an app release (for now it is a Markdown file) |

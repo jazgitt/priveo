@@ -10,9 +10,9 @@
 | Mobile app | Flutter, iOS and Android, one app for customer, crew and admin | `AUTH-10`, `ADM-ACC-04`. Role on the login decides the screens |
 | App state and navigation | Riverpod, go_router, feature folders | Role-based routing, the vehicle switcher (`HOME-07`), testable state |
 | API | Python, FastAPI, one service that also runs the scheduler | The scheduler needs OR-Tools. One codebase for the REST API, cron jobs, invoices and scheduling |
-| Database | PostgreSQL | Relational rules: capacity, audit, billing, one role per mobile number |
+| Database | PostgreSQL | Relational rules: capacity, audit, billing, unique sign-in identifiers |
 | Hosting | AWS Mumbai (ap-south-1): **ECS Fargate** for the API, RDS for Postgres, S3 for media, EventBridge Scheduler for cron jobs | Users are in India. ECS gives scheduled tasks and room for the scheduler |
-| Messaging | One Indian provider (MSG91 or Gupshup) for OTP SMS to customers only | `AUTH-03`. India SMS needs DLT registration. No passwords go by SMS or WhatsApp (`CRW-ACC-05`) |
+| Email | Resend for the welcome email, verification codes and password reset codes. No SMS or WhatsApp provider in MVP | `AUTH-03`, `AUTH-16`, `ADM-CUS-04`. No passwords go by SMS or WhatsApp (`CRW-ACC-05`). Sending domain needs SPF and DKIM set up |
 | Push notifications | Firebase Cloud Messaging on both platforms (APNs through FCM on iOS) | `NOTIF-01`, `NOTIF-02`, `ADM-SCH-24`, `CRW-NOT` |
 | Media | S3 object storage with signed upload URLs | Photos under 10 MB and videos under 25 MB (rule 17), uploaded straight from the phone |
 | Offline uploads | Local queue in the app, background upload with retry | `CRW-SVC-10`: uploads must survive a poor connection |
@@ -42,7 +42,7 @@
 |---|---|---|
 | Web framework | FastAPI with Pydantic v2 | Auto-generated OpenAPI used to produce the Dart client or models |
 | Database access | SQLAlchemy 2 and Alembic migrations | |
-| Authentication | Short-lived JWT access tokens plus refresh tokens. Customers by OTP. Crew by mobile number and password. Admins by user ID and password. Passwords hashed with Argon2 | `CRW-ACC-02`. One login field takes a mobile number or a user ID. Role claim decides access. Rate limit and lockout (`CRW-ACC-07`). The admin shows a crew password once and it is never stored readable |
+| Authentication | Short-lived JWT access tokens plus refresh tokens. Customers by email: an emailed code on first sign-in, then email and password. Crew by mobile number and password. Admins by user ID and password. Passwords hashed with Argon2 | `CRW-ACC-02`, `AUTH-11` to `AUTH-17`. One login field takes an email, a mobile number or a user ID. Role claim decides access. Rate limit and lockout (`CRW-ACC-07`). The admin shows a crew password once and it is never stored readable |
 | Authorisation | Role checks on every route: customer, crew (with Manager, Member, Trainee), admin | `CRW-MGR`, `ADM-ACC-02`. A Manager acts only within their own society |
 | Scheduler | Google OR-Tools (CP-SAT) behind an internal module | `ADM-SCH`: maximise crew capacity, keep manual changes on re-run, flag cutoff misses, suggest improvements |
 | Background jobs | AWS EventBridge Scheduler triggering ECS tasks, or an in-process scheduler (APScheduler) on one instance | Monthly Due payments, Over due, 7-day auto-Inactive, renewal reminders, check-in pushes |
@@ -67,7 +67,7 @@
 
 | Requirement area | Served by |
 |---|---|
-| Login by role, OTP and password | FastAPI auth, MSG91 or Gupshup, JWT |
+| Login by role, email code and password | FastAPI auth, Resend, JWT |
 | Onboarding, plans, vehicles, societies | Flutter feature folders, FastAPI, Postgres reference tables seeded and admin-managed |
 | UPI payment, statuses, reminders, auto-Inactive | Manual UPI flow, Postgres payment records, scheduled jobs, FCM |
 | Calendar, skip, pause, 9 PM rule | Server-side date rules in IST, so the app and the admin see one truth |
@@ -79,10 +79,10 @@
 ## 4. Risks and decisions still needed
 
 1. **Apple and Google setup.** An Apple Developer account is needed for push and release. Allow lead time.
-2. **DLT registration.** OTP SMS in India needs sender ID and template registration before launch.
+2. **Email delivery.** Verification and reset codes depend on email arriving. Set up SPF and DKIM on the sending domain, watch bounces, and test with Gmail and Outlook before launch. Customers who cannot receive email need the admin reset (`ADM-CUS-19`, `ADM-CUS-20`).
 3. **Hand-over of crew passwords.** They are shown once to the admin and given out in person, so a lost password means a reset. Consider a short-lived "must be handed over" reminder in the admin screen.
 4. **iOS background upload.** Crew uploads may pause when the app is closed. The queue must resume on open, and the job must stay not complete until everything has uploaded (`CRW-SVC-10`).
 5. **Scheduler scale.** OR-Tools CP-SAT is fine for one society and a week. Test with realistic volumes before choosing ECS task sizes.
 6. **API compatibility.** One app serves three roles, so older app versions stay in use. Version the API and plan for forced-update behaviour.
 7. **Flutter, Dart and package versions.** Pin them when the project is created.
-8. **Open owner choices:** MSG91 or Gupshup for OTP, and confirmation of the proposed supporting choices in section 2.
+8. **Open owner choices:** confirmation of the proposed supporting choices in section 2.

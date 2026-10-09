@@ -59,10 +59,10 @@ Rules followed:
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADM-CUS-01 | The admin can create a customer on the customer's behalf. The form follows the customer's own onboarding: first name, last name, mobile number; society; vehicle (make, model, variant, registration number, optional RC document); parking (basement, number); plan; service cutoff time; interior care day and Deep Spa day (each only when the plan includes it). | Owner |
-| ADM-CUS-02 | The same validation as customer onboarding applies: 10-digit mobile number, registration number format, required fields. | Derived |
-| ADM-CUS-03 | A mobile number can belong to only one customer. If it already exists, the app opens that customer instead of creating a duplicate. A mobile number can have only one role: it cannot be used for a customer if it already belongs to a crew member or an admin, and the reverse. | Derived and Owner |
-| ADM-CUS-04 | After the admin creates the customer, the customer signs in with an OTP sent to that mobile number and finds everything already set up. They do not repeat onboarding. No SMS or notification is sent when the admin creates the account. | Owner |
+| ADM-CUS-01 | The admin can create a customer on the customer's behalf. The form follows the customer's own onboarding: first name, last name, email (required), mobile number (required contact number); society; vehicle (make, model, variant, registration number, optional RC document); parking (basement, number); plan; service cutoff time; interior care day and Deep Spa day (each only when the plan includes it). | Owner |
+| ADM-CUS-02 | The same validation as customer onboarding applies: valid email address, 10-digit mobile number, registration number format, required fields. | Derived |
+| ADM-CUS-03 | An email can belong to only one customer. If it already exists, the app opens that customer instead of creating a duplicate. The mobile number is a contact detail and is not checked for duplicates. | Derived and Owner |
+| ADM-CUS-04 | After the admin creates the customer, a welcome email is sent to the customer's email. It says the account is ready and asks them to open the app and sign in with that email. It contains no code or password. The customer then enters their email in the app, gets a 6-digit verification code, sets a password and reviews the details the admin entered (AUTH-14, ONB-25 in the customer file). No SMS is sent. | Owner |
 | ADM-CUS-05 | The admin can add further vehicles to an existing customer. Each vehicle has its own subscription. | Derived |
 | ADM-CUS-06 | The admin can set the first payment's status when onboarding (see section 6). | Owner |
 | ADM-CUS-07 | The vehicle photo is mandatory. When the admin onboards a customer, the admin can upload it. The customer can replace it later in their own app. | Owner |
@@ -72,6 +72,10 @@ Rules followed:
 | ID | Requirement | Status |
 |---|---|---|
 | ADM-CUS-08 | The admin can search the customer list by name, mobile number, registration number or society, and open a customer to see their vehicles, subscriptions, schedule settings and payment statuses. | Derived |
+| ADM-CUS-17 | In the customer view the admin sees whether the customer has verified their email, set a password and confirmed the onboarding review. | Derived |
+| ADM-CUS-18 | The admin can resend the welcome email. | Derived |
+| ADM-CUS-19 | The admin can correct a customer's email. The customer's password is cleared, a new welcome email is sent, and the customer verifies the new email and sets a new password. The change is audited (ADM-CUS-16). | Derived (check) |
+| ADM-CUS-20 | The admin can reset a customer's password by clearing it. The customer then gets an emailed code at the next sign-in, as for a first sign-in. The change is audited (ADM-CUS-16). | Derived |
 
 ### 2.3 Update plan and schedule settings (item g)
 
@@ -117,7 +121,7 @@ Rules followed:
 | ADM-CRW-18 | The admin can reset a crew member's password. A new password is generated in the same format and shown to the admin once, as at onboarding (ADM-CRW-17). The old password stops working at once. Crew cannot change their own password or login ID (CRW-ACC-06 in the crew file). The admin can also unlock a crew login that was locked after wrong attempts. | Derived |
 | ADM-CRW-04 | Working hours are set during onboarding for every crew member, whatever their role. For each day of the week the admin marks the day as working or off and sets a start time and an end time. | Owner (item e) |
 | ADM-CRW-05 | The admin can edit working hours later. The change applies to dates from then on. | Derived |
-| ADM-CRW-06 | A mobile number can belong to only one crew member, and it cannot already belong to a customer or an admin (one role for each number). | Derived and Owner |
+| ADM-CRW-06 | A mobile number can belong to only one crew member, because it is their login ID. | Derived |
 | ADM-CRW-07 | The admin can see the crew list with each person's society, role, working hours and upcoming exceptions, and can search and filter it by society. | Derived |
 | ADM-CRW-13 | Every crew member belongs to exactly one society. A crew member cannot be moved to another society for now. | Owner |
 | ADM-CRW-14 | Trainees count as zero capacity. They appear in the crew list but add nothing to capacity, and the scheduler does not assign visits to them directly. A Trainee gets the jobs of the Member they are paired with (ADM-CRW-19). | Owner |
@@ -341,7 +345,7 @@ These are the admin features the customer requirements already depend on. You co
 19. Crew sign in with their mobile number and a generated password that only the admin can reset. A job the crew could not complete becomes a Missed visit, and the admin decides the outcome: schedule it again for the next day only, or mark it skipped by operations.
 20. The daily schedule is frozen by 8 PM the day before. After a freeze, new visits are assigned automatically to crew with spare capacity, or go to a Needs scheduling list. Removing work needs no code, adding or moving work does.
 21. A billing cycle is 30 calendar days from the first service date. The admin chooses when a subscription becomes Active. An unpaid subscription becomes Inactive after its payment has been Over due for 7 days.
-22. A mobile number has only one role: customer, crew or admin.
+22. Sign-in identifiers are unique: a customer's email, a crew member's mobile number and an admin's user ID.
 23. The admin can move a payment back to Due or Over due, and generate a GST invoice for a Received payment.
 24. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26 (rule 28 in the customer file).
 
@@ -353,6 +357,7 @@ For your reference when you write the data model. This is a reading of the requi
 
 - **User login**: person, login, role (customer, crew, admin). The role decides which screens the app shows.
 - **Admin user**: name, user ID (the first is `priveopapa`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.
+- **Customer login**: as in the customer file: email, password hash, email verified, onboarding confirmed. Created when the admin creates the customer.
 - **Admin preferences**: scheduling period (Daily, Weekly or Monthly; default Weekly), week start day (Sunday).
 - **Cutoff request**: customer's vehicle, old cutoff time, new cutoff time, assigned crew member and time, status (open, handled), handled by and when.
 - **Society**: name, sector, city, active flag.

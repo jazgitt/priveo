@@ -37,6 +37,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 | Interior cleaning 2 days a week (wireframe) | Interior cleaning once a week, on the customer's interior care day |
 | The monthly full spa on the interior day | Deep Spa is separate: 2 hours, once in each 30-day plan, on its own Deep Spa day |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |
+| Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by email: a code on first sign-in, then a password. Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
 | A 9-step wireframe onboarding | The plan is chosen before service preferences. See the customer file, section 1 |
 | A "My Vehicles" bottom tab | Bottom tabs are Home, Calendar, Account, Support. Vehicles sit under Account |
 | Sample renewal dates that disagree with each other | A billing cycle is 30 calendar days |
