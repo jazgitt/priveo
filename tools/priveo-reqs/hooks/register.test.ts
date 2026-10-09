@@ -1,4 +1,5 @@
 import { test, expect } from 'claude-code/testing'
+import { breakdown, roleLine } from './status-pane'
 import { parse, integrity, reconcile, tally, featureLine, serialize } from './register'
 
 const doc = (rows: string[]) => parse('docs/reqs/admin-functional-requirements.md', rows.join('\n'))
@@ -32,4 +33,12 @@ test('integrity finds duplicates and undefined citations', () => {
   const r = integrity([a, b])
   expect(r.dupes.map(d => d[0])).toEqual(['ADM-ACC-01'])
   expect(r.missing).toEqual(['AUTH-99 (admin:1)'])
+})
+
+test('breakdown names the areas and groups them by role', () => {
+  const areas = breakdown({ 'AUTH-01': { bugs: 0 }, 'AUTH-02': { bugs: 1 }, 'ADM-PAY-01': {}, 'CRW-SCH-01': {}, 'ZZZ-01': {} })
+  expect(areas.map(a => a.role)).toEqual(['Customer', 'Customer', 'Crew', 'Admin'])
+  expect(areas[0]).toMatchObject({ area: 'AUTH', name: 'Sign-in and authentication', total: 2, bugs: 1 })
+  expect(areas.find(a => a.area === 'ADM-PAY')!.name).toBe('Payments')
+  expect(roleLine(areas)).toBe('Customer 3, Crew 1, Admin 1')
 })
