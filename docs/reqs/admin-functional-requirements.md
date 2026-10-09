@@ -1,0 +1,437 @@
+# Priveo Car Concierge: Admin Functional Requirements
+
+**Status:** Draft v0.4: owner decisions of 9 Oct 2026, reviewed against the customer requirements; crew-driven additions (checklists, proof minimums, could-not-complete reasons, crew passwords)
+**Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
+**Platforms:** The same Flutter app as the customer and crew, with screens chosen by the user's role. A web portal with the same admin functions comes in V2.
+**Language:** English only
+
+## How this document was built
+
+Sources:
+
+- The admin feature list you gave on 9 Oct 2026 (items a to l) and your answers to the questions in section 13.
+- The customer requirements file, for the rules the admin features must respect or that already depend on an admin feature.
+
+Rules followed:
+
+- Each requirement has an ID. Admin IDs start with `ADM-`.
+- **Status** column:
+  - **Owner**: you stated it.
+  - **Derived**: not stated, but needed to make a stated item work, or taken from the customer requirements. Please check these.
+  - **Open**: depends on a question in section 13.
+- Everything in this file is **MVP** unless section 14 says otherwise.
+- Crew role privileges are in `crew-functional-requirements.md` (section 3a for Managers, section 3 for Members and Trainees). Where a Manager can do something an admin can also do, the admin file notes it.
+
+## Contents
+
+1. Access and roles
+2. Customers
+3. Crew
+4. Services and working slots
+5. Capacity
+6. Payments
+7. Scheduling
+8. Complaints, feedback and ratings (includes visits the crew could not complete, 8.2a)
+9. Reference data and settings (includes service checklists and proof minimums, 9.1)
+10. Business rules
+11. Data entities implied by the requirements
+12. Customer requirements and the admin features that cover them
+13. Open questions
+14. Deferred to V2 and out of scope
+
+---
+
+## 1. Access and roles
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-ACC-01 | In MVP the admin functions are used in the mobile app. A web portal with the same functions comes in V2. | Owner (item l) |
+| ADM-ACC-02 | Admin screens are available only to users with the Admin role. | Derived |
+| ADM-ACC-03 | Crew members have one of three roles: **Manager**, **Member**, **Trainee**. The Admin role is separate from these. | Owner (item c) |
+| ADM-ACC-04 | Admins and crew use the same app as customers. Each has their own login, and the role set for it in the backend decides what they can see and do. | Owner |
+| ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with their mobile number and password, like crew (CRW-ACC-02 in the crew file). | Owner |
+
+---
+
+## 2. Customers
+
+### 2.1 Onboard a customer manually (item a)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CUS-01 | The admin can create a customer on the customer's behalf. The form follows the customer's own onboarding: first name, last name, mobile number; society; vehicle (make, model, variant, registration number, optional RC document); parking (basement, number); plan; service cutoff time; interior care day and Deep Spa day (each only when the plan includes it). | Owner |
+| ADM-CUS-02 | The same validation as customer onboarding applies: 10-digit mobile number, registration number format, required fields. | Derived |
+| ADM-CUS-03 | A mobile number can belong to only one customer. If it already exists, the app opens that customer instead of creating a duplicate. A mobile number can have only one role: it cannot be used for a customer if it already belongs to a crew member or an admin, and the reverse. | Derived and Owner |
+| ADM-CUS-04 | After the admin creates the customer, the customer signs in with an OTP sent to that mobile number and finds everything already set up. They do not repeat onboarding. No SMS or notification is sent when the admin creates the account. | Owner |
+| ADM-CUS-05 | The admin can add further vehicles to an existing customer. Each vehicle has its own subscription. | Derived |
+| ADM-CUS-06 | The admin can set the first payment's status when onboarding (see section 6). | Owner |
+| ADM-CUS-07 | The vehicle photo is mandatory. When the admin onboards a customer, the admin can upload it. The customer can replace it later in their own app. | Owner |
+
+### 2.2 Find and view customers
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CUS-08 | The admin can search the customer list by name, mobile number, registration number or society, and open a customer to see their vehicles, subscriptions, schedule settings and payment statuses. | Derived |
+
+### 2.3 Update plan and schedule settings (item g)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CUS-09 | The admin can change the plan of a vehicle's subscription (ADM-SET-01), and the schedule settings the customer can also change themselves: service cutoff time, interior care day, Deep Spa day, skip and un-skip a date, pause, and end a pause early. | Owner (item g) |
+| ADM-CUS-10 | The customer can make the same changes in their own app. Whichever happens last is the current state, and the change shows in both. | Owner |
+| ADM-CUS-11 | The 9 PM deadline (SCHED-01, SCHED-02 in the customer file) applies to customers only. The admin is not bound by it, so the admin can make a change after 9 PM, for example when a customer calls the helpline. Onboarding is not affected by the deadline either. | Owner |
+| ADM-CUS-14 | When the admin changes a customer's services or schedule settings, the customer is not notified. | Owner |
+| ADM-CUS-15 | When the admin changes a subscription's plan, the new plan and its price start on the next renewal date. The current 30 days continue on the old plan and price. The customer is not notified (ADM-CUS-14). Changing plan by the customer is V2. | Owner |
+| ADM-CUS-16 | Every admin change to a customer, vehicle, subscription, schedule setting, car detail or notification switch is recorded with the admin and the time (audit entry), because the customer is not notified of it. | Derived |
+
+### 2.4 Customer notification settings (item i)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CUS-12 | The admin can see and switch on or off each of a customer's notification events: service completed, service skipped, complaint update, renewal reminder, monthly check-in. These are the same switches as the customer's Settings. | Owner (item i) |
+| ADM-CUS-13 | The most recent change wins, whether it came from the customer or the admin. | Derived |
+
+---
+
+### 2.5 Subscription start and status
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-SUB-01 | A new subscription starts as **Activating**. The admin chooses when it becomes **Active** and sets its first service date, whatever the payment status. The billing cycle starts on that first service date (rule 26 in the customer file). Visits are scheduled only for Active subscriptions. | Owner |
+| ADM-SUB-02 | The admin can set a vehicle's subscription to **Inactive**, with a reason. Its future visits are removed from schedules (without the code, ADM-SCH-29), and the vehicle no longer counts in capacity demand (ADM-CAP-03) or in "cars serviced" (ADM-REF-02). The customer sees Inactive. | Owner and Derived |
+| ADM-SUB-03 | The backend sets a subscription to Inactive automatically when its payment has been **Over due for 7 days**. The admin gets a push notification (ADM-SCH-24). The admin can override it. | Owner |
+| ADM-SUB-04 | The admin can reactivate an Inactive subscription: it returns to Activating, and the admin then sets the first service date and activates it as in ADM-SUB-01. A new billing cycle and a new Due payment start from that date. Renewal by the customer is V2. | Derived |
+| ADM-SUB-05 | Every change of subscription status is recorded with the admin, or the backend, and the time. | Derived |
+
+## 3. Crew
+
+### 3.1 Onboard crew (items b, c, e)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CRW-01 | The admin can onboard one or more crew members. Several can be added in one session, one after another, without leaving the screen. | Owner (item b) |
+| ADM-CRW-02 | Details for each crew member: name, mobile number, society, role (Manager, Member or Trainee, required) and working hours. | Owner |
+| ADM-CRW-03 | The admin can change a crew member's role at any time, including assigning the Manager role to a crew member. | Owner (item c) |
+| ADM-CRW-16 | One or more crew members can be given the Manager role, when they are onboarded or later. A society can have several Managers. | Owner |
+| ADM-CRW-17 | Onboarding a crew member creates their login with the Crew role, so they can use the app as soon as they are onboarded. The login ID is the crew member's mobile number. A password is generated automatically (the first 3 letters of the name, 4 random digits and `$`), and the login details are sent to the crew member by SMS or WhatsApp. | Owner |
+| ADM-CRW-18 | The admin can reset a crew member's password. A new password is generated in the same format and sent to the crew member by SMS or WhatsApp. Crew cannot change their own password or login ID (CRW-ACC-06 in the crew file). The admin can also unlock a crew login that was locked after wrong attempts. | Derived |
+| ADM-CRW-04 | Working hours are set during onboarding for every crew member, whatever their role. For each day of the week the admin marks the day as working or off and sets a start time and an end time. | Owner (item e) |
+| ADM-CRW-05 | The admin can edit working hours later. The change applies to dates from then on. | Derived |
+| ADM-CRW-06 | A mobile number can belong to only one crew member, and it cannot already belong to a customer or an admin (one role for each number). | Derived and Owner |
+| ADM-CRW-07 | The admin can see the crew list with each person's society, role, working hours and upcoming exceptions, and can search and filter it by society. | Derived |
+| ADM-CRW-13 | Every crew member belongs to exactly one society. A crew member cannot be moved to another society for now. | Owner |
+| ADM-CRW-14 | Trainees count as zero capacity. They appear in the crew list but add nothing to capacity, and the scheduler does not assign visits to them directly. A Trainee gets the jobs of the Member they are paired with (ADM-CRW-19). | Owner |
+| ADM-CRW-19 | Every Trainee is paired with a Member of the same society. The admin chooses the Member when onboarding the Trainee and can change it later. A Member can have more than one Trainee, and a Trainee has exactly one Member. Changing a Trainee's role to Member, or a Member's role while Trainees are paired with them, requires pairing to be fixed first. | Owner and Derived |
+| ADM-CRW-20 | A Manager can also perform the actions in section 3a of the crew file for crew in their society: see the society's schedule, mark a job Could not complete or skipped, reassign a job, and add exceptions. These are recorded with the Manager's name and the time, like admin actions (ADM-SCH-19). | Owner |
+| ADM-CRW-15 | The admin can deactivate a crew member who has left. A deactivated crew member no longer counts in capacity or the scheduler, and cannot sign in. Their past visits and records stay. | Derived (in MVP) |
+
+### 3.2 Exceptions (item f)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CRW-08 | The admin can mark an exception for a crew member on one date or a date range. Types: **Sick**, **Leave**, **Late start**. | Owner (item f) |
+| ADM-CRW-09 | Sick and Leave remove the crew member from the whole day. Late start removes the crew member until the start time the admin enters for that day. | Derived |
+| ADM-CRW-10 | The admin can edit or remove an exception. | Derived |
+| ADM-CRW-11 | Capacity is recalculated as soon as an exception is saved, edited or removed, so it is always accurate (section 5). | Owner |
+| ADM-CRW-12 | If an exception affects visits that are already scheduled, the app lists the affected visits so the admin can reassign them. On a frozen schedule the exception removes the crew member's visits without the code (ADM-SCH-29). The visits then go to the Needs scheduling list (ADM-SCH-28), and reassigning them needs the code (ADM-SCH-17) or happens automatically if a crew member fits (ADM-SCH-27). | Derived |
+
+---
+
+## 4. Services and working slots (item d)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-SVS-01 | There are three services: **Cleaning-External**, **Cleaning-Internal** and **Deep Spa**. In the customer app they appear as the visit types Exterior, Exterior + Interior and Full spa. Every visit includes one Cleaning-External. The interior care day adds Cleaning-Internal. Deep Spa is not tied to the interior care day: it is done once in each 30-day plan on the customer's Deep Spa day (ONB-24 in the customer file). If the interior care day is skipped, paused or skipped by operations, that week's Cleaning-Internal is lost and not made up. Each service is a **separate job**, with its own job card, checklist, proof and completion (CRW-SCH-05 in the crew file). The customer's visit is Completed when all of its jobs are done. | Owner |
+| ADM-SVS-02 | A working slot is a start time and an end time on chosen days of the week, during which that service can be done. Every working slot belongs to one society. | Owner |
+| ADM-SVS-03 | A service can have several independent working slots in a society, for example 5 to 8 AM and 4 to 6 PM. | Owner |
+| ADM-SVS-04 | The admin can add, edit and delete working slots for every service, for each society. | Owner |
+| ADM-SVS-05 | Default working slots: **Cleaning-External**: 5 AM to 11 AM, every day of the week. **Cleaning-Internal**: 5 AM to 11 AM, every day of the week. **Deep Spa**: every day of the week, at any time of day, and the admin decides when to schedule it. Every day is open: there is no rest day. | Owner |
+| ADM-SVS-06 | A new society starts with the default working slots, which the admin can then edit. | Derived |
+| ADM-SVS-07 | A slot's end time must be after its start time, and two slots of the same service cannot overlap on the same day in the same society. | Derived |
+| ADM-SVS-08 | Changes to working slots apply to scheduling from then on. A frozen schedule is not changed by them. | Derived |
+| ADM-SVS-09 | Planning durations: **Cleaning-External** about 20 minutes (one crew member does 3 in 1 hour), **Cleaning-Internal** about 20 minutes, and **Deep Spa** 2 hours (120 minutes). These apply to every vehicle category for now. | Owner |
+| ADM-SVS-10 | The scheduler plans all three services with these durations (ADM-SVS-09), each as its own job. Cleaning-External is due every day, Cleaning-Internal on the customer's interior care day, and Deep Spa once in each 30-day plan on the customer's Deep Spa day (ONB-24 in the customer file). | Owner |
+
+---
+
+## 5. Capacity
+
+Capacity is worked out for each society, because crew and working slots belong to one society each.
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CAP-01 | The admin can see the capacity for each society and date: the crew hours available that day, from every counted crew member's working hours minus their exceptions, and what fits in it, counted in minutes: 20 for each Cleaning-External or Cleaning-Internal and 120 for each Deep Spa (ADM-SVS-09). | Owner (items e, f) |
+| ADM-CAP-02 | Trainees add zero (ADM-CRW-14). Members and Managers both count in full. | Owner |
+| ADM-CAP-03 | Next to capacity the admin sees the demand for that date in the same minutes: one Cleaning-External for each active vehicle (after skips and pauses), plus the Cleaning-Internal and Deep Spa jobs due that day, and how many of them have been scheduled so far. | Derived |
+| ADM-CAP-04 | Dates where demand is higher than capacity are marked, so the admin can act before scheduling. | Derived |
+| ADM-CAP-05 | The capacity figure is always current. It updates immediately when crew are added or deactivated, working hours change, or an exception is saved. | Owner |
+
+---
+
+## 6. Payments (item h)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-PAY-01 | The admin can see a list of payments and filter by status (Due, Over due, Initiated, Received), customer, vehicle and due date. | Derived |
+| ADM-PAY-02 | The admin can update the status of any payment to **Due**, **Over due**, **Initiated** or **Received**. | Owner (item h) |
+| ADM-PAY-03 | When the admin sets a payment to **Received**, the payment record is closed and the customer sees Received (PAY-08, PAY-09 in the customer file). | Owner |
+| ADM-PAY-04 | The admin can record a payment for a customer who paid offline or in person, without the customer marking it Initiated first. | Derived |
+| ADM-PAY-05 | Every status change records which admin made it and when. | Derived |
+| ADM-PAY-06 | The backend creates each month's Due payment and moves it to Over due when the due date passes unpaid. The admin can override. | Derived |
+| ADM-PAY-07 | The admin can move a payment back from Initiated or Received to Due or Over due, for example when the customer marked it paid but the money did not arrive, or Received was set by mistake. The renewal reminders then resume (NOTIF-05 in the customer file). The customer is not sent a new notification and sees the new status in the app. The change is audited (ADM-PAY-05). | Owner and Derived |
+| ADM-PAY-08 | When a payment is **Received**, the admin can generate a GST invoice for it. The customer can view it in billing history (SUB-06 in the customer file). The invoice fields come from the invoice settings (ADM-SET-04). | Owner |
+| ADM-PAY-09 | The invoice number is **PRV** + the month + the year as two digits (YY) + the last 4 digits of the customer's mobile number + 4 random digits. The month is two digits (01 to 12). Example for October 2026, mobile ending 4321: `PRV10264321` followed by 4 random digits such as `8052`. The backend generates it and makes sure it is unique, drawing new random digits if the number already exists. | Owner |
+
+---
+
+## 7. Scheduling (items j, k)
+
+Scheduling turns the customers' services and the crew's capacity into a plan of who does which visit, and when.
+
+### 7.1 Run the scheduler (item j)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-SCH-01 | The admin starts scheduling for a chosen society, or all societies, and a date range. Nothing is scheduled until the admin starts it. | Owner (item j) |
+| ADM-SCH-02 | For each society the scheduler uses only that society's crew, working slots and customers. | Owner |
+| ADM-SCH-03 | The scheduler plans all three services, each as its own job with its own duration (ADM-SVS-09, ADM-SVS-10). | Owner |
+| ADM-SCH-04 | The scheduler uses: each customer's schedule settings (cutoff time, interior care day, Deep Spa day, skips, pauses), the working slots of each service, every counted crew member's working hours, and crew exceptions. Trainees are never assigned directly: they get the jobs of their paired Member (ADM-CRW-19). | Owner and Derived |
+| ADM-SCH-05 | The goal of the scheduler is to make the greatest use of the crew's capacity. | Owner |
+| ADM-SCH-06 | The result is a draft schedule: for each visit, the date, the crew member and a time inside a working slot. | Derived |
+| ADM-SCH-07 | A visit should finish by the customer's service cutoff time. The customer can choose any cutoff time (ONB-16), so the scheduler does not assume it can be met: a visit that cannot be placed without breaking it is flagged for the admin. | Owner |
+| ADM-SCH-08 | Visits that cannot be placed, for example because capacity is short, are listed as **Unscheduled** with the reason. | Derived |
+| ADM-SCH-09 | One scheduler run covers one period. The period is a week by default, and the week starts on Sunday. The admin can switch it to Daily or Monthly in Preferences (ADM-PRF-01). | Owner |
+| ADM-SCH-10 | Dates beyond the scheduled week have no crew assignment yet. The customer calendar shows the visits expected from the subscription for those dates (CAL-01 in the customer file). | Derived |
+
+### 7.2 Review, change, re-run, freeze (item k)
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-SCH-11 | A schedule is either **Draft** or **Frozen**. A new schedule starts as Draft. | Derived |
+| ADM-SCH-12 | The admin can review a draft schedule by day, by crew member and by customer or society. | Owner |
+| ADM-SCH-13 | In a draft the admin can make changes by hand: move a visit to a different crew member or time, swap two visits, remove a crew assignment, and assign an Unscheduled visit. | Owner |
+| ADM-SCH-14 | The admin can re-run the scheduler on a draft any number of times. A re-run always keeps the changes made by hand. | Owner |
+| ADM-SCH-15 | A re-run can also suggest improvements that make better use of capacity. The admin chooses which suggestions to apply. Nothing is changed without the admin's choice. | Owner (suggestions) and Derived (admin chooses) |
+| ADM-SCH-16 | The admin can **freeze** a draft. A frozen schedule cannot be edited. | Owner |
+| ADM-SCH-17 | To add or move work in a frozen schedule (removals are exempt, ADM-SCH-29), the admin must enter the **secret code**, which unfreezes it. The admin then edits, can re-run, and freezes again. | Owner |
+| ADM-SCH-18 | The secret code is the word **unfreeze**. A wrong code does not unfreeze the schedule. The code is checked by the backend. | Owner |
+| ADM-SCH-19 | Every freeze, unfreeze, manual change and re-run records which admin did it and when. | Derived |
+| ADM-SCH-20 | As soon as a schedule is frozen, each crew member can see their assigned schedule as a stack of cards, one for each assigned car. They can view it day by day, or for everything that has been scheduled so far. The details are in the crew requirements. Customers see the assigned crew member and time once the visit has been assigned (CAL-10 in the customer file). Until then they see only their own cutoff time. | Owner |
+| ADM-SCH-21 | If a customer skips or pauses after a schedule is frozen, the change applies to the frozen schedule automatically, without unfreezing: the visit is removed, and the admin is notified with a push notification. | Owner |
+| ADM-SCH-22 | If a customer changes a cutoff time after a schedule is frozen, the new cutoff time is saved as a request to the admin. The app does not move the assigned visit. The admin gets a push notification showing the customer, the vehicle, the old and new cutoff time, and the assigned crew member and time. | Owner |
+| ADM-SCH-23 | The admin then chooses how to deal with the request: run the scheduler to fit it in, or change the schedule by hand, and then freeze again. Changing a frozen schedule needs the secret code (ADM-SCH-17). | Owner |
+| ADM-SCH-24 | The admin cannot switch these notifications off. The other admin notifications in MVP are: a visit the crew could not complete (ADM-CNC-04), a visit auto-assigned after a freeze (ADM-SCH-27), a visit that needs scheduling (ADM-SCH-28), and a subscription that became Inactive automatically (ADM-SUB-03). | Owner and Derived |
+
+### 7.2a Freeze cutoff time
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-SCH-25 | Each day's schedule has a **freeze cutoff time** of **8 PM the day before**: the time by which the admin must freeze it so the crew can see their jobs. The customer's skip and pause deadline is 9 PM (SCHED-01), so a skip or pause made between 8 and 9 PM is removed from the frozen schedule automatically (ADM-SCH-21). | Owner |
+| ADM-SCH-26 | Visits that need to be scheduled again after a Missed outcome (ADM-CNC-06) are picked up by the next day's schedule before its freeze cutoff time. If the schedule is already frozen, the admin unfreezes it with the secret code (ADM-SCH-17), adds the visit and freezes it again. | Owner and Derived |
+| ADM-SCH-27 | After a schedule is frozen, a visit that needs a crew member (a new customer or vehicle, an un-skip, an ended pause, or a reactivated subscription) is **assigned automatically** without unfreezing. The system picks a counted crew member of the same society who has spare capacity, the visit's slot allows it and no other job overlaps, and gives the earliest time before the customer's cutoff time. The admin and the crew member each get a push notification. | Owner |
+| ADM-SCH-28 | If no crew member fits, the visit goes to a **Needs scheduling** list and the admin gets a push notification. The admin then adds it by hand (ADM-SCH-13 and ADM-SCH-17) or re-runs the scheduler. | Derived |
+| ADM-SCH-29 | **Removing** work from a frozen schedule does not need the secret code: a visit skipped by operations, a crew exception, a crew deactivation, or a visit removed by the customer's skip or pause. The visits left without a crew member go to the Needs scheduling list (ADM-SCH-28). Adding or moving work by hand needs the code. | Owner and Derived |
+
+### 7.3 Preferences
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-PRF-01 | The admin has a Preferences screen. It holds the scheduling period, with three options: **Daily**, **Weekly** and **Monthly**. The default is Weekly, with the week starting on Sunday. Monthly covers one calendar month. | Owner |
+
+---
+
+## 8. Complaints, feedback and ratings
+
+These are the admin features the customer requirements already depend on. You confirmed they are all part of the MVP.
+
+### 8.1 Complaints
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CMP-01 | The admin can see a list of complaints with ID, customer, vehicle, category, linked visit, status and raised date, and can filter by status, society and category. | Owner |
+| ADM-CMP-02 | The admin can open a complaint to see its description, photos and the linked visit. | Derived |
+| ADM-CMP-03 | The admin can change a complaint's status: **Raised**, **In progress**, **Resolved**. | Owner |
+| ADM-CMP-04 | The admin can add an update note to a complaint, for example "Supervisor visit booked". The customer sees it in My complaints. | Owner |
+| ADM-CMP-05 | Each status change and each new update note sends the customer a "Complaint update" push notification, if they have it switched on (CMP-04 in the customer file). | Owner |
+| ADM-CMP-06 | The customer is promised a reply within 4 hours (ISS-06 in the customer file). A complaint still in Raised after 4 hours is highlighted in the list. | Derived |
+| ADM-CMP-07 | Each status change and note records which admin made it and when. | Derived |
+
+### 8.2 Visits skipped by operations
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-OPS-01 | The admin can mark a scheduled visit as skipped by operations, for example when crew are unavailable. The visit shows as Skipped for the customer, who gets a "Service skipped" push notification if they have it switched on (NOTIF-04 in the customer file). | Owner |
+| ADM-OPS-02 | The admin can add a reason when skipping a visit. | Derived |
+| ADM-OPS-03 | A visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day and the customer is not charged extra. | Owner |
+
+### 8.2a Visits the crew could not complete
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CNC-01 | The admin can add, rename, reorder and deactivate the **could-not-complete reasons** the crew choose from (for example car not in the parking spot, car locked, customer did not allow, bad weather, other). A deactivated reason no longer appears for crew, and past records keep it. | Derived |
+| ADM-CNC-02 | When a crew member marks a job Could not complete (CRW-CNC-01), the visit becomes **Missed**. The admin can see a list of Missed visits with the society, customer, vehicle, crew member, reason, note, photo and date, and can filter it by society, date and reason. | Derived |
+| ADM-CNC-03 | Missed is decided for each job. For each Missed job the admin chooses one of two outcomes: **schedule that job again**, for the next day only, or **mark it skipped by operations** (ADM-OPS-01, which extends the plan by one day). A job cannot be scheduled again for any other day, and a job already done is not repeated. A Missed job with no outcome stays on the Missed list until the admin chooses. A Manager can mark a job skipped in the same way (CRW-MGR-02). The visit is Completed when all its jobs are done or skipped. | Owner (next day only, per job) and Derived |
+| ADM-CNC-06 | A visit scheduled again is added to the next day's schedule as a visit that must be placed, before that day's freeze cutoff time (ADM-SCH-26). It is planned like any job of that service, with that service's duration (ADM-SCH-03) and the customer is not charged extra. | Owner and Derived |
+| ADM-CNC-04 | The admin gets a push notification when a visit becomes Missed. This is added to the admin notifications allowed in ADM-SCH-24. The customer sees "Missed. Rescheduled on dd-Mon-yy" once the admin schedules it again (CAL-09 in the customer file). | Derived and Owner |
+| ADM-CNC-05 | The outcome and the admin who chose it are recorded with the time. | Derived |
+
+### 8.3 Feedback, ratings and check-ins
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-FDB-01 | The admin can view customer feedback (category, star rating, comments, date, customer, testimonial permission) and filter it by category, rating, society and date. | Owner |
+| ADM-FDB-02 | The admin can view visit ratings with their positive or issue tags and comments, for each visit, and filter them by society and date. Ratings are general and are not tied to a crew member. | Owner |
+| ADM-FDB-03 | The admin can see the average rating and how often each tag was selected, by society and period. | Derived |
+| ADM-FDB-04 | The admin can view monthly check-in results: the star rating for each category and the comment, by customer, vehicle and renewal cycle, with an average for each category by society. | Owner |
+| ADM-FDB-05 | Entries where the customer gave testimonial permission are marked, so Priveo knows which ones it may quote. Entries without permission are never marked usable. | Derived |
+| ADM-FDB-06 | The admin can add, rename, edit the description of, and deactivate the **feedback categories**, the **positive rating tags** and the **check-in categories**. The customer app loads these lists from the backend (FDBK-06, SVC-11, CHK-03 in the customer file). | Owner |
+| ADM-FDB-07 | A category or tag that is deactivated no longer appears for customers, but feedback already given with it stays and is still readable. | Derived |
+
+---
+
+## 9. Reference data and settings
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-REF-01 | The admin can add, edit and deactivate **societies**: name, sector, city. The customer's society list shows only active societies. A society with active subscriptions or crew cannot be deactivated (ADM-REF-06). | Owner |
+| ADM-REF-02 | The "cars serviced" figure shown in the society list is calculated from the active vehicles in that society. | Derived |
+| ADM-REF-03 | The admin can maintain the **vehicle catalogue**: makes, models and variants, and the vehicle category for each. They can add, edit and deactivate them. The customer onboarding dropdowns and the auto-detected category come from it (ONB-09, ONB-11). | Owner |
+| ADM-REF-04 | The admin can edit a customer's car details: registration number, make, model, variant and category. Customers cannot change these themselves (VEH-04 in the customer file). | Owner |
+| ADM-REF-05 | The admin can open a vehicle's uploaded RC document and mark it **Verified**. The customer sees the status in My vehicles (VEH-03). | Derived |
+| ADM-SET-01 | **Plans**: the admin keeps a list of plans and can add, edit and deactivate them. For each plan: the plan name, the monthly price, the struck-through list price, the inclusions shown on the review screen (PAY-01, PAY-02), and whether it includes interior cleaning and whether it includes Deep Spa. The interior care day step in the customer's onboarding appears only when the plan includes interior cleaning (ONB-18). The customer chooses one plan when subscribing and when adding a vehicle (PAY-12). A deactivated plan is no longer offered, and subscriptions already on it continue. Only Premium Care exists to start with. | Owner |
+| ADM-SET-02 | **Payment settings**: the UPI ID and the UPI QR code image shown on the payment screen (PAY-05). | Owner |
+| ADM-SET-03 | **Support settings**: the helpline number and the WhatsApp number used by "Call support" and "WhatsApp support", and the support hours shown (SUP-02, SUP-03, SUP-04). | Owner |
+| ADM-SET-04 | **Invoice settings**: the seller's legal name, address and GSTIN used on the GST invoices (ADM-PAY-08). The values are loaded into the database by an initial seed, and are not edited in the app in MVP. | Owner |
+| ADM-REF-06 | A society can be deactivated only when it has no active subscriptions and no active crew. The admin first deactivates those. Deactivating the society then only removes it from the customer's society list. | Owner |
+
+### 9.1 Service checklists and proof minimums
+
+| ID | Requirement | Status |
+|---|---|---|
+| ADM-CHK-01 | The admin prepares a checklist for each service (Cleaning-External, Cleaning-Internal, Deep Spa) during app setup. The crew member checks the items of the service they are doing (CRW-SVC-01 to CRW-SVC-03 in the crew file). | Owner |
+| ADM-CHK-02 | Only the admin can edit checklists. Crew and customers cannot add, remove or change items. | Owner |
+| ADM-CHK-03 | The admin can add, rename, reorder and deactivate the items of each checklist. | Owner and Derived |
+| ADM-CHK-04 | The customer sees the checked items, with the time each was checked, in Service Details (SVC-03 in the customer file). | Derived |
+| ADM-CHK-05 | An edit applies to visits from then on. A deactivated or renamed item stays readable on visits already done, as it was then (like ADM-FDB-07). | Derived |
+| ADM-CHK-06 | For each service the admin sets the minimum number of photos and the minimum number of videos the crew must upload before they can mark a job complete (CRW-SVC-07, CRW-SVC-08). | Owner |
+| ADM-CHK-07 | Starting checklist for Cleaning-External, taken from the prototype: exterior body cleaned, glass cleaned, wheels cleaned, tyres dressed, final inspection completed. The starting lists for Cleaning-Internal and Deep Spa are to be supplied by the owner. | Derived and Open |
+
+---
+
+## 10. Business rules
+
+1. The admin sets crew working hours and exceptions, so capacity is always known and accurate.
+2. Crew roles are Manager, Member and Trainee. Their privileges are in the crew file. Trainees count as zero capacity, are paired with a Member and get that Member's jobs. Members and Managers count in full.
+3. Every crew member and every working slot belongs to one society. Capacity and scheduling are worked out for each society.
+4. Each service has one or more independent working slots. The defaults are Cleaning-External and Cleaning-Internal 5 AM to 11 AM every day, and Deep Spa every day at any time. All are editable. There is no rest day: every day is open.
+5. Planning durations: Cleaning-External and Cleaning-Internal about 20 minutes each (one crew member does 3 in 1 hour), Deep Spa 2 hours. The scheduler plans all three.
+6. Scheduling only happens when the admin starts it, one period at a time: Daily, Weekly (the default, with the week starting on Sunday) or Monthly. It aims to use the crew's capacity as fully as possible.
+7. A draft can be changed by hand and re-run many times. Re-runs keep the changes made by hand and may suggest improvements. Once frozen it can be changed only after entering the secret code, which is the word "unfreeze".
+8. When a schedule is frozen, crew can see their assigned cars. Customers see no change for now.
+9. A customer's skip or pause after a freeze applies automatically, and the admin is notified. A cutoff change after a freeze is a request to the admin, who re-runs the scheduler or changes the schedule by hand, and freezes again.
+10. A customer can change their own services and schedule settings. The admin can change them too, and the last change wins.
+11. Payment statuses are Due, Over due, Initiated and Received. The admin can set any of them. Received closes the record.
+12. Admin actions on payments, complaints and schedules are recorded with who and when.
+13. Customers, crew and admins use the same app. The role on each person's login decides what they see and do.
+14. A web portal for all admin functions comes in V2.
+15. A visit skipped by operations is added to the end of the plan: one day of extension for each day skipped.
+16. The customer's 9 PM deadline applies to customers only. The admin is not bound by it.
+17. A crew member cannot be moved to another society for now.
+18. Checklists are set by the admin for each service and only the admin can edit them. The admin also sets the minimum photos and videos for each service.
+19. Crew sign in with their mobile number and a generated password that only the admin can reset. A job the crew could not complete becomes a Missed visit, and the admin decides the outcome: schedule it again for the next day only, or mark it skipped by operations.
+20. The daily schedule is frozen by 8 PM the day before. After a freeze, new visits are assigned automatically to crew with spare capacity, or go to a Needs scheduling list. Removing work needs no code, adding or moving work does.
+21. A billing cycle is 30 calendar days from the first service date. The admin chooses when a subscription becomes Active. An unpaid subscription becomes Inactive after its payment has been Over due for 7 days.
+22. A mobile number has only one role: customer, crew or admin.
+23. The admin can move a payment back to Due or Over due, and generate a GST invoice for a Received payment.
+24. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26 (rule 28 in the customer file).
+
+---
+
+## 11. Data entities implied by the requirements
+
+For your reference when you write the data model. This is a reading of the requirements, not a design.
+
+- **User login**: person, login, role (customer, crew, admin). The role decides which screens the app shows.
+- **Admin user**: name, mobile, password (stored securely). Created by the initial database seed.
+- **Admin preferences**: scheduling period (Daily, Weekly or Monthly; default Weekly), week start day (Sunday).
+- **Cutoff request**: customer's vehicle, old cutoff time, new cutoff time, assigned crew member and time, status (open, handled), handled by and when.
+- **Society**: name, sector, city, active flag.
+- **Crew member**: name, mobile, society, role (Manager, Member, Trainee), active flag.
+- **Working hours**: crew member, day of week, working or off, start time, end time.
+- **Exception**: crew member, type (Sick, Leave, Late start), start date, end date, start time (for Late start).
+- **Service**: name (Cleaning-External, Cleaning-Internal, Deep Spa), planned duration (20 minutes for Cleaning-External and Cleaning-Internal, 120 minutes for Deep Spa).
+- **Working slot**: society, service, days of the week, start time, end time.
+- **Capacity**: calculated per society and date, not stored by hand.
+- **Schedule**: society, date range, status (Draft, Frozen), frozen by and when, unfrozen by and when.
+- **Scheduled visit**: schedule, customer's vehicle, service, date, crew member, start and end time, entered by hand (yes or no), status (scheduled, unscheduled and why, or skipped by operations with a reason).
+- **Scheduler suggestion**: schedule, proposed change, applied or ignored.
+- **Secret code**: the word "unfreeze", checked by the backend.
+- **Audit entry**: admin, action, target, time.
+- **Payment**: as in the customer file, with the admin who last changed the status.
+- **Complaint**: as in the customer file, with status changes and update notes, each with admin and time.
+- **Feedback category, positive rating tag, check-in category**: name, description, active flag.
+- **Vehicle catalogue**: make, model, variant, vehicle category, active flag.
+- **Crew login**: as in the crew file. The admin generates and resets the password and sees whether the login is locked.
+- **Checklist**: service, ordered items (name, active flag), minimum photos, minimum videos.
+- **Could-not-complete reason**: name, active flag.
+- **Could-not-complete record**: as in the crew file, with the admin outcome, handled by and when.
+- **Plan**: name, monthly price, list price, inclusions, active flag. Several plans can exist.
+- **Invoice**: payment, invoice number, date, amount and GST breakdown, seller details, generated by and when.
+- **Invoice settings**: seller legal name, address, GSTIN, invoice number format.
+- **Needs scheduling entry**: visit, reason (late visit, crew removed, nobody fits), time added, handled by and when.
+- **Payment settings**: UPI ID, UPI QR code image.
+- **Support settings**: helpline number, WhatsApp number, support hours.
+
+---
+
+## 12. Customer requirements and the admin features that cover them
+
+| Needed by (customer file) | Admin capability | Covered by |
+|---|---|---|
+| PAY-08, PAY-09: payment confirmed by the admin | Update payment status | ADM-PAY |
+| ONB-16: slot assigned by the admin | Scheduling and freeze. Crew see the assignment on freeze; customers do not for now. | ADM-SCH |
+| SCHED-02: customers call the helpline for changes after 9 PM | Admin changes after the customer's deadline | ADM-CUS-09, ADM-CUS-11 |
+| FDBK-06, SVC-11, CHK-03: categories and tags configurable by the admin | Add, edit and deactivate them | ADM-FDB-06 |
+| CMP-02, CMP-04: complaint status and notes drive the customer's push notification | Manage complaints | ADM-CMP |
+| NOTIF-04: "service skipped" also fires when crew or operations skip a visit | Mark a visit as skipped by operations | ADM-OPS |
+| FDBK-03, SVC-12, CHK-04: feedback, ratings, tags and check-ins go to the Priveo team | View feedback, ratings and check-ins | ADM-FDB |
+| ONB-03: list of societies with cars serviced | Manage societies | ADM-REF-01, ADM-REF-02 |
+| ONB-09, ONB-11: make, model, variant and vehicle category lists | Manage the vehicle catalogue | ADM-REF-03 |
+| VEH-03, VEH-04: RC status; car details change only through support | Edit car details, verify the RC | ADM-REF-04, ADM-REF-05 |
+| PAY-01, PAY-02, PAY-05, SUP-02, SUP-03, SUP-04: plan price and inclusions, UPI QR code and ID, helpline and WhatsApp numbers | Maintain these settings | ADM-SET |
+| SVC-03: checklist items with completion times | Maintain checklists for each service | ADM-CHK-01 to ADM-CHK-05 |
+| Crew file: minimum photos and videos before "Mark complete" | Set the minimums for each service | ADM-CHK-06 |
+| Crew file: Could not complete reasons and Missed visits | Manage the reasons and decide the outcome | ADM-CNC |
+| Crew file: login details and password reset | Generate, send and reset crew passwords | ADM-CRW-17, ADM-CRW-18 |
+
+---
+
+## 13. Open questions
+
+Open from the crew work and the review:
+
+1. The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07). The owner will supply them later.
+2. Check: the Deep Spa in each 30-day plan is on the first occurrence of the customer's Deep Spa day on or after the plan starts, and a skipped Deep Spa is lost for that plan, like a skipped interior day (ONB-24 in the customer file).
+3. Check: a Trainee's paired Member being absent. Derived rule: the Trainee has no jobs that day (CRW-SCH-12 in the crew file).
+4. Check: the plan is now chosen before service preferences, so the onboarding has one more step (ONB-23 in the customer file).
+
+Answered during the review: the invoice month is two digits; ratings are general; one crew card for each job; a skipped interior day is lost for that week; Deep Spa is 2 hours and Internal is 20 minutes, both planned by the scheduler; a plan change starts at the next renewal; Missed shows "Missed. Rescheduled on dd-Mon-yy"; visits waiting for a crew show as Scheduled; crew roles and privileges.
+
+---
+
+## 14. Deferred to V2 and out of scope
+
+### Deferred to V2
+
+| Area | Item |
+|---|---|
+| Platform | Web portal with all admin functions (item l) |
+| Crew | Moving a crew member to another society |
+
+### To be specified later by the owner
+
+- The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07).
+
+### Out of scope for this file
+
+- Crew app features (Part 3), which are in `crew-functional-requirements.md`.
