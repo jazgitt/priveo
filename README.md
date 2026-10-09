@@ -1,6 +1,6 @@
 # Priveo Car Concierge
 
-A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning and a Deep Spa on top. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. One Flutter app on iOS and Android serves customers, crew and admins, and the role on each login decides which screens appear.
+A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa add-on that existing customers buy separately. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. One Flutter app on iOS and Android serves customers, crew and admins, and the role on each login decides which screens appear.
 
 This repository currently holds the product requirements and the prototype material they were built from. There is no application code yet.
 
@@ -35,7 +35,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 | A 2-hour cleaning slot picker | The customer sets a service cutoff time, in 30-minute steps. The admin assigns the slot |
 | One plan, with ₹4,999 in one wireframe | Several plans, chosen by the customer. Premium Care is ₹999 a month, with ₹1,499 struck through |
 | Interior cleaning 2 days a week (wireframe) | Interior cleaning once a week, on the customer's interior care day |
-| The monthly full spa on the interior day | Deep Spa is separate: 2 hours, once in each 30-day plan, on its own Deep Spa day |
+| The monthly full spa on the interior day | Deep Spa is an add-on: 2 hours, bought separately by an existing customer, who proposes one date and a finish-by time |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |
 | Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by email: a code on first sign-in, then a password. Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
 | A 9-step wireframe onboarding | The plan is chosen before service preferences. See the customer file, section 1 |
@@ -53,7 +53,5 @@ The requirements follow the prototype, except where the owner has decided otherw
 ## Open items
 
 - Starting checklists for Cleaning-Internal and Deep Spa, to be supplied by the owner (`ADM-CHK-07`).
-- Deep Spa checks: which date in each plan, whether a skipped Deep Spa is lost, and whether it must finish by the cutoff time (`ONB-24`).
-- Two "check" items: the extra plan step in onboarding (`ONB-23`) and a Trainee with no jobs when the paired Member is absent (`CRW-SCH-12`).
 
 The full lists are in section 13 of the admin file, section 11 of the crew file and section 14 of the customer file.

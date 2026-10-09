@@ -51,7 +51,7 @@ Rules followed:
 | CRW-ACC-04 | When the admin onboards a crew member, the password is generated automatically in this format: the first 3 letters of their name, then 4 random digits, then `$` (for example `Raj4821$`). | Owner |
 | CRW-ACC-05 | Passwords are never sent by SMS or WhatsApp. After the admin onboards a crew member or resets their password, the admin screen shows the login ID and the generated password once, with a Copy button, and the admin gives them to the crew member outside the app. The app stores only a hash, so the password cannot be shown again. | Owner |
 | CRW-ACC-06 | Crew cannot change their password. If it is lost, the admin resets it: a new password is generated in the same format and shown to the admin once (CRW-ACC-05, ADM-CRW-18 in the admin file). | Owner (reset: Derived) |
-| CRW-ACC-07 | A wrong password shows an error. After a set number of wrong attempts the login is locked until the admin resets the password. The number of attempts is not decided. | Open |
+| CRW-ACC-07 | A wrong password shows an error. After 5 wrong attempts the login is locked until the admin resets the password (ADM-CRW-18). This applies to crew and admin logins. | Owner |
 | CRW-ACC-08 | A deactivated crew member cannot sign in (ADM-CRW-15). Their past visits and records stay. | Derived |
 | CRW-ACC-09 | Log out. | Derived |
 | CRW-ACC-10 | A mobile number can belong to only one crew member (ADM-CRW-06). A customer's email or contact mobile number has no effect on crew sign-in. | Owner |
@@ -79,13 +79,13 @@ Rules followed:
 | CRW-SCH-02 | A job card shows: the vehicle (registration, make, model, category), the society, the parking spot (basement and number), the assigned slot time, the service to be done, and the job status. | Owner |
 | CRW-SCH-03 | The card also shows the vehicle photo the customer gave at signup, to help the crew find the car. The crew does not use it to identify the car (rule 17 in the customer file). | Derived |
 | CRW-SCH-04 | The card shows the customer's service cutoff time as the time the job must be finished by. The customer sees the assigned crew member and time once the visit is assigned (CAL-10 in the customer file), but never the crew's notes or contact details. | Owner |
-| CRW-SCH-05 | The service shown is Cleaning-External for every visit. On the customer's interior care day there is also a separate job for Cleaning-Internal or Deep Spa (ADM-SVS-01). Each job has its own job card, checklist, proof and completion, and can be done by a different crew member. The scheduler plans these jobs with their own durations: 20 minutes for Cleaning-Internal and 2 hours for Deep Spa (ADM-SVS-09, ADM-SVS-10), so the card shows the assigned start and end time for each. | Owner and Open |
+| CRW-SCH-05 | The service shown is Cleaning-External for every visit. On the customer's interior care day there is also a separate job for Cleaning-Internal. A Deep Spa job appears when a customer has bought the add-on and it has been scheduled (section 9a of the customer file). Each job has its own job card, checklist, proof and completion, and can be done by a different crew member. The scheduler plans these jobs with their own durations: 20 minutes for Cleaning-Internal and 2 hours for Deep Spa (ADM-SVS-09, ADM-SVS-10), so the card shows the assigned start and end time for each. | Owner |
 | CRW-SCH-06 | The crew member can view the cards day by day, or all of the jobs scheduled so far. | Owner |
 | CRW-SCH-07 | Job statuses: **Scheduled**, **In progress** (started and not finished), **Completed**, **Could not complete**. | Derived |
-| CRW-SCH-08 | When a customer skips or pauses after the schedule is frozen, the visit is removed from the crew member's cards automatically (ADM-SCH-21). | Derived |
+| CRW-SCH-08 | When a customer skips, pauses or cancels an add-on after the schedule is frozen, the visit is removed from the crew member's cards automatically (ADM-SCH-21). | Derived |
 | CRW-SCH-09 | When the admin unfreezes, changes and freezes the schedule again, or the system assigns a late visit automatically (ADM-SCH-27), the crew member's cards update to match. | Derived |
 | CRW-SCH-10 | A Member sees only their own jobs. A Trainee is paired with a Member (ADM-CRW-19) and sees the same jobs as that Member. A Trainee can do everything a Member can: check the checklist, upload proof, mark a job complete or Could not complete. A Trainee counts as zero capacity and is never assigned a job by the scheduler (ADM-CRW-14). | Owner |
-| CRW-SCH-12 | A job is one job, whoever does it. When the Member or the Trainee marks it complete, it is complete for both, and each sees the other's checklist ticks and uploads. If the paired Member has an exception for the day (sick, leave, late start), the Trainee has no jobs until the Member does. | Derived (check) |
+| CRW-SCH-12 | A job is one job, whoever does it. When the Member or the Trainee marks it complete, it is complete for both, and each sees the other's checklist ticks and uploads. If the paired Member has an exception for the day (sick, leave, late start), the Trainee has no jobs until the Member does. | Owner |
 | CRW-SCH-13 | No crew member sees a customer's name or mobile number on a job card or anywhere else in the crew app. Cards show the vehicle, society and parking spot only. | Owner |
 | CRW-SCH-11 | Jobs from a schedule that is still a draft are not shown. | Derived |
 
@@ -101,7 +101,7 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | CRW-MGR-02 | A Manager can mark a job assigned to another crew member as **Could not complete** (with a reason, CRW-CNC-02) or as **skipped**. A job marked skipped by a Manager is a visit skipped by operations: the customer gets the "Service skipped" notification if it is switched on, and the plan is extended by one day (ADM-OPS-03). | Owner and Derived |
 | CRW-MGR-03 | A Manager can reassign a job to another Member or Manager of the same society who is working that day. The admin's secret code is not needed. The job moves to the other crew member's cards, a Trainee paired with either follows their Member, and both crew members get a push notification. The reassignment is recorded. | Owner and Derived |
 | CRW-MGR-04 | A Manager can see crew attendance for their society and can add, edit and remove exceptions (Sick, Leave, Late start) for its crew members (ADM-CRW-08). Capacity is recalculated at once (ADM-CRW-11), and the affected visits go to the Needs scheduling list (ADM-SCH-28) or are auto-assigned (ADM-SCH-27). | Owner and Derived |
-| CRW-MGR-05 | A Manager cannot change working hours, roles, passwords or schedules, and cannot freeze or unfreeze a schedule. Those stay with the admin. | Derived (check) |
+| CRW-MGR-05 | A Manager can edit the working hours of crew members in their society. The change applies to dates from then on and capacity is recalculated at once (ADM-CRW-05, ADM-CRW-11). A Manager cannot change roles, societies or passwords, cannot run the scheduler, and cannot freeze or unfreeze a schedule. Those stay with the admin. | Owner |
 | CRW-MGR-06 | A Manager does not see a customer's name or mobile number (CRW-SCH-13). | Owner |
 
 ---
@@ -150,13 +150,12 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 
 | ID | Requirement | Status |
 |---|---|---|
-| CRW-NOT-01 | The crew member receives a push notification when a schedule is frozen with new or changed jobs for them. | Derived |
-| CRW-NOT-02 | The crew member receives a push notification when a job is removed from their cards because of a skip, a pause, or a visit skipped by operations. | Derived |
-| CRW-NOT-05 | A crew member (and a Trainee paired with them) gets a push notification when a Manager reassigns a job to or from them (CRW-MGR-03). | Derived |
+| CRW-NOT-01 | The crew member receives a push notification when a schedule is frozen with new or changed jobs for them. | Owner |
+| CRW-NOT-02 | The crew member receives a push notification when a job is removed from their cards because of a skip, a pause, or a visit skipped by operations. | Owner |
+| CRW-NOT-05 | A crew member (and a Trainee paired with them) gets a push notification when a Manager reassigns a job to or from them (CRW-MGR-03). | Owner |
 | CRW-NOT-04 | The crew member receives a push notification when a job is assigned to them automatically after a freeze (ADM-SCH-27). The job appears on their cards. | Owner |
-| CRW-NOT-03 | Crew cannot switch these notifications off. There are no other crew notifications in MVP. | Derived |
+| CRW-NOT-03 | Crew cannot switch these notifications off. There are no other crew notifications in MVP. | Owner |
 
-These are proposals for you to check. Today the admin file says the admin gets the only notifications of this kind.
 
 ---
 
@@ -206,14 +205,9 @@ For your reference when you write the data model. This is a reading of the requi
 
 ## 11. Open questions
 
-1. How many wrong passwords lock an account (CRW-ACC-07)?
-2. (Answered: sign-in identifiers are unique, and customers now use email.)
-3. (Answered: the scheduler plans them with 20 and 120 minutes, ADM-SVS-10.)
-4. (Answered: a Trainee is paired with a Member and does everything a Member does.)
-5. (Answered: see CAL-09.)
-6. (Answered: crew do not see ratings or comments.)
-7. Do you agree with the crew notifications in section 7?
-8. (Answered: privileges are in this file.)
+1. The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07), to be supplied by the owner.
+
+Answered: the wrong-password limit (5, then locked until the admin resets); one role identifiers; the crew notifications; how Cleaning-Internal and Deep Spa are planned; the Trainee pairing; Missed visits; ratings and comments are not shown to crew; privileges for Manager, Member and Trainee.
 
 ---
 
@@ -229,4 +223,3 @@ For your reference when you write the data model. This is a reading of the requi
 ### Out of scope for this file
 
 - The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07), to be supplied by the owner.
-- Scheduling of Cleaning-Internal and Deep Spa (ADM-SVS-10).

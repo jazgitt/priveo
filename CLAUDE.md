@@ -8,14 +8,14 @@ Requirements and prototype material only. There is no application code, build or
 
 ## Tech stack (decided by the owner)
 
-Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. Resend for email (verification codes, password reset codes, welcome email). FCM for push. S3 signed uploads for media with an offline upload queue in the app. Flutter web for the V2 admin portal. Details, proposed supporting choices and risks are in `docs/tech-stack.md`. Choices marked Proposed there are not decided.
+Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with PostgreSQL for the API, with the scheduler (OR-Tools) in the same service. AWS Mumbai (ECS Fargate, RDS, S3, EventBridge Scheduler) for hosting. Resend for email (verification codes, password reset codes, welcome email). FCM for push. S3 signed uploads for media with an offline upload queue in the app. Flutter web for the V2 admin portal. Details, supporting choices and risks are in `docs/tech-stack.md`. All choices there are decided; the risks section lists what to watch.
 
 ## Layout
 
 - `docs/reqs/customer-app-functional-requirements.md`: customer app (v0.5)
 - `docs/reqs/admin-functional-requirements.md`: admin (v0.4)
 - `docs/reqs/crew-functional-requirements.md`: crew (v0.1)
-- `docs/tech-stack.md`: technical stack, decided and proposed
+- `docs/tech-stack.md`: technical stack (all choices decided)
 - `docs/prototype/`: interactive prototype HTML, wireframes, vision deck, marketing images. Read-only source material. The prototype HTML is about 1 MB, so search it with grep instead of reading it whole.
 
 ## Rules for editing the requirements
@@ -31,7 +31,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 
 ## Domain facts to keep straight
 
-- Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours, once per 30-day plan, on its own Deep Spa day). Each service is a separate job.
+- Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours). Each service is a separate job. Deep Spa is not in the plan: it is an add-on that existing customers buy separately, proposing one date and a finish-by time. Scheduling does not wait for its payment in MVP.
 - A visit is Completed only when all its jobs are done or skipped.
 - Billing cycle is 30 calendar days from the first service date. Payments are manual by UPI (statuses Due, Over due, Initiated, Received). A payment Over due for 7 days makes a subscription Inactive.
 - The admin freezes the next day's schedule by 8 PM the day before. Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.

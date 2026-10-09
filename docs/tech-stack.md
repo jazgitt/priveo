@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Technical Stack
 
-**Status:** Draft v0.1, 9 Oct 2026. Choices marked **Decided** were made by the owner. Choices marked **Proposed** are recommendations for the owner to confirm.
+**Status:** v0.2, 9 Oct 2026. The owner has decided every choice in sections 1 and 2. Section 4 lists risks to watch.
 **Basis:** the three functional requirements files in `docs/reqs/`. Requirement IDs are cited where a requirement drives a choice.
 
 ## 1. Decided
@@ -18,11 +18,11 @@
 | Offline uploads | Local queue in the app, background upload with retry | `CRW-SVC-10`: uploads must survive a poor connection |
 | Admin web (V2) | Flutter web, reusing the app's feature code and models | `ADM-ACC-01`, V2 portal. Design admin screens to work on tablet and desktop |
 
-## 2. Proposed supporting choices (please confirm)
+## 2. Supporting choices (decided)
 
 ### App
 
-| Area | Proposal | Notes |
+| Area | Choice | Notes |
 |---|---|---|
 | HTTP client | Dio with interceptors for tokens, retry and error mapping | |
 | Models and JSON | `freezed` and `json_serializable` | Generated from the API's OpenAPI schema where practical |
@@ -38,7 +38,7 @@
 
 ### API
 
-| Area | Proposal | Notes |
+| Area | Choice | Notes |
 |---|---|---|
 | Web framework | FastAPI with Pydantic v2 | Auto-generated OpenAPI used to produce the Dart client or models |
 | Database access | SQLAlchemy 2 and Alembic migrations | |
@@ -53,7 +53,7 @@
 
 ### Platform and delivery
 
-| Area | Proposal | Notes |
+| Area | Choice | Notes |
 |---|---|---|
 | Containers | Docker images built in CI and run on ECS Fargate (decided) | Cron work through EventBridge Scheduler |
 | Database | RDS PostgreSQL, Multi-AZ off in MVP, automated backups on | |
@@ -85,4 +85,4 @@
 5. **Scheduler scale.** OR-Tools CP-SAT is fine for one society and a week. Test with realistic volumes before choosing ECS task sizes.
 6. **API compatibility.** One app serves three roles, so older app versions stay in use. Version the API and plan for forced-update behaviour.
 7. **Flutter, Dart and package versions.** Pin them when the project is created.
-8. **Open owner choices:** confirmation of the proposed supporting choices in section 2.
+8. **Open owner choices:** none. Sections 1 and 2 are decided.
