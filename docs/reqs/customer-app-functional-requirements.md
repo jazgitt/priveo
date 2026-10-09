@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.8: prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is a separately bought add-on; consistency pass
+**Status:** Draft v0.9: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is a separately bought add-on; consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -22,7 +22,7 @@ Rules followed:
 - **Status** column:
   - **Defined**: the prototype shows the behavior working.
   - **Stub**: the prototype only shows a button or toast. The intent is visible but the behavior is not defined.
-  - **Wireframe**: shown in the wireframes but not in the interactive prototype.
+  - **Derived**: needed to make a stated item work and not shown in the prototype. Please check it.
   - **Owner**: added or changed by an owner decision.
   - **Open**: behavior still undecided, see section 14.
 - Where the wireframes and the interactive prototype disagree, the prototype is the source of truth (owner decision). The decisions are listed in section 14.
@@ -60,7 +60,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | AUTH-04 | Terms and Privacy Policy consent notice is shown on the email screen. The customer's acceptance is recorded with the date and time at first sign-in, including for customers the admin created. | Defined (record: Derived) |
 | AUTH-05 | The code screen shows the email the code was sent to, six single-digit boxes, a "Verify" button, and a 30-second resend countdown (00:28 in the prototype). A code is valid for 10 minutes. | Defined (email, 10 minutes: Owner) |
 | AUTH-06 | The user can paste the code from the clipboard. The code does not auto-fill from an SMS, as the prototype shows. | Owner and Derived |
-| AUTH-07 | Resend becomes available when the countdown ends. A wrong code shows an error. After 5 wrong attempts the code is cancelled and the user must request a new one. At most 5 codes can be requested in an hour. | Wireframe (numbers: Owner) |
+| AUTH-07 | Resend becomes available when the countdown ends. A wrong code shows an error. After 5 wrong attempts the code is cancelled and the user must request a new one. At most 5 codes can be requested in an hour. | Derived (numbers: Owner) |
 | AUTH-08 | After a correct code, a customer with no password sets one (AUTH-12). Then, if the customer has not yet confirmed the onboarding review (ONB-25), the review opens. Otherwise Home opens. | Owner |
 | AUTH-10 | Customers and crew use this app. Admins use a web portal, and a limited set of admin quick actions is also in this app. Each person has their own login, and the role set for it in the backend decides which screens and actions they see. This file covers the customer screens. The admin requirements are in `admin-functional-requirements.md`, and the crew screens are in `crew-functional-requirements.md`. | Owner |
 | AUTH-11 | There is one welcome and sign-in screen for everyone. The field takes an email (customer), a 10-digit mobile number (crew) or a user ID (admin). The backend decides the method from what is entered: a customer gets an emailed code on first sign-in and then uses a password, and a crew member or admin is asked for a password (CRW-ACC-02 in the crew file). The rest of this section describes the customer path. | Owner |
@@ -79,7 +79,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | ONB-01 | Fields: First name (required), Last name (required), Email (read-only, shown with a verified indicator), Mobile number (required contact number, not verified; the customer can correct it). The admin has usually filled these in already. | Defined (email, mobile: Owner) |
 | ONB-25 | **Onboarding review.** In MVP the admin creates the customer and fills in the details (ADM-CUS-01). When the customer first signs in, the onboarding steps (personal details, society, vehicle, parking, service preferences, plan and review) open with those details filled in. The customer goes through each step, completes anything the admin left empty, and confirms on the last step. Home opens only after the customer confirms. | Owner |
 | ONB-26 | In the review the customer can change what they can normally change: names, mobile number, parking, vehicle photo, service cutoff time and interior day. The society, the vehicle details (make, model, variant, registration, category) and the plan are shown but can be changed only by Priveo (VEH-04, VEH-09, ADM-REF-04), so the society selection and the vehicle dropdowns (ONB-03 to ONB-11) are used when a customer adds a vehicle or, in V2, signs up publicly. | Owner |
-| ONB-02 | First and last name accept only letters, spaces and basic name characters. | Wireframe |
+| ONB-02 | First and last name accept only letters, spaces and basic name characters. | Derived |
 
 ### 1.2 Society (Step 2 of 7)
 
@@ -88,7 +88,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | ONB-03 | List of societies serviced by Priveo, each showing name, sector/city and number of cars serviced. Only societies Priveo currently serves are listed. | Owner |
 | ONB-04 | Search box filters the list as the user types. | Defined |
 | ONB-05 | The user selects exactly one society (radio selection). A society is required to continue. | Defined |
-| ONB-07 | If no societies are available, show "No serviced societies available at the moment." | Wireframe |
+| ONB-07 | If no societies are available, show "No serviced societies available at the moment." | Derived |
 
 ### 1.3 Vehicle (Step 3 of 7)
 
@@ -120,7 +120,7 @@ The plan is Step 5 of 7 (ONB-23, PAY-12).
 | ONB-17 | A helper note explains that this is the time by which the clean will be done and that Priveo assigns the exact slot. | Owner |
 | ONB-18 | Weekly day selection (Monday to Sunday, single choice) for the day on which interior cleaning is added to the exterior clean. Required when the chosen plan includes interior cleaning, and hidden when it does not (ADM-SET-01). The field is called "Interior care day". | Defined (conditional on plan: Owner) |
 | ONB-20 | Both fields are mandatory where they are shown. Continuing without them shows inline errors: "Please select your service cutoff time." plus, for the day field when the plan has interior cleaning, "Please select your interior care day." | Defined |
-| ONB-21 | Preferences are saved when the user continues. | Wireframe |
+| ONB-21 | Preferences are saved when the user continues. | Derived |
 | ONB-23 | When a customer adds a vehicle, the plan is chosen in a step before Service preferences (PAY-12), because the plan decides whether the interior care day is asked. In the onboarding review the plan step shows the plan the admin chose, read-only. The onboarding therefore has one more step than before. | Owner |
 
 ### 1.6 Review and confirm (Step 7 of 7)
@@ -300,7 +300,7 @@ Each vehicle has its own subscription. The screen opens for the selected vehicle
 | SUB-02 | Details: car and registration, society, service cutoff time, interior day (when the plan has it). | Defined |
 | SUB-03 | "Pause service" shortcut opens the skip/pause screen. | Defined |
 | SUB-05 | Subscription states: **Active** (membership running), **Activating** (started, waiting for the admin to set the first service date and activate it), **Paused** (paused by customer), **Inactive** (stopped by the admin, or automatically when a plan payment has been Over due for 7 days). | Defined (Inactive: Owner) |
-| SUB-06 | Billing history ("View billing history") lists the subscription's payments, newest first, each with its amount, due date and status (PAY-09). | Wireframe (list: Derived) |
+| SUB-06 | Billing history ("View billing history") lists the subscription's payments, newest first, each with its amount, due date and status (PAY-09). | Derived |
 | SUB-12 | For a payment the admin has generated a GST invoice for (ADM-PAY-08), billing history shows an invoice that the customer can open and save. | Owner |
 | SUB-08 | The customer can edit the default service cutoff time and the weekly interior day after signup. Each stays required where the plan has it. A change follows the cutoff rule (SCHED-01) and applies from the next date that is still before its 9 PM cutoff. A cutoff time for a single date is changed from the calendar (CAL-08). | Owner |
 

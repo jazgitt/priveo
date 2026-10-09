@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Technical Architecture
 
-**Status:** v0.1 DRAFT, 9 Oct 2026, for owner review. It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
+**Status:** v0.2 DRAFT, 9 Oct 2026, for owner review. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
 **Basis:** the three requirements files in `docs/reqs/` and `docs/tech-stack.md`.
 
 ## 1. Principles
@@ -55,7 +55,7 @@ priveo/
     brand/tokens.json  design tokens, source for both UI themes
 ```
 
-`docs/reqs/` and `docs/prototype/` stay as they are. **Open:** whether the code lives in this repository or a new one. The repository currently holds only requirements and prototype material.
+`docs/reqs/` and `docs/prototype/` stay as they are. **Owner:** the code lives in this repository, next to `docs/`. Keep commits that change code apart from commits that change requirements. Add the build and test commands to `CLAUDE.md` when code is added.
 
 ## 4. Backend architecture
 
@@ -112,7 +112,7 @@ One service, several callers. The route decides who the actor is, the service ap
 |---|---|---|
 | Style | REST, JSON, resource-based, under `/v1` | Derived |
 | Audience groups | `/v1/auth` (shared), `/v1/customer`, `/v1/crew`, `/v1/admin`, `/v1/public` (health, app config). Each group has its own router and role dependency | Derived |
-| Contract | One OpenAPI schema per audience group, so the mobile app imports `customer`, `crew` and the admin quick actions, and the web portal imports `admin`. Smaller clients, clearer review | Derived. **Open:** one schema or three |
+| Contract | One OpenAPI schema per audience group, so the mobile app imports `customer`, `crew` and the admin quick actions, and the web portal imports `admin`. Smaller clients, clearer review | Owner: three schemas |
 | Auth on mobile | Short-lived bearer access token, refresh token tied to a server session | Decided in the stack |
 | Auth on web | HttpOnly secure cookie, CSRF token on every change request, 60 minute inactivity (`ADM-ACC-12`) | Decided in the stack and requirements |
 | Errors | One envelope: `code` (stable, machine), `message` (plain, for display), `fields` (per-field errors), `request_id`. Clients map `code` to text | Derived |
@@ -243,7 +243,7 @@ Upload steps: ask the server for a signed URL, upload straight to S3 with a size
 
 | Area | Approach |
 |---|---|
-| Security | Tokens only in `flutter_secure_storage`. Certificate pinning is **Open**. No secrets in the app. Screens with personal data excluded from screenshots on request. Jailbreak and root detection are **Open** |
+| Security | Tokens only in `flutter_secure_storage`. Certificate pinning is not in MVP (owner decision). No secrets in the app. Screens with personal data excluded from screenshots on request. Jailbreak and root detection are not in MVP (owner decision) |
 | Errors | The data layer turns exceptions into typed failures. The UI shows the API's `message`. Crashes go to Crashlytics |
 | Theming | One `ThemeData` for light and dark, built from `docs/brand/tokens.json`. Fonts are bundled. Follows the phone setting with a manual switch |
 | Accessibility | 48 px touch targets (56 px on crew screens), 130% text scale, labels on every control, status never by colour alone |
@@ -289,7 +289,7 @@ apps/admin-web/src/
 | Audit | Every admin change and every status change writes an audit entry in the same transaction |
 | Observability | Structured JSON logs with `request_id` and user role (no personal data), CloudWatch alarms, Sentry or Crashlytics for errors |
 | Config and secrets | Environment variables and AWS Secrets Manager. The admin password comes from `.env` at seed time and is never committed |
-| Environments | `dev`, `staging`, `prod`, each with its own database and bucket |
+| Environments | `dev` and `prod` from the start, each with its own database and bucket. `staging` is added in phase 6 (owner decision), before payments and store submission |
 
 ## 8. Build plan
 
@@ -297,13 +297,13 @@ Phases follow the dependencies: a customer cannot sign in until an admin has cre
 
 | Phase | Build | Done when |
 |---|---|---|
-| 0 Foundation | Repository, CI (lint, test, build), Docker, the three environments, FastAPI skeleton with the error envelope and OpenAPI export, Flutter skeleton with flavors, theme from tokens and role shells, React skeleton, generated clients, `platform` and `audit` modules | A "hello" call from the app and the portal reaches the API in `staging`, and CI is green |
+| 0 Foundation | Repository, CI (lint, test, build), Docker, the `dev` and `prod` environments, FastAPI skeleton with the error envelope and OpenAPI export, Flutter skeleton with flavors, theme from tokens and role shells, React skeleton, generated clients, `platform` and `audit` modules | A "hello" call from the app and the portal reaches the API in `dev`, and CI is green |
 | 1 Identity and reference data | `identity` (all three sign-ins, email codes, sessions, lockout, seed admin), `directory` (societies, plans, catalogue, services, slots, checklists), the admin portal sign-in and settings screens | An admin signs in on the web and the app, and can manage reference data |
 | 2 People | `crew` and `customers` modules, admin screens for customers, vehicles, subscriptions, crew, working hours and exceptions, crew password hand-over | The admin can create a customer and a crew member, and the customer can sign in |
 | 3 Scheduling | `scheduling`, solver, capacity, schedule board, freeze and unfreeze, needs-scheduling | A frozen schedule for one society and a week is produced from test data |
 | 4 Crew app | Job cards, performing a service, checklist, offline upload queue, could-not-complete, manager features, `visits` and `media` | A crew member completes a day of jobs with a poor connection |
 | 5 Customer app | Onboarding, home, calendar, service details with proof, vehicles, account, notifications | A customer sees a completed visit with its photos |
-| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions | A payment runs from Due to Received, and an over-due payment makes the subscription Inactive after 7 days |
+| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions, and the `staging` environment | A payment runs from Due to Received, and an over-due payment makes the subscription Inactive after 7 days |
 | 7 Support and feedback | `support` (complaints, issues, feedback, ratings, check-ins), admin alerts, ratings shown to crew | A complaint goes from a customer to the admin and back |
 | 8 Hardening | Load test of the scheduler, security review, accessibility pass, backup restore test, store submissions | The release checklist is signed off |
 
@@ -319,12 +319,19 @@ The requirements start each ID at **Draft**. As each phase starts, move its IDs 
 | End to end | A scripted day: admin creates, schedule runs and freezes, crew completes, customer sees | `integration_test` per role | Playwright for the main admin flows |
 | Security | Role and ownership tests on every route, crew privacy test, rate limits | Token storage checks | Cookie, CSRF and session tests |
 
-## 10. Risks and open items for this design
+## 10. Decisions and open items for this design
 
-1. **Code location.** New repository or this one. **Open.**
-2. **One OpenAPI schema or one per audience.** Three small schemas are proposed. **Open.**
-3. **Scheduler runs.** In-process background task on the API service, or a separate ECS task for each run. The task is safer for memory and time limits, the in-process option is simpler. Start in-process behind the `solve` function and move later. **Open.**
-4. **Realtime for the admin bell.** Polling first, server-sent events later. **Open.**
-5. **Certificate pinning and root detection** in the mobile app. **Open.**
-6. **Phone deep links** from push notifications into each role's screens need a route list. Derived when the screens are built.
-7. **Admin single login** remains the main security risk (risk 8 in the stack).
+Owner decisions of 9 Oct 2026:
+
+1. **Code location:** this repository.
+2. **API contract:** three OpenAPI schemas (customer, crew, admin).
+3. **Scheduler runs:** in-process background task on the API service, behind the `solve` function. Move to a separate ECS task later if volumes need it.
+4. **Admin bell:** polling first, server-sent events later.
+5. **Mobile hardening:** no certificate pinning and no root or jailbreak detection in MVP. Revisit after launch.
+6. **First launch:** one society. The data model stays multi-society, so adding a society needs no migration. Scheduling and capacity are built and tested for one society first.
+7. **Environments:** `dev` and `prod` from the start, `staging` added in phase 6. This phases the three environments in `docs/tech-stack.md`; the end state is unchanged.
+
+Still open or to watch:
+
+1. **Phone deep links** from push notifications into each role's screens need a route list. Derived when the screens are built.
+2. **Admin single login** remains the main security risk (risk 8 in the stack).

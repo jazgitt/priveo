@@ -40,7 +40,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 
 ## Conventions in the documents
 
-- **Status column:** Defined (the prototype shows it working), Stub, Wireframe, Owner (the owner decided it), Derived (needed to make a stated item work, please check), Open (undecided).
+- **Status column:** Defined (the prototype shows it working), Stub, Owner (the owner decided it), Derived (needed to make a stated item work, please check), Open (undecided).
 - **IDs:** customer IDs such as `PAY-05`, admin IDs start `ADM-`, crew IDs start `CRW-`. IDs are never renumbered. Retired IDs leave gaps.
 - **Dates:** every date in the app is shown as `dd-Mon-yy`, for example `07-Nov-26`.
 - **Language:** English only.
