@@ -1,7 +1,9 @@
 """One-time load of the existing customers from the owner's spreadsheet.
 
 It reads two sheets, "Customer Master" (one row for each vehicle) and
-"Deep Spa Addons". It can run again: a customer is matched by email and a
+"Deep Spa Addons". A person in the second sheet who is not in the first has
+taken Deep Spa as a standalone service (ADD-14): they are loaded as a
+customer with a vehicle and no subscription. It can run again: a customer is matched by email and a
 row by its serial number, and what is already loaded is left as it is.
 
 The report names rows by sheet and serial number only. It never contains a
@@ -41,6 +43,9 @@ class ImportReport:
     customers_kept: int = 0
     vehicles_created: int = 0
     vehicles_kept: int = 0
+    # Vehicles of customers who took only a standalone Deep Spa.
+    standalone_vehicles_created: int = 0
+    standalone_vehicles_kept: int = 0
     addons_created: int = 0
     addons_kept: int = 0
     # Loaded, but something needs the admin's attention.
@@ -138,6 +143,7 @@ class _Importer:
         # with the car number and model text the sheet gave.
         self.vehicles: dict[str, list[tuple[Vehicle, str, str]]] = {}
         self.customers: dict[str, Customer] = {}
+        self.master_emails: set[str] = set()
         self.latest_start: date | None = None
 
     def warn(self, sheet: str, ref: str, message: str) -> None:
@@ -156,7 +162,7 @@ class _Importer:
                 self.db.flush()
         return self.society
 
-    def _customer(self, row: dict, ref: str, email: str) -> Customer | None:
+    def _customer(self, row: dict, sheet: str, ref: str, email: str) -> Customer | None:
         if email in self.customers:
             return self.customers[email]
         customer = self.db.scalar(select(Customer).where(Customer.email == email))
@@ -166,14 +172,14 @@ class _Importer:
             name = _text(row.get("customer name"))
             mobile = mobile_of(row.get("phone number"))
             if not name or mobile is None:
-                self.error(MASTER_SHEET, ref, "the name or the 10-digit phone number is missing")
+                self.error(sheet, ref, "the name or the 10-digit phone number is missing")
                 return None
             if self.db.scalar(select(Login).where(Login.login_id == email)) is not None:
-                self.error(MASTER_SHEET, ref, "the email already belongs to another login")
+                self.error(sheet, ref, "the email already belongs to another login")
                 return None
             first, last = split_name(name)
             if not last:
-                self.warn(MASTER_SHEET, ref, "the name is one word, so the last name is empty")
+                self.warn(sheet, ref, "the name is one word, so the last name is empty")
             # No password yet: the customer sets one at first sign-in (AUTH-03).
             login = Login(role="customer", login_id=email, display_name=name)
             self.db.add(login)
@@ -188,6 +194,34 @@ class _Importer:
         self.customers[email] = customer
         return customer
 
+    def _new_vehicle(self, customer: Customer, row: dict, sheet: str, ref: str,
+                     source_ref: str) -> Vehicle:
+        car_number = _text(row.get("car number"))
+        notes = []
+        registration = registration_of(car_number)
+        if registration is None:
+            self.warn(sheet, ref, "the car number is missing or incomplete"
+                      if not car_number or len(_compact(car_number)) < 8
+                      else "the car number is not in a known format")
+            if car_number:
+                notes.append(f"Car number as given: {car_number}")
+        elif self.db.scalar(select(Vehicle).where(Vehicle.registration == registration)):
+            self.warn(sheet, ref, "the car number is already on another vehicle")
+            notes.append(f"Car number as given: {car_number}")
+            registration = None
+        basement, number, understood = parking_of(row.get("parking number"))
+        if not understood:
+            self.warn(sheet, ref, "the parking is free text, kept as a note")
+            notes.append(f"Parking as given: {' '.join(_text(row.get('parking number')).split())}")
+
+        vehicle = Vehicle(
+            customer_id=customer.id, registration=registration,
+            model=_text(row.get("car model")), parking_basement=basement,
+            parking_number=number, notes="\n".join(notes), source_ref=source_ref)
+        self.db.add(vehicle)
+        self.db.flush()
+        return vehicle
+
     def master_row(self, row: dict) -> None:
         ref = _text(row.get("sl. no.")) or "?"
         email = _text(row.get("email")).lower()
@@ -199,9 +233,10 @@ class _Importer:
         if start is None or not isinstance(price, int | float) or not model:
             return self.error(MASTER_SHEET, ref,
                               "the start date, the price or the car model is missing")
-        customer = self._customer(row, ref, email)
+        customer = self._customer(row, MASTER_SHEET, ref, email)
         if customer is None:
             return None
+        self.master_emails.add(email)
         self.latest_start = max(self.latest_start or start, start)
 
         source_ref = f"master:{ref}"
@@ -212,29 +247,7 @@ class _Importer:
             self.vehicles.setdefault(email, []).append((vehicle, car_number, model))
             return None
 
-        notes = []
-        registration = registration_of(car_number)
-        if registration is None:
-            self.warn(MASTER_SHEET, ref, "the car number is missing or incomplete"
-                      if not car_number or len(_compact(car_number)) < 8
-                      else "the car number is not in a known format")
-            if car_number:
-                notes.append(f"Car number as given: {car_number}")
-        elif self.db.scalar(select(Vehicle).where(Vehicle.registration == registration)):
-            self.warn(MASTER_SHEET, ref, "the car number is already on another vehicle")
-            notes.append(f"Car number as given: {car_number}")
-            registration = None
-        basement, number, understood = parking_of(row.get("parking number"))
-        if not understood:
-            self.warn(MASTER_SHEET, ref, "the parking is free text, kept as a note")
-            notes.append(f"Parking as given: {' '.join(_text(row.get('parking number')).split())}")
-
-        vehicle = Vehicle(
-            customer_id=customer.id, registration=registration, model=model,
-            parking_basement=basement, parking_number=number,
-            notes="\n".join(notes), source_ref=source_ref)
-        self.db.add(vehicle)
-        self.db.flush()
+        vehicle = self._new_vehicle(customer, row, MASTER_SHEET, ref, source_ref)
 
         cutoff = time_of(row.get("customer cutoff time"))
         if cutoff is None:
@@ -250,7 +263,10 @@ class _Importer:
         self.vehicles.setdefault(email, []).append((vehicle, car_number, model))
         return None
 
-    def _match_vehicle(self, email: str, car_number: str, model: str) -> Vehicle | None:
+    def _match_vehicle(self, email: str, car_number: str, model: str,
+                       *, guess: bool = True) -> Vehicle | None:
+        """The customer's vehicle with this car number or model. With guess,
+        a customer's only vehicle is taken when neither matches."""
         mine = self.vehicles.get(email, [])
         wanted = _compact(car_number)
         if wanted:
@@ -261,15 +277,37 @@ class _Importer:
         for vehicle, _, their_model in mine:
             if model and their_model.casefold() == model.casefold():
                 return vehicle
-        return mine[0][0] if len(mine) == 1 else None
+        return mine[0][0] if guess and len(mine) == 1 else None
+
+    def _standalone_vehicle(self, customer: Customer, row: dict, ref: str, email: str,
+                            car_number: str, model: str) -> None:
+        """The car of a customer who has no subscription (ADM-ADD-11)."""
+        source_ref = f"deepspa-vehicle:{ref}"
+        vehicle = self.db.scalar(select(Vehicle).where(Vehicle.source_ref == source_ref))
+        if vehicle is not None:
+            self.report.standalone_vehicles_kept += 1
+        elif self._match_vehicle(email, car_number, model, guess=False) is not None:
+            return None  # The same car as an earlier row of this customer.
+        elif not model:
+            return self.warn(ADDON_SHEET, ref, "no car model, so no vehicle was made")
+        else:
+            vehicle = self._new_vehicle(customer, row, ADDON_SHEET, ref, source_ref)
+            self.report.standalone_vehicles_created += 1
+        self.vehicles.setdefault(email, []).append((vehicle, car_number, model))
+        return None
 
     def addon_row(self, row: dict, year: int) -> None:
         ref = _text(row.get("sl. no.")) or "?"
         email = _text(row.get("email")).lower()
-        customer = self.customers.get(email)
+        if not _EMAIL.fullmatch(email):
+            return self.error(ADDON_SHEET, ref, "the email is missing or not valid")
+        customer = self._customer(row, ADDON_SHEET, ref, email)
         if customer is None:
-            return self.error(ADDON_SHEET, ref,
-                              "no customer with this email in the Customer Master sheet")
+            return None
+        car_number = _text(row.get("car number"))
+        model = _text(row.get("car model"))
+        if email not in self.master_emails:
+            self._standalone_vehicle(customer, row, ref, email, car_number, model)
         source_ref = f"deepspa:{ref}"
         if self.db.scalar(select(AddonRequest).where(AddonRequest.source_ref == source_ref)):
             self.report.addons_kept += 1
@@ -285,8 +323,7 @@ class _Importer:
         status_text = _text(row.get("status")).lower()
         if status_text not in _PAYMENT:
             self.warn(ADDON_SHEET, ref, "no payment status")
-        vehicle = self._match_vehicle(
-            email, _text(row.get("car number")), _text(row.get("car model")))
+        vehicle = self._match_vehicle(email, car_number, model)
         if vehicle is None:
             self.warn(ADDON_SHEET, ref, "could not tell which of the customer's vehicles")
 

@@ -31,6 +31,9 @@ def main() -> None:
     print(f"customers: {report.customers_created} new, {report.customers_kept} already there")
     print(f"vehicles with a subscription: {report.vehicles_created} new, "
           f"{report.vehicles_kept} already there")
+    print(f"vehicles without a subscription (standalone Deep Spa): "
+          f"{report.standalone_vehicles_created} new, "
+          f"{report.standalone_vehicles_kept} already there")
     print(f"add-on requests: {report.addons_created} new, {report.addons_kept} already there")
     for title, lines in (("Needs attention", report.warnings), ("Not loaded", report.errors)):
         print(f"\n{title}: {len(lines)}")

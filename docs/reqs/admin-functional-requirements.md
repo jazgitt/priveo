@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.7: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on; admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.8: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -170,7 +170,7 @@ Rules followed:
 | ADM-SVS-07 | A slot's end time must be after its start time, and two slots of the same service cannot overlap on the same day in the same society. | Derived |
 | ADM-SVS-08 | Changes to working slots apply to scheduling from then on. A frozen schedule is not changed by them. | Derived |
 | ADM-SVS-09 | Planning durations: **Cleaning-External** about 20 minutes (one crew member does 3 in 1 hour), **Cleaning-Internal** about 20 minutes, and **Deep Spa** 2 hours (120 minutes). These apply to every vehicle category for now. | Owner |
-| ADM-SVS-10 | The scheduler plans all three services with these durations (ADM-SVS-09), each as its own job. Cleaning-External is due every day and Cleaning-Internal on the customer's interior care day. A Deep Spa job is planned when a customer buys the add-on, on the date and finish-by time the customer proposed (ADM-SCH-30). | Owner |
+| ADM-SVS-10 | The scheduler plans all three services with these durations (ADM-SVS-09), each as its own job. Cleaning-External is due every day and Cleaning-Internal on the customer's interior care day. A Deep Spa job is planned when a customer buys it, as an add-on or as a standalone service (ADM-ADD-10), on the date and finish-by time proposed (ADM-SCH-30). | Owner |
 
 ---
 
@@ -352,10 +352,13 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-ADD-03 | For a request on the Needs scheduling list, the admin agrees a new date with the customer, sets the date and time, and the scheduler then plans it (ADM-SCH-30). The customer sees the assigned crew member and time (CAL-10). | Owner |
 | ADM-ADD-04 | The admin can create an add-on request for a customer, for example when the customer asks by phone, and can change or cancel any request at any time. The admin is not bound by the 9 PM deadline (ADM-CUS-11). | Derived |
 | ADM-ADD-05 | An add-on's payment appears in the payments list with the type Add-on (ADM-PAY-10). The admin confirms it and can generate its invoice like a plan payment. | Owner |
-| ADM-ADD-06 | Add-ons can be bought only for a vehicle whose subscription is Active, by an existing customer (ADD-01 in the customer file). | Owner |
+| ADM-ADD-06 | As an add-on, Deep Spa is bought for a vehicle whose subscription is Active (ADD-01 in the customer file). A customer without a subscription takes it as a standalone service (ADM-ADD-10). | Owner |
 | ADM-ADD-07 | A job the crew could not do for an add-on follows the Missed rules (ADM-CNC-03). | Derived |
 | ADM-ADD-08 | In MVP scheduling an add-on does not depend on its payment status. This can change later. | Owner |
 | ADM-ADD-09 | Every admin action on an add-on request is recorded with the admin and the time. | Derived |
+| ADM-ADD-10 | Deep Spa is also a standalone service: a customer who has no subscription can take it (ADD-14 in the customer file). | Owner |
+| ADM-ADD-11 | A customer can therefore exist with a vehicle and no subscription. The one-time load of existing customers brings in the people who have taken only a Deep Spa in this way, with their Deep Spa as history. | Derived |
+| ADM-ADD-12 | How a standalone Deep Spa is requested, paid for and recorded for a customer without a subscription is not decided yet (ADD-15 in the customer file). | Open |
 
 ## 10. Business rules
 
@@ -383,7 +386,7 @@ These are the admin features the customer requirements already depend on. You co
 22. Sign-in identifiers are unique: a customer's email, a crew member's mobile number and an admin's user ID.
 23. The admin can move a payment back to Due or Over due, and generate a GST invoice for a Received payment.
 24. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26 (rule 28 in the customer file).
-25. Deep Spa is an add-on bought separately by existing customers, planned by the scheduler on the date the customer proposes, and not dependent on payment status in MVP.
+25. Deep Spa is bought separately, as an add-on by a customer with a subscription or as a standalone service by a customer without one. It is planned by the scheduler on the date proposed, and is not dependent on payment status in MVP.
 
 ---
 
@@ -421,7 +424,7 @@ For your reference when you write the data model. This is a reading of the requi
 - **Invoice**: payment, invoice number, date, amount and GST breakdown, seller details, generated by and when.
 - **Invoice settings**: seller legal name, address, GSTIN, invoice number format.
 - **Needs scheduling entry**: visit, reason (late visit, crew removed, nobody fits), time added, handled by and when.
-- **Add-on / Add-on request**: as in the customer file. A request is planned as a scheduled job and has its own payment of type Add-on.
+- **Add-on / Add-on request**: as in the customer file. A request is planned as a scheduled job and has its own payment of type Add-on. The customer may have no subscription (standalone Deep Spa).
 - **Payment settings**: UPI ID, UPI QR code image.
 - **Support settings**: helpline number, WhatsApp number, support hours.
 
@@ -447,7 +450,7 @@ For your reference when you write the data model. This is a reading of the requi
 | Crew file: Could not complete reasons and Missed visits | Manage the reasons and decide the outcome | ADM-CNC |
 | Crew file: login details and password reset | Generate and reset crew passwords and show them once to the admin | ADM-CRW-17, ADM-CRW-18 |
 | AUTH-14, ONB-25: customers sign in only if the admin created them, then review the details | Create customers, send the welcome email, manage sign-in | ADM-CUS-01, ADM-CUS-04, ADM-CUS-17 to ADM-CUS-21 |
-| ADD-01 to ADD-13: add-ons bought by existing customers | Manage add-ons and requests | ADM-ADD, ADM-SCH-30, ADM-SCH-31 |
+| ADD-01 to ADD-15: Deep Spa as an add-on and as a standalone service | Manage add-ons and requests | ADM-ADD, ADM-SCH-30, ADM-SCH-31 |
 | SUB-05, SUB-11: subscription states and Inactive | Start, stop and reactivate subscriptions | ADM-SUB |
 
 ---
@@ -457,8 +460,9 @@ For your reference when you write the data model. This is a reading of the requi
 Open from the crew work and the review:
 
 1. The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07). The owner will supply them later.
+2. How a customer without a subscription requests, pays for and follows a standalone Deep Spa (ADM-ADD-12, ADD-15). The owner will decide later.
 
-Answered during the review: Deep Spa is a separately bought add-on for existing customers and is separate from the day's plan visit; the customer proposes one date and a finish-by time; scheduling does not wait for payment; the customer can change or cancel until 9 PM the day before; a job that cannot fit goes to the admin's list; the plan is chosen before service preferences when a customer adds a vehicle; a Trainee has no jobs when the paired Member is absent; sign-in limits are as written in AUTH-05 to AUTH-13; the customer can change names, mobile number, parking, vehicle photo, cutoff time and interior day in the onboarding review; the first payment is asked only if Due or Over due; ratings are general; one crew card for each job; a skipped interior day is lost for that week; Deep Spa is 2 hours and Internal is 20 minutes; a plan change starts at the next renewal; Missed shows "Missed. Rescheduled on dd-Mon-yy"; crew roles and privileges.
+Answered during the review: Deep Spa is bought separately, as an add-on by subscribers and as a standalone service by others (revised 10 Oct 2026), and is separate from the day's plan visit; the customer proposes one date and a finish-by time; scheduling does not wait for payment; the customer can change or cancel until 9 PM the day before; a job that cannot fit goes to the admin's list; the plan is chosen before service preferences when a customer adds a vehicle; a Trainee has no jobs when the paired Member is absent; sign-in limits are as written in AUTH-05 to AUTH-13; the customer can change names, mobile number, parking, vehicle photo, cutoff time and interior day in the onboarding review; the first payment is asked only if Due or Over due; ratings are general; one crew card for each job; a skipped interior day is lost for that week; Deep Spa is 2 hours and Internal is 20 minutes; a plan change starts at the next renewal; Missed shows "Missed. Rescheduled on dd-Mon-yy"; crew roles and privileges.
 
 ---
 
@@ -474,6 +478,7 @@ Answered during the review: Deep Spa is a separately bought add-on for existing 
 ### To be specified later by the owner
 
 - The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07).
+- The standalone Deep Spa flow for a customer without a subscription (ADM-ADD-12).
 
 ### Out of scope for this file
 
