@@ -100,8 +100,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 ## 6. Not built yet
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- Native Android flavors with their own application IDs.
 - The real Priveo mark. The launcher icon and the native splash use a placeholder gold P drawn by `apps/mobile/tool/gen_brand_mark.py` (needs Pillow). **Open:** the owner supplies the square mark.
-- Golden tests. Make them on the CI machine, since Windows and Linux render fonts differently.
-- An `integration_test` run on a device or emulator.
-- A generated API client. The app has hand-written models for the three homes.
+- A logo that shows on a light background. The logo is white, so it is almost invisible on the light splash and login screens (see `apps/mobile/test/goldens/login_light.png`). **Open.**
+- Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
+- An Android package build in `mobile-ci`. Only `mobile-integration` (after a merge) builds one, so a native build error is not caught on the pull request.
