@@ -35,6 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free disk space for the emulator
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/share/swift
+          df -h /
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -62,5 +67,6 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
+          disk-size: 4096M
           working-directory: apps/mobile
           script: flutter test integration_test --dart-define=API_BASE_URL="$API_DEV_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
