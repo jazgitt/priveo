@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+import app.models  # Registers every table, so the links between them resolve.
 from app.home import router as home
 from app.identity import router as identity
 from app.platform.errors import install_error_handlers
