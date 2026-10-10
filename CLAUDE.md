@@ -39,7 +39,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 
 ## Domain facts to keep straight
 
-- Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours). Each service is a separate job. Deep Spa is not in the plan: it is an add-on that existing customers buy separately, proposing one date and a finish-by time. Scheduling does not wait for its payment in MVP.
+- Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours). Each service is a separate job. Deep Spa is not in the plan. A subscriber buys it separately as an add-on, proposing one date and a finish-by time. A customer without a subscription can take it as a standalone service; how they do that is not decided yet (`ADD-15`). Scheduling does not wait for its payment in MVP.
 - A visit is Completed only when all its jobs are done or skipped.
 - Billing cycle is 30 calendar days from the first service date. Payments are manual by UPI (statuses Due, Over due, Initiated, Received). A payment Over due for 7 days makes a subscription Inactive.
 - A schedule is frozen once, by 8 PM the day before its first day (a weekly schedule before the week starts). Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.

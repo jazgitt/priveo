@@ -58,8 +58,11 @@ ADDON_ROWS = [
      "Deep Spa (799/-)", "4th Oct", "Paid", "Deep Spa done on 4th Oct", ASHA],
     [2, "Vikram", "9000000102/9000000103", "Nexon", 7577, "D-2 14", "B2-9",
      "Deep Spa (699/-)", "7th Oct 5:30 PM", None, "", "vikram@example.com"],
-    [3, "Nobody", 9000000199, "Punch", "", "", "", "Deep Spa (699/-)", "5th Oct", "Pending",
-     "", "nobody@example.com"],
+    # Not in the master sheet: a standalone Deep Spa customer, twice with one car.
+    [3, "Meera Nair", 9000000199, "Tata Punch", "HR 26 DK 8337", "C-7", "B1-40",
+     "Deep Spa (699/-)", "5th Oct", "Pending", "", "meera@example.com"],
+    [4, "Meera Nair", 9000000199, "Tata Punch", "HR26DK8337", "C-7", "B1-40",
+     "Deep Spa (699/-)", "9th Oct", "Paid", "", "meera@example.com"],
 ]
 
 
@@ -75,6 +78,7 @@ def test_helpers():
     assert mobile_of("+91 90000 00101") == "9000000101"
     assert mobile_of("9000000102/9000000103") == "9000000102"
     assert mobile_of(12345) is None
+    assert mobile_of("9xxxxx0101") == "9xxxxx0101"  # masked
     assert registration_of("dl 13 cm 0019") == "DL13CM0019"
     assert registration_of("22 BH 1234 A") == "22BH1234A"
     assert registration_of("7577") is None
@@ -88,13 +92,14 @@ def test_helpers():
 
 def test_a_trial_run_saves_nothing(db, tmp_path):
     report = import_workbook(db, _workbook(tmp_path, ROWS, ADDON_ROWS), apply=False)
-    assert (report.customers_created, report.vehicles_created) == (2, 3)
+    assert (report.customers_created, report.vehicles_created) == (3, 3)
     assert _count(db, Customer) == 0 and _count(db, Login) == 0 and _count(db, Society) == 0
 
 
 def test_the_load(db, tmp_path):
     report = import_workbook(db, _workbook(tmp_path, ROWS, ADDON_ROWS), apply=True)
-    assert (report.customers_created, report.vehicles_created, report.addons_created) == (2, 3, 2)
+    assert (report.customers_created, report.vehicles_created, report.addons_created) == (3, 3, 4)
+    assert report.standalone_vehicles_created == 1 and report.errors == []
 
     # Two rows with one email, in any letter case, are one customer.
     asha = db.scalar(select(Customer).where(Customer.email == ASHA))
@@ -131,6 +136,17 @@ def test_the_load(db, tmp_path):
     assert second.vehicle_id == cars["master:3"].id  # matched by a partial number
     assert second.payment_status is None and "7th Oct 5:30 PM" in second.notes
 
+    # The standalone customer has a login, one vehicle and no subscription.
+    meera = db.scalar(select(Customer).where(Customer.email == "meera@example.com"))
+    assert (meera.first_name, meera.mobile, meera.flat) == ("Meera", "9000000199", "C-7")
+    car = cars["deepspa-vehicle:3"]
+    assert (car.customer_id, car.registration, car.model) == (
+        meera.id, "HR26DK8337", "Tata Punch")
+    assert "deepspa-vehicle:4" not in cars
+    assert db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id)) is None
+    assert addons["deepspa:3"].vehicle_id == car.id == addons["deepspa:4"].vehicle_id
+    assert addons["deepspa:3"].payment_status == "Due"
+
 
 def test_the_report_flags_gaps_without_personal_details(db, tmp_path):
     report = import_workbook(db, _workbook(tmp_path, ROWS, ADDON_ROWS), apply=True)
@@ -139,9 +155,9 @@ def test_the_report_flags_gaps_without_personal_details(db, tmp_path):
     assert "Customer Master row 2: no cutoff time" in text
     assert "Customer Master row 3: the name is one word" in text
     assert "Deep Spa Addons row 2: no payment status" in text
-    assert report.errors == [
-        "Deep Spa Addons row 3: no customer with this email in the Customer Master sheet"]
-    for secret in ("Asha", "Vikram", "9000000101", "example.com", "DL13", "7577"):
+    assert report.errors == []
+    for secret in ("Asha", "Vikram", "Meera", "9000000101", "example.com", "DL13", "7577",
+                   "HR26"):
         assert secret not in text
 
 
@@ -149,10 +165,11 @@ def test_running_it_again_adds_nothing(db, tmp_path):
     path = _workbook(tmp_path, ROWS, ADDON_ROWS)
     import_workbook(db, path, apply=True)
     again = import_workbook(db, path, apply=True)
-    assert (again.customers_created, again.vehicles_created, again.addons_created) == (0, 0, 0)
-    assert (again.customers_kept, again.vehicles_kept, again.addons_kept) == (2, 3, 2)
+    assert (again.customers_created, again.vehicles_created, again.addons_created,
+            again.standalone_vehicles_created) == (0, 0, 0, 0)
+    assert (again.customers_kept, again.vehicles_kept, again.addons_kept) == (3, 3, 4)
     assert (_count(db, Customer), _count(db, Vehicle), _count(db, Subscription),
-            _count(db, AddonRequest)) == (2, 3, 3, 2)
+            _count(db, AddonRequest)) == (3, 4, 3, 4)
 
 
 @pytest.mark.parametrize("change, message", [

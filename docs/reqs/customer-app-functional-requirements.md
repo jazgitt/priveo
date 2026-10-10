@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.9: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is a separately bought add-on; consistency pass
+**Status:** Draft v0.10: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -325,11 +325,11 @@ A customer can own more than one vehicle. Each vehicle has its own parking detai
 
 ## 9a. Add-ons (Deep Spa)
 
-An add-on is an optional extra service the customer buys separately from the plan. In MVP the only add-on is Deep Spa, a 2-hour job. It is available only to existing customers, for now.
+An add-on is an optional extra service the customer buys separately from the plan. In MVP the only add-on is Deep Spa, a 2-hour job. A customer with a subscription buys it as an add-on. A customer without a subscription can take Deep Spa as a standalone service (ADD-14). The rows ADD-01 to ADD-13 describe the add-on path in the app.
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADD-01 | Add-ons can be bought only by an existing customer, for a vehicle whose subscription is Active. For a vehicle that is Activating, Paused or Inactive the add-on screens are hidden. Deep Spa is not part of any plan. | Owner and Derived |
+| ADD-01 | In the app, an add-on is bought for a vehicle whose subscription is Active. For a vehicle that is Activating, Paused or Inactive the add-on screens are hidden. Deep Spa is not part of any plan. Deep Spa without a subscription is the standalone service (ADD-14). | Owner and Derived |
 | ADD-02 | The customer finds add-ons on the Home "Add-ons" card (HOME-09) and in an "Add-ons" item in the Account menu (ACC-03). The screen lists the add-ons offered, each with its name, description, price including GST and struck-through list price, loaded from the backend (ADM-ADD-01). It also lists the customer's earlier add-on requests with their status. | Owner |
 | ADD-03 | The customer can buy any number of add-ons. Each purchase is its own request, with its own payment. | Owner |
 | ADD-04 | To buy, the customer chooses the add-on, proposes **one preferred date** and a **finish-by time**, and confirms. The date must be tomorrow or later and still before its 9 PM cutoff (SCHED-01). The finish-by time is any time of day in 30-minute steps. A summary shows the vehicle, add-on, date, time and total. | Owner |
@@ -342,6 +342,8 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ADD-11 | A scheduled add-on appears on the calendar on its date with the Full spa marker (CAL-02) and a day card. When the job is done, its proof (checklist, photos, video, crew member) opens in Service Details like any job (SVC-01 to SVC-06). The add-on job is separate from the day's plan visit: the plan visit completes without waiting for it. | Owner |
 | ADD-12 | If the crew could not do the job, it is Missed. The admin schedules it again for the next day only, or marks it skipped by operations: a skipped Deep Spa does not extend the plan, and any refund or rebooking is handled by the admin outside the app (ADM-CNC-03, ADM-OPS-03). The customer sees "Missed. Rescheduled on dd-Mon-yy" as in CAL-09. | Derived |
 | ADD-13 | No new notification event is added in MVP. "Service completed" applies when the add-on job is done (NOTIF-02). | Derived |
+| ADD-14 | Deep Spa is not only an add-on. A customer who has no subscription can take Deep Spa as a standalone service. | Owner |
+| ADD-15 | How a customer without a subscription asks for, pays for and follows a standalone Deep Spa is not decided yet. | Open |
 
 ---
 
@@ -448,7 +450,7 @@ Starting check-in categories (CHK-03):
 These are behaviors a developer must implement, taken from the screens and owner decisions:
 
 1. There is no fixed rest day. Every day of the week is open for service, and the admin decides what is scheduled.
-2. The plan includes exterior cleaning 7 days a week. On the customer's chosen day the visit also includes interior cleaning. If that day is skipped, paused or skipped by operations, that week's interior cleaning is lost and not made up. Deep Spa is not part of the plan: it is an add-on bought separately (section 9a).
+2. The plan includes exterior cleaning 7 days a week. On the customer's chosen day the visit also includes interior cleaning. If that day is skipped, paused or skipped by operations, that week's interior cleaning is lost and not made up. Deep Spa is not part of the plan: a subscriber buys it separately as an add-on, and a customer without a subscription can take it as a standalone service (section 9a).
 3. Every customer change to a date's schedule (skip, un-skip, start or end of a pause, a new service cutoff time, an add-on change or cancellation) must be made by 9 PM the previous day. After that the customer calls the helpline for emergency changes. Skipped visits are not charged and the crew is notified automatically.
 4. A pause covers a date range, with no minimum or maximum length in MVP. Paused visits are added to the end of the plan, so the renewal date moves forward by the number of visits paused. Ending a pause early recalculates it. A skip is a subset of a pause: skipped dates inside a pause are counted once, as paused days.
 5. The customer sets a service cutoff time, the time by which the daily clean must be finished, and does not choose a slot. The admin assigns the actual slot later.
@@ -477,7 +479,7 @@ These are behaviors a developer must implement, taken from the screens and owner
 28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement.
 29. A customer signs in with their email. The customer exists only because the admin created them. At the first sign-in they get a 6-digit code by email, set a password, and review the details the admin entered. After that they sign in with email and password, and stay signed in on the phone. Forgot password and an email change use an emailed code. There is no mobile OTP.
 30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo."
-31. Deep Spa (2 hours) is an add-on that existing customers buy separately for a vehicle with an Active subscription. The customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
+31. Deep Spa (2 hours) is sold in two ways. A customer with a subscription buys it as an add-on for a vehicle with an Active subscription. A customer without a subscription can take it as a standalone service; how they do that is not decided yet (ADD-15). For an add-on, the customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
 
 ---
 
@@ -488,7 +490,7 @@ For your reference when you write the data model. This is a reading of the scree
 - **Customer**: first name, last name, email (sign-in identity, unique), mobile (contact, not verified), password (stored hashed), email verified, terms accepted date, onboarding confirmed, avatar initials. Has many vehicles.
 - **Verification code**: customer, purpose (first sign-in, forgot password, email change), code (stored hashed), expiry, wrong attempts, sent time.
 - **Add-on**: name, description, price, list price, duration, active flag. Managed by the admin. Deep Spa is the first.
-- **Add-on request**: customer, vehicle, add-on, proposed date, finish-by time, status (Requested, Scheduled, Completed, Cancelled, Missed), assigned crew member and time, payment, created and changed times.
+- **Add-on request**: customer, vehicle (with or without a subscription), add-on, proposed date, finish-by time, status (Requested, Scheduled, Completed, Cancelled, Missed), assigned crew member and time, payment, created and changed times.
 - **Society**: name, sector, city, cars serviced. Slots are managed by the admin.
 - **Vehicle**: customer, society (fixed), make, model, variant, category, registration number, RC document, photo (mandatory, the customer's own).
 - **Parking**: vehicle, basement, parking number.
@@ -533,7 +535,11 @@ Owner decision: where the wireframes and the interactive prototype differ, the p
 
 ### Open questions
 
-All earlier questions in this file are answered and removed. None of its own are open. Other open questions that touch the customer app are tracked in `admin-functional-requirements.md` and `crew-functional-requirements.md`.
+All earlier questions in this file are answered and removed. One is open:
+
+1. How a customer without a subscription asks for, pays for and follows a standalone Deep Spa (ADD-15). The owner will decide later.
+
+Other open questions that touch the customer app are tracked in `admin-functional-requirements.md` and `crew-functional-requirements.md`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Priveo Car Concierge
 
-A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa add-on that existing customers buy separately. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. A Flutter app on iOS and Android serves customers and crew, with a small set of admin quick actions. Admins do their full work on a React web portal. The role on each login decides what appears.
+A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa that is bought separately: as an add-on by a subscriber, or as a standalone service by a customer without a subscription. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. A Flutter app on iOS and Android serves customers and crew, with a small set of admin quick actions. Admins do their full work on a React web portal. The role on each login decides what appears.
 
 This repository currently holds the product requirements and the prototype material they were built from. There is no application code yet.
 
@@ -32,7 +32,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 | UPI AutoPay and a "Renew automatically" switch | Every payment is manual: the customer pays by UPI QR or UPI ID and taps "I've paid", then the admin confirms |
 | A "Crew rest day" | There is no rest day. Every day is open |
 | A 2-hour cleaning slot picker | The customer sets a service cutoff time, in 30-minute steps. The admin assigns the slot |
-| The monthly full spa on the interior day | Deep Spa is an add-on: 2 hours, bought separately by an existing customer, who proposes one date and a finish-by time |
+| The monthly full spa on the interior day | Deep Spa is 2 hours and bought separately: as an add-on by a subscriber, who proposes one date and a finish-by time, or as a standalone service by a customer without a subscription |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |
 | Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by email: a code on first sign-in, then a password. Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
 | A "My Vehicles" bottom tab | Bottom tabs are Home, Calendar, Account, Support. Vehicles sit under Account |
@@ -49,5 +49,6 @@ The requirements follow the prototype, except where the owner has decided otherw
 ## Open items
 
 - Starting checklists for Cleaning-Internal and Deep Spa, to be supplied by the owner (`ADM-CHK-07`).
+- How a customer without a subscription requests, pays for and follows a standalone Deep Spa (`ADD-15`, `ADM-ADD-12`).
 
 The full lists are in section 13 of the admin file, section 11 of the crew file and section 14 of the customer file.
