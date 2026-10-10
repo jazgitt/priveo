@@ -1,6 +1,6 @@
 # Priveo Build Plan
 
-**Status:** v0.3, 10 Oct 2026. Phase 0 started: steps 1, 2, 5 to 9 and 12 are built; steps 3, 4, 10 and 11 are written as workflows but wait on the owner's accounts (see `docs/build-and-release.md`).
+**Status:** v0.4, 10 Oct 2026. Phase 0a is built except delivery through Play: steps 1, 2, 5 to 9 and 12 are done, and steps 3 and 4 run on Vercel in place of AWS for `dev`. Step 10 (Play internal testing) is written as a workflow and waits on the owner's Play Console account. Step 11 (iOS) is not started and waits on the Apple Developer account. The app icon and native splash use a placeholder mark. See `docs/build-and-release.md`.
 **Basis:** `docs/architecture.md` v0.2, `docs/tech-stack.md`, `docs/brand/tokens.json`, and the owner's answers of 9 Oct 2026: Android first and iOS later in Phase 0, mock data served by a deployed FastAPI, delivery by TestFlight and Play internal testing, application ID `in.priveo.app`, code in this repository, `dev` and `prod` environments until Phase 6.
 
 ## 1. The plan at a glance
