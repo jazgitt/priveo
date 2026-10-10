@@ -18,6 +18,8 @@
 | App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>` |
 | App: run (dev) | `flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=<url>` |
 
+The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
+
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
 
 The mock passwords are configuration, never committed. An empty password switches that mock login off.
@@ -89,7 +91,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 - The Android build number is the GitHub run number (`--build-number`). The version name comes from `apps/mobile/pubspec.yaml`.
 - The API build number is the same run number, passed to the image as `BUILD_NUMBER`. `GET /v1/public/health` shows it.
-- Phase 0 Play builds use the `dev` entry point and the `dev` API address. A `prod` build comes with Phase 8.
+- Phase 0 Play builds are the `prod` flavor (`in.priveo.app`, the Play app) started from the `dev` entry point with the `dev` API address. **Derived:** the owner has not chosen whether Play testers should get `in.priveo.app` or `in.priveo.app.dev` in Phase 0. A real `prod` build comes with Phase 8.
 
 ## 6. Not built yet
 
