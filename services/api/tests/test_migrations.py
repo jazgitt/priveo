@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 
 from alembic import command
 from alembic.config import Config
@@ -27,3 +29,17 @@ def test_migrations_build_the_tables_the_models_describe(tmp_path):
     command.downgrade(config, "base")
     assert set(inspect(engine).get_table_names()) <= {"alembic_version"}
     engine.dispose()
+
+
+def test_the_running_app_knows_every_table():
+    """The app is started on its own, as on the host, without the test
+    set-up. A table it has not loaded breaks any save that links to it."""
+    code = ("from app.main import app; import app.models as m; "
+            "from app.platform.db import Base; "
+            "from sqlalchemy.orm import configure_mappers; configure_mappers(); "
+            "[fk.column for t in Base.metadata.tables.values() for fk in t.foreign_keys]; "
+            "print(len(Base.metadata.tables))")
+    only_app = code.replace("import app.models as m; ", "")
+    counts = [subprocess.run([sys.executable, "-c", c], capture_output=True, text=True,
+                             check=True).stdout.strip() for c in (only_app, code)]
+    assert counts[0] == counts[1] != "0"
