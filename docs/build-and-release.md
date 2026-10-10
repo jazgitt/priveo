@@ -22,7 +22,7 @@
 | App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD`, `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
 | App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
 | App: run (dev) | `flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=<url>` |
-| App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile	ool\push_apk.ps1` (the phone plugged in by USB; uses the `dev` API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-dev.apk` from the Files app |
+| App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the `dev` API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-dev.apk` from the Files app |
 
 The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
 
