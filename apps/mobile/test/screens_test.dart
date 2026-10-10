@@ -1,3 +1,4 @@
+import 'package:priveo/features/customer/calendar/calendar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
@@ -167,7 +168,9 @@ void main() {
     }
     await tester.tap(find.text('Calendar'));
     await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsOneWidget);
+    // The tab holds the real calendar. This fake API has no calendar route.
+    expect(find.text('Coming soon'), findsNothing);
+    expect(find.byType(CalendarScreen), findsOneWidget);
   });
 
   testWidgets('crew login lands on the crew home', (tester) async {
