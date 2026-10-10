@@ -95,7 +95,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
 - Native Android flavors with their own application IDs.
-- A native splash screen. The animated splash inside the app is done.
+- The real Priveo mark. The launcher icon and the native splash use a placeholder gold P drawn by `apps/mobile/tool/gen_brand_mark.py` (needs Pillow). **Open:** the owner supplies the square mark.
 - Golden tests. Make them on the CI machine, since Windows and Linux render fonts differently.
 - An `integration_test` run on a device or emulator.
 - A generated API client. The app has hand-written models for the three homes.
