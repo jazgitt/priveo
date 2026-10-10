@@ -363,4 +363,406 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancel => 'Cancel';
+
+  @override
+  String get cust_calendar_title => 'Service calendar';
+
+  @override
+  String get cust_previous_month => 'Previous month';
+
+  @override
+  String get cust_next_month => 'Next month';
+
+  @override
+  String get cust_legend_done => 'Completed';
+
+  @override
+  String get cust_legend_interior => 'Exterior + Interior';
+
+  @override
+  String get cust_legend_spa => 'Deep Spa';
+
+  @override
+  String get cust_legend_scheduled => 'Scheduled';
+
+  @override
+  String get cust_legend_skipped => 'Skipped';
+
+  @override
+  String get cust_legend_missed => 'Missed';
+
+  @override
+  String get cust_no_visit => 'No visit on this day.';
+
+  @override
+  String get cust_no_visit_chip => 'No visit';
+
+  @override
+  String get cust_view_details => 'View service details';
+
+  @override
+  String get cust_proof_after_visit => 'Proof appears after the visit.';
+
+  @override
+  String get cust_you_skipped => 'You skipped this date.';
+
+  @override
+  String get cust_missed_note => 'This service was missed.';
+
+  @override
+  String cust_scheduled_by(String time) {
+    return 'Scheduled to be completed by $time. Proof appears after the visit.';
+  }
+
+  @override
+  String get cust_history_title => 'Service history';
+
+  @override
+  String get cust_history_empty => 'No services yet.';
+
+  @override
+  String cust_photo_count(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cust_visit_title => 'Service details';
+
+  @override
+  String get cust_jobs_heading => 'Jobs';
+
+  @override
+  String get cust_photos_heading => 'Photos';
+
+  @override
+  String get cust_videos_heading => 'Videos';
+
+  @override
+  String get cust_no_proof_yet =>
+      'Photos and videos appear once the service is done.';
+
+  @override
+  String get cust_play_video => 'Play video';
+
+  @override
+  String get cust_photo_unavailable => 'Photo unavailable';
+
+  @override
+  String get cust_close => 'Close';
+
+  @override
+  String cust_photo_position(int index, int total) {
+    return '$index / $total';
+  }
+
+  @override
+  String get cust_vehicles_title => 'My vehicles';
+
+  @override
+  String get cust_vehicles_empty => 'No vehicles yet.';
+
+  @override
+  String get cust_no_subscription => 'No subscription';
+
+  @override
+  String get cust_number_to_be_added => 'Number to be added';
+
+  @override
+  String get cust_vehicle_title => 'Vehicle';
+
+  @override
+  String get cust_field_registration => 'Registration';
+
+  @override
+  String get cust_field_car => 'Make and model';
+
+  @override
+  String get cust_field_variant => 'Variant';
+
+  @override
+  String get cust_field_category => 'Category';
+
+  @override
+  String get cust_field_society => 'Society';
+
+  @override
+  String get cust_field_parking => 'Parking';
+
+  @override
+  String get cust_field_plan => 'Plan';
+
+  @override
+  String get cust_field_cutoff => 'Service cutoff time';
+
+  @override
+  String get cust_field_interior_day => 'Interior care day';
+
+  @override
+  String get cust_not_on_file => 'Not on file';
+
+  @override
+  String get cust_car_details_via_support =>
+      'Car details change only through Priveo support.';
+
+  @override
+  String get cust_account_title => 'My account';
+
+  @override
+  String get cust_account_vehicles => 'My vehicles';
+
+  @override
+  String get cust_account_history => 'Service history';
+
+  @override
+  String get cust_account_notifications => 'Notifications';
+
+  @override
+  String get cust_account_sign_out => 'Sign out';
+
+  @override
+  String get cust_settings_heading => 'Settings';
+
+  @override
+  String get cust_settings_note =>
+      'Notification choices will be available in a later update.';
+
+  @override
+  String get cust_notifications_title => 'Notifications';
+
+  @override
+  String get cust_notifications_empty => 'No notifications yet.';
+
+  @override
+  String get cust_mark_all_read => 'Mark all as read';
+
+  @override
+  String get cust_next_service_heading => 'Next service';
+
+  @override
+  String get people_crewProfileTitle => 'My profile';
+
+  @override
+  String get people_role => 'Role';
+
+  @override
+  String get people_workingHours => 'Working hours';
+
+  @override
+  String get people_dayOff => 'Off';
+
+  @override
+  String people_hoursRange(String start, String end) {
+    return '$start to $end';
+  }
+
+  @override
+  String get people_profileNote =>
+      'Your name, mobile number, society and role are set by Priveo.';
+
+  @override
+  String get people_profileMissing =>
+      'Your details are not set up yet. Contact Priveo.';
+
+  @override
+  String get people_vehiclesTitle => 'My vehicles';
+
+  @override
+  String get people_vehicleDetails => 'Vehicle details';
+
+  @override
+  String get people_subscriptionStatus => 'Subscription status';
+
+  @override
+  String get people_monthlyAmount => 'Monthly amount';
+
+  @override
+  String get people_vehicleNotFound => 'This vehicle is not on your account.';
+
+  @override
+  String get support_title => 'Help and support';
+
+  @override
+  String get support_call => 'Call support';
+
+  @override
+  String get support_whatsapp => 'WhatsApp support';
+
+  @override
+  String support_hours(String hours) {
+    return 'Support hours: $hours';
+  }
+
+  @override
+  String get support_report_issue => 'Report an issue';
+
+  @override
+  String get support_my_complaints => 'My complaints';
+
+  @override
+  String support_complaints_in_progress(String count) {
+    return '$count in progress';
+  }
+
+  @override
+  String get support_give_feedback => 'Give feedback';
+
+  @override
+  String get support_monthly_checkin => 'Monthly check-in';
+
+  @override
+  String get support_cannot_open => 'We could not open that. Please try again.';
+
+  @override
+  String get support_report_title => 'Report an issue';
+
+  @override
+  String get support_issue_category => 'What went wrong?';
+
+  @override
+  String get support_issue_choose => 'Choose what went wrong.';
+
+  @override
+  String get support_issue_linked_visit =>
+      'This report is linked to the clean you came from.';
+
+  @override
+  String get support_issue_description => 'Describe what happened';
+
+  @override
+  String get support_issue_description_required => 'Describe what happened.';
+
+  @override
+  String get support_issue_send => 'Send report';
+
+  @override
+  String get support_issue_sent => 'Thank you. We will reply within 4 hours.';
+
+  @override
+  String get support_complaints_title => 'My complaints';
+
+  @override
+  String get support_complaints_empty => 'You have not raised any complaints.';
+
+  @override
+  String support_complaint_raised_on(String date) {
+    return 'Raised $date';
+  }
+
+  @override
+  String get support_complaint_reply_hint => 'Write a reply';
+
+  @override
+  String get support_complaint_send => 'Send';
+
+  @override
+  String get support_complaint_resolved =>
+      'This complaint is resolved. Raise a new one if the problem is back.';
+
+  @override
+  String get support_thread_you => 'You';
+
+  @override
+  String get support_thread_priveo => 'Priveo';
+
+  @override
+  String support_status_changed(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get support_feedback_title => 'Give feedback';
+
+  @override
+  String get support_feedback_category => 'What is it about? (optional)';
+
+  @override
+  String get support_feedback_rating => 'Your rating';
+
+  @override
+  String get support_feedback_comment => 'Comments';
+
+  @override
+  String get support_feedback_testimonial =>
+      'Priveo may quote my feedback as a testimonial.';
+
+  @override
+  String get support_feedback_send => 'Send';
+
+  @override
+  String get support_feedback_thanks => 'Thank you for your feedback.';
+
+  @override
+  String support_star(String n) {
+    return 'Rate $n out of 5';
+  }
+
+  @override
+  String get support_rate_title => 'Rate this clean';
+
+  @override
+  String get support_rate_positive_tags => 'What went well? (optional)';
+
+  @override
+  String get support_rate_issue_tags => 'What could be better? (optional)';
+
+  @override
+  String get support_rate_thanks => 'Thank you for rating this clean.';
+
+  @override
+  String get support_checkin_title => 'Monthly check-in';
+
+  @override
+  String support_checkin_intro(String vehicle) {
+    return 'How is Priveo doing for $vehicle? Tap a star for any of these.';
+  }
+
+  @override
+  String get support_checkin_comment => 'Anything else? (optional)';
+
+  @override
+  String get support_checkin_submit => 'Submit';
+
+  @override
+  String get support_checkin_thanks => 'Thank you. Your check-in is saved.';
+
+  @override
+  String get support_checkin_none => 'There is no check-in to give right now.';
+
+  @override
+  String get support_crew_ratings_title => 'Ratings';
+
+  @override
+  String get support_crew_ratings_note =>
+      'Customers rate each visit as a whole. A rating is never given to a crew member.';
+
+  @override
+  String get support_crew_ratings_average => 'Average rating';
+
+  @override
+  String support_crew_ratings_count(String count, String days) {
+    return '$count ratings in the last $days days';
+  }
+
+  @override
+  String get support_crew_ratings_none => 'No ratings yet.';
+
+  @override
+  String get support_alerts_title => 'Alerts';
+
+  @override
+  String support_alerts_unread(String count) {
+    return '$count unread';
+  }
+
+  @override
+  String get support_alerts_empty => 'No alerts.';
+
+  @override
+  String get support_alerts_mark_all => 'Mark all as read';
 }

@@ -61,8 +61,12 @@ _Type _typeOf(Map<String, dynamic> s, String where) {
     case 'string' when s['format'] == 'date':
       return _Type('DateTime', (j) => 'DateTime.parse($j as String)',
           (v) => '_date($v)');
-    case 'string' when s['format'] == null && s['enum'] == null:
+    case 'string':
+      // Plain text, ids, enums, times and date-times stay as strings.
       return _Type('String', (j) => '$j as String', (v) => v);
+    case 'object':
+      return _Type('Map<String, dynamic>',
+          (j) => '$j as Map<String, dynamic>', (v) => v);
     case 'integer':
       return _Type('int', (j) => '$j as int', (v) => v);
     case 'number':
@@ -182,8 +186,40 @@ void main() {
 
   final schemas = ((contract['components'] as Map)['schemas'] as Map)
       .cast<String, Map<String, dynamic>>();
+  // The generator covers a fixed subset of OpenAPI. A model or an endpoint
+  // outside it is left out here and called with a hand-written DTO instead.
+  // `skipped` holds models the generator cannot write. `_skipSchemas` are the
+  // ones every endpoint mentions and no screen reads.
+  final skipped = <String>{};
+  var models = <String, String>{};
+  var changed = true;
+  bool refsSkipped(Object json) {
+    final text = jsonEncode(json);
+    return skipped.any((s) => text.contains('#/components/schemas/$s"'));
+  }
+
+  while (changed) {
+    changed = false;
+    models = {};
+    for (final name in schemas.keys.toList()..sort()) {
+      if (_skipSchemas.contains(name) || skipped.contains(name)) continue;
+      if (name.contains('__') || refsSkipped(schemas[name]!)) {
+        skipped.add(name);
+        changed = true;
+        continue;
+      }
+      try {
+        final sb = StringBuffer();
+        _writeModel(sb, name, schemas[name]!);
+        models[name] = sb.toString();
+      } on UnsupportedError {
+        skipped.add(name);
+        changed = true;
+      }
+    }
+  }
   for (final name in schemas.keys.toList()..sort()) {
-    if (!_skipSchemas.contains(name)) _writeModel(b, name, schemas[name]!);
+    if (models.containsKey(name)) b.write(models[name]);
   }
 
   b
@@ -194,7 +230,14 @@ void main() {
     ..writeln("  static final _noAuth = Options(extra: {'noAuth': true});\n");
   (contract['paths'] as Map<String, dynamic>).forEach((path, verbs) {
     (verbs as Map<String, dynamic>).forEach((verb, op) {
-      _writeMethod(b, path, verb, op as Map<String, dynamic>);
+      if (path.contains('{') || refsSkipped(op)) return;
+      try {
+        final sb = StringBuffer();
+        _writeMethod(sb, path, verb, op as Map<String, dynamic>);
+        b.write(sb);
+      } on UnsupportedError {
+        // Left to a hand-written call.
+      }
     });
   });
   final out = b.toString().trimRight();
