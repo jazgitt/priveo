@@ -13,11 +13,14 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../../support/help_screen.dart';
+import '../account/account_screen.dart';
+import '../calendar/calendar_screen.dart';
 import '../data/customer_reads_repository.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
 
-/// Customer shell: bottom tabs. Only Home has content so far.
+/// Customer shell: bottom tabs Home, Calendar, Account and Support.
 /// The layout follows the prototype's dark home.
 class CustomerShell extends ConsumerStatefulWidget {
   const CustomerShell({super.key});
@@ -49,9 +52,12 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
           children: [
             _TopBar(onAvatar: () => _go(_accountTab)),
             Expanded(
-              child: _index == 0
-                  ? CustomerHomeScreen(onCalendar: () => _go(_calendarTab))
-                  : const ComingSoon(),
+              child: switch (_index) {
+                0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
+                _calendarTab => const CalendarScreen(),
+                _accountTab => const AccountScreen(),
+                _ => const HelpScreen(),
+              },
             ),
           ],
         ),

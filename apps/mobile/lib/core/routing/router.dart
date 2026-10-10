@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin_quick/home/admin_home_screen.dart';
+import '../../features/admin_quick/alerts/routes.dart' as alerts;
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/crew/home/crew_home_screen.dart';
 import '../../features/customer/home/customer_shell.dart';
+import '../../features/customer/routes.dart' as customer_pages;
+import '../../features/people/routes.dart' as people;
+import '../../features/support/routes.dart' as support;
 import '../../features/splash/splash_screen.dart';
 import '../auth/auth_controller.dart';
 import '../auth/session.dart';
@@ -17,7 +21,9 @@ String? redirectFor(String location, Session? session) {
   if (location == '/splash') return null;
   if (session == null) return location == '/login' ? null : '/login';
   final home = session.role.homePath;
-  return location == home ? null : home;
+  // The role's own pages sit under its home path. Support and alerts are
+  // `/customer/support`, `/crew/ratings` and `/admin/alerts`.
+  return location == home || location.startsWith('$home/') ? null : home;
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -36,7 +42,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
-      GoRoute(path: '/customer', builder: (_, _) => const CustomerShell()),
+      GoRoute(
+        path: '/customer',
+        builder: (_, _) => const CustomerShell(),
+        routes: customer_pages.routes,
+      ),
       GoRoute(
           path: '/crew',
           builder: (_, _) =>
@@ -45,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/admin',
           builder: (_, _) =>
               Theme(data: adminTheme, child: const AdminHomeScreen())),
+      ...support.routes,
+      ...alerts.routes,
+      // The people slice's vehicle pages are replaced by the customer slice's.
+      ...people.routes.where((r) => r is GoRoute && r.path == '/crew/profile'),
     ],
   );
   ref.onDispose(router.dispose);
