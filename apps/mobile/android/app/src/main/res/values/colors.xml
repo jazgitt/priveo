@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- From docs/brand/tokens.json: color.light.app and color.dark.ink. -->
+<resources>
+    <color name="splash_background">#F7F3EC</color>
+    <color name="ic_launcher_background">#08080A</color>
+</resources>
