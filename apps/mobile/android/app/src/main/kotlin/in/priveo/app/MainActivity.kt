@@ -1,4 +1,4 @@
-package in.priveo.app
+package `in`.priveo.app
 
 import io.flutter.embedding.android.FlutterActivity
 
