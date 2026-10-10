@@ -1,5 +1,6 @@
 // Golden images of the splash end state, the login screen and the three
-// homes, in light and dark.
+// homes. Each has one look: the customer side is dark, crew is white and
+// admin is cream.
 //
 // The images are made and compared on Linux only (the CI machine), because
 // text renders a little differently on each system. To remake them, add the
@@ -38,14 +39,14 @@ Future<void> _loadImages(WidgetTester tester) async {
   });
 }
 
-Future<void> _open(WidgetTester tester, Brightness brightness,
-    {Session? session}) async {
+Future<void> _open(WidgetTester tester, {Session? session}) async {
   tester.view.physicalSize = const Size(780, 1688);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final store = MemorySessionStore();
   if (session != null) await store.write(session);
-  await pumpApp(tester, store: store, brightness: brightness);
+  // Each role has one look, whatever the phone setting is.
+  await pumpApp(tester, store: store);
 }
 
 void main() {
@@ -58,38 +59,35 @@ void main() {
 
   final bool skip = !Platform.isLinux;
 
-  for (final brightness in Brightness.values) {
-    final mode = brightness.name;
+  testWidgets('splash end state', (tester) async {
+    await _open(tester);
+    await _loadImages(tester);
+    // The animation takes 2 seconds, then the app leaves the splash.
+    await tester.pump(const Duration(milliseconds: 1950));
+    await expectLater(
+        find.byType(MaterialApp), matchesGoldenFile('goldens/splash.png'));
+    await passSplash(tester);
+  }, skip: skip);
 
-    testWidgets('splash end state, $mode', (tester) async {
-      await _open(tester, brightness);
-      await _loadImages(tester);
-      // The animation takes 2 seconds, then the app leaves the splash.
-      await tester.pump(const Duration(milliseconds: 1950));
-      await expectLater(find.byType(MaterialApp),
-          matchesGoldenFile('goldens/splash_$mode.png'));
-      await passSplash(tester);
-    }, skip: skip);
+  testWidgets('login', (tester) async {
+    await _open(tester);
+    await passSplash(tester);
+    await _loadImages(tester);
+    await tester.pumpAndSettle();
+    await expectLater(
+        find.byType(MaterialApp), matchesGoldenFile('goldens/login.png'));
+  }, skip: skip);
 
-    testWidgets('login, $mode', (tester) async {
-      await _open(tester, brightness);
+  // Customer is dark, crew is white, admin is cream.
+  for (final session in [customerSession, crewSession, adminSession]) {
+    final role = session.role.name;
+    testWidgets('$role home', (tester) async {
+      await _open(tester, session: session);
       await passSplash(tester);
       await _loadImages(tester);
       await tester.pumpAndSettle();
       await expectLater(find.byType(MaterialApp),
-          matchesGoldenFile('goldens/login_$mode.png'));
+          matchesGoldenFile('goldens/${role}_home.png'));
     }, skip: skip);
-
-    for (final session in [customerSession, crewSession, adminSession]) {
-      final role = session.role.name;
-      testWidgets('$role home, $mode', (tester) async {
-        await _open(tester, brightness, session: session);
-        await passSplash(tester);
-        await _loadImages(tester);
-        await tester.pumpAndSettle();
-        await expectLater(find.byType(MaterialApp),
-            matchesGoldenFile('goldens/${role}_home_$mode.png'));
-      }, skip: skip);
-    }
   }
 }

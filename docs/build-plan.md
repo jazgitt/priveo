@@ -48,7 +48,7 @@ A wrong ID or password shows the API's error message.
 
 | Screen | Content |
 |---|---|
-| Splash | Native splash (dark background, P mark), then an animated logo: fade and scale in, a gold rule draws under it, about 2 seconds, then to login or the role home. Skipped to a simple fade when the phone has reduce-motion on. Dark and light follow the phone setting |
+| Splash | Native splash (dark background, P mark), then an animated logo: fade and scale in, a gold rule draws under it, about 2 seconds, then to login or the role home. Skipped to a simple fade when the phone has reduce-motion on. Always dark. Each role has one look: customer dark (as the prototype), crew white, admin cream (owner decision, 10-Oct-26) |
 | Login | Logo, one ID field, password field with show and hide, gold primary button (56 px high), error message area, and in dev builds a small "Use demo account" list |
 | Customer home | Greeting, a vehicle card (registration, model, society, parking), the next service card (date, service, status), subscription status chip, four quick actions (Skip or Pause, Service History, Give Feedback, Report an Issue), bottom tabs Home, Calendar, Account, Support. Tabs other than Home show a "Coming soon" screen |
 | Crew home | Date, society, counts for today (total, done, left), a list of job cards with time, vehicle, parking and service, and a status chip. No customer name or mobile number |

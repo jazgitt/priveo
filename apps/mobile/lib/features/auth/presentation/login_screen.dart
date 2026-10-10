@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/providers.dart';
+import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -72,34 +74,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     const Center(child: BrandLogo(width: 160)),
                     const SizedBox(height: 32),
-                    Text(l.loginTitle,
-                        style: Theme.of(context).textTheme.headlineMedium),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _id,
-                      enabled: !_busy,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.username],
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(labelText: l.loginIdLabel),
+                    Text(
+                      l.loginTitle,
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _password,
-                      enabled: !_busy,
-                      obscureText: _obscure,
-                      autofillHints: const [AutofillHints.password],
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _submit(),
-                      decoration: InputDecoration(
-                        labelText: l.passwordLabel,
-                        suffixIcon: IconButton(
-                          tooltip: _obscure ? l.showPassword : l.hidePassword,
-                          icon: Icon(_obscure
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
-                          onPressed: () =>
-                              setState(() => _obscure = !_obscure),
+                    const SizedBox(height: 24),
+                    _Field(
+                      label: l.loginIdLabel,
+                      child: TextField(
+                        controller: _id,
+                        enabled: !_busy,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.username],
+                        textInputAction: TextInputAction.next,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _Field(
+                      label: l.passwordLabel,
+                      child: TextField(
+                        controller: _password,
+                        enabled: !_busy,
+                        obscureText: _obscure,
+                        autofillHints: const [AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
+                        decoration: InputDecoration(
+                          suffixIcon: IconButton(
+                            tooltip: _obscure ? l.showPassword : l.hidePassword,
+                            icon: Icon(
+                              _obscure
+                                  ? Symbols.visibility_rounded
+                                  : Symbols.visibility_off_rounded,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
                         ),
                       ),
                     ),
@@ -112,11 +122,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? null
                           : Semantics(
                               liveRegion: true,
-                              child: Text(_error!,
-                                  style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .error)),
+                              child: Text(
+                                _error!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
                             ),
                     ),
                     PrimaryButton(
@@ -126,18 +139,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     if (config.showDemoAccounts) ...[
                       const SizedBox(height: 24),
-                      Text(l.demoAccounts,
-                          style: Theme.of(context).textTheme.labelMedium),
+                      SectionLabel(l.demoAccounts),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         children: [
                           for (final e in demos.entries)
-                            ActionChip(
-                              label: Text(e.key),
+                            OutlinedButton(
                               onPressed: _busy
                                   ? null
                                   : () => setState(() => _id.text = e.value),
+                              child: Text(e.key),
                             ),
                         ],
                       ),
@@ -149,6 +161,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A label above its input, with a soft gold glow while the input has focus.
+class _Field extends StatefulWidget {
+  const _Field({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  State<_Field> createState() => _FieldState();
+}
+
+class _FieldState extends State<_Field> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = context.brand;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ExcludeSemantics(
+          child: Text(
+            widget.label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: b.mute),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Semantics(
+          label: widget.label,
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onFocusChange: (f) => setState(() => _focused = f),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  if (_focused)
+                    BoxShadow(
+                      color: b.gold.withValues(alpha: 0.12),
+                      spreadRadius: 4,
+                    ),
+                ],
+              ),
+              child: widget.child,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
