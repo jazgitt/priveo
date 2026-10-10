@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/app.dart';
+import 'package:priveo/core/api/api.g.dart' hide AppConfig;
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
-import 'package:priveo/features/admin_quick/home/admin_home_data.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
-import 'package:priveo/features/crew/home/crew_home_data.dart';
-import 'package:priveo/features/customer/home/customer_home_data.dart';
 
 const customerSession = Session(
     role: Role.customer,
@@ -57,19 +55,21 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> logout() async => logoutCalls++;
 }
 
-class FakeCustomerHomeRepository implements CustomerHomeRepository {
+/// Serves the three homes from the JSON below. Other calls are not used
+/// by the screens under test.
+class FakePriveoApi implements PriveoApi {
   @override
-  Future<CustomerHome> fetch() async => CustomerHome.fromJson(customerJson);
-}
+  Future<CustomerHome> customerHome() async =>
+      CustomerHome.fromJson(customerJson);
 
-class FakeCrewHomeRepository implements CrewHomeRepository {
   @override
-  Future<CrewHome> fetch() async => CrewHome.fromJson(crewJson);
-}
+  Future<CrewHome> crewHome() async => CrewHome.fromJson(crewJson);
 
-class FakeAdminHomeRepository implements AdminHomeRepository {
   @override
-  Future<AdminHome> fetch() async => AdminHome.fromJson(adminJson);
+  Future<AdminHome> adminHome() async => AdminHome.fromJson(adminJson);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
 const customerJson = {
@@ -146,10 +146,7 @@ Future<ProviderContainer> pumpApp(
     appConfigProvider.overrideWithValue(AppConfig.dev),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
-    customerHomeRepositoryProvider
-        .overrideWithValue(FakeCustomerHomeRepository()),
-    crewHomeRepositoryProvider.overrideWithValue(FakeCrewHomeRepository()),
-    adminHomeRepositoryProvider.overrideWithValue(FakeAdminHomeRepository()),
+    apiProvider.overrideWithValue(FakePriveoApi()),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(

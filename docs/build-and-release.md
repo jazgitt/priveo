@@ -13,9 +13,11 @@
 | API: smoke test a running API | `SMOKE_CUSTOMER_PASSWORD=... SMOKE_CREW_PASSWORD=... SMOKE_ADMIN_PASSWORD=... python scripts/smoke_test.py <url>` |
 | App: get packages | `cd apps/mobile && flutter pub get` |
 | App: theme from tokens | `dart run tool/gen_theme.dart` (after changing `docs/brand/tokens.json`) |
+| App: API client from the contract | `dart run tool/gen_api.dart` (after `packages/api-contract/openapi.json` changes) |
 | App: translations | `flutter gen-l10n` (after changing `lib/l10n/app_en.arb`) |
 | App: analyze and test | `flutter analyze && flutter test` |
-| App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>` |
+| App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD`, `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
+| App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
 | App: run (dev) | `flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=<url>` |
 
 The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
@@ -29,8 +31,10 @@ The mock passwords are configuration, never committed. An empty password switche
 | Workflow | Runs on | Does |
 |---|---|---|
 | `api-ci` | Pull request touching the API | Lint, pytest, and a check that `openapi.json` matches the code |
-| `mobile-ci` | Pull request touching the app or `tokens.json` | Theme and translations up to date, `flutter analyze`, `flutter test` |
+| `mobile-ci` | Pull request touching the app, `tokens.json` or `openapi.json` | Theme, translations and API client up to date, `flutter analyze`, `flutter test` |
+| `mobile-goldens` | The label `update-goldens` added to a pull request | Remakes the golden images on Linux and commits them to the branch. Push one more commit afterwards, since that commit does not start `mobile-ci` |
 | `api-deploy` | Merge to `main` touching the API | Deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
+| `mobile-integration` | Merge to `main` touching the app, or a pull request changing the integration test | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 10 minutes |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
 `api-deploy` has two jobs. `deploy-vercel` runs when `DEPLOY_PROVIDER` is empty or `vercel` and `VERCEL_PROJECT_ID` is set. `deploy-aws` runs when `DEPLOY_PROVIDER` is `aws` and `AWS_DEPLOY_ROLE_ARN` is set. A job with missing settings is skipped. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
@@ -97,7 +101,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
 - Native Android flavors with their own application IDs.
-- A native splash screen. The animated splash inside the app is done.
+- The real Priveo mark. The launcher icon and the native splash use a placeholder gold P drawn by `apps/mobile/tool/gen_brand_mark.py` (needs Pillow). **Open:** the owner supplies the square mark.
 - Golden tests. Make them on the CI machine, since Windows and Linux render fonts differently.
 - An `integration_test` run on a device or emulator.
 - A generated API client. The app has hand-written models for the three homes.
