@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:priveo/core/api/api.g.dart';
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/routing/router.dart';
 import 'package:priveo/core/util/format.dart';
-import 'package:priveo/features/crew/home/crew_home_data.dart';
-import 'package:priveo/features/customer/home/customer_home_data.dart';
 
 import 'support/fakes.dart';
 
@@ -55,8 +54,8 @@ void main() {
   group('mappers', () {
     test('customer home', () {
       final h = CustomerHome.fromJson(customerJson);
-      expect(h.registration, 'MH 12 AB 1234');
-      expect(h.nextServiceDate, DateTime(2026, 11, 7));
+      expect(h.vehicle.registration, 'MH 12 AB 1234');
+      expect(h.nextService.date, DateTime(2026, 11, 7));
       expect(h.quickActions, hasLength(4));
     });
     test('crew home', () {

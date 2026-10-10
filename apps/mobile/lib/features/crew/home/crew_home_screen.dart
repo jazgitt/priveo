@@ -5,6 +5,7 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../../../core/api/api.g.dart' show JobCard;
 import 'crew_home_data.dart';
 
 class CrewHomeScreen extends ConsumerWidget {
