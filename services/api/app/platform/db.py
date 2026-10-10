@@ -55,7 +55,9 @@ def make_engine(url: str) -> Engine:
                              connect_args={"check_same_thread": False})
     # No pool in the API process: the host (Neon, or RDS Proxy) pools, and a
     # serverless function must not hold connections between requests.
-    return create_engine(url, poolclass=NullPool)
+    # Prepared statements are off because the host's pooler hands each
+    # transaction to a different server connection.
+    return create_engine(url, poolclass=NullPool, connect_args={"prepare_threshold": None})
 
 
 @lru_cache

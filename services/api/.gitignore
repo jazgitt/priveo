@@ -1,3 +1,8 @@
 .vercel
 .env*
 !.env.example
+
+# Files the Neon install adds for coding agents.
+.agents/
+.claude/
+skills-lock.json
