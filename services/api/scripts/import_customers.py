@@ -29,6 +29,8 @@ def main() -> None:
 
     print("SAVED" if apply else "TRIAL RUN: nothing was saved")
     print(f"customers: {report.customers_created} new, {report.customers_kept} already there")
+    print(f"customers moved from the placeholder society to a named one: "
+          f"{report.societies_set}")
     print(f"vehicles with a subscription: {report.vehicles_created} new, "
           f"{report.vehicles_kept} already there")
     print(f"vehicles without a subscription (standalone Deep Spa): "

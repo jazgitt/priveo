@@ -2,7 +2,7 @@
 from datetime import date, datetime, time
 
 import pytest
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from sqlalchemy import func, select
 
 from app.customers.importer import (
@@ -192,3 +192,26 @@ def test_a_migrated_customer_cannot_sign_in_before_setting_a_password(client, en
         import_workbook(session, _workbook(tmp_path, ROWS), apply=True)
     r = client.post("/v1/auth/login", json={"login_id": ASHA, "password": ""})
     assert r.status_code == 401 and r.json()["code"] == "invalid_credentials"
+
+
+def test_the_society_column_names_the_society(db, tmp_path):
+    # First without the column: everyone goes under the placeholder.
+    import_workbook(db, _workbook(tmp_path, ROWS, ADDON_ROWS), apply=True)
+    assert [s.name for s in db.scalars(select(Society))] == [PLACEHOLDER_SOCIETY]
+
+    # Then with it. The same people move to the named society, and the
+    # placeholder goes once nobody is left under it.
+    wb = load_workbook(_workbook(tmp_path, ROWS, ADDON_ROWS))
+    for sheet, name in (("Customer Master", "DLF Meadows"), ("Deep Spa Addons", "dlf  meadows ")):
+        ws = wb[sheet]
+        ws.cell(row=1, column=ws.max_column + 1, value="society name")
+        for r in range(2, ws.max_row + 1):
+            ws.cell(row=r, column=ws.max_column, value=name)
+    path = tmp_path / "with-society.xlsx"
+    wb.save(path)
+
+    report = import_workbook(db, path, apply=True)
+    assert (report.customers_created, report.societies_set) == (0, 3)
+    assert [s.name for s in db.scalars(select(Society))] == ["DLF Meadows"]
+    assert _count(db, Customer) == 3
+    assert import_workbook(db, path, apply=True).societies_set == 0

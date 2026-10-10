@@ -1,43 +1,22 @@
-from datetime import timedelta
 from typing import Protocol
 
 from app.home.schemas import (
     AdminHome,
     CrewHome,
-    CustomerHome,
     JobCard,
-    NextService,
     PaymentToConfirm,
-    QuickAction,
-    VehicleCard,
 )
 from app.platform.clock import today_ist
 
 
 class HomeRepository(Protocol):
-    def customer_home(self, user_id: str) -> CustomerHome: ...
     def crew_home(self, user_id: str) -> CrewHome: ...
     def admin_home(self, user_id: str) -> AdminHome: ...
 
 
 class MockHomeRepository:
-    """Phase 0 mock data. Phase 1 onward replaces this with the database."""
-
-    def customer_home(self, user_id: str) -> CustomerHome:
-        return CustomerHome(
-            greeting_name="Aarav",
-            vehicle=VehicleCard(registration="MH 12 AB 1234", model="Hyundai Creta",
-                                society="Green Meadows", parking="B2-14"),
-            next_service=NextService(date=today_ist() + timedelta(days=1),
-                                     service="Cleaning-External", status="Scheduled"),
-            subscription_status="Active",
-            quick_actions=[
-                QuickAction(key="skip_pause", label="Skip or Pause"),
-                QuickAction(key="history", label="Service History"),
-                QuickAction(key="feedback", label="Give Feedback"),
-                QuickAction(key="report_issue", label="Report an Issue"),
-            ],
-        )
+    """Mock data for the crew and admin homes, until their modules exist.
+    The customer home reads the database (app.customers.service)."""
 
     def crew_home(self, user_id: str) -> CrewHome:
         jobs = [

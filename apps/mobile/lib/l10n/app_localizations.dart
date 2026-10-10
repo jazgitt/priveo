@@ -328,6 +328,300 @@ abstract class AppLocalizations {
   /// **'Next service'**
   String get nextService;
 
+  /// No description provided for @notScheduledYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not scheduled yet'**
+  String get notScheduledYet;
+
+  /// No description provided for @dailyCleanBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily clean by {time}'**
+  String dailyCleanBy(String time);
+
+  /// No description provided for @interiorCareOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Interior care on {day}'**
+  String interiorCareOn(String day);
+
+  /// No description provided for @noVehicles.
+  ///
+  /// In en, this message translates to:
+  /// **'No vehicle is on your account yet. Contact Priveo.'**
+  String get noVehicles;
+
+  /// No description provided for @noRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Number to be added'**
+  String get noRegistration;
+
+  /// No description provided for @noParking.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking to be added'**
+  String get noParking;
+
+  /// No description provided for @noSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'No subscription'**
+  String get noSubscription;
+
+  /// No description provided for @noPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No plan'**
+  String get noPlan;
+
+  /// No description provided for @pricePerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{price} a month'**
+  String pricePerMonth(String price);
+
+  /// No description provided for @vehicleOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle {number} of {total}'**
+  String vehicleOf(int number, int total);
+
+  /// No description provided for @stepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {number} of {total}'**
+  String stepOf(int number, int total);
+
+  /// No description provided for @onboardingIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Check what we have, and fill in anything that is missing.'**
+  String get onboardingIntro;
+
+  /// No description provided for @reviewIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Check everything once more, then confirm.'**
+  String get reviewIntro;
+
+  /// No description provided for @yourDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Your details'**
+  String get yourDetails;
+
+  /// No description provided for @yourSociety.
+  ///
+  /// In en, this message translates to:
+  /// **'Your society'**
+  String get yourSociety;
+
+  /// No description provided for @yourVehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vehicle'**
+  String get yourVehicle;
+
+  /// No description provided for @reviewAndConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and confirm'**
+  String get reviewAndConfirm;
+
+  /// No description provided for @firstName.
+  ///
+  /// In en, this message translates to:
+  /// **'First name'**
+  String get firstName;
+
+  /// No description provided for @lastName.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name'**
+  String get lastName;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
+
+  /// No description provided for @email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get email;
+
+  /// No description provided for @mobileNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number'**
+  String get mobileNumber;
+
+  /// No description provided for @society.
+  ///
+  /// In en, this message translates to:
+  /// **'Society'**
+  String get society;
+
+  /// No description provided for @flat.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get flat;
+
+  /// No description provided for @vehicle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle'**
+  String get vehicle;
+
+  /// No description provided for @registration.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration'**
+  String get registration;
+
+  /// No description provided for @parking.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking'**
+  String get parking;
+
+  /// No description provided for @basement.
+  ///
+  /// In en, this message translates to:
+  /// **'Basement'**
+  String get basement;
+
+  /// No description provided for @parkingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking number'**
+  String get parkingNumber;
+
+  /// No description provided for @parkingPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spot: {spot}'**
+  String parkingPreview(String spot);
+
+  /// No description provided for @servicePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Service preferences'**
+  String get servicePreferences;
+
+  /// No description provided for @cutoffTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Service cutoff time'**
+  String get cutoffTime;
+
+  /// No description provided for @chooseTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a time'**
+  String get chooseTime;
+
+  /// No description provided for @cutoffNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the time by which your daily clean will be done. Priveo assigns the exact slot.'**
+  String get cutoffNote;
+
+  /// No description provided for @interiorCareDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Interior care day'**
+  String get interiorCareDay;
+
+  /// No description provided for @plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get plan;
+
+  /// No description provided for @yourPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan'**
+  String get yourPlan;
+
+  /// No description provided for @notOnFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on file'**
+  String get notOnFile;
+
+  /// No description provided for @onlyPriveoCanChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Only Priveo can change these. Contact support if something is wrong.'**
+  String get onlyPriveoCanChange;
+
+  /// No description provided for @enterFirstName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your first name, using letters only.'**
+  String get enterFirstName;
+
+  /// No description provided for @enterLastName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your last name, using letters only.'**
+  String get enterLastName;
+
+  /// No description provided for @enterMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a 10-digit mobile number.'**
+  String get enterMobile;
+
+  /// No description provided for @selectBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the basement.'**
+  String get selectBasement;
+
+  /// No description provided for @enterParkingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the parking number, in digits.'**
+  String get enterParkingNumber;
+
+  /// No description provided for @selectCutoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select your service cutoff time.'**
+  String get selectCutoff;
+
+  /// No description provided for @selectInteriorDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select your interior care day.'**
+  String get selectInteriorDay;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @confirmDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmDetails;
+
   /// No description provided for @subscription.
   ///
   /// In en, this message translates to:

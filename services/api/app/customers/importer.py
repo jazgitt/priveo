@@ -15,7 +15,7 @@ from datetime import date, datetime, time
 from pathlib import Path
 
 from openpyxl import load_workbook
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
@@ -41,6 +41,8 @@ class ImportReport:
     applied: bool = False
     customers_created: int = 0
     customers_kept: int = 0
+    # Customers already there whose society was the placeholder and is now named.
+    societies_set: int = 0
     vehicles_created: int = 0
     vehicles_kept: int = 0
     # Vehicles of customers who took only a standalone Deep Spa.
@@ -138,7 +140,7 @@ class _Importer:
     def __init__(self, db: Session, report: ImportReport):
         self.db = db
         self.report = report
-        self.society: Society | None = None
+        self.societies: dict[str, Society] = {}
         # For each email: the customer and the vehicles from the sheet, each
         # with the car number and model text the sheet gave.
         self.vehicles: dict[str, list[tuple[Vehicle, str, str]]] = {}
@@ -152,15 +154,28 @@ class _Importer:
     def error(self, sheet: str, ref: str, message: str) -> None:
         self.report.errors.append(f"{sheet} row {ref}: {message}")
 
-    def _society(self) -> Society:
-        if self.society is None:
-            self.society = self.db.scalar(
-                select(Society).where(Society.name == PLACEHOLDER_SOCIETY))
-            if self.society is None:
-                self.society = Society(name=PLACEHOLDER_SOCIETY)
-                self.db.add(self.society)
+    def _society(self, row: dict) -> Society:
+        """The society named on the row ("society name"), or the placeholder
+        when the row does not name one."""
+        name = " ".join(_text(row.get("society name")).split()) or PLACEHOLDER_SOCIETY
+        key = name.lower()
+        if key not in self.societies:
+            society = self.db.scalar(
+                select(Society).where(func.lower(Society.name) == key))
+            if society is None:
+                society = Society(name=name)
+                self.db.add(society)
                 self.db.flush()
-        return self.society
+            self.societies[key] = society
+        return self.societies[key]
+
+    def drop_unused_placeholder(self) -> None:
+        placeholder = self.db.scalar(
+            select(Society).where(Society.name == PLACEHOLDER_SOCIETY))
+        if placeholder is not None and self.db.scalar(
+                select(Customer.id).where(Customer.society_id == placeholder.id)) is None:
+            self.db.delete(placeholder)
+            self.db.flush()
 
     def _customer(self, row: dict, sheet: str, ref: str, email: str) -> Customer | None:
         if email in self.customers:
@@ -168,6 +183,11 @@ class _Importer:
         customer = self.db.scalar(select(Customer).where(Customer.email == email))
         if customer is not None:
             self.report.customers_kept += 1
+            society = self._society(row)
+            current = self.db.get(Society, customer.society_id)
+            if current.name == PLACEHOLDER_SOCIETY and society.id != current.id:
+                customer.society_id = society.id
+                self.report.societies_set += 1
         else:
             name = _text(row.get("customer name"))
             mobile = mobile_of(row.get("phone number"))
@@ -186,7 +206,7 @@ class _Importer:
             self.db.flush()
             customer = Customer(
                 login_id=login.id, first_name=first, last_name=last, email=email,
-                mobile=mobile, society_id=self._society().id,
+                mobile=mobile, society_id=self._society(row).id,
                 flat=_text(row.get("flat no.")), source="migration")
             self.db.add(customer)
             self.db.flush()
@@ -354,6 +374,7 @@ def import_workbook(db: Session, path: Path | str, *, apply: bool) -> ImportRepo
             year = (run.latest_start or today_ist()).year
             for row in _rows(workbook[ADDON_SHEET]):
                 run.addon_row(row, year)
+        run.drop_unused_placeholder()
         if apply:
             db.commit()
         else:

@@ -147,6 +147,9 @@ void main() {
   });
 
   testWidgets('customer login lands on the customer home', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
     await pumpApp(tester);
     await passSplash(tester);
     await signIn(tester, 'customer@priveo.test', 'secret');

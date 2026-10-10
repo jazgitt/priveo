@@ -112,8 +112,10 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
 - Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. Only the sending step is missing.
 - The rest of Phase 1 sign-in: the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
-- The onboarding review after a customer's first sign-in (`ONB-25`), and the links to the Terms and the Privacy Policy on the sign-in screen.
+- The links to the Terms and the Privacy Policy on the sign-in screen.
+- In the onboarding review (`ONB-25`): the vehicle photo (`ONB-22`, needs uploads) and the plan name (needs the plans). The review has one step for each vehicle, holding its parking, service preferences and plan together. **Derived:** the requirement lists these as separate steps and does not say how several vehicles are handled.
+- On the customer home: the next service (needs scheduling; the card says "Not scheduled yet"), the vehicle photo, the "Today's clean is done" strip and the add-ons card. The crew and admin homes still serve mock data.
 - Higher-resolution brand files. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark, the in-app logo and the P mark from the owner's files in `docs/brand`. They are white with gold and low resolution, so they are only shown on the dark look and are slightly soft.
-- Prototype content that needs data the API does not send yet: the car photo on the vehicle card, the "Today's clean is done" strip, the service time window and the vehicle variant.
+- Prototype content that needs data the API does not send yet: the car photo on the vehicle card and the vehicle variant.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
 - An Android package build in `mobile-ci`. Only `mobile-integration` builds one, and it runs on request, so a native build error is not caught on the pull request.

@@ -39,14 +39,15 @@ Future<void> _loadImages(WidgetTester tester) async {
   });
 }
 
-Future<void> _open(WidgetTester tester, {Session? session}) async {
+Future<void> _open(WidgetTester tester,
+    {Session? session, FakePriveoApi? api}) async {
   tester.view.physicalSize = const Size(780, 1688);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final store = MemorySessionStore();
   if (session != null) await store.write(session);
   // Each role has one look, whatever the phone setting is.
-  await pumpApp(tester, store: store);
+  await pumpApp(tester, store: store, api: api);
 }
 
 void main() {
@@ -76,6 +77,26 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('goldens/login.png'));
+  }, skip: skip);
+
+  // The review at first sign-in: the details step, and a vehicle step.
+  testWidgets('onboarding review', (tester) async {
+    await _open(tester,
+        session: customerSession,
+        api: FakePriveoApi(onboardingConfirmed: false));
+    await passSplash(tester);
+    await _loadImages(tester);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp),
+        matchesGoldenFile('goldens/onboarding_details.png'));
+
+    await tester.enterText(find.byType(TextField).at(1), 'Mehta');
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+    }
+    await expectLater(find.byType(MaterialApp),
+        matchesGoldenFile('goldens/onboarding_vehicle.png'));
   }, skip: skip);
 
   // Customer is dark, crew is white, admin is cream.

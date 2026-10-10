@@ -14,7 +14,7 @@ const _logins = [
   (
     'customer@priveo.test',
     String.fromEnvironment('LIVE_CUSTOMER_PASSWORD'),
-    'Next service',
+    'Hello,',
   ),
   ('9000000002', String.fromEnvironment('LIVE_CREW_PASSWORD'), 'Total'),
   (

@@ -42,6 +42,21 @@ _Type _typeOf(Map<String, dynamic> s, String where) {
         (j) => '$name.fromJson($j as Map<String, dynamic>)',
         (v) => '$v.toJson()');
   }
+  // "X or null": the field is always sent, and may be null.
+  if (s['anyOf'] case final List<dynamic> options
+      when options.length == 2 && options.any((o) => (o as Map)['type'] == 'null')) {
+    final inner = _typeOf(
+        options.firstWhere((o) => (o as Map)['type'] != 'null')
+            as Map<String, dynamic>,
+        where);
+    return _Type('${inner.dart}?', (j) => '$j == null ? null : ${inner.read(j)}',
+        (v) {
+      final plain = inner.write(v);
+      if (plain == v) return v;
+      if (plain.startsWith('$v.')) return '$v?${plain.substring(v.length)}';
+      return '$v == null ? null : ${inner.write('$v!')}';
+    });
+  }
   switch (s['type']) {
     case 'string' when s['format'] == 'date':
       return _Type('DateTime', (j) => 'DateTime.parse($j as String)',
