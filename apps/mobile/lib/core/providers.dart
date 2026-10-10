@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/data/auth_repository.dart';
+import 'api/api.g.dart' show PriveoApi;
 import 'auth/auth_controller.dart';
 import 'auth/session.dart';
 import 'config/app_config.dart';
@@ -23,5 +24,9 @@ final dioProvider = Provider<Dio>((ref) {
   );
 });
 
+/// The client generated from the contract. Tests override this one provider.
+final apiProvider =
+    Provider<PriveoApi>((ref) => PriveoApi(ref.watch(dioProvider)));
+
 final authRepositoryProvider =
-    Provider<AuthRepository>((ref) => ApiAuthRepository(ref.watch(dioProvider)));
+    Provider<AuthRepository>((ref) => ApiAuthRepository(ref.watch(apiProvider)));

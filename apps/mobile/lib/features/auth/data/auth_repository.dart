@@ -1,5 +1,4 @@
-import 'package:dio/dio.dart';
-
+import '../../../core/api/api.g.dart';
 import '../../../core/auth/session.dart';
 import '../../../core/network/api_failure.dart';
 
@@ -10,46 +9,24 @@ abstract class AuthRepository {
 }
 
 class ApiAuthRepository implements AuthRepository {
-  ApiAuthRepository(this._dio);
+  ApiAuthRepository(this._api);
 
-  final Dio _dio;
-
-  /// Auth calls must not carry or retry with the bearer token.
-  static final _noAuth = Options(extra: {'noAuth': true});
+  final PriveoApi _api;
 
   @override
-  Future<Session> login(String loginId, String password) async {
-    try {
-      final r = await _dio.post<Map<String, dynamic>>(
-        '/v1/auth/login',
-        data: {'login_id': loginId, 'password': password},
-        options: _noAuth,
-      );
-      return Session.fromLoginJson(r.data!);
-    } on DioException catch (e) {
-      throw ApiFailure.fromDio(e);
-    }
-  }
+  Future<Session> login(String loginId, String password) async =>
+      Session.fromLogin(await _api
+          .login(LoginRequest(loginId: loginId, password: password)));
 
   @override
-  Future<Session> refresh(String refreshToken) async {
-    try {
-      final r = await _dio.post<Map<String, dynamic>>(
-        '/v1/auth/refresh',
-        data: {'refresh_token': refreshToken},
-        options: _noAuth,
-      );
-      return Session.fromLoginJson(r.data!);
-    } on DioException catch (e) {
-      throw ApiFailure.fromDio(e);
-    }
-  }
+  Future<Session> refresh(String refreshToken) async => Session.fromLogin(
+      await _api.refresh(RefreshRequest(refreshToken: refreshToken)));
 
   @override
   Future<void> logout() async {
     try {
-      await _dio.post<void>('/v1/auth/logout');
-    } on DioException {
+      await _api.logout();
+    } on ApiFailure {
       // Signing out always succeeds on the phone.
     }
   }
