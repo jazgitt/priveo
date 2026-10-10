@@ -13,6 +13,7 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../data/customer_reads_repository.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
 
@@ -508,18 +509,32 @@ class _VehicleCard extends StatelessWidget {
 
 /// The next visit for the selected vehicle (HOME-04). Until visits are
 /// scheduled it shows the customer's service time and interior care day.
-class _NextServiceCard extends StatelessWidget {
+class _NextServiceCard extends ConsumerWidget {
   const _NextServiceCard(this.vehicle, {required this.onCalendar});
 
   final VehicleCard vehicle;
   final VoidCallback onCalendar;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final b = context.brand;
-    final next = vehicle.nextService;
+    // The home data has no visit yet: ask the customer reads for it.
+    final fromVisits = ref
+        .watch(nextServicesProvider)
+        .value
+        ?.where((n) => n.vehicleId == vehicle.id)
+        .firstOrNull;
+    final next =
+        vehicle.nextService ??
+        (fromVisits == null
+            ? null
+            : NextService(
+                date: fromVisits.date,
+                service: fromVisits.service,
+                status: fromVisits.status,
+              ));
     final cutoff = vehicle.cutoffTime;
     final day = vehicle.interiorDay;
     Widget detail(String service, String value) => Padding(
@@ -551,7 +566,8 @@ class _NextServiceCard extends StatelessWidget {
             next == null ? l.notScheduledYet : formatDate(next.date),
             style: text.headlineSmall,
           ),
-          if (next != null) detail(next.service, next.service),
+          if (next != null && next.service.isNotEmpty)
+            detail(next.service, next.service),
           if (cutoff != null)
             detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
           if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
