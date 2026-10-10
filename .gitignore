@@ -48,3 +48,6 @@ venv/
 
 # Vercel
 .vercel/
+
+# Real customer data for the one-time migration. Never commit.
+/seed/
