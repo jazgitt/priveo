@@ -15,7 +15,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "in.priveo.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -25,11 +24,27 @@ android {
         versionName = flutter.versionName
     }
 
+    // Upload key. key.properties is written by CI from GitHub secrets and is
+    // never committed. Without it, release builds fall back to the debug key.
+    val keyProps = java.util.Properties()
+    val keyFile = rootProject.file("key.properties")
+    if (keyFile.exists()) keyFile.inputStream().use { keyProps.load(it) }
+
+    signingConfigs {
+        if (keyFile.exists()) {
+            create("upload") {
+                keyAlias = keyProps["keyAlias"] as String
+                keyPassword = keyProps["keyPassword"] as String
+                storeFile = file(keyProps["storeFile"] as String)
+                storePassword = keyProps["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keyFile.exists()) signingConfigs.getByName("upload")
+            else signingConfigs.getByName("debug")
         }
     }
 }

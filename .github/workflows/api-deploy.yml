@@ -1,0 +1,83 @@
+name: api-deploy
+
+# Builds the API image, deploys it to ECS `dev`, then runs the smoke test.
+# Needs the repository variables and secrets listed in docs/build-and-release.md.
+# Until AWS_DEPLOY_ROLE_ARN is set, the job is skipped.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/api-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: api-deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+      ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: image
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${GITHUB_SHA}"
+          docker build \
+            --build-arg BUILD_NUMBER=${{ github.run_number }} \
+            -t "$IMAGE" services/api
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Register a task definition with the new image
+        id: taskdef
+        run: |
+          aws ecs describe-task-definition --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition > current.json
+          jq --arg img "${{ steps.image.outputs.image }}" '
+            .containerDefinitions[0].image = $img
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                  .compatibilities, .registeredAt, .registeredBy)' \
+            current.json > next.json
+          ARN=$(aws ecs register-task-definition --cli-input-json file://next.json \
+            --query taskDefinition.taskDefinitionArn --output text)
+          echo "arn=$ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy and wait
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+            --task-definition "${{ steps.taskdef.outputs.arn }}" > /dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test
+        env:
+          SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+          SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+        run: python services/api/scripts/smoke_test.py "${{ vars.API_DEV_URL }}"

@@ -1,0 +1,18 @@
+default_platform(:android)
+
+platform :android do
+  desc "Upload the signed bundle to the Play internal testing track"
+  lane :internal do
+    json_key = ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON")
+    upload_to_play_store(
+      package_name: "in.priveo.app",
+      track: "internal",
+      aab: "apps/mobile/build/app/outputs/bundle/release/app-release.aab",
+      json_key_data: json_key,
+      release_status: "completed",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
