@@ -109,6 +109,8 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 ## 6. Not built yet
 
+Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `main` until it is merged. Their gaps and stubs are in `docs/overnight-build-report.md`. The list below is from before that branch.
+
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
 - Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. Only the sending step is missing.
 - The rest of Phase 1 sign-in: the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
