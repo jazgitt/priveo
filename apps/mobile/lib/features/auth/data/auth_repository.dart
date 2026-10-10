@@ -6,6 +6,9 @@ abstract class AuthRepository {
   Future<Session> login(String loginId, String password);
   Future<Session> refresh(String refreshToken);
   Future<void> logout();
+
+  /// Ends every session of this login, on every device (ADM-ACC-14).
+  Future<void> logoutAll();
 }
 
 class ApiAuthRepository implements AuthRepository {
@@ -30,4 +33,7 @@ class ApiAuthRepository implements AuthRepository {
       // Signing out always succeeds on the phone.
     }
   }
+
+  @override
+  Future<void> logoutAll() => _api.logoutAll();
 }

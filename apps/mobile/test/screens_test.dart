@@ -102,6 +102,29 @@ void main() {
     expect(await store.read(), isNull);
   });
 
+  testWidgets('admin signs out of all devices after confirming',
+      (tester) async {
+    final store = MemorySessionStore();
+    await store.write(adminSession);
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, store: store, auth: auth);
+    await passSplash(tester);
+
+    await tester.tap(find.text('Sign out of all devices'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(auth.logoutAllCalls, 0);
+
+    await tester.tap(find.text('Sign out of all devices'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+    expect(auth.logoutAllCalls, 1);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(await store.read(), isNull);
+  });
+
   testWidgets('demo accounts fill the ID field in dev builds', (tester) async {
     await pumpApp(tester);
     await passSplash(tester);

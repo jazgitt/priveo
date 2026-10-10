@@ -38,19 +38,38 @@ jobs:
         with:
           node-version: "22"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The database is changed before the new code goes live. The seed makes
+      # the admin login, and in dev the demo customer and crew logins.
+      - name: Migrate and seed the database
+        working-directory: services/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+          MOCK_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+          MOCK_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+          SEED_DEMO_LOGINS: "true"
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::The DATABASE_URL secret is not set."
+            exit 1
+          fi
+          pip install -q -e .
+          alembic upgrade head
+          python scripts/seed.py
+
       # Runs from services/api, so leave the project's Root Directory empty
-      # in Vercel. Runtime settings (TOKEN_SECRET, MOCK_*_PASSWORD) live in
-      # the Vercel project's environment variables.
+      # in Vercel. Runtime settings (TOKEN_SECRET, DATABASE_URL) live in the
+      # Vercel project's environment variables.
       - name: Deploy to production (the `dev` API)
         working-directory: services/api
         run: |
           npx --yes vercel@58 deploy --prod --yes --token "$VERCEL_TOKEN" \
             --build-env BUILD_NUMBER=${{ github.run_number }} \
             --env BUILD_NUMBER=${{ github.run_number }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
       - name: Smoke test
         env:

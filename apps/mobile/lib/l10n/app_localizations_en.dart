@@ -128,4 +128,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get demoAdmin => 'Admin';
+
+  @override
+  String get signOutAll => 'Sign out of all devices';
+
+  @override
+  String get signOutAllBody =>
+      'This signs you out on every phone and browser, including this one.';
+
+  @override
+  String get cancel => 'Cancel';
 }

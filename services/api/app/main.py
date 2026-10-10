@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
     install_error_handlers(app)
     app.include_router(system.router)
     app.include_router(identity.router)
+    app.include_router(identity.admin)
     app.include_router(home.customer)
     app.include_router(home.crew)
     app.include_router(home.admin)

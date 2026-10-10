@@ -395,7 +395,16 @@ class PriveoApi {
   /// Logout
   Future<void> logout() async {
     try {
-      await _dio.post<void>('/v1/auth/logout', options: _noAuth);
+      await _dio.post<void>('/v1/auth/logout');
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Logout All
+  Future<void> logoutAll() async {
+    try {
+      await _dio.post<void>('/v1/admin/sessions/logout-all');
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

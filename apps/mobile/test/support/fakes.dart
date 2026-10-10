@@ -53,6 +53,11 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async => logoutCalls++;
+
+  int logoutAllCalls = 0;
+
+  @override
+  Future<void> logoutAll() async => logoutAllCalls++;
 }
 
 /// Serves the three homes from the JSON below. Other calls are not used

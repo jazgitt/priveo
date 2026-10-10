@@ -39,5 +39,8 @@
   "adminNoPayments": "No payments waiting.",
   "demoCustomer": "Customer",
   "demoCrew": "Crew",
-  "demoAdmin": "Admin"
+  "demoAdmin": "Admin",
+  "signOutAll": "Sign out of all devices",
+  "signOutAllBody": "This signs you out on every phone and browser, including this one.",
+  "cancel": "Cancel"
 }

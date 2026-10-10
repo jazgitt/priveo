@@ -1,14 +1,16 @@
 # Build and release (Phase 0)
 
-**Status:** 10 Oct 2026. Covers the Phase 0a Android path. The `dev` API host is Vercel by default and switches to AWS with `DEPLOY_PROVIDER=aws`. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
+**Status:** 10 Oct 2026. Covers the Phase 0a Android path and the start of Phase 1 (real sign-in on PostgreSQL). The `dev` API host is Vercel with a Neon database, and switches to AWS with `DEPLOY_PROVIDER=aws`. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
 
 ## 1. Run it on your machine
 
 | What | Command (from the repo root) |
 |---|---|
 | API: install | `cd services/api && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"` |
-| API: run | `MOCK_CUSTOMER_PASSWORD=... MOCK_CREW_PASSWORD=... MOCK_ADMIN_PASSWORD=... .venv/Scripts/python -m uvicorn app.main:app --port 8000` |
-| API: lint and test | `.venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q` |
+| API: set up the database | Put `DATABASE_URL`, `TOKEN_SECRET`, `ADMIN_PASSWORD` and, for the demo logins, `SEED_DEMO_LOGINS=true` with `MOCK_CUSTOMER_PASSWORD` and `MOCK_CREW_PASSWORD` in `services/api/.env`. Then `.venv/Scripts/python -m alembic upgrade head && .venv/Scripts/python scripts/seed.py` |
+| API: run | `.venv/Scripts/python -m uvicorn app.main:app --port 8000` (reads `.env`) |
+| API: add a migration | Change the models, then `.venv/Scripts/python -m alembic revision -m "what changed"` and write the steps by hand |
+| API: lint and test | `.venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. The tests use an in-memory database and need no setup. Set `TEST_DATABASE_URL` to run them on PostgreSQL; that database is emptied |
 | API: export the contract | `.venv/Scripts/python scripts/export_openapi.py` (writes `packages/api-contract/openapi.json`) |
 | API: smoke test a running API | `SMOKE_CUSTOMER_PASSWORD=... SMOKE_CREW_PASSWORD=... SMOKE_ADMIN_PASSWORD=... python scripts/smoke_test.py <url>` |
 | App: get packages | `cd apps/mobile && flutter pub get` |
@@ -26,16 +28,16 @@ Each role has one look, whatever the phone's light or dark setting (owner decisi
 
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
 
-The mock passwords are configuration, never committed. An empty password switches that mock login off.
+Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and unlocks the login. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
 
 ## 2. The pipelines
 
 | Workflow | Runs on | Does |
 |---|---|---|
-| `api-ci` | Pull request touching the API | Lint, pytest, and a check that `openapi.json` matches the code |
+| `api-ci` | Pull request touching the API | Lint, pytest on an in-memory database and again on PostgreSQL, and a check that `openapi.json` matches the code |
 | `mobile-ci` | Pull request touching the app, `tokens.json` or `openapi.json` | Theme, translations and API client up to date, `flutter analyze`, `flutter test` |
 | `mobile-goldens` | The label `update-goldens` added to a pull request | Remakes the golden images on Linux and commits them to the branch. Push one more commit afterwards, since that commit does not start `mobile-ci` |
-| `api-deploy` | Merge to `main` touching the API | Deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
+| `api-deploy` | Merge to `main` touching the API | Migrate and seed the `dev` database, deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
 | `mobile-integration` | Started by hand (`gh workflow run mobile-integration`). Also on a merge to `main` touching the app, but only when `RUN_EMULATOR_ON_MERGE` is `true` | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 15 minutes |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
@@ -65,7 +67,8 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 | Name | Value |
 |---|---|
 | `VERCEL_TOKEN` | A Vercel access token (Vercel only) |
-| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD` | Used by the smoke test. Set the same values as environment variables on the host (Vercel project or ECS task) |
+| `DATABASE_URL` | The `dev` PostgreSQL address. The deploy uses it to migrate and seed. The same value is in the Vercel project's environment |
+| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD` | The passwords of the demo customer, the demo crew member and the admin on `dev`. The deploy seeds them and the smoke test signs in with them |
 | `ANDROID_KEYSTORE_BASE64` | The upload keystore, base64 encoded |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | The upload key details |
 | `PLAY_SERVICE_ACCOUNT_JSON` | The Google Cloud service account key with Play Console access |
@@ -76,9 +79,10 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 1. Sign in once: `npx vercel login`.
 2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
-3. Add the runtime environment variables to the project (Production): `TOKEN_SECRET` (a long random value), `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD`. Use `npx vercel env add <NAME> production`.
-4. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
-5. Add the repository variables and secrets from section 3.
+3. Add the database: `npx vercel integration add neon --name priveo-dev`. The first time, accept Neon's terms in the browser when asked. It adds `DATABASE_URL` to the project. Copy that value into the GitHub secret `DATABASE_URL`.
+4. Add the runtime environment variable `TOKEN_SECRET` (a long random value) to the project (Production). Use `npx vercel env add TOKEN_SECRET production`.
+5. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
+6. Add the repository variables and secrets from section 3.
 
 **AWS (switch with `DEPLOY_PROVIDER=aws`)**
 
@@ -103,6 +107,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 ## 6. Not built yet
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
+- The rest of Phase 1 sign-in: the customer's emailed code, set password and forgot password (need Resend, Phase 2), the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
 - Higher-resolution brand files. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark, the in-app logo and the P mark from the owner's files in `docs/brand`. They are white with gold and low resolution, so they are only shown on the dark look and are slightly soft.
 - Prototype content that needs data the API does not send yet: the car photo on the vehicle card, the "Today's clean is done" strip, the service time window and the vehicle variant.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
