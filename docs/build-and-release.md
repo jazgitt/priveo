@@ -1,6 +1,6 @@
 # Build and release (Phase 0)
 
-**Status:** 9 Oct 2026. Covers the Phase 0a Android path. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
+**Status:** 10 Oct 2026. Covers the Phase 0a Android path. The `dev` API host is Vercel by default and switches to AWS with `DEPLOY_PROVIDER=aws`. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
 
 ## 1. Run it on your machine
 
@@ -28,10 +28,10 @@ The mock passwords are configuration, never committed. An empty password switche
 |---|---|---|
 | `api-ci` | Pull request touching the API | Lint, pytest, and a check that `openapi.json` matches the code |
 | `mobile-ci` | Pull request touching the app or `tokens.json` | Theme and translations up to date, `flutter analyze`, `flutter test` |
-| `api-deploy` | Merge to `main` touching the API | Build image, push to ECR, deploy to ECS `dev`, smoke test |
+| `api-deploy` | Merge to `main` touching the API | Deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
-`api-deploy` is skipped until `AWS_DEPLOY_ROLE_ARN` is set. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
+`api-deploy` has two jobs. `deploy-vercel` runs when `DEPLOY_PROVIDER` is empty or `vercel` and `VERCEL_PROJECT_ID` is set. `deploy-aws` runs when `DEPLOY_PROVIDER` is `aws` and `AWS_DEPLOY_ROLE_ARN` is set. A job with missing settings is skipped. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
 
 To make a failing test block a merge, turn on branch protection for `main` and require `api-ci` and `mobile-ci`. **Open:** this is a GitHub setting that the owner must switch on.
 
@@ -41,31 +41,49 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 
 | Name | Value |
 |---|---|
+| `DEPLOY_PROVIDER` | `vercel` (default when empty) or `aws`. This is the switch |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | From `.vercel/project.json` after `vercel link` (Vercel only) |
 | `AWS_DEPLOY_ROLE_ARN` | The IAM role that GitHub assumes through OIDC |
 | `AWS_REGION` | `ap-south-1` (Mumbai) |
 | `ECR_REPOSITORY` | The ECR repository name |
 | `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY` | The `dev` ECS names |
-| `API_DEV_URL` | For example `https://api-dev.<your-domain>` |
+| `API_DEV_URL` | The public address of the `dev` API: the project's production domain on Vercel (for example `https://priveo-api.vercel.app`), or `https://api-dev.<your-domain>` on AWS. The app and the smoke test both use it |
+
+The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) are needed only when `DEPLOY_PROVIDER` is `aws`.
 
 **Secrets:**
 
 | Name | Value |
 |---|---|
-| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD` | Used by the smoke test. Set the same values as configuration on the ECS task |
+| `VERCEL_TOKEN` | A Vercel access token (Vercel only) |
+| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD` | Used by the smoke test. Set the same values as environment variables on the host (Vercel project or ECS task) |
 | `ANDROID_KEYSTORE_BASE64` | The upload keystore, base64 encoded |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | The upload key details |
 | `PLAY_SERVICE_ACCOUNT_JSON` | The Google Cloud service account key with Play Console access |
 
 ## 4. One-time setup, in order
 
+**Vercel (default host)**
+
+1. Sign in once: `npx vercel login`.
+2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
+3. Add the runtime environment variables to the project (Production): `TOKEN_SECRET` (a long random value), `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD`. Use `npx vercel env add <NAME> production`.
+4. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
+5. Add the repository variables and secrets from section 3.
+
+**AWS (switch with `DEPLOY_PROVIDER=aws`)**
+
 1. **AWS:** create the `dev` resources (ECR repository, ECS Fargate service behind a load balancer with a certificate, a log group), a task definition whose first container is the API image and whose environment holds `TOKEN_SECRET` and the three `MOCK_*_PASSWORD` values (from Secrets Manager), and the GitHub OIDC role. Open: the plan does not choose Terraform, so a short script or the console is fine for Phase 0.
 2. **Domain:** point `api-dev` at the load balancer.
-3. **Upload key:** create it once and keep a backup outside the repository.
+
+**Android release (either host)**
+
+1. **Upload key:** create it once and keep a backup outside the repository.
    `keytool -genkeypair -v -keystore upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
    Then `base64 -w0 upload.jks` goes into `ANDROID_KEYSTORE_BASE64`.
-4. **Play Console:** create the app `in.priveo.app` and turn on Play App Signing. **Upload the first bundle by hand** (build it with the command in the release workflow and upload it to the internal testing track). The Play API cannot create the first release of a new app. After that the pipeline takes over.
-5. **Service account:** create it in Google Cloud, give it release access in Play Console, and store its JSON key as `PLAY_SERVICE_ACCOUNT_JSON`.
-6. **Testers:** add the testers' Google accounts to the internal testing list.
+2. **Play Console:** create the app `in.priveo.app` and turn on Play App Signing. **Upload the first bundle by hand** (build it with the command in the release workflow and upload it to the internal testing track). The Play API cannot create the first release of a new app. After that the pipeline takes over.
+3. **Service account:** create it in Google Cloud, give it release access in Play Console, and store its JSON key as `PLAY_SERVICE_ACCOUNT_JSON`.
+4. **Testers:** add the testers' Google accounts to the internal testing list.
 
 ## 5. Build number and versions
 
