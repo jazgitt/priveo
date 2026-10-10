@@ -1,0 +1,22 @@
+from fastapi import FastAPI
+
+from app.home import router as home
+from app.identity import router as identity
+from app.platform.errors import install_error_handlers
+from app.platform.middleware import RequestIdMiddleware
+from app.public import router as public
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Priveo API", version="0.1.0", docs_url=None, redoc_url=None)
+    app.add_middleware(RequestIdMiddleware)
+    install_error_handlers(app)
+    app.include_router(public.router)
+    app.include_router(identity.router)
+    app.include_router(home.customer)
+    app.include_router(home.crew)
+    app.include_router(home.admin)
+    return app
+
+
+app = create_app()

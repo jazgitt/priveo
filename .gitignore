@@ -42,3 +42,6 @@ venv/
 *.log
 *.sqlite
 *.sqlite3
+
+# Python packaging
+*.egg-info/
