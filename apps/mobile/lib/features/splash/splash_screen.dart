@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/tokens.g.dart';
+import '../../core/ui/widgets.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Animated logo: fade and scale in, a gold rule draws under it, about two
@@ -82,8 +83,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Image.asset('assets/brand/priveo-logo.png',
-                      width: 200, excludeFromSemantics: true),
+                  const BrandLogo(width: 200),
                   const SizedBox(height: 16),
                   AnimatedBuilder(
                     animation: rule,

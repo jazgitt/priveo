@@ -101,7 +101,6 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 ## 6. Not built yet
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- The real Priveo mark. The launcher icon and the native splash use a placeholder gold P drawn by `apps/mobile/tool/gen_brand_mark.py` (needs Pillow). **Open:** the owner supplies the square mark.
-- A logo that shows on a light background. The logo is white, so it is almost invisible on the light splash and login screens (see `apps/mobile/test/goldens/login_light.png`). **Open.**
+- An owner-made logo for light backgrounds. The owner's files in `docs/brand` are white with gold. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark and the in-app logo from them, and recolours a dark version for light mode. **Derived:** that recolour is not an owner asset. The source files are also low resolution.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
 - An Android package build in `mobile-ci`. Only `mobile-integration` builds one, and it runs on request, so a native build error is not caught on the pull request.

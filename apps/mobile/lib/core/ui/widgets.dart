@@ -4,6 +4,22 @@ import '../../l10n/app_localizations.dart';
 import 'theme.dart';
 import 'tokens.g.dart';
 
+/// The Priveo logo: white on a dark theme, dark ink on a light theme.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+        Theme.of(context).brightness == Brightness.dark
+            ? 'assets/brand/priveo-logo.png'
+            : 'assets/brand/priveo-logo-light.png',
+        width: width,
+        excludeFromSemantics: true,
+      );
+}
+
 /// Gold primary button, 56 px high.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({

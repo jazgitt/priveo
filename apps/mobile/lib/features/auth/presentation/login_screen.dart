@@ -70,8 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.asset('assets/brand/priveo-logo.png',
-                        width: 160, excludeFromSemantics: true),
+                    const Center(child: BrandLogo(width: 160)),
                     const SizedBox(height: 32),
                     Text(l.loginTitle,
                         style: Theme.of(context).textTheme.headlineMedium),
