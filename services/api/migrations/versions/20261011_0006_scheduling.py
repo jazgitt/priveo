@@ -9,7 +9,7 @@ from alembic import op
 revision = "0006"
 # The slice was asked to name '20261010_0004_onboarding_confirmed'. The chain
 # on this branch calls that revision "0004". Re-chain when the branches merge.
-down_revision = "0004"
+down_revision = "0005"
 branch_labels = None
 depends_on = None
 
