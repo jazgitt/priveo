@@ -75,6 +75,7 @@ def test_helpers():
     assert mobile_of("+91 90000 00101") == "9000000101"
     assert mobile_of("9000000102/9000000103") == "9000000102"
     assert mobile_of(12345) is None
+    assert mobile_of("9xxxxx0101") == "9xxxxx0101"  # masked
     assert registration_of("dl 13 cm 0019") == "DL13CM0019"
     assert registration_of("22 BH 1234 A") == "22BH1234A"
     assert registration_of("7577") is None

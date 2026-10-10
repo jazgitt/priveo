@@ -74,7 +74,12 @@ def split_name(name: str) -> tuple[str, str]:
 
 
 def mobile_of(value) -> str | None:
-    digits = re.sub(r"\D", "", _text(value).split("/")[0])
+    first = _text(value).split("/")[0].strip()
+    # A masked file hides digits with "x", as in 9xxxxx1234. It is kept as
+    # given, so the load works on data that is safe to share.
+    if re.fullmatch(r"[0-9xX]{10}", first) and "x" in first.lower():
+        return first.lower()
+    digits = re.sub(r"\D", "", first)
     digits = digits[-10:]
     return digits if len(digits) == 10 else None
 
