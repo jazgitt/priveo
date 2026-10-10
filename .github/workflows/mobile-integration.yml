@@ -1,18 +1,17 @@
 name: mobile-integration
 
 # Runs the app on an Android emulator against the dev API and signs in as
-# each role. Runs on a merge to main, and on a pull request that changes the
-# integration test or this file.
+# each role. It takes about 15 minutes, so it runs only when asked:
+#   - by hand: Actions, mobile-integration, Run workflow
+#     (or `gh workflow run mobile-integration`)
+#   - on each merge to main that touches the app, when the repository
+#     variable RUN_EMULATOR_ON_MERGE is `true`. It is off when unset.
 
 on:
   push:
     branches: [main]
     paths:
       - "apps/mobile/**"
-      - ".github/workflows/mobile-integration.yml"
-  pull_request:
-    paths:
-      - "apps/mobile/integration_test/**"
       - ".github/workflows/mobile-integration.yml"
   workflow_dispatch:
 
@@ -25,6 +24,7 @@ concurrency:
 
 jobs:
   logins:
+    if: github.event_name == 'workflow_dispatch' || vars.RUN_EMULATOR_ON_MERGE == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
