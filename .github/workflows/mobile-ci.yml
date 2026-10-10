@@ -39,3 +39,10 @@ jobs:
           git diff --exit-code -- lib/core/api/api.g.dart
       - run: flutter analyze
       - run: flutter test
+      - name: Keep the golden differences
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: apps/mobile/test/failures
+          if-no-files-found: ignore
