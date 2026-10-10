@@ -7,7 +7,7 @@ platform :android do
     upload_to_play_store(
       package_name: "in.priveo.app",
       track: "internal",
-      aab: "apps/mobile/build/app/outputs/bundle/release/app-release.aab",
+      aab: "apps/mobile/build/app/outputs/bundle/prodRelease/app-prod-release.aab",
       json_key_data: json_key,
       release_status: "completed",
       skip_upload_metadata: true,
