@@ -39,8 +39,8 @@ class AdminHomeScreen extends ConsumerWidget {
               Text(l.adminPaymentsToConfirm,
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              if (h.payments.isEmpty) Text(l.adminNoPayments),
-              for (final p in h.payments) ...[
+              if (h.paymentsToConfirm.isEmpty) Text(l.adminNoPayments),
+              for (final p in h.paymentsToConfirm) ...[
                 SectionCard(
                   child: Row(
                     children: [

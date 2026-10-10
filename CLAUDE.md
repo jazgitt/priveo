@@ -8,7 +8,7 @@ Requirements and prototype material, plus the start of Phase 0 (`docs/build-plan
 
 Build and test commands (from the repo root):
 - API: `cd services/api && .venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. Export the contract with `scripts/export_openapi.py`.
-- App: `cd apps/mobile && flutter analyze && flutter test`. After changing `docs/brand/tokens.json` run `dart run tool/gen_theme.dart`; after changing `lib/l10n/app_en.arb` run `flutter gen-l10n`. CI fails if either generated output is stale.
+- App: `cd apps/mobile && flutter analyze && flutter test`. After changing `docs/brand/tokens.json` run `dart run tool/gen_theme.dart`; after changing `lib/l10n/app_en.arb` run `flutter gen-l10n`; after the contract `packages/api-contract/openapi.json` changes run `dart run tool/gen_api.dart` (writes `lib/core/api/api.g.dart`, the app's models and API calls). CI fails if any generated output is stale.
 - Mock passwords (`MOCK_*_PASSWORD`) are environment configuration, never committed.
 
 ## Tech stack (decided by the owner)
