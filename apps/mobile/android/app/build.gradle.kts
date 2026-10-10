@@ -26,6 +26,21 @@ android {
         versionName = flutter.versionName
     }
 
+    // dev and prod install side by side. Pick one with --flavor; the default
+    // is set in pubspec.yaml. The manifest reads the label from appLabel.
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appLabel"] = "Priveo Dev"
+        }
+        create("prod") {
+            dimension = "env"
+            manifestPlaceholders["appLabel"] = "Priveo"
+        }
+    }
+
     // Upload key. key.properties is written by CI from GitHub secrets and is
     // never committed. Without it, release builds fall back to the debug key.
     val keyProps = Properties()

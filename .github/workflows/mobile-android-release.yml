@@ -67,7 +67,10 @@ jobs:
         if: env.HAS_KEYSTORE == 'true'
         working-directory: apps/mobile
         run: |
+          # The Play app is in.priveo.app, so this is the prod flavor. In
+          # Phase 0 it still starts from the dev entry point and the dev API.
           flutter build appbundle --release \
+            --flavor prod \
             -t lib/main_dev.dart \
             --dart-define=API_BASE_URL=${{ vars.API_DEV_URL }} \
             --build-number=${{ github.run_number }}
