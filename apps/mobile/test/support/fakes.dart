@@ -26,9 +26,14 @@ const adminSession = Session(
     refreshToken: 'r-admin');
 
 /// Accepts the password "secret" for the three demo IDs. Anything else gets
-/// the API's message.
+/// the API's message. [newCustomer] has no password yet: it gets the code
+/// [code], and then signs in as the customer.
 class FakeAuthRepository implements AuthRepository {
   static const wrongMessage = 'The ID or password is not correct.';
+  static const notRegistered = 'This email is not registered. Contact Priveo.';
+  static const wrongCode = 'The code is not correct.';
+  static const newCustomer = 'new@priveo.test';
+  static const code = '246810';
   static const _accounts = {
     'customer@priveo.test': customerSession,
     '9000000002': crewSession,
@@ -36,6 +41,42 @@ class FakeAuthRepository implements AuthRepository {
   };
 
   int logoutCalls = 0;
+  int codesSent = 0;
+  String? passwordSet;
+
+  @override
+  Future<StartResult> start(String loginId) async {
+    if (loginId == newCustomer) {
+      codesSent++;
+      return const StartResult(next: 'code', resendInSeconds: 30);
+    }
+    if (loginId.contains('@') && !_accounts.containsKey(loginId)) {
+      throw const ApiFailure(
+          code: 'email_not_registered', message: notRegistered, statusCode: 404);
+    }
+    return const StartResult(next: 'password', resendInSeconds: 0);
+  }
+
+  @override
+  Future<int> sendCode(String email) async {
+    codesSent++;
+    return 30;
+  }
+
+  @override
+  Future<String> verifyCode(String email, String code) async {
+    if (code != FakeAuthRepository.code) {
+      throw const ApiFailure(
+          code: 'invalid_code', message: wrongCode, statusCode: 400);
+    }
+    return 'password-token';
+  }
+
+  @override
+  Future<Session> setPassword(String passwordToken, String password) async {
+    passwordSet = password;
+    return customerSession;
+  }
 
   @override
   Future<Session> login(String loginId, String password) async {

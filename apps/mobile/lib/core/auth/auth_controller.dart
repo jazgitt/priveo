@@ -20,6 +20,16 @@ class AuthController extends AsyncNotifier<Session?> {
     state = AsyncData(s);
   }
 
+  /// Sets a customer's password after a correct code, and signs them in.
+  /// Throws [ApiFailure] when it fails.
+  Future<void> setPassword(String passwordToken, String password) async {
+    final s = await ref
+        .read(authRepositoryProvider)
+        .setPassword(passwordToken, password);
+    await ref.read(sessionStoreProvider).write(s);
+    state = AsyncData(s);
+  }
+
   Future<void> logout() async {
     final repo = ref.read(authRepositoryProvider);
     await repo.logout();

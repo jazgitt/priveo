@@ -46,6 +46,8 @@ def main() -> None:
     # clears the wrong-attempt count, so a deploy never uses up a try.
     status, body = call(base, "/v1/auth/login", {"login_id": "priveopapa", "password": "wrong"})
     check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
+    status, body = call(base, "/v1/auth/start", {"login_id": "priveopapa"})
+    check(status == 200 and body.get("next") == "password", "sign-in start")
     for role, login_id, env in LOGINS:
         password = os.environ.get(env, "")
         status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})

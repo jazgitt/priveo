@@ -148,11 +148,125 @@ abstract class AppLocalizations {
   /// **'Signing in'**
   String get signingIn;
 
-  /// No description provided for @enterIdAndPassword.
+  /// No description provided for @continueButton.
   ///
   /// In en, this message translates to:
-  /// **'Enter your ID and password.'**
-  String get enterIdAndPassword;
+  /// **'Continue'**
+  String get continueButton;
+
+  /// No description provided for @enterId.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email, mobile number or user ID.'**
+  String get enterId;
+
+  /// No description provided for @enterPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password.'**
+  String get enterPassword;
+
+  /// No description provided for @termsNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing you accept the Terms and the Privacy Policy.'**
+  String get termsNotice;
+
+  /// No description provided for @changeId.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get changeId;
+
+  /// No description provided for @changeEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Change email'**
+  String get changeEmail;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get forgotPassword;
+
+  /// No description provided for @codeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code'**
+  String get codeTitle;
+
+  /// No description provided for @codeSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a 6-digit code to {email}. It works for 10 minutes.'**
+  String codeSentTo(String email);
+
+  /// No description provided for @codeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get codeLabel;
+
+  /// No description provided for @enterCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code.'**
+  String get enterCode;
+
+  /// No description provided for @verifyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get verifyButton;
+
+  /// No description provided for @resendIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code in {time}'**
+  String resendIn(String time);
+
+  /// No description provided for @resendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get resendCode;
+
+  /// No description provided for @newPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a password'**
+  String get newPasswordTitle;
+
+  /// No description provided for @passwordRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 8 characters, with a letter and a number.'**
+  String get passwordRule;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @confirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPasswordLabel;
+
+  /// No description provided for @passwordsDiffer.
+  ///
+  /// In en, this message translates to:
+  /// **'The two passwords do not match.'**
+  String get passwordsDiffer;
+
+  /// No description provided for @savePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and continue'**
+  String get savePassword;
 
   /// No description provided for @networkError.
   ///

@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 
-from app.identity.service import AuthService, LoginResult, User
+from app.identity.service import (
+    AuthService,
+    CodeSent,
+    CodeVerified,
+    LoginResult,
+    StartResult,
+    User,
+)
 from app.platform.deps import bearer_token, get_auth_service, require_role
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -15,6 +22,47 @@ class LoginRequest(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class StartRequest(BaseModel):
+    login_id: str
+
+
+class CodeRequest(BaseModel):
+    email: str
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+
+class SetPasswordRequest(BaseModel):
+    password_token: str
+    password: str
+
+
+@router.post("/start", response_model=StartResult)
+def start(body: StartRequest, auth: AuthService = Depends(get_auth_service)):
+    """Says what to ask for next: the password, or the code just emailed."""
+    return auth.start(body.login_id)
+
+
+@router.post("/code", response_model=CodeSent)
+def send_code(body: CodeRequest, auth: AuthService = Depends(get_auth_service)):
+    """Emails a customer a new code: "resend" and "forgot password"."""
+    return auth.send_code(body.email)
+
+
+@router.post("/code/verify", response_model=CodeVerified)
+def verify_code(body: VerifyCodeRequest, auth: AuthService = Depends(get_auth_service)):
+    return auth.verify_code(body.email, body.code)
+
+
+@router.post("/password", response_model=LoginResult)
+def set_password(body: SetPasswordRequest, auth: AuthService = Depends(get_auth_service)):
+    """Sets the password after a correct code and signs the customer in."""
+    return auth.set_password(body.password_token, body.password)
 
 
 @router.post("/login", response_model=LoginResult)

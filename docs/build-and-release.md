@@ -7,7 +7,7 @@
 | What | Command (from the repo root) |
 |---|---|
 | API: install | `cd services/api && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"` |
-| API: set up the database | Put `DATABASE_URL`, `TOKEN_SECRET`, `ADMIN_PASSWORD` and, for the demo logins, `SEED_DEMO_LOGINS=true` with `MOCK_CUSTOMER_PASSWORD` and `MOCK_CREW_PASSWORD` in `services/api/.env`. Then `.venv/Scripts/python -m alembic upgrade head && .venv/Scripts/python scripts/seed.py` |
+| API: set up the database | Put `DATABASE_URL`, `TOKEN_SECRET`, `ADMIN_PASSWORD` and, for the demo logins, `SEED_DEMO_LOGINS=true` with `MOCK_CUSTOMER_PASSWORD` and `MOCK_CREW_PASSWORD` in `services/api/.env`. To try a customer's first sign-in, add `MOCK_EMAIL_CODE` (any 6 digits). Then `.venv/Scripts/python -m alembic upgrade head && .venv/Scripts/python scripts/seed.py` |
 | API: run | `.venv/Scripts/python -m uvicorn app.main:app --port 8000` (reads `.env`) |
 | API: add a migration | Change the models, then `.venv/Scripts/python -m alembic revision -m "what changed"` and write the steps by hand |
 | API: load the existing customers (one time) | `.venv/Scripts/python scripts/import_customers.py "../../seed/<file>.xlsx"` is a trial run that saves nothing. Add `--apply` to save. Needs `DATABASE_URL`. The spreadsheet holds real customer data and stays in `/seed`, which is git-ignored |
@@ -82,6 +82,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
 3. Add the database: `npx vercel integration add neon --name priveo-dev`. The first time, accept Neon's terms in the browser when asked. It adds `DATABASE_URL` to the project. Copy that value into the GitHub secret `DATABASE_URL`.
 4. Add the runtime environment variable `TOKEN_SECRET` (a long random value) to the project (Production). Use `npx vercel env add TOKEN_SECRET production`.
+   - Until email is connected, also add `MOCK_EMAIL_CODE` (6 digits of your choice) the same way, then deploy again. It is the code every customer enters at first sign-in and after "Forgot password" on `dev`. No email is sent. Without it those two steps answer "Email is not set up yet". It does nothing when `ENVIRONMENT=prod`.
 5. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
 6. Add the repository variables and secrets from section 3.
 
@@ -108,7 +109,9 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 ## 6. Not built yet
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- The rest of Phase 1 sign-in: the customer's emailed code, set password and forgot password (need Resend, Phase 2), the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
+- Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. Only the sending step is missing.
+- The rest of Phase 1 sign-in: the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
+- The onboarding review after a customer's first sign-in (`ONB-25`), and the links to the Terms and the Privacy Policy on the sign-in screen.
 - Higher-resolution brand files. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark, the in-app logo and the P mark from the owner's files in `docs/brand`. They are white with gold and low resolution, so they are only shown on the dark look and are slightly soft.
 - Prototype content that needs data the API does not send yet: the car photo on the vehicle card, the "Today's clean is done" strip, the service time window and the vehicle variant.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.

@@ -22,6 +22,18 @@ class Settings(BaseSettings):
     seed_demo_logins: bool = False
     mock_customer_password: str = ""
     mock_crew_password: str = ""
+    # "dev" or "prod". The dev-only switches below do nothing in "prod".
+    environment: str = "dev"
+    # Dev only, until email is connected: no email is sent, and this fixed
+    # 6-digit value is the code for every customer (AUTH-03). Never committed.
+    mock_email_code: str = ""
+
+    @property
+    def fixed_email_code(self) -> str | None:
+        code = self.mock_email_code.strip()
+        if self.environment == "prod" or not (len(code) == 6 and code.isdigit()):
+            return None
+        return code
 
 
 @lru_cache

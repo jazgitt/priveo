@@ -59,3 +59,25 @@ class AuthEvent(Base):
     login_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"), index=True)
     kind: Mapped[str] = mapped_column(String(32))
     at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class EmailCode(Base):
+    """A 6-digit code emailed to a customer, for the first sign-in or a
+    forgotten password (AUTH-03, AUTH-16). Only a keyed hash is stored."""
+
+    __tablename__ = "email_codes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    wrong_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    verified_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    # After a correct code: the hash of the one-time token that lets the
+    # customer set a password, and when that token stops working.
+    password_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    password_token_expires_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    # Set when the code can no longer be used: used, replaced or cancelled.
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    ended_reason: Mapped[str | None] = mapped_column(String(32))

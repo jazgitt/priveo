@@ -4,13 +4,13 @@ Priveo Car Concierge: a subscription car-care service for housing societies. A F
 
 ## State of the repo
 
-Requirements and prototype material, plus the start of Phase 0 (`docs/build-plan.md`): a FastAPI in `services/api` (real sign-in on PostgreSQL with Alembic migrations; the three home screens still serve mock data), a Flutter app in `apps/mobile` (splash, login, three role homes), the contract in `packages/api-contract`, and the GitHub workflows in `.github/workflows`. The AWS deploy, the Play release and iOS wait on the owner's accounts. Full commands, pipeline and setup steps are in `docs/build-and-release.md`.
+Requirements and prototype material, plus the start of Phase 0 (`docs/build-plan.md`): a FastAPI in `services/api` (real sign-in on PostgreSQL with Alembic migrations, including the customer's code and set-password steps with a fixed dev code in place of email; the three home screens still serve mock data), a Flutter app in `apps/mobile` (splash, login, three role homes), the contract in `packages/api-contract`, and the GitHub workflows in `.github/workflows`. The AWS deploy, the Play release and iOS wait on the owner's accounts. Full commands, pipeline and setup steps are in `docs/build-and-release.md`.
 
 Build and test commands (from the repo root):
 - API: `cd services/api && .venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. Export the contract with `scripts/export_openapi.py`.
 - App: `cd apps/mobile && flutter analyze && flutter test`. After changing `docs/brand/tokens.json` run `dart run tool/gen_theme.dart`; after changing `lib/l10n/app_en.arb` run `flutter gen-l10n`; after the contract `packages/api-contract/openapi.json` changes run `dart run tool/gen_api.dart` (writes `lib/core/api/api.g.dart`, the app's models and API calls). CI fails if any generated output is stale.
 - Database changes go through an Alembic migration in `services/api/migrations/versions`, written by hand. A test checks that the migrations build the tables the models describe.
-- Passwords (`ADMIN_PASSWORD`, `MOCK_*_PASSWORD`) and `DATABASE_URL` are environment configuration, never committed.
+- Passwords (`ADMIN_PASSWORD`, `MOCK_*_PASSWORD`), the dev sign-in code (`MOCK_EMAIL_CODE`) and `DATABASE_URL` are environment configuration, never committed.
 
 ## Tech stack (decided by the owner)
 

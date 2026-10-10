@@ -23,6 +23,8 @@ def settings(monkeypatch):
     monkeypatch.setenv("MOCK_CUSTOMER_PASSWORD", PASSWORDS["customer"])
     monkeypatch.setenv("MOCK_CREW_PASSWORD", PASSWORDS["crew"])
     monkeypatch.setenv("SEED_DEMO_LOGINS", "true")
+    monkeypatch.setenv("MOCK_EMAIL_CODE", "246810")
+    monkeypatch.setenv("ENVIRONMENT", "dev")
     monkeypatch.setenv("TOKEN_SECRET", "test-secret-that-is-long-enough-for-hs256")
     get_settings.cache_clear()
     yield get_settings()
