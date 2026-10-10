@@ -40,7 +40,8 @@ def check(ok: bool, what: str) -> None:
 def main() -> None:
     base = sys.argv[1].rstrip("/")
     status, body = call(base, "/v1/public/health")
-    check(status == 200 and body.get("status") == "ok", f"health (build {body.get('build_number')})")
+    check(status == 200 and body.get("status") == "ok",
+          f"health (build {body.get('build_number')})")
     # The wrong password goes first. The admin's right password below then
     # clears the wrong-attempt count, so a deploy never uses up a try.
     status, body = call(base, "/v1/auth/login", {"login_id": "priveopapa", "password": "wrong"})

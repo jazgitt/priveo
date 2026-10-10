@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+# openpyxl is only for the one-time customer load (scripts/import_customers.py).
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6", "openpyxl>=3.1"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -30,6 +31,10 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+# Named here so that every ruff version checks the same rules.
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DTZ", "RUF100"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "app.platform.deps.require_role"]

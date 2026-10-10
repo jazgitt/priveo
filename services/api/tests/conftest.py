@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.identity import models  # noqa: F401  (registers the tables)
+import app.models  # noqa: F401  (registers the tables)
 from app.identity.seed import seed_logins
 from app.main import create_app
 from app.platform.config import get_settings

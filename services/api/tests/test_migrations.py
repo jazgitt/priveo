@@ -4,7 +4,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect
 
-from app.identity import models  # noqa: F401  (registers the tables)
+import app.models  # noqa: F401  (registers the tables)
 from app.platform.db import Base, make_engine
 
 
