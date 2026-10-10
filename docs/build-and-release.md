@@ -34,7 +34,7 @@ The mock passwords are configuration, never committed. An empty password switche
 | `mobile-ci` | Pull request touching the app, `tokens.json` or `openapi.json` | Theme, translations and API client up to date, `flutter analyze`, `flutter test` |
 | `mobile-goldens` | The label `update-goldens` added to a pull request | Remakes the golden images on Linux and commits them to the branch. Push one more commit afterwards, since that commit does not start `mobile-ci` |
 | `api-deploy` | Merge to `main` touching the API | Deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
-| `mobile-integration` | Merge to `main` touching the app, or a pull request changing the integration test | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 10 minutes |
+| `mobile-integration` | Started by hand (`gh workflow run mobile-integration`). Also on a merge to `main` touching the app, but only when `RUN_EMULATOR_ON_MERGE` is `true` | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 15 minutes |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
 `api-deploy` has two jobs. `deploy-vercel` runs when `DEPLOY_PROVIDER` is empty or `vercel` and `VERCEL_PROJECT_ID` is set. `deploy-aws` runs when `DEPLOY_PROVIDER` is `aws` and `AWS_DEPLOY_ROLE_ARN` is set. A job with missing settings is skipped. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
@@ -47,6 +47,7 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 
 | Name | Value |
 |---|---|
+| `RUN_EMULATOR_ON_MERGE` | `true` runs `mobile-integration` on each merge to `main` that touches the app. Unset or anything else: it runs only when started by hand |
 | `DEPLOY_PROVIDER` | `vercel` (default when empty) or `aws`. This is the switch |
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | From `.vercel/project.json` after `vercel link` (Vercel only) |
 | `AWS_DEPLOY_ROLE_ARN` | The IAM role that GitHub assumes through OIDC |
@@ -103,4 +104,4 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 - The real Priveo mark. The launcher icon and the native splash use a placeholder gold P drawn by `apps/mobile/tool/gen_brand_mark.py` (needs Pillow). **Open:** the owner supplies the square mark.
 - A logo that shows on a light background. The logo is white, so it is almost invisible on the light splash and login screens (see `apps/mobile/test/goldens/login_light.png`). **Open.**
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
-- An Android package build in `mobile-ci`. Only `mobile-integration` (after a merge) builds one, so a native build error is not caught on the pull request.
+- An Android package build in `mobile-ci`. Only `mobile-integration` builds one, and it runs on request, so a native build error is not caught on the pull request.
