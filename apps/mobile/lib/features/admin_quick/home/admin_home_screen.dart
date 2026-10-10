@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/network/api_failure.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
@@ -61,6 +63,8 @@ class AdminHomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              const SizedBox(height: 12),
+              const _SignOutAllButton(),
             ],
           ),
         ),
@@ -86,5 +90,42 @@ class _Stat extends StatelessWidget {
             ],
           ),
         ),
+      );
+}
+
+/// Ends every session of the admin's login, after asking once (ADM-ACC-14).
+class _SignOutAllButton extends ConsumerWidget {
+  const _SignOutAllButton();
+
+  Future<void> _confirm(BuildContext context, WidgetRef ref) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(l.signOutAll),
+        content: Text(l.signOutAllBody),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false), child: Text(l.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text(l.signOut)),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      await ref.read(authControllerProvider.notifier).logoutAll();
+    } on ApiFailure catch (e) {
+      messenger
+          .showSnackBar(SnackBar(content: Text(e.message ?? l.networkError)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => OutlinedButton(
+        onPressed: () => _confirm(context, ref),
+        child: Text(AppLocalizations.of(context).signOutAll),
       );
 }

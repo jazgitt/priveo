@@ -333,6 +333,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Admin'**
   String get demoAdmin;
+
+  /// No description provided for @signOutAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of all devices'**
+  String get signOutAll;
+
+  /// No description provided for @signOutAllBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This signs you out on every phone and browser, including this one.'**
+  String get signOutAllBody;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
 }
 
 class _AppLocalizationsDelegate

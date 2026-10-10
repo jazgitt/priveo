@@ -27,6 +27,15 @@ class AuthController extends AsyncNotifier<Session?> {
     state = const AsyncData(null);
   }
 
+  /// Signs this login out everywhere, this phone included.
+  /// Throws [ApiFailure] when the server could not be reached, and then
+  /// nobody is signed out.
+  Future<void> logoutAll() async {
+    await ref.read(authRepositoryProvider).logoutAll();
+    await ref.read(sessionStoreProvider).clear();
+    state = const AsyncData(null);
+  }
+
   /// Gets new tokens. Runs once at a time. Signs out when it fails.
   Future<bool> refreshTokens() => _refreshing ??= _doRefresh().whenComplete(() {
         _refreshing = null;

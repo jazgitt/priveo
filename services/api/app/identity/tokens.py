@@ -1,32 +1,50 @@
-"""Stateless signed mock tokens. Phase 1 replaces these with real sessions."""
-import base64
+"""Access tokens are short-lived JWTs tied to a server session.
+Refresh tokens are random strings; the database keeps only their hash."""
 import hashlib
-import hmac
-import time
+import secrets
+import uuid
+from dataclasses import dataclass
+from datetime import timedelta
+
+import jwt
 
 from app.platform.config import Settings
+from app.platform.db import utcnow
+
+_ALGORITHM = "HS256"
 
 
-def _sign(secret: str, payload: str) -> str:
-    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()[:32]
+@dataclass(frozen=True)
+class AccessClaims:
+    login_id: uuid.UUID
+    session_id: uuid.UUID
+    role: str
 
 
-def issue(settings: Settings, kind: str, role: str, user_id: str, ttl_seconds: int) -> str:
-    payload = f"{kind}|{role}|{user_id}|{int(time.time()) + ttl_seconds}"
-    body = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
-    return f"{body}.{_sign(settings.token_secret, payload)}"
+def issue_access(settings: Settings, login_id: uuid.UUID, session_id: uuid.UUID,
+                 role: str) -> str:
+    payload = {
+        "sub": str(login_id),
+        "sid": str(session_id),
+        "role": role,
+        "exp": utcnow() + timedelta(minutes=settings.access_token_minutes),
+    }
+    return jwt.encode(payload, settings.token_secret, algorithm=_ALGORITHM)
 
 
-def verify(settings: Settings, token: str, kind: str) -> tuple[str, str] | None:
-    """Return (role, user_id) when the token is genuine, of this kind and not expired."""
+def read_access(settings: Settings, token: str) -> AccessClaims | None:
+    """The claims when the token is genuine and not expired."""
     try:
-        body, sig = token.split(".", 1)
-        payload = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)).decode()
-        if not hmac.compare_digest(sig, _sign(settings.token_secret, payload)):
-            return None
-        tkind, role, user_id, exp = payload.split("|")
-        if tkind != kind or int(exp) < time.time():
-            return None
-        return role, user_id
-    except (ValueError, UnicodeDecodeError):
+        p = jwt.decode(token, settings.token_secret, algorithms=[_ALGORITHM],
+                       options={"require": ["sub", "sid", "role", "exp"]})
+        return AccessClaims(uuid.UUID(p["sub"]), uuid.UUID(p["sid"]), p["role"])
+    except (jwt.InvalidTokenError, ValueError):
         return None
+
+
+def new_refresh_token() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def refresh_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
