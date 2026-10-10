@@ -1,0 +1,66 @@
+name: mobile-integration
+
+# Runs the app on an Android emulator against the dev API and signs in as
+# each role. Runs on a merge to main, and on a pull request that changes the
+# integration test or this file.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-integration.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/integration_test/**"
+      - ".github/workflows/mobile-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  logins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      API_DEV_URL: ${{ vars.API_DEV_URL }}
+      CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+      CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+      ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.3"
+          channel: stable
+          cache: true
+
+      - name: Let the emulator use hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - run: flutter pub get
+        working-directory: apps/mobile
+
+      - name: Sign in as each role on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: apps/mobile
+          script: flutter test integration_test --dart-define=API_BASE_URL="$API_DEV_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"

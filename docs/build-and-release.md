@@ -16,6 +16,7 @@
 | App: translations | `flutter gen-l10n` (after changing `lib/l10n/app_en.arb`) |
 | App: analyze and test | `flutter analyze && flutter test` |
 | App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>` |
+| App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
 | App: run (dev) | `flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=<url>` |
 
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
@@ -29,6 +30,7 @@ The mock passwords are configuration, never committed. An empty password switche
 | `api-ci` | Pull request touching the API | Lint, pytest, and a check that `openapi.json` matches the code |
 | `mobile-ci` | Pull request touching the app or `tokens.json` | Theme and translations up to date, `flutter analyze`, `flutter test` |
 | `api-deploy` | Merge to `main` touching the API | Deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
+| `mobile-integration` | Merge to `main` touching the app, or a pull request changing the integration test | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 10 minutes |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
 `api-deploy` has two jobs. `deploy-vercel` runs when `DEPLOY_PROVIDER` is empty or `vercel` and `VERCEL_PROJECT_ID` is set. `deploy-aws` runs when `DEPLOY_PROVIDER` is `aws` and `AWS_DEPLOY_ROLE_ARN` is set. A job with missing settings is skipped. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
