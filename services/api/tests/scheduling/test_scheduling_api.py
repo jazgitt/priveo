@@ -260,11 +260,11 @@ def test_next_service_for_the_customer(api, world, admin, run_week):
     cust = auth(login(api, "customer")["access_token"])
     params = {"from_date": SUNDAY.isoformat()}
 
-    r = api.get("/v1/customer/next-service", headers=cust, params=params)
+    r = api.get("/v1/customer/next-job", headers=cust, params=params)
     assert r.status_code == 200 and r.json() == {"job": None}  # a draft is not shown
 
     api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin)
-    job = api.get("/v1/customer/next-service", headers=cust, params=params).json()["job"]
+    job = api.get("/v1/customer/next-job", headers=cust, params=params).json()["job"]
     assert job["date"] == "2026-10-18" and job["service"] == "Cleaning-External"
     assert job["status"] == "Scheduled" and job["crew_name"] == "Ravi Kumar"
     assert job["start_time"] == "06:00" and job["finish_by"] == "09:30"
@@ -272,7 +272,7 @@ def test_next_service_for_the_customer(api, world, admin, run_week):
                         "service", "status", "start_time", "end_time", "crew_name",
                         "finish_by"}
 
-    later = api.get("/v1/customer/next-service", headers=cust,
+    later = api.get("/v1/customer/next-job", headers=cust,
                     params={"from_date": "2026-10-19"}).json()["job"]
     assert later["date"] == "2026-10-19"
 
@@ -297,7 +297,7 @@ def test_scheduling_endpoints_are_for_their_role(api, admin, world):
     r = api.post(f"{BASE}/run", headers=cust, json={"start_date": "2026-10-18"})
     assert r.status_code == 403
     assert api.get("/v1/crew/day", params={"date": "2026-10-18"}).status_code == 401
-    assert api.get("/v1/customer/next-service", headers=admin).status_code == 403
+    assert api.get("/v1/customer/next-job", headers=admin).status_code == 403
 
 
 def db_login(world, role):

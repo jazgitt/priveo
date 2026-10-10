@@ -33,7 +33,7 @@ crew = APIRouter(prefix="/v1/crew", tags=["scheduling"])
 admin = APIRouter(prefix="/v1/admin/scheduling", tags=["scheduling"])
 
 
-@customer.get("/next-service", response_model=CustomerNextService)
+@customer.get("/next-job", response_model=CustomerNextService)
 def next_service(from_date: date | None = None,
                  user: User = Depends(require_role("customer")),
                  db: Session = Depends(get_db)):

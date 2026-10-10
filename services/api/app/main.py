@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 import app.models  # Registers every table, so the links between them resolve.
-from app import crew
+from app import crew, customer_reads, notifications, scheduling, support
 from app.customers import router as customers
 from app.home import router as home
 from app.identity import router as identity
@@ -21,6 +21,10 @@ def create_app() -> FastAPI:
     app.include_router(home.crew)
     app.include_router(home.admin)
     crew.register(app)
+    scheduling.register(app)
+    customer_reads.register(app)
+    notifications.register(app)
+    support.register(app)
     return app
 
 
