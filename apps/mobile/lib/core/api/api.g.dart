@@ -48,6 +48,54 @@ class AppConfig {
       };
 }
 
+class CodeRequest {
+  const CodeRequest({
+    required this.email,
+  });
+
+  final String email;
+
+  factory CodeRequest.fromJson(Map<String, dynamic> j) => CodeRequest(
+        email: j['email'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+      };
+}
+
+class CodeSent {
+  const CodeSent({
+    required this.resendInSeconds,
+  });
+
+  final int resendInSeconds;
+
+  factory CodeSent.fromJson(Map<String, dynamic> j) => CodeSent(
+        resendInSeconds: j['resend_in_seconds'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'resend_in_seconds': resendInSeconds,
+      };
+}
+
+class CodeVerified {
+  const CodeVerified({
+    required this.passwordToken,
+  });
+
+  final String passwordToken;
+
+  factory CodeVerified.fromJson(Map<String, dynamic> j) => CodeVerified(
+        passwordToken: j['password_token'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'password_token': passwordToken,
+      };
+}
+
 class CrewHome {
   const CrewHome({
     required this.date,
@@ -316,6 +364,62 @@ class RefreshRequest {
       };
 }
 
+class SetPasswordRequest {
+  const SetPasswordRequest({
+    required this.passwordToken,
+    required this.password,
+  });
+
+  final String passwordToken;
+  final String password;
+
+  factory SetPasswordRequest.fromJson(Map<String, dynamic> j) => SetPasswordRequest(
+        passwordToken: j['password_token'] as String,
+        password: j['password'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'password_token': passwordToken,
+        'password': password,
+      };
+}
+
+class StartRequest {
+  const StartRequest({
+    required this.loginId,
+  });
+
+  final String loginId;
+
+  factory StartRequest.fromJson(Map<String, dynamic> j) => StartRequest(
+        loginId: j['login_id'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'login_id': loginId,
+      };
+}
+
+class StartResult {
+  const StartResult({
+    required this.next,
+    required this.resendInSeconds,
+  });
+
+  final String next;
+  final int resendInSeconds;
+
+  factory StartResult.fromJson(Map<String, dynamic> j) => StartResult(
+        next: j['next'] as String,
+        resendInSeconds: j['resend_in_seconds'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'next': next,
+        'resend_in_seconds': resendInSeconds,
+      };
+}
+
 class VehicleCard {
   const VehicleCard({
     required this.registration,
@@ -344,6 +448,26 @@ class VehicleCard {
       };
 }
 
+class VerifyCodeRequest {
+  const VerifyCodeRequest({
+    required this.email,
+    required this.code,
+  });
+
+  final String email;
+  final String code;
+
+  factory VerifyCodeRequest.fromJson(Map<String, dynamic> j) => VerifyCodeRequest(
+        email: j['email'] as String,
+        code: j['code'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+        'code': code,
+      };
+}
+
 /// Every endpoint in the contract. A failed call throws [ApiFailure].
 class PriveoApi {
   PriveoApi(this._dio);
@@ -367,6 +491,46 @@ class PriveoApi {
     try {
       final r = await _dio.get<Map<String, dynamic>>('/v1/public/config', options: _noAuth);
       return AppConfig.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Start
+  Future<StartResult> start(StartRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/start', data: body.toJson(), options: _noAuth);
+      return StartResult.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Send Code
+  Future<CodeSent> sendCode(CodeRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/code', data: body.toJson(), options: _noAuth);
+      return CodeSent.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Verify Code
+  Future<CodeVerified> verifyCode(VerifyCodeRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/code/verify', data: body.toJson(), options: _noAuth);
+      return CodeVerified.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Set Password
+  Future<LoginResult> setPassword(SetPasswordRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/password', data: body.toJson(), options: _noAuth);
+      return LoginResult.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

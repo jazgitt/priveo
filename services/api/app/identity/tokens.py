@@ -1,6 +1,7 @@
 """Access tokens are short-lived JWTs tied to a server session.
 Refresh tokens are random strings; the database keeps only their hash."""
 import hashlib
+import hmac
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -48,3 +49,13 @@ def new_refresh_token() -> str:
 
 def refresh_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def keyed_hash(settings: Settings, value: str) -> str:
+    """For short values such as a 6-digit code, which a plain hash would not
+    protect: the key is the token secret, so the database alone is not enough."""
+    return hmac.new(settings.token_secret.encode(), value.encode(), hashlib.sha256).hexdigest()
+
+
+def same(a: str, b: str) -> bool:
+    return hmac.compare_digest(a, b)

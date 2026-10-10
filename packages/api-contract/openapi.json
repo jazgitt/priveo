@@ -47,6 +47,173 @@
         }
       }
     },
+    "/v1/auth/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start",
+        "description": "Says what to ask for next: the password, or the code just emailed.",
+        "operationId": "start_v1_auth_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/code": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Send Code",
+        "description": "Emails a customer a new code: \"resend\" and \"forgot password\".",
+        "operationId": "send_code_v1_auth_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeSent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/code/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Code",
+        "operationId": "verify_code_v1_auth_code_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeVerified"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Set Password",
+        "description": "Sets the password after a correct code and signs the customer in.",
+        "operationId": "set_password_v1_auth_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/login": {
       "post": {
         "tags": [
@@ -403,6 +570,45 @@
         ],
         "title": "AppConfig"
       },
+      "CodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "CodeRequest"
+      },
+      "CodeSent": {
+        "properties": {
+          "resend_in_seconds": {
+            "type": "integer",
+            "title": "Resend In Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resend_in_seconds"
+        ],
+        "title": "CodeSent"
+      },
+      "CodeVerified": {
+        "properties": {
+          "password_token": {
+            "type": "string",
+            "title": "Password Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password_token"
+        ],
+        "title": "CodeVerified"
+      },
       "CrewHome": {
         "properties": {
           "date": {
@@ -687,6 +893,55 @@
         ],
         "title": "RefreshRequest"
       },
+      "SetPasswordRequest": {
+        "properties": {
+          "password_token": {
+            "type": "string",
+            "title": "Password Token"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password_token",
+          "password"
+        ],
+        "title": "SetPasswordRequest"
+      },
+      "StartRequest": {
+        "properties": {
+          "login_id": {
+            "type": "string",
+            "title": "Login Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_id"
+        ],
+        "title": "StartRequest"
+      },
+      "StartResult": {
+        "properties": {
+          "next": {
+            "type": "string",
+            "title": "Next"
+          },
+          "resend_in_seconds": {
+            "type": "integer",
+            "title": "Resend In Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "next",
+          "resend_in_seconds"
+        ],
+        "title": "StartResult"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -754,6 +1009,24 @@
           "parking"
         ],
         "title": "VehicleCard"
+      },
+      "VerifyCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "VerifyCodeRequest"
       }
     }
   }

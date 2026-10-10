@@ -6,9 +6,15 @@ import 'support/fakes.dart';
 import 'package:priveo/core/auth/session.dart';
 
 Future<void> signIn(WidgetTester tester, String id, String password) async {
-  await tester.enterText(find.byType(TextField).at(0), id);
-  await tester.enterText(find.byType(TextField).at(1), password);
+  await enterId(tester, id);
+  await tester.enterText(find.byType(TextField), password);
   await tester.tap(find.text('Sign in').last);
+  await tester.pumpAndSettle();
+}
+
+Future<void> enterId(WidgetTester tester, String id) async {
+  await tester.enterText(find.byType(TextField), id);
+  await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
 }
 
@@ -42,9 +48,102 @@ void main() {
       (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your email, mobile number or user ID.'),
+        findsOneWidget);
+
+    await enterId(tester, 'priveopapa');
     await tester.tap(find.text('Sign in').last);
     await tester.pumpAndSettle();
-    expect(find.text('Enter your ID and password.'), findsOneWidget);
+    expect(find.text('Enter your password.'), findsOneWidget);
+    // Only a customer can reset a password with an emailed code.
+    expect(find.text('Forgot password?'), findsNothing);
+
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue'), findsOneWidget);
+  });
+
+  testWidgets('an email that is not registered shows the API message',
+      (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await enterId(tester, 'stranger@priveo.test');
+    expect(find.text(FakeAuthRepository.notRegistered), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
+  });
+
+  testWidgets('first sign-in: code, then a password, then home',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+    await passSplash(tester);
+    await enterId(tester, FakeAuthRepository.newCustomer);
+    expect(find.text('Enter the code'), findsOneWidget);
+    expect(find.textContaining(FakeAuthRepository.newCustomer), findsOneWidget);
+    expect(find.text('Resend code in 00:30'), findsOneWidget);
+
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the 6-digit code.'), findsOneWidget);
+
+    // Only digits are taken, six at most, as when a code is pasted.
+    await tester.enterText(find.byType(TextField), '12a34567');
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    expect(find.text(FakeAuthRepository.wrongCode), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), FakeAuthRepository.code);
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    expect(find.text('Set a password'), findsOneWidget);
+
+    Future<void> save(String password, String confirm) async {
+      await tester.enterText(find.byType(TextField).at(0), password);
+      await tester.enterText(find.byType(TextField).at(1), confirm);
+      await tester.tap(find.text('Save and continue'));
+      await tester.pumpAndSettle();
+    }
+
+    await save('short1', 'short1');
+    expect(auth.passwordSet, isNull);
+    await save('carwash2026', 'carwash2027');
+    expect(find.text('The two passwords do not match.'), findsOneWidget);
+    await save('carwash2026', 'carwash2026');
+    expect(auth.passwordSet, 'carwash2026');
+    expect(find.text('Hello,'), findsOneWidget);
+  });
+
+  testWidgets('the code can be sent again when the countdown ends',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+    await passSplash(tester);
+    await enterId(tester, FakeAuthRepository.newCustomer);
+    expect(find.text('Resend code'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Resend code in 00:28'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 28));
+    await tester.tap(find.text('Resend code'));
+    await tester.pumpAndSettle();
+    expect(auth.codesSent, 2);
+    expect(find.text('Resend code in 00:30'), findsOneWidget);
+  });
+
+  testWidgets('forgot password sends a code', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+    await passSplash(tester);
+    await enterId(tester, 'customer@priveo.test');
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+    expect(auth.codesSent, 1);
+    expect(find.text('Enter the code'), findsOneWidget);
+
+    await tester.tap(find.text('Change email'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue'), findsOneWidget);
   });
 
   testWidgets('customer login lands on the customer home', (tester) async {

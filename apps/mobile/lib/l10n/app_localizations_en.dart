@@ -36,7 +36,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signingIn => 'Signing in';
 
   @override
-  String get enterIdAndPassword => 'Enter your ID and password.';
+  String get continueButton => 'Continue';
+
+  @override
+  String get enterId => 'Enter your email, mobile number or user ID.';
+
+  @override
+  String get enterPassword => 'Enter your password.';
+
+  @override
+  String get termsNotice =>
+      'By continuing you accept the Terms and the Privacy Policy.';
+
+  @override
+  String get changeId => 'Change';
+
+  @override
+  String get changeEmail => 'Change email';
+
+  @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
+  String get codeTitle => 'Enter the code';
+
+  @override
+  String codeSentTo(String email) {
+    return 'We sent a 6-digit code to $email. It works for 10 minutes.';
+  }
+
+  @override
+  String get codeLabel => '6-digit code';
+
+  @override
+  String get enterCode => 'Enter the 6-digit code.';
+
+  @override
+  String get verifyButton => 'Verify';
+
+  @override
+  String resendIn(String time) {
+    return 'Resend code in $time';
+  }
+
+  @override
+  String get resendCode => 'Resend code';
+
+  @override
+  String get newPasswordTitle => 'Set a password';
+
+  @override
+  String get passwordRule =>
+      'Use at least 8 characters, with a letter and a number.';
+
+  @override
+  String get newPasswordLabel => 'New password';
+
+  @override
+  String get confirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get passwordsDiffer => 'The two passwords do not match.';
+
+  @override
+  String get savePassword => 'Save and continue';
 
   @override
   String get networkError =>
