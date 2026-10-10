@@ -1,4 +1,4 @@
-"""Smoke test for a deployed API: health, three mock logins, three home calls.
+"""Smoke test for a deployed API: health, a wrong password, three logins, three home calls.
 
 Usage: python scripts/smoke_test.py https://api-dev.example.com
 Passwords come from SMOKE_CUSTOMER_PASSWORD, SMOKE_CREW_PASSWORD and
@@ -42,14 +42,16 @@ def main() -> None:
     status, body = call(base, "/v1/public/health")
     check(status == 200 and body.get("status") == "ok",
           f"health (build {body.get('build_number')})")
+    # The wrong password goes first. The admin's right password below then
+    # clears the wrong-attempt count, so a deploy never uses up a try.
+    status, body = call(base, "/v1/auth/login", {"login_id": "priveopapa", "password": "wrong"})
+    check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
     for role, login_id, env in LOGINS:
         password = os.environ.get(env, "")
         status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})
         check(status == 200 and body.get("role") == role, f"login {role}")
         status, _ = call(base, f"/v1/{role}/home", token=body["access_token"])
         check(status == 200, f"home {role}")
-    status, body = call(base, "/v1/auth/login", {"login_id": "priveopapa", "password": "wrong"})
-    check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
 
 
 if __name__ == "__main__":
