@@ -40,7 +40,8 @@ def check(ok: bool, what: str) -> None:
 def main() -> None:
     base = sys.argv[1].rstrip("/")
     status, body = call(base, "/v1/public/health")
-    check(status == 200 and body.get("status") == "ok", f"health (build {body.get('build_number')})")
+    check(status == 200 and body.get("status") == "ok",
+          f"health (build {body.get('build_number')})")
     for role, login_id, env in LOGINS:
         password = os.environ.get(env, "")
         status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})

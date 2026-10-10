@@ -32,5 +32,9 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 
+# Named here so that every ruff version checks the same rules.
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DTZ", "RUF100"]
+
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "app.platform.deps.require_role"]
