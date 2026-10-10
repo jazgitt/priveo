@@ -190,11 +190,23 @@ abstract class AppLocalizations {
   /// **'We could not load this screen.'**
   String get loadFailed;
 
-  /// No description provided for @hello.
+  /// No description provided for @greeting.
   ///
   /// In en, this message translates to:
-  /// **'Hello, {name}'**
-  String hello(String name);
+  /// **'Hello,'**
+  String get greeting;
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get quickActions;
+
+  /// No description provided for @viewCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'View service calendar'**
+  String get viewCalendar;
 
   /// No description provided for @nextService.
   ///

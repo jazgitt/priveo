@@ -22,6 +22,8 @@
 
 The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
 
+Each role has one look, whatever the phone's light or dark setting (owner decision, 10-Oct-26): the splash, login and customer screens are dark and follow the prototype; crew screens are plain white; admin screens are cream. **Derived:** the white crew background is not in `tokens.json`. The customer look also uses the prototype's corner sizes (cards 22, inputs 15) where `tokens.json` says 18 and 12. The looks are in `apps/mobile/lib/core/ui/theme.dart`.
+
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
 
 The mock passwords are configuration, never committed. An empty password switches that mock login off.
@@ -101,6 +103,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 ## 6. Not built yet
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- An owner-made logo for light backgrounds. The owner's files in `docs/brand` are white with gold. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark and the in-app logo from them, and recolours a dark version for light mode. **Derived:** that recolour is not an owner asset. The source files are also low resolution.
+- Higher-resolution brand files. `apps/mobile/tool/gen_brand_mark.py` (needs Pillow) makes the icon, the splash mark, the in-app logo and the P mark from the owner's files in `docs/brand`. They are white with gold and low resolution, so they are only shown on the dark look and are slightly soft.
+- Prototype content that needs data the API does not send yet: the car photo on the vehicle card, the "Today's clean is done" strip, the service time window and the vehicle variant.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
 - An Android package build in `mobile-ci`. Only `mobile-integration` builds one, and it runs on request, so a native build error is not caught on the pull request.

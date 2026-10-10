@@ -24,9 +24,9 @@ class PriveoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       onGenerateTitle: (c) => AppLocalizations.of(c).appName,
-      theme: buildTheme(Brightness.light),
-      darkTheme: buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
+      // The splash, login and customer screens. The crew and admin routes
+      // set their own look in the router.
+      theme: customerTheme,
       routerConfig: ref.watch(routerProvider),
       localizationsDelegates: const [
         AppLocalizations.delegate,

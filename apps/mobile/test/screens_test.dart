@@ -51,7 +51,8 @@ void main() {
     await pumpApp(tester);
     await passSplash(tester);
     await signIn(tester, 'customer@priveo.test', 'secret');
-    expect(find.text('Hello, Aarav'), findsOneWidget);
+    expect(find.text('Hello,'), findsOneWidget);
+    expect(find.text('Aarav'), findsOneWidget);
     expect(find.text('MH 12 AB 1234'), findsOneWidget);
     expect(find.text('07-Nov-26'), findsOneWidget);
     for (final a in [

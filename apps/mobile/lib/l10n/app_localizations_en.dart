@@ -58,9 +58,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadFailed => 'We could not load this screen.';
 
   @override
-  String hello(String name) {
-    return 'Hello, $name';
-  }
+  String get greeting => 'Hello,';
+
+  @override
+  String get quickActions => 'Quick actions';
+
+  @override
+  String get viewCalendar => 'View service calendar';
 
   @override
   String get nextService => 'Next service';

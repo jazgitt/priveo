@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +9,7 @@ import '../../features/customer/home/customer_shell.dart';
 import '../../features/splash/splash_screen.dart';
 import '../auth/auth_controller.dart';
 import '../auth/session.dart';
+import '../ui/theme.dart';
 
 /// Redirect rule. The splash screen decides its own exit. After that:
 /// no session means login, and a session means the shell for its role.
@@ -36,8 +37,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/customer', builder: (_, _) => const CustomerShell()),
-      GoRoute(path: '/crew', builder: (_, _) => const CrewHomeScreen()),
-      GoRoute(path: '/admin', builder: (_, _) => const AdminHomeScreen()),
+      GoRoute(
+          path: '/crew',
+          builder: (_, _) =>
+              Theme(data: crewTheme, child: const CrewHomeScreen())),
+      GoRoute(
+          path: '/admin',
+          builder: (_, _) =>
+              Theme(data: adminTheme, child: const AdminHomeScreen())),
     ],
   );
   ref.onDispose(router.dispose);

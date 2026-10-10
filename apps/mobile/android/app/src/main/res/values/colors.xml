@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- From docs/brand/tokens.json: color.light.app and color.dark.ink. -->
+<!-- From docs/brand/tokens.json: color.dark.app and color.dark.ink. The splash is dark in both phone modes. -->
 <resources>
-    <color name="splash_background">#F7F3EC</color>
+    <color name="splash_background">#0D0D10</color>
     <color name="ic_launcher_background">#08080A</color>
 </resources>

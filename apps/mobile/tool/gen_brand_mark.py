@@ -1,25 +1,22 @@
 """Makes the app's brand images from the owner's files in docs/brand:
-the Android launcher icon, the native splash mark and the in-app logo.
+the Android launcher icon, the native splash mark, and the logo and P mark
+shown inside the app.
 
-The owner's files are white with gold, for dark backgrounds. The versions for
-light backgrounds are DERIVED here: white becomes the light text colour and
-gold becomes the light gold text colour from tokens.json.
+The owner's files are white with gold, for dark backgrounds. The app only
+shows them on the dark look (splash, login, customer screens).
 
 Needs Pillow. Run from apps/mobile: python tool/gen_brand_mark.py
 """
-import colorsys
 import json
 from pathlib import Path
 
-from PIL import Image, ImageColor
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 BRAND = ROOT.parent.parent / "docs/brand"
 RES = ROOT / "android/app/src/main/res"
 TOKENS = json.loads((BRAND / "tokens.json").read_text())["color"]
 INK = TOKENS["dark"]["ink"]
-LIGHT_TEXT = ImageColor.getrgb(TOKENS["light"]["text"])
-LIGHT_GOLD = ImageColor.getrgb(TOKENS["light"]["goldText"])
 DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
 
@@ -28,20 +25,6 @@ def trimmed(name: str) -> Image.Image:
     img = Image.open(BRAND / name).convert("RGBA")
     solid = img.getchannel("A").point(lambda a: 255 if a > 60 else 0)
     return img.crop(solid.getbbox())
-
-
-def for_light(img: Image.Image) -> Image.Image:
-    out = img.copy()
-    px = out.load()
-    for y in range(out.height):
-        for x in range(out.width):
-            r, g, b, a = px[x, y]
-            if a == 0:
-                continue
-            hue, sat, _ = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-            is_gold = sat > 0.22 and 0.07 < hue < 0.17
-            px[x, y] = (*(LIGHT_GOLD if is_gold else LIGHT_TEXT), a)
-    return out
 
 
 def square(mark: Image.Image, size: int, share: float, background=None) -> Image.Image:
@@ -59,7 +42,6 @@ def save(img: Image.Image, path: Path) -> None:
 
 
 p_mark = trimmed("priveo_p_icon.png")
-p_mark_light = for_light(p_mark)
 for density, factor in DENSITIES.items():
     # Legacy launcher icon, 48 dp, full square.
     save(square(p_mark, round(48 * factor), 0.62, INK),
@@ -67,15 +49,15 @@ for density, factor in DENSITIES.items():
     # Adaptive icon foreground, 108 dp. Only the middle 66 dp is always shown.
     save(square(p_mark, round(108 * factor), 0.40),
          RES / f"mipmap-{density}/ic_launcher_foreground.png")
-    # Native splash mark, 96 dp: dark ink by day, white at night.
-    save(square(p_mark_light, round(96 * factor), 0.90),
-         RES / f"drawable-{density}/splash_mark.png")
+    # Native splash mark, 96 dp. The splash is dark in both phone modes.
     save(square(p_mark, round(96 * factor), 0.90),
-         RES / f"drawable-night-{density}/splash_mark.png")
+         RES / f"drawable-{density}/splash_mark.png")
 
 # The logo inside the app, 600 px wide (shown at 200 logical pixels).
 logo = trimmed("priveo_full_logo.png")
 logo = logo.resize((600, round(600 * logo.height / logo.width)), Image.LANCZOS)
 save(logo, ROOT / "assets/brand/priveo-logo.png")
-save(for_light(logo), ROOT / "assets/brand/priveo-logo-light.png")
-print("wrote launcher icons, splash marks and the in-app logos")
+# The P mark in the customer top bar, 120 px high (shown at 30).
+save(p_mark.resize((round(120 * p_mark.width / p_mark.height), 120), Image.LANCZOS),
+     ROOT / "assets/brand/priveo-mark.png")
+print("wrote launcher icons, splash marks, the in-app logo and the P mark")
