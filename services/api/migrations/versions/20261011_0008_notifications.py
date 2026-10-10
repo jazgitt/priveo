@@ -9,7 +9,7 @@ from alembic import op
 revision = "0008"
 # The task named 20261010_0004_onboarding_confirmed, which is the file name;
 # the revision ID inside that file is "0004". Re-chain at integration.
-down_revision = "0004"
+down_revision = "0006"
 branch_labels = None
 depends_on = None
 
