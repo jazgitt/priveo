@@ -4,7 +4,7 @@ Priveo Car Concierge: a subscription car-care service for housing societies. A F
 
 ## State of the repo
 
-Requirements and prototype material, plus the start of Phase 0 (`docs/build-plan.md`): a FastAPI in `services/api` (real sign-in on PostgreSQL with Alembic migrations, including the customer's code and set-password steps with a fixed dev code in place of email; the three home screens still serve mock data), a Flutter app in `apps/mobile` (splash, login, three role homes), the contract in `packages/api-contract`, and the GitHub workflows in `.github/workflows`. The AWS deploy, the Play release and iOS wait on the owner's accounts. Full commands, pipeline and setup steps are in `docs/build-and-release.md`.
+Requirements and prototype material, plus the start of Phase 0 (`docs/build-plan.md`): a FastAPI in `services/api` (real sign-in on PostgreSQL with Alembic migrations, including the customer's code and set-password steps with a fixed dev code in place of email; the customer home and the onboarding review read the database; the crew and admin homes still serve mock data), a Flutter app in `apps/mobile` (splash, sign-in, the customer's onboarding review, three role homes), the contract in `packages/api-contract`, and the GitHub workflows in `.github/workflows`. The AWS deploy, the Play release and iOS wait on the owner's accounts. Full commands, pipeline and setup steps are in `docs/build-and-release.md`.
 
 Build and test commands (from the repo root):
 - API: `cd services/api && .venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. Export the contract with `scripts/export_openapi.py`.

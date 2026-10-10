@@ -26,6 +26,8 @@ class Customer(Base):
     flat: Mapped[str] = mapped_column(String(40), default="")
     # Set when the customer accepts the terms at first sign-in (AUTH-04).
     terms_accepted_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    # Set when the customer confirms the review of their details (ONB-25).
+    onboarding_confirmed_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     # "admin" for customers made in the portal, "migration" for the first load.
     source: Mapped[str] = mapped_column(String(16), default="admin")
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

@@ -133,6 +133,168 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextService => 'Next service';
 
   @override
+  String get notScheduledYet => 'Not scheduled yet';
+
+  @override
+  String dailyCleanBy(String time) {
+    return 'Daily clean by $time';
+  }
+
+  @override
+  String interiorCareOn(String day) {
+    return 'Interior care on $day';
+  }
+
+  @override
+  String get noVehicles => 'No vehicle is on your account yet. Contact Priveo.';
+
+  @override
+  String get noRegistration => 'Number to be added';
+
+  @override
+  String get noParking => 'Parking to be added';
+
+  @override
+  String get noSubscription => 'No subscription';
+
+  @override
+  String get noPlan => 'No plan';
+
+  @override
+  String pricePerMonth(String price) {
+    return '$price a month';
+  }
+
+  @override
+  String vehicleOf(int number, int total) {
+    return 'Vehicle $number of $total';
+  }
+
+  @override
+  String stepOf(int number, int total) {
+    return 'Step $number of $total';
+  }
+
+  @override
+  String get onboardingIntro =>
+      'Check what we have, and fill in anything that is missing.';
+
+  @override
+  String get reviewIntro => 'Check everything once more, then confirm.';
+
+  @override
+  String get yourDetails => 'Your details';
+
+  @override
+  String get yourSociety => 'Your society';
+
+  @override
+  String get yourVehicle => 'Your vehicle';
+
+  @override
+  String get reviewAndConfirm => 'Review and confirm';
+
+  @override
+  String get firstName => 'First name';
+
+  @override
+  String get lastName => 'Last name';
+
+  @override
+  String get name => 'Name';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get mobileNumber => 'Mobile number';
+
+  @override
+  String get society => 'Society';
+
+  @override
+  String get flat => 'Flat';
+
+  @override
+  String get vehicle => 'Vehicle';
+
+  @override
+  String get registration => 'Registration';
+
+  @override
+  String get parking => 'Parking';
+
+  @override
+  String get basement => 'Basement';
+
+  @override
+  String get parkingNumber => 'Parking number';
+
+  @override
+  String parkingPreview(String spot) {
+    return 'Your spot: $spot';
+  }
+
+  @override
+  String get servicePreferences => 'Service preferences';
+
+  @override
+  String get cutoffTime => 'Service cutoff time';
+
+  @override
+  String get chooseTime => 'Choose a time';
+
+  @override
+  String get cutoffNote =>
+      'This is the time by which your daily clean will be done. Priveo assigns the exact slot.';
+
+  @override
+  String get interiorCareDay => 'Interior care day';
+
+  @override
+  String get plan => 'Plan';
+
+  @override
+  String get yourPlan => 'Your plan';
+
+  @override
+  String get notOnFile => 'Not on file';
+
+  @override
+  String get onlyPriveoCanChange =>
+      'Only Priveo can change these. Contact support if something is wrong.';
+
+  @override
+  String get enterFirstName => 'Enter your first name, using letters only.';
+
+  @override
+  String get enterLastName => 'Enter your last name, using letters only.';
+
+  @override
+  String get enterMobile => 'Enter a 10-digit mobile number.';
+
+  @override
+  String get selectBasement => 'Select the basement.';
+
+  @override
+  String get enterParkingNumber => 'Enter the parking number, in digits.';
+
+  @override
+  String get selectCutoff => 'Please select your service cutoff time.';
+
+  @override
+  String get selectInteriorDay => 'Please select your interior care day.';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get confirmDetails => 'Confirm';
+
+  @override
   String get subscription => 'Subscription';
 
   @override

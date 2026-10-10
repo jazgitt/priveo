@@ -135,31 +135,27 @@ class CrewHome {
 class CustomerHome {
   const CustomerHome({
     required this.greetingName,
-    required this.vehicle,
-    required this.nextService,
-    required this.subscriptionStatus,
+    required this.onboardingConfirmed,
+    required this.vehicles,
     required this.quickActions,
   });
 
   final String greetingName;
-  final VehicleCard vehicle;
-  final NextService nextService;
-  final String subscriptionStatus;
+  final bool onboardingConfirmed;
+  final List<VehicleCard> vehicles;
   final List<QuickAction> quickActions;
 
   factory CustomerHome.fromJson(Map<String, dynamic> j) => CustomerHome(
         greetingName: j['greeting_name'] as String,
-        vehicle: VehicleCard.fromJson(j['vehicle'] as Map<String, dynamic>),
-        nextService: NextService.fromJson(j['next_service'] as Map<String, dynamic>),
-        subscriptionStatus: j['subscription_status'] as String,
+        onboardingConfirmed: j['onboarding_confirmed'] as bool,
+        vehicles: [for (final x in j['vehicles'] as List) VehicleCard.fromJson(x as Map<String, dynamic>)],
         quickActions: [for (final x in j['quick_actions'] as List) QuickAction.fromJson(x as Map<String, dynamic>)],
       );
 
   Map<String, dynamic> toJson() => {
         'greeting_name': greetingName,
-        'vehicle': vehicle.toJson(),
-        'next_service': nextService.toJson(),
-        'subscription_status': subscriptionStatus,
+        'onboarding_confirmed': onboardingConfirmed,
+        'vehicles': [for (final x in vehicles) x.toJson()],
         'quick_actions': [for (final x in quickActions) x.toJson()],
       };
 }
@@ -300,6 +296,134 @@ class NextService {
       };
 }
 
+class Onboarding {
+  const Onboarding({
+    required this.confirmed,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.mobile,
+    required this.society,
+    required this.flat,
+    required this.vehicles,
+  });
+
+  final bool confirmed;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String mobile;
+  final String society;
+  final String flat;
+  final List<OnboardingVehicle> vehicles;
+
+  factory Onboarding.fromJson(Map<String, dynamic> j) => Onboarding(
+        confirmed: j['confirmed'] as bool,
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        email: j['email'] as String,
+        mobile: j['mobile'] as String,
+        society: j['society'] as String,
+        flat: j['flat'] as String,
+        vehicles: [for (final x in j['vehicles'] as List) OnboardingVehicle.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'confirmed': confirmed,
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': email,
+        'mobile': mobile,
+        'society': society,
+        'flat': flat,
+        'vehicles': [for (final x in vehicles) x.toJson()],
+      };
+}
+
+class OnboardingAnswers {
+  const OnboardingAnswers({
+    required this.firstName,
+    required this.lastName,
+    required this.mobile,
+    required this.vehicles,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String mobile;
+  final List<VehicleAnswer> vehicles;
+
+  factory OnboardingAnswers.fromJson(Map<String, dynamic> j) => OnboardingAnswers(
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        mobile: j['mobile'] as String,
+        vehicles: [for (final x in j['vehicles'] as List) VehicleAnswer.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_name': firstName,
+        'last_name': lastName,
+        'mobile': mobile,
+        'vehicles': [for (final x in vehicles) x.toJson()],
+      };
+}
+
+class OnboardingVehicle {
+  const OnboardingVehicle({
+    required this.id,
+    required this.registration,
+    required this.model,
+    required this.parkingBasement,
+    required this.parkingNumber,
+    required this.hasSubscription,
+    required this.planName,
+    required this.monthlyPriceRupees,
+    required this.cutoffTime,
+    required this.asksInteriorDay,
+    required this.interiorDay,
+  });
+
+  final String id;
+  final String registration;
+  final String model;
+  final String parkingBasement;
+  final String parkingNumber;
+  final bool hasSubscription;
+  final String? planName;
+  final int? monthlyPriceRupees;
+  final String? cutoffTime;
+  final bool asksInteriorDay;
+  final String? interiorDay;
+
+  factory OnboardingVehicle.fromJson(Map<String, dynamic> j) => OnboardingVehicle(
+        id: j['id'] as String,
+        registration: j['registration'] as String,
+        model: j['model'] as String,
+        parkingBasement: j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] as String,
+        hasSubscription: j['has_subscription'] as bool,
+        planName: j['plan_name'] == null ? null : j['plan_name'] as String,
+        monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
+        cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
+        asksInteriorDay: j['asks_interior_day'] as bool,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'registration': registration,
+        'model': model,
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+        'has_subscription': hasSubscription,
+        'plan_name': planName,
+        'monthly_price_rupees': monthlyPriceRupees,
+        'cutoff_time': cutoffTime,
+        'asks_interior_day': asksInteriorDay,
+        'interior_day': interiorDay,
+      };
+}
+
 class PaymentToConfirm {
   const PaymentToConfirm({
     required this.id,
@@ -420,31 +544,87 @@ class StartResult {
       };
 }
 
+class VehicleAnswer {
+  const VehicleAnswer({
+    required this.id,
+    required this.parkingBasement,
+    required this.parkingNumber,
+    required this.cutoffTime,
+    required this.interiorDay,
+  });
+
+  final String id;
+  final String parkingBasement;
+  final String parkingNumber;
+  final String? cutoffTime;
+  final String? interiorDay;
+
+  factory VehicleAnswer.fromJson(Map<String, dynamic> j) => VehicleAnswer(
+        id: j['id'] as String,
+        parkingBasement: j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] as String,
+        cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+        'cutoff_time': cutoffTime,
+        'interior_day': interiorDay,
+      };
+}
+
 class VehicleCard {
   const VehicleCard({
+    required this.id,
     required this.registration,
     required this.model,
     required this.society,
     required this.parking,
+    required this.subscriptionStatus,
+    required this.monthlyPriceRupees,
+    required this.cutoffTime,
+    required this.interiorDay,
+    required this.nextService,
   });
 
+  final String id;
   final String registration;
   final String model;
   final String society;
   final String parking;
+  final String? subscriptionStatus;
+  final int? monthlyPriceRupees;
+  final String? cutoffTime;
+  final String? interiorDay;
+  final NextService? nextService;
 
   factory VehicleCard.fromJson(Map<String, dynamic> j) => VehicleCard(
+        id: j['id'] as String,
         registration: j['registration'] as String,
         model: j['model'] as String,
         society: j['society'] as String,
         parking: j['parking'] as String,
+        subscriptionStatus: j['subscription_status'] == null ? null : j['subscription_status'] as String,
+        monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
+        cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        nextService: j['next_service'] == null ? null : NextService.fromJson(j['next_service'] as Map<String, dynamic>),
       );
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'registration': registration,
         'model': model,
         'society': society,
         'parking': parking,
+        'subscription_status': subscriptionStatus,
+        'monthly_price_rupees': monthlyPriceRupees,
+        'cutoff_time': cutoffTime,
+        'interior_day': interiorDay,
+        'next_service': nextService?.toJson(),
       };
 }
 
@@ -579,6 +759,25 @@ class PriveoApi {
     try {
       final r = await _dio.get<Map<String, dynamic>>('/v1/customer/home');
       return CustomerHome.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Onboarding
+  Future<Onboarding> onboarding() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/customer/onboarding');
+      return Onboarding.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Confirm Onboarding
+  Future<void> confirmOnboarding(OnboardingAnswers body) async {
+    try {
+      await _dio.post<void>('/v1/customer/onboarding/confirm', data: body.toJson());
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

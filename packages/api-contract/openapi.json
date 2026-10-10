@@ -430,6 +430,109 @@
         }
       }
     },
+    "/v1/customer/onboarding": {
+      "get": {
+        "tags": [
+          "customer"
+        ],
+        "summary": "Onboarding",
+        "description": "The details the admin entered, for the customer to review (ONB-25).",
+        "operationId": "onboarding_v1_customer_onboarding_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/onboarding/confirm": {
+      "post": {
+        "tags": [
+          "customer"
+        ],
+        "summary": "Confirm Onboarding",
+        "description": "Saves the customer's changes and confirms the review. Home opens after it.",
+        "operationId": "confirm_onboarding_v1_customer_onboarding_confirm_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingAnswers"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/crew/home": {
       "get": {
         "tags": [
@@ -657,15 +760,16 @@
             "type": "string",
             "title": "Greeting Name"
           },
-          "vehicle": {
-            "$ref": "#/components/schemas/VehicleCard"
+          "onboarding_confirmed": {
+            "type": "boolean",
+            "title": "Onboarding Confirmed"
           },
-          "next_service": {
-            "$ref": "#/components/schemas/NextService"
-          },
-          "subscription_status": {
-            "type": "string",
-            "title": "Subscription Status"
+          "vehicles": {
+            "items": {
+              "$ref": "#/components/schemas/VehicleCard"
+            },
+            "type": "array",
+            "title": "Vehicles"
           },
           "quick_actions": {
             "items": {
@@ -678,9 +782,8 @@
         "type": "object",
         "required": [
           "greeting_name",
-          "vehicle",
-          "next_service",
-          "subscription_status",
+          "onboarding_confirmed",
+          "vehicles",
           "quick_actions"
         ],
         "title": "CustomerHome"
@@ -834,6 +937,179 @@
         ],
         "title": "NextService"
       },
+      "Onboarding": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          },
+          "society": {
+            "type": "string",
+            "title": "Society"
+          },
+          "flat": {
+            "type": "string",
+            "title": "Flat"
+          },
+          "vehicles": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingVehicle"
+            },
+            "type": "array",
+            "title": "Vehicles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirmed",
+          "first_name",
+          "last_name",
+          "email",
+          "mobile",
+          "society",
+          "flat",
+          "vehicles"
+        ],
+        "title": "Onboarding"
+      },
+      "OnboardingAnswers": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          },
+          "vehicles": {
+            "items": {
+              "$ref": "#/components/schemas/VehicleAnswer"
+            },
+            "type": "array",
+            "title": "Vehicles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "mobile",
+          "vehicles"
+        ],
+        "title": "OnboardingAnswers"
+      },
+      "OnboardingVehicle": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "parking_basement": {
+            "type": "string",
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "type": "string",
+            "title": "Parking Number"
+          },
+          "has_subscription": {
+            "type": "boolean",
+            "title": "Has Subscription"
+          },
+          "plan_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Name"
+          },
+          "monthly_price_rupees": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Price Rupees"
+          },
+          "cutoff_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Time"
+          },
+          "asks_interior_day": {
+            "type": "boolean",
+            "title": "Asks Interior Day"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "registration",
+          "model",
+          "parking_basement",
+          "parking_number",
+          "has_subscription",
+          "plan_name",
+          "monthly_price_rupees",
+          "cutoff_time",
+          "asks_interior_day",
+          "interior_day"
+        ],
+        "title": "OnboardingVehicle"
+      },
       "PaymentToConfirm": {
         "properties": {
           "id": {
@@ -982,8 +1258,59 @@
         ],
         "title": "ValidationError"
       },
+      "VehicleAnswer": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "parking_basement": {
+            "type": "string",
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "type": "string",
+            "title": "Parking Number"
+          },
+          "cutoff_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Time"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parking_basement",
+          "parking_number",
+          "cutoff_time",
+          "interior_day"
+        ],
+        "title": "VehicleAnswer"
+      },
       "VehicleCard": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "registration": {
             "type": "string",
             "title": "Registration"
@@ -999,14 +1326,74 @@
           "parking": {
             "type": "string",
             "title": "Parking"
+          },
+          "subscription_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Status"
+          },
+          "monthly_price_rupees": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Price Rupees"
+          },
+          "cutoff_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Time"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          },
+          "next_service": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NextService"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
+          "id",
           "registration",
           "model",
           "society",
-          "parking"
+          "parking",
+          "subscription_status",
+          "monthly_price_rupees",
+          "cutoff_time",
+          "interior_day",
+          "next_service"
         ],
         "title": "VehicleCard"
       },

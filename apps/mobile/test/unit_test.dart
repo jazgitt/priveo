@@ -54,8 +54,13 @@ void main() {
   group('mappers', () {
     test('customer home', () {
       final h = CustomerHome.fromJson(customerJson);
-      expect(h.vehicle.registration, 'MH 12 AB 1234');
-      expect(h.nextService.date, DateTime(2026, 11, 7));
+      expect(h.vehicles.first.registration, 'MH 12 AB 1234');
+      expect(h.vehicles.first.nextService?.date, DateTime(2026, 11, 7));
+      expect(h.vehicles.last.subscriptionStatus, isNull);
+      // What may be empty is sent back as empty.
+      expect(h.vehicles.last.toJson()['next_service'], isNull);
+      expect(h.vehicles.first.toJson()['next_service'],
+          {'date': '2026-11-07', 'service': 'Cleaning-External', 'status': 'Scheduled'});
       expect(h.quickActions, hasLength(4));
     });
     test('crew home', () {

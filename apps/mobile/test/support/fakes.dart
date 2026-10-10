@@ -104,9 +104,30 @@ class FakeAuthRepository implements AuthRepository {
 /// Serves the three homes from the JSON below. Other calls are not used
 /// by the screens under test.
 class FakePriveoApi implements PriveoApi {
+  FakePriveoApi({this.onboardingConfirmed = true});
+
+  /// False for a customer who has not reviewed their details yet (ONB-25).
+  bool onboardingConfirmed;
+  OnboardingAnswers? confirmed;
+
   @override
-  Future<CustomerHome> customerHome() async =>
-      CustomerHome.fromJson(customerJson);
+  Future<CustomerHome> customerHome() async => CustomerHome.fromJson(
+      {...customerJson, 'onboarding_confirmed': onboardingConfirmed});
+
+  @override
+  Future<Onboarding> onboarding() async => Onboarding.fromJson(onboardingJson);
+
+  @override
+  Future<void> confirmOnboarding(OnboardingAnswers body) async {
+    if (body.firstName == 'Fail') {
+      throw const ApiFailure(
+          code: 'validation_failed',
+          message: 'Please check the details.',
+          statusCode: 422);
+    }
+    confirmed = body;
+    onboardingConfirmed = true;
+  }
 
   @override
   Future<CrewHome> crewHome() async => CrewHome.fromJson(crewJson);
@@ -120,23 +141,107 @@ class FakePriveoApi implements PriveoApi {
 
 const customerJson = {
   'greeting_name': 'Aarav',
-  'vehicle': {
-    'registration': 'MH 12 AB 1234',
-    'model': 'Hyundai Creta',
-    'society': 'Green Meadows',
-    'parking': 'B2-14',
-  },
-  'next_service': {
-    'date': '2026-11-07',
-    'service': 'Cleaning-External',
-    'status': 'Scheduled',
-  },
-  'subscription_status': 'Active',
+  'onboarding_confirmed': true,
+  'vehicles': [
+    {
+      'id': 'v1',
+      'registration': 'MH 12 AB 1234',
+      'model': 'Hyundai Creta',
+      'society': 'Green Meadows',
+      'parking': 'B2-14',
+      'subscription_status': 'Active',
+      'monthly_price_rupees': 1299,
+      'cutoff_time': '07:00',
+      'interior_day': 'Friday',
+      'next_service': {
+        'date': '2026-11-07',
+        'service': 'Cleaning-External',
+        'status': 'Scheduled',
+      },
+    },
+    {
+      'id': 'v2',
+      'registration': '',
+      'model': 'Maruti Swift',
+      'society': 'Green Meadows',
+      'parking': '',
+      'subscription_status': 'Active',
+      'monthly_price_rupees': 999,
+      'cutoff_time': '06:30',
+      'interior_day': null,
+      'next_service': null,
+    },
+    {
+      'id': 'v3',
+      'registration': 'DL 3 CAB 1234',
+      'model': 'Tata Punch',
+      'society': 'Green Meadows',
+      'parking': 'B1-40',
+      'subscription_status': null,
+      'monthly_price_rupees': null,
+      'cutoff_time': null,
+      'interior_day': null,
+      'next_service': null,
+    },
+  ],
   'quick_actions': [
     {'key': 'skip_pause', 'label': 'Skip or Pause'},
     {'key': 'history', 'label': 'Service History'},
     {'key': 'feedback', 'label': 'Give Feedback'},
     {'key': 'report_issue', 'label': 'Report an Issue'},
+  ],
+};
+
+/// A migrated customer with gaps: no last name, a masked mobile number, a
+/// car with no parking or cutoff time, and a car with no subscription.
+const onboardingJson = {
+  'confirmed': false,
+  'first_name': 'Aarav',
+  'last_name': '',
+  'email': 'aarav@gmale.com',
+  'mobile': '9xxxxx0101',
+  'society': 'Green Meadows',
+  'flat': 'A-101',
+  'vehicles': [
+    {
+      'id': 'v1',
+      'registration': 'MH 12 AB 1234',
+      'model': 'Hyundai Creta',
+      'parking_basement': 'B2',
+      'parking_number': '14',
+      'has_subscription': true,
+      'plan_name': null,
+      'monthly_price_rupees': 1299,
+      'cutoff_time': '07:00',
+      'asks_interior_day': true,
+      'interior_day': 'Friday',
+    },
+    {
+      'id': 'v2',
+      'registration': '',
+      'model': 'Maruti Swift',
+      'parking_basement': '',
+      'parking_number': '',
+      'has_subscription': true,
+      'plan_name': null,
+      'monthly_price_rupees': 999,
+      'cutoff_time': null,
+      'asks_interior_day': false,
+      'interior_day': null,
+    },
+    {
+      'id': 'v3',
+      'registration': 'DL 3 CAB 1234',
+      'model': 'Tata Punch',
+      'parking_basement': 'B1',
+      'parking_number': '40',
+      'has_subscription': false,
+      'plan_name': null,
+      'monthly_price_rupees': null,
+      'cutoff_time': null,
+      'asks_interior_day': false,
+      'interior_day': null,
+    },
   ],
 };
 
@@ -184,6 +289,7 @@ Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
   SessionStore? store,
   FakeAuthRepository? auth,
+  FakePriveoApi? api,
   Brightness brightness = Brightness.light,
 }) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
@@ -192,7 +298,7 @@ Future<ProviderContainer> pumpApp(
     appConfigProvider.overrideWithValue(AppConfig.dev),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
-    apiProvider.overrideWithValue(FakePriveoApi()),
+    apiProvider.overrideWithValue(api ?? FakePriveoApi()),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(

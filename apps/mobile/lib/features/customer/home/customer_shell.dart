@@ -6,24 +6,26 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/api/api.g.dart';
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/tokens.g.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
 
-/// Customer shell: bottom tabs. Only Home has content in Phase 0.
+/// Customer shell: bottom tabs. Only Home has content so far.
 /// The layout follows the prototype's dark home.
-class CustomerShell extends StatefulWidget {
+class CustomerShell extends ConsumerStatefulWidget {
   const CustomerShell({super.key});
 
   @override
-  State<CustomerShell> createState() => _CustomerShellState();
+  ConsumerState<CustomerShell> createState() => _CustomerShellState();
 }
 
-class _CustomerShellState extends State<CustomerShell> {
+class _CustomerShellState extends ConsumerState<CustomerShell> {
   static const _calendarTab = 1;
   static const _accountTab = 2;
   int _index = 0;
@@ -33,6 +35,11 @@ class _CustomerShellState extends State<CustomerShell> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Home opens only after the customer has confirmed their details (ONB-25).
+    final home = ref.watch(customerHomeProvider).value;
+    if (home != null && !home.onboardingConfirmed) {
+      return const OnboardingReviewScreen();
+    }
     return Scaffold(
       extendBody: true,
       body: SafeArea(
@@ -198,6 +205,8 @@ class CustomerHomeScreen extends ConsumerWidget {
 
   final VoidCallback onCalendar;
 
+  static const _side = EdgeInsets.symmetric(horizontal: 20);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
@@ -206,104 +215,218 @@ class CustomerHomeScreen extends ConsumerWidget {
     final home = ref.watch(customerHomeProvider);
     return home.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) =>
-          ErrorView(onRetry: () => ref.invalidate(customerHomeProvider)),
-      data: (h) => RefreshIndicator(
-        onRefresh: () => ref.refresh(customerHomeProvider.future),
-        child: ListView(
-          // Leaves room for the tab bar, which floats over the list.
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
-          children: [
-            Text(l.greeting, style: text.bodyMedium?.copyWith(color: b.mute)),
-            Text(h.greetingName, style: text.displaySmall),
-            const SizedBox(height: 18),
-            _VehicleCard(h.vehicle, subscriptionStatus: h.subscriptionStatus),
-            const SizedBox(height: 14),
-            SectionCard(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: SectionLabel(l.nextService)),
-                      StatusChip(
-                        h.nextService.status,
-                        tone: StatusChip.toneFor(h.nextService.status),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    formatDate(h.nextService.date),
-                    style: text.headlineSmall,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _ServiceMarker(h.nextService.service),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          h.nextService.service,
-                          style: text.bodyMedium?.copyWith(color: b.mute),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: onCalendar,
-                      icon: const Icon(
-                        Symbols.calendar_month_rounded,
-                        size: 18,
-                      ),
-                      label: Text(l.viewCalendar),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SectionLabel(l.quickActions),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 2.4,
-              children: [for (final a in h.quickActions) _QuickAction(a)],
-            ),
-          ],
-        ),
+      error: (e, _) => ErrorView(
+        message: e is ApiFailure ? e.message : null,
+        onRetry: () => ref.invalidate(customerHomeProvider),
       ),
+      data: (h) {
+        final selected = selectedIndex(
+          h.vehicles,
+          ref.watch(selectedVehicleProvider),
+        );
+        final vehicle = h.vehicles.isEmpty ? null : h.vehicles[selected];
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(customerHomeProvider.future),
+          child: ListView(
+            // Leaves room for the tab bar, which floats over the list.
+            padding: const EdgeInsets.only(top: 14, bottom: 110),
+            children: [
+              Padding(
+                padding: _side,
+                child: Text(
+                  l.greeting,
+                  style: text.bodyMedium?.copyWith(color: b.mute),
+                ),
+              ),
+              Padding(
+                padding: _side,
+                child: Text(h.greetingName, style: text.displaySmall),
+              ),
+              const SizedBox(height: 18),
+              if (vehicle == null)
+                Padding(
+                  padding: _side,
+                  child: SectionCard(child: Text(l.noVehicles)),
+                )
+              else if (h.vehicles.length == 1)
+                Padding(padding: _side, child: _VehicleCard(vehicle))
+              else
+                _VehicleCarousel(
+                  vehicles: h.vehicles,
+                  selected: selected,
+                  onSelected: (i) => ref
+                      .read(selectedVehicleProvider.notifier)
+                      .select(h.vehicles[i].id),
+                ),
+              // A vehicle with no subscription has no daily service.
+              if (vehicle != null && vehicle.subscriptionStatus != null) ...[
+                const SizedBox(height: 14),
+                Padding(
+                  padding: _side,
+                  child: _NextServiceCard(vehicle, onCalendar: onCalendar),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Padding(padding: _side, child: SectionLabel(l.quickActions)),
+              const SizedBox(height: 12),
+              Padding(
+                padding: _side,
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 2.4,
+                  children: [for (final a in h.quickActions) _QuickAction(a)],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-/// Number plate, model, society and parking, with the subscription status.
+/// The customer's vehicles as cards to swipe through (HOME-07). The card in
+/// the middle is the selected one. Its neighbours peek in from the sides,
+/// smaller, dimmer and turned away a little.
+class _VehicleCarousel extends StatefulWidget {
+  const _VehicleCarousel({
+    required this.vehicles,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<VehicleCard> vehicles;
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  State<_VehicleCarousel> createState() => _VehicleCarouselState();
+}
+
+class _VehicleCarouselState extends State<_VehicleCarousel> {
+  late final _controller = PageController(
+    initialPage: widget.selected,
+    viewportFraction: 0.86,
+  );
+
+  @override
+  void didUpdateWidget(_VehicleCarousel old) {
+    super.didUpdateWidget(old);
+    // The selection changed somewhere else: follow it.
+    if (_controller.hasClients &&
+        _controller.page?.round() != widget.selected) {
+      _controller.jumpToPage(widget.selected);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  double _distanceFrom(int index) {
+    final page = _controller.hasClients && _controller.position.haveDimensions
+        ? _controller.page ?? widget.selected.toDouble()
+        : widget.selected.toDouble();
+    return (page - index).clamp(-1.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final b = context.brand;
+    final flat = MediaQuery.disableAnimationsOf(context);
+    // The card's content is a fixed number of text lines, so its height
+    // follows the text size setting.
+    final height = 90 + 82 * MediaQuery.textScalerOf(context).scale(1);
+    return Column(
+      children: [
+        SizedBox(
+          height: height,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: widget.vehicles.length,
+            onPageChanged: widget.onSelected,
+            itemBuilder: (context, i) => AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final d = _distanceFrom(i);
+                final away = d.abs();
+                return Opacity(
+                  opacity: 1 - 0.45 * away,
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0012)
+                      ..rotateY(flat ? 0 : d * 0.32)
+                      ..scaleByDouble(1 - 0.07 * away, 1 - 0.07 * away, 1, 1),
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: _VehicleCard(widget.vehicles[i]),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Semantics(
+          label: l.vehicleOf(widget.selected + 1, widget.vehicles.length),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < widget.vehicles.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == widget.selected ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: i == widget.selected ? b.gold : b.line,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Number plate, model, society, parking and the plan price, with the
+/// subscription status.
 class _VehicleCard extends StatelessWidget {
-  const _VehicleCard(this.vehicle, {required this.subscriptionStatus});
+  const _VehicleCard(this.vehicle);
 
   final VehicleCard vehicle;
-  final String subscriptionStatus;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final b = context.brand;
+    final status = vehicle.subscriptionStatus;
+    final price = vehicle.monthlyPriceRupees;
     Widget line(IconData icon, String value) => Row(
       children: [
         Icon(icon, size: 15, color: b.mute),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(value, style: text.bodySmall?.copyWith(color: b.mute)),
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(color: b.mute),
+          ),
         ),
       ],
     );
@@ -314,41 +437,133 @@ class _VehicleCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: DarkTokens.text,
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Text(
-                  vehicle.registration,
-                  style: text.labelMedium?.copyWith(
-                    color: const Color(0xFF111111),
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: vehicle.registration.isEmpty
+                          ? b.line
+                          : DarkTokens.text,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Text(
+                      vehicle.registration.isEmpty
+                          ? l.noRegistration
+                          : vehicle.registration,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.labelMedium?.copyWith(
+                        color: vehicle.registration.isEmpty
+                            ? b.mute
+                            : const Color(0xFF111111),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Semantics(
                 label: l.subscription,
                 child: StatusChip(
-                  subscriptionStatus,
-                  tone: StatusChip.toneFor(subscriptionStatus),
+                  status ?? l.noSubscription,
+                  tone: status == null
+                      ? ChipTone.neutral
+                      : StatusChip.toneFor(status),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(vehicle.model, style: text.titleLarge),
+          Text(
+            vehicle.model,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.titleLarge,
+          ),
           const SizedBox(height: 12),
           line(Symbols.location_on_rounded, vehicle.society),
           const SizedBox(height: 4),
-          line(Symbols.local_parking_rounded, vehicle.parking),
+          line(
+            Symbols.local_parking_rounded,
+            vehicle.parking.isEmpty ? l.noParking : vehicle.parking,
+          ),
+          const SizedBox(height: 4),
+          line(
+            Symbols.workspace_premium_rounded,
+            price == null ? l.noPlan : l.pricePerMonth(formatRupees(price)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The next visit for the selected vehicle (HOME-04). Until visits are
+/// scheduled it shows the customer's service time and interior care day.
+class _NextServiceCard extends StatelessWidget {
+  const _NextServiceCard(this.vehicle, {required this.onCalendar});
+
+  final VehicleCard vehicle;
+  final VoidCallback onCalendar;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final b = context.brand;
+    final next = vehicle.nextService;
+    final cutoff = vehicle.cutoffTime;
+    final day = vehicle.interiorDay;
+    Widget detail(String service, String value) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          _ServiceMarker(service),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(value, style: text.bodyMedium?.copyWith(color: b.mute)),
+          ),
+        ],
+      ),
+    );
+    return SectionCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: SectionLabel(l.nextService)),
+              if (next != null)
+                StatusChip(next.status, tone: StatusChip.toneFor(next.status)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            next == null ? l.notScheduledYet : formatDate(next.date),
+            style: text.headlineSmall,
+          ),
+          if (next != null) detail(next.service, next.service),
+          if (cutoff != null)
+            detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
+          if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onCalendar,
+              icon: const Icon(Symbols.calendar_month_rounded, size: 18),
+              label: Text(l.viewCalendar),
+            ),
+          ),
         ],
       ),
     );
