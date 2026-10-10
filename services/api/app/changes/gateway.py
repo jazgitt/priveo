@@ -1,10 +1,16 @@
 """What the changes module needs from the visits and jobs of the scheduling
-slice. The scheduling slice implements this Protocol; until then an in-memory
-stub stands in. Visits and jobs are never read or written here directly."""
+module. `sql_gateway.py` implements this Protocol over the scheduler's tables;
+the in-memory stub is for tests. Visits and jobs are never read or written
+here directly."""
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, time, timedelta
 from typing import Protocol
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from app.platform.db import get_db
 
 
 @dataclass(frozen=True)
@@ -88,14 +94,18 @@ class InMemoryScheduleChangeGateway:
         self.cutoffs[(vehicle_id, day)] = cutoff
 
 
-_gateway: ScheduleChangeGateway = InMemoryScheduleChangeGateway()
+_override: ScheduleChangeGateway | None = None
 
 
-def set_schedule_gateway(gateway: ScheduleChangeGateway) -> None:
-    """Bound once at start-up, when the scheduling slice is wired in."""
-    global _gateway
-    _gateway = gateway
+def set_schedule_gateway(gateway: ScheduleChangeGateway | None) -> None:
+    """Replaces the scheduler-backed gateway, for tests and tools."""
+    global _override
+    _override = gateway
 
 
-def get_schedule_gateway() -> ScheduleChangeGateway:
-    return _gateway
+def get_schedule_gateway(db: Session = Depends(get_db)) -> ScheduleChangeGateway:
+    if _override is not None:
+        return _override
+    from app.changes.sql_gateway import SqlScheduleChangeGateway
+
+    return SqlScheduleChangeGateway(db)

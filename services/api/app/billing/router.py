@@ -124,13 +124,13 @@ def issue_invoice(payment_id: str, user: User = Depends(require_role("admin")),
     return svc.issue_invoice(payment_id, user.id)
 
 
-@admin.get("/alerts", response_model=list[AlertOut])
+@admin.get("/payment-alerts", response_model=list[AlertOut])
 def alerts(unread_only: bool = False, user: User = Depends(require_role("admin")),
            svc: BillingService = Depends(get_billing_service)):
     return svc.alerts(unread_only)
 
 
-@admin.post("/alerts/{alert_id}/read", status_code=204)
+@admin.post("/payment-alerts/{alert_id}/read", status_code=204)
 def read_alert(alert_id: str, user: User = Depends(require_role("admin")),
                svc: BillingService = Depends(get_billing_service)):
     svc.mark_alert_read(alert_id)

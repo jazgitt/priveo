@@ -5,7 +5,7 @@ import '../../../core/ui/theme.dart';
 import 'payments_screens.dart';
 
 const adminPaymentsPath = '/admin/payments';
-const adminAlertsPath = '/admin/alerts';
+const adminAlertsPath = '/admin/payment-alerts';
 
 /// The admin quick-action screens for money, in the admin cream look. They sit
 /// under `/admin/`, so the role redirect must let those paths through.

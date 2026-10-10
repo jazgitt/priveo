@@ -45,7 +45,7 @@ def test_a_payment_runs_from_due_to_received(money):
     r = m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
     assert r.json()["payment"]["status"] == "Initiated"
     # The admin is alerted, and sees it in the list to confirm (ADM-PAY-11).
-    alerts = m.client.get("/v1/admin/alerts", headers=m.admin).json()
+    alerts = m.client.get("/v1/admin/payment-alerts", headers=m.admin).json()
     assert alerts[0]["kind"] == "payment_initiated" and alerts[0]["payment_id"] == p["id"]
     to_confirm = m.client.get("/v1/admin/payments?status=Initiated", headers=m.admin).json()
     assert [x["id"] for x in to_confirm] == [p["id"]]

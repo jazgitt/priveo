@@ -108,14 +108,14 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
 
   @override
   Future<List<AdminAlertDto>> alerts() =>
-      _call(() => _dio.get<dynamic>('/v1/admin/alerts'), (d) => [
+      _call(() => _dio.get<dynamic>('/v1/admin/payment-alerts'), (d) => [
             for (final x in d as List)
               AdminAlertDto.fromJson(x as Map<String, dynamic>)
           ]);
 
   @override
   Future<void> markRead(String id) =>
-      _call(() => _dio.post<dynamic>('/v1/admin/alerts/$id/read'), (_) {});
+      _call(() => _dio.post<dynamic>('/v1/admin/payment-alerts/$id/read'), (_) {});
 }
 
 final adminPaymentsRepositoryProvider = Provider<AdminPaymentsRepository>(

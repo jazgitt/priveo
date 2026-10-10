@@ -9,7 +9,7 @@ from alembic import op
 revision = "0010"
 # The earlier migrations are named by their short ID ("0004"), which is what
 # Alembic matches; the file is 20261010_0004_onboarding_confirmed.py.
-down_revision = "0008"
+down_revision = "0009"
 branch_labels = None
 depends_on = None
 

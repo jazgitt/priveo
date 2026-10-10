@@ -273,7 +273,7 @@ void main() {
 
     testWidgets('alerts can be marked read', (tester) async {
       final admin = FakeAdminPaymentsRepository();
-      await openAt(tester, '/admin/alerts', admin: admin);
+      await openAt(tester, '/admin/payment-alerts', admin: admin);
       expect(find.text("Meera Rao's subscription is Inactive."), findsOneWidget);
       await tester.tap(find.text('Mark read'));
       await tester.pumpAndSettle();

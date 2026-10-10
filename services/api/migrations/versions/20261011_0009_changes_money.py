@@ -8,7 +8,7 @@ from alembic import op
 
 revision = "0009"
 # The chain is re-made when the slices are merged.
-down_revision = "0004"
+down_revision = "0008"
 branch_labels = None
 depends_on = None
 
