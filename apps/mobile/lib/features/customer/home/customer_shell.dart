@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/api/api.g.dart';
@@ -12,7 +13,11 @@ import '../../../core/ui/tokens.g.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../changes_money/routes.dart' as money;
+import '../../changes_money/strings.dart';
 import '../../common/signout_button.dart';
+import '../../support/feedback_sheet.dart';
+import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
 import '../calendar/calendar_screen.dart';
@@ -286,7 +291,17 @@ class CustomerHomeScreen extends ConsumerWidget {
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.4,
-                  children: [for (final a in h.quickActions) _QuickAction(a)],
+                  children: [
+                    for (final a in h.quickActions) _QuickAction(a),
+                    _QuickAction(
+                      const QuickAction(
+                          key: 'subscription', label: MoneyStrings.subTitle),
+                    ),
+                    _QuickAction(
+                      const QuickAction(
+                          key: 'addons', label: MoneyStrings.addonTitle),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -618,12 +633,41 @@ class _ServiceMarker extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickAction extends ConsumerWidget {
   const _QuickAction(this.action);
 
   final QuickAction action;
 
+  /// Where a quick action leads. The money screens belong to one vehicle: the
+  /// one selected on Home.
+  void _open(BuildContext context, WidgetRef ref) {
+    final home = ref.read(customerHomeProvider).value;
+    String? vehicleId;
+    if (home != null && home.vehicles.isNotEmpty) {
+      vehicleId = home
+          .vehicles[selectedIndex(
+              home.vehicles, ref.read(selectedVehicleProvider))]
+          .id;
+    }
+    switch (action.key) {
+      case 'history':
+        context.push('/customer/history');
+      case 'feedback':
+        showFeedbackSheet(context);
+      case 'report_issue':
+        context.push(SupportRoutes.report);
+      case 'skip_pause' when vehicleId != null:
+        context.push(money.skipPausePath(vehicleId));
+      case 'subscription' when vehicleId != null:
+        context.push(money.subscriptionPath(vehicleId));
+      case 'addons' when vehicleId != null:
+        context.push(money.addonsPath(vehicleId));
+    }
+  }
+
   static IconData _iconFor(String key) => switch (key) {
+    'subscription' => Symbols.workspace_premium_rounded,
+    'addons' => Symbols.auto_awesome_rounded,
     'skip_pause' => Symbols.pause_circle_rounded,
     'history' => Symbols.history_rounded,
     'feedback' => Symbols.star_rounded,
@@ -632,7 +676,7 @@ class _QuickAction extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final b = context.brand;
     final radius = BorderRadius.circular(18);
     return Material(
@@ -643,7 +687,7 @@ class _QuickAction extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: radius,
-        onTap: () {},
+        onTap: () => _open(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(

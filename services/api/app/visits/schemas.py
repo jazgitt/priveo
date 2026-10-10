@@ -17,7 +17,7 @@ class CrewRef(BaseModel):
     name: str
 
 
-class JobCard(BaseModel):
+class CrewJobCard(BaseModel):
     id: str
     visit_id: str
     visit_status: str
@@ -44,7 +44,7 @@ class VisitList(BaseModel):
     total: int
     done: int
     left: int
-    jobs: list[JobCard]
+    jobs: list[CrewJobCard]
 
 
 class ChecklistItem(BaseModel):
@@ -77,7 +77,7 @@ class Outcome(BaseModel):
 
 
 class JobDetail(BaseModel):
-    job: JobCard
+    job: CrewJobCard
     checklist: list[ChecklistItem]
     requirements: Requirements
     uploads: list[UploadInfo]
@@ -121,7 +121,7 @@ class TeamMember(BaseModel):
     id: str
     name: str
     role: str
-    jobs: list[JobCard]
+    jobs: list[CrewJobCard]
 
 
 class ManagerSchedule(BaseModel):
@@ -129,4 +129,4 @@ class ManagerSchedule(BaseModel):
     society: str
     crew: list[TeamMember]
     # Jobs not yet on anyone.
-    unassigned: list[JobCard]
+    unassigned: list[CrewJobCard]

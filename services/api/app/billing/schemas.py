@@ -95,7 +95,7 @@ class AdminPaymentIn(BaseModel):
     status: str = "Due"
 
 
-class AlertOut(BaseModel):
+class PaymentAlertOut(BaseModel):
     id: str
     kind: str
     message: str

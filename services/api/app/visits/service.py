@@ -121,7 +121,7 @@ def managed_job(db: Session, login_id: uuid.UUID, job_id: str) -> Job:
 
 # ---- Cards ---------------------------------------------------------------------
 
-def _cards(db: Session, jobs: list[Job]) -> list[s.JobCard]:
+def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
     if not jobs:
         return []
     visits = {v.id: v for v in db.scalars(
@@ -147,7 +147,7 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.JobCard]:
         visit = visits[job.visit_id]
         vehicle = vehicles[visit.vehicle_id]
         parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
-        cards.append(s.JobCard(
+        cards.append(s.CrewJobCard(
             id=str(job.id), visit_id=str(visit.id), visit_status=visit.status,
             date=visit.date, service=job.service, status=job.status,
             vehicle=s.VehicleInfo(id=str(vehicle.id), registration=vehicle.registration or "",
@@ -340,7 +340,7 @@ def manager_schedule(db: Session, manager: SchedulingCrew, day: date) -> s.Manag
         .join(Login, Login.id == SchedulingCrew.login_id)
         .where(SchedulingCrew.society_id == manager.society_id, SchedulingCrew.active)
         .order_by(Login.display_name)).all())
-    by_owner: dict[str, list[s.JobCard]] = {}
+    by_owner: dict[str, list[s.CrewJobCard]] = {}
     unassigned = []
     for card in cards:
         if card.assigned_to is None:

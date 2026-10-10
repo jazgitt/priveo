@@ -7,8 +7,8 @@ from app.billing.config import MoneySettings, get_money_settings
 from app.billing.schemas import (
     AdminPaymentIn,
     AdminPaymentOut,
-    AlertOut,
     InvoiceOut,
+    PaymentAlertOut,
     PaymentDetail,
     PaymentOut,
     StatusIn,
@@ -124,7 +124,7 @@ def issue_invoice(payment_id: str, user: User = Depends(require_role("admin")),
     return svc.issue_invoice(payment_id, user.id)
 
 
-@admin.get("/payment-alerts", response_model=list[AlertOut])
+@admin.get("/payment-alerts", response_model=list[PaymentAlertOut])
 def alerts(unread_only: bool = False, user: User = Depends(require_role("admin")),
            svc: BillingService = Depends(get_billing_service)):
     return svc.alerts(unread_only)

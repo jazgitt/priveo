@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/network/api_failure.dart';
@@ -7,6 +8,8 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../alerts/routes.dart' show AlertsRoutes;
+import '../payments/routes.dart' show adminAlertsPath, adminPaymentsPath;
 import 'admin_home_data.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
@@ -63,6 +66,21 @@ class AdminHomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => context.push(adminPaymentsPath),
+                child: const Text('All payments'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => context.push(AlertsRoutes.alerts),
+                child: Text(l.adminAlerts),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => context.push(adminAlertsPath),
+                child: const Text('Payment alerts'),
+              ),
               const SizedBox(height: 12),
               const _SignOutAllButton(),
             ],

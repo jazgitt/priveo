@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin_quick/home/admin_home_screen.dart';
 import '../../features/admin_quick/alerts/routes.dart' as alerts;
+import '../../features/admin_quick/payments/routes.dart' as payments;
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/changes_money/routes.dart' as money;
 import '../../features/crew/home/crew_home_screen.dart';
 import '../../features/customer/home/customer_shell.dart';
 import '../../features/customer/routes.dart' as customer_pages;
@@ -57,6 +59,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               Theme(data: adminTheme, child: const AdminHomeScreen())),
       ...support.routes,
       ...alerts.routes,
+      ...payments.routes,
+      ...money.routes,
       // The people slice's vehicle pages are replaced by the customer slice's.
       ...people.routes.where((r) => r is GoRoute && r.path == '/crew/profile'),
     ],

@@ -22,9 +22,9 @@ from app.billing.models import (
 from app.billing.schemas import (
     AdminPaymentIn,
     AdminPaymentOut,
-    AlertOut,
     InvoiceOut,
     PayInstructions,
+    PaymentAlertOut,
     PaymentDetail,
     PaymentOut,
     SubscriptionView,
@@ -399,11 +399,11 @@ class BillingService:
         self._db.commit()
         return self._invoice_out(inv)
 
-    def alerts(self, unread_only: bool = False) -> list[AlertOut]:
+    def alerts(self, unread_only: bool = False) -> list[PaymentAlertOut]:
         q = select(MoneyAlert).order_by(MoneyAlert.created_at.desc()).limit(100)
         if unread_only:
             q = q.where(MoneyAlert.read_at.is_(None))
-        return [AlertOut(id=str(a.id), kind=a.kind, message=a.message,
+        return [PaymentAlertOut(id=str(a.id), kind=a.kind, message=a.message,
                          payment_id=str(a.payment_id) if a.payment_id else None,
                          created_at=a.created_at, read=a.read_at is not None)
                 for a in self._db.scalars(q)]

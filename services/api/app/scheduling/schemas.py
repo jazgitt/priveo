@@ -55,7 +55,7 @@ class DayCapacity(BaseModel):
     over_capacity: bool
 
 
-class CrewOut(BaseModel):
+class SchedulingCrewOut(BaseModel):
     id: uuid.UUID
     name: str
     role: str
@@ -90,7 +90,7 @@ class AdminJob(BaseModel):
 class Board(BaseModel):
     schedule: ScheduleOut
     days: list[DayCapacity]
-    crew: list[CrewOut]
+    crew: list[SchedulingCrewOut]
     jobs: list[AdminJob]
 
 
