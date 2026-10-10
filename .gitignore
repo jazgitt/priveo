@@ -45,3 +45,6 @@ venv/
 
 # Python packaging
 *.egg-info/
+
+# Vercel
+.vercel/
