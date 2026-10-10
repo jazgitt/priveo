@@ -1,6 +1,6 @@
 # Priveo Build Plan
 
-**Status:** v0.2 DRAFT, 9 Oct 2026. Not started. The owner will say when to implement.
+**Status:** v0.3, 10 Oct 2026. Phase 0 started: steps 1, 2, 5 to 9 and 12 are built; steps 3, 4, 10 and 11 are written as workflows but wait on the owner's accounts (see `docs/build-and-release.md`).
 **Basis:** `docs/architecture.md` v0.2, `docs/tech-stack.md`, `docs/brand/tokens.json`, and the owner's answers of 9 Oct 2026: Android first and iOS later in Phase 0, mock data served by a deployed FastAPI, delivery by TestFlight and Play internal testing, application ID `in.priveo.app`, code in this repository, `dev` and `prod` environments until Phase 6.
 
 ## 1. The plan at a glance

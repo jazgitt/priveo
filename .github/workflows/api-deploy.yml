@@ -1,0 +1,121 @@
+name: api-deploy
+
+# Deploys the API to `dev`, then runs the smoke test.
+# The host is chosen by the repository variable DEPLOY_PROVIDER:
+#   vercel (default)  ->  job `deploy-vercel`
+#   aws               ->  job `deploy-aws` (ECR + ECS)
+# Needs the variables and secrets listed in docs/build-and-release.md.
+# A job whose credentials are missing is skipped.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/api-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: api-deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy-vercel:
+    if: ${{ (vars.DEPLOY_PROVIDER || 'vercel') == 'vercel' && vars.VERCEL_PROJECT_ID != '' }}
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Runs from services/api, so leave the project's Root Directory empty
+      # in Vercel. Runtime settings (TOKEN_SECRET, MOCK_*_PASSWORD) live in
+      # the Vercel project's environment variables.
+      - name: Deploy to production (the `dev` API)
+        working-directory: services/api
+        run: |
+          npx --yes vercel@58 deploy --prod --yes --token "$VERCEL_TOKEN" \
+            --build-env BUILD_NUMBER=${{ github.run_number }} \
+            --env BUILD_NUMBER=${{ github.run_number }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test
+        env:
+          SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+          SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+        run: python services/api/scripts/smoke_test.py "${{ vars.API_DEV_URL }}"
+
+  deploy-aws:
+    if: ${{ vars.DEPLOY_PROVIDER == 'aws' && vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+      ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: image
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${GITHUB_SHA}"
+          docker build \
+            --build-arg BUILD_NUMBER=${{ github.run_number }} \
+            -t "$IMAGE" services/api
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Register a task definition with the new image
+        id: taskdef
+        run: |
+          aws ecs describe-task-definition --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition > current.json
+          jq --arg img "${{ steps.image.outputs.image }}" '
+            .containerDefinitions[0].image = $img
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                  .compatibilities, .registeredAt, .registeredBy)' \
+            current.json > next.json
+          ARN=$(aws ecs register-task-definition --cli-input-json file://next.json \
+            --query taskDefinition.taskDefinitionArn --output text)
+          echo "arn=$ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy and wait
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+            --task-definition "${{ steps.taskdef.outputs.arn }}" > /dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test
+        env:
+          SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+          SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+        run: python services/api/scripts/smoke_test.py "${{ vars.API_DEV_URL }}"

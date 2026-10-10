@@ -1,0 +1,119 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:priveo/features/auth/presentation/login_screen.dart';
+
+import 'support/fakes.dart';
+import 'package:priveo/core/auth/session.dart';
+
+Future<void> signIn(WidgetTester tester, String id, String password) async {
+  await tester.enterText(find.byType(TextField).at(0), id);
+  await tester.enterText(find.byType(TextField).at(1), password);
+  await tester.tap(find.text('Sign in').last);
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets('splash goes to login when signed out', (tester) async {
+    await pumpApp(tester);
+    expect(find.byType(LoginScreen), findsNothing);
+    await passSplash(tester);
+    expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('splash with reduce motion is short', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpApp(tester);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('wrong password shows the API message', (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await signIn(tester, 'priveopapa', 'wrong');
+    expect(find.text(FakeAuthRepository.wrongMessage), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('empty fields are checked before calling the API',
+      (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await tester.tap(find.text('Sign in').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your ID and password.'), findsOneWidget);
+  });
+
+  testWidgets('customer login lands on the customer home', (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await signIn(tester, 'customer@priveo.test', 'secret');
+    expect(find.text('Hello, Aarav'), findsOneWidget);
+    expect(find.text('MH 12 AB 1234'), findsOneWidget);
+    expect(find.text('07-Nov-26'), findsOneWidget);
+    for (final a in [
+      'Skip or Pause',
+      'Service History',
+      'Give Feedback',
+      'Report an Issue',
+    ]) {
+      expect(find.text(a), findsOneWidget);
+    }
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Coming soon'), findsOneWidget);
+  });
+
+  testWidgets('crew login lands on the crew home', (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await signIn(tester, '9000000002', 'secret');
+    expect(find.textContaining('07-Nov-26'), findsOneWidget);
+    expect(find.text('MH 12 CD 5678'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+  });
+
+  testWidgets('admin login lands on the admin home', (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await signIn(tester, 'priveopapa', 'secret');
+    expect(find.text('Payments to confirm'), findsOneWidget);
+    expect(find.text('Flat A-101'), findsOneWidget);
+    expect(find.text('₹1,499'), findsOneWidget);
+  });
+
+  testWidgets('a stored session skips login and sign out returns to it',
+      (tester) async {
+    final store = MemorySessionStore();
+    await store.write(crewSession);
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, store: store, auth: auth);
+    await passSplash(tester);
+    expect(find.text('MH 12 CD 5678'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Sign out'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(auth.logoutCalls, 1);
+    expect(await store.read(), isNull);
+  });
+
+  testWidgets('demo accounts fill the ID field in dev builds', (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await tester.tap(find.text('Admin'));
+    await tester.pump();
+    expect(find.text('priveopapa'), findsOneWidget);
+  });
+
+  testWidgets('dark theme renders the login screen', (tester) async {
+    await pumpApp(tester, brightness: Brightness.dark);
+    await passSplash(tester);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    final theme = Theme.of(tester.element(find.byType(LoginScreen)));
+    expect(theme.brightness, Brightness.dark);
+  });
+}
