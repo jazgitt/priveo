@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../api/api.g.dart' show LoginResult;
+
 enum Role {
   customer,
   crew,
@@ -26,6 +28,14 @@ class Session {
   final String accessToken;
   final String refreshToken;
 
+  factory Session.fromLogin(LoginResult r) => Session(
+        role: Role.parse(r.role),
+        displayName: r.displayName,
+        accessToken: r.accessToken,
+        refreshToken: r.refreshToken,
+      );
+
+  /// Reads the session saved on the phone by [toJson].
   factory Session.fromLoginJson(Map<String, dynamic> j) => Session(
         role: Role.parse(j['role'] as String),
         displayName: j['display_name'] as String,

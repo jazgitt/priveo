@@ -1,18 +1,26 @@
-// Calls a running API with the real Dio client and repositories.
+// Calls a running API with the real Dio client and the generated API client.
 // Skipped unless LIVE_API_URL is set, for example:
 //   flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=http://127.0.0.1:8000 \
-//     --dart-define=LIVE_PASSWORD=...   (the same password for the three mock logins)
+//     --dart-define=LIVE_PASSWORD=...
+// LIVE_PASSWORD is used for all three mock logins. When they differ, set
+// LIVE_CUSTOMER_PASSWORD, LIVE_CREW_PASSWORD and LIVE_ADMIN_PASSWORD.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:priveo/core/api/api.g.dart';
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/network/api_client.dart';
 import 'package:priveo/core/network/api_failure.dart';
-import 'package:priveo/features/admin_quick/home/admin_home_data.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
-import 'package:priveo/features/crew/home/crew_home_data.dart';
-import 'package:priveo/features/customer/home/customer_home_data.dart';
 
 const _url = String.fromEnvironment('LIVE_API_URL');
 const _password = String.fromEnvironment('LIVE_PASSWORD');
+const _passwords = {
+  'customer@priveo.test':
+      String.fromEnvironment('LIVE_CUSTOMER_PASSWORD', defaultValue: _password),
+  '9000000002':
+      String.fromEnvironment('LIVE_CREW_PASSWORD', defaultValue: _password),
+  'priveopapa':
+      String.fromEnvironment('LIVE_ADMIN_PASSWORD', defaultValue: _password),
+};
 
 void main() {
   group('live API', () {
@@ -22,10 +30,11 @@ void main() {
       accessToken: () => token,
       refreshTokens: () async => false,
     );
-    final auth = ApiAuthRepository(dio);
+    final api = PriveoApi(dio);
+    final auth = ApiAuthRepository(api);
 
     Future<Session> signIn(String id) async {
-      final s = await auth.login(id, _password);
+      final s = await auth.login(id, _passwords[id]!);
       token = s.accessToken;
       return s;
     }
@@ -40,26 +49,26 @@ void main() {
 
     test('customer', () async {
       expect((await signIn('customer@priveo.test')).role, Role.customer);
-      final h = await ApiCustomerHomeRepository(dio).fetch();
+      final h = await api.customerHome();
       expect(h.quickActions, hasLength(4));
     });
 
     test('crew', () async {
       expect((await signIn('9000000002')).role, Role.crew);
-      final h = await ApiCrewHomeRepository(dio).fetch();
+      final h = await api.crewHome();
       expect(h.jobs, isNotEmpty);
     });
 
     test('admin', () async {
       expect((await signIn('priveopapa')).role, Role.admin);
-      final h = await ApiAdminHomeRepository(dio).fetch();
-      expect(h.payments, isNotEmpty);
+      final h = await api.adminHome();
+      expect(h.paymentsToConfirm, isNotEmpty);
     });
 
     test('a role cannot read another role home', () async {
       await signIn('customer@priveo.test');
       await expectLater(
-        ApiAdminHomeRepository(dio).fetch(),
+        api.adminHome(),
         throwsA(isA<ApiFailure>().having((e) => e.statusCode, 'status', 403)),
       );
     });
