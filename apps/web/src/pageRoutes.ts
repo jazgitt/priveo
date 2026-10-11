@@ -3,6 +3,7 @@ import type { RouteObject } from "react-router-dom";
 import { routes as alerts } from "./pages/alerts";
 import { routes as capacity } from "./pages/capacity";
 import { routes as complaints } from "./pages/complaints";
+import { routes as crew } from "./pages/crew";
 import { routes as dashboard } from "./pages/dashboard";
 import { routes as feedback } from "./pages/feedback";
 import { routes as payments } from "./pages/payments";
@@ -19,4 +20,5 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...capacity,
   ...complaints,
   ...feedback,
+  ...crew,
 ];
