@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/media_image.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../crew_providers.dart';
@@ -111,6 +112,17 @@ class JobFacts extends StatelessWidget {
               StatusChip(card.status, tone: toneForJob(card.status)),
             ],
           ),
+          if (card.vehicle.photoUrl != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 160,
+                width: double.infinity,
+                child: MediaImage(card.vehicle.photoUrl!),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           row(CrewText.service, card.service),
           if (card.vehicle.name.isNotEmpty) row(CrewText.car, card.vehicle.name),

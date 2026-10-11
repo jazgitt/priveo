@@ -124,13 +124,15 @@ class ApiCrewRepository implements CrewRepository, UploadApi {
   Future<CrewProfileInfo> profile() async {
     final body = await _json(() => _dio.get('/v1/crew/profile'));
     var hasPhoto = false;
+    String? photoUrl;
     try {
       final photo = await _json(() => _dio.get('/v1/crew/profile/photo'));
       hasPhoto = photo['upload_id'] != null;
+      photoUrl = photo['url'] as String?;
     } on ApiFailure {
       // The photo is a nicety. The details still show.
     }
-    return CrewProfileInfo.fromJson(body, hasPhoto: hasPhoto);
+    return CrewProfileInfo.fromJson(body, hasPhoto: hasPhoto, photoUrl: photoUrl);
   }
 
   @override

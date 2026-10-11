@@ -41,10 +41,11 @@ def test_visit_detail_carries_the_proof_media(api, asha):
     assert body["status"] == "Completed"
     assert body["vehicle_registration"] == "HR 26 DK 8337"
     assert [j["service"] for j in body["jobs"]] == ["Cleaning-External", "Cleaning-Internal"]
-    assert body["jobs"][0]["proof"][0] == {"kind": "photo", "url": "https://media.test/a.jpg"}
+    first = body["jobs"][0]["proof"][0]
+    assert (first["kind"], first["url"]) == ("photo", "https://media.test/a.jpg")
     assert body["jobs"][0]["proof"][2]["kind"] == "video"
-    # No crew name or customer detail is in the response.
-    assert "crew" not in r.text
+    # No crew mobile or customer detail is in the response.
+    assert "mobile" not in r.text and "Asha" not in r.text
 
 
 def test_visit_of_another_customer_is_not_found(api, asha, db, repo):

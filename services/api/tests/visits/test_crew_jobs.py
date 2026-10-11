@@ -221,7 +221,7 @@ def test_profile_photo_needs_a_confirmed_upload(crew_client, make_crew, signin):
     ravi = make_crew("9000000010", "Ravi Kumar")
     headers = signin(ravi)
     assert crew_client.get("/v1/crew/profile/photo", headers=headers).json() == {
-        "upload_id": None}
+        "upload_id": None, "url": None}
 
     unready = crew_client.put("/v1/crew/profile/photo", headers=headers,
                               json={"upload_id": "nope"})

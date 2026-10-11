@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_failure.dart';
 import '../../../core/providers.dart';
+import '../../../core/ui/media_image.dart' show absoluteMediaUrl;
 
 // Hand-written DTOs for the customer read endpoints (/v1/customer/...).
 // They move to the generated client when the contract is regenerated.
@@ -76,16 +77,51 @@ class NextServiceDto {
 }
 
 class ProofDto {
-  const ProofDto({required this.kind, required this.url});
+  const ProofDto({
+    required this.kind,
+    required this.url,
+    this.stage,
+    this.takenAt,
+  });
 
   /// `photo` or `video`.
   final String kind;
   final String url;
 
-  bool get isVideo => kind == 'video';
+  /// `Before`, `During` or `After` (SVC-04, SVC-05).
+  final String? stage;
+  final DateTime? takenAt;
 
-  factory ProofDto.fromJson(Map<String, dynamic> j) =>
-      ProofDto(kind: j['kind'] as String, url: j['url'] as String);
+  bool get isVideo => kind == 'video';
+  bool get isAfter => stage == 'After';
+
+  factory ProofDto.fromJson(Map<String, dynamic> j) => ProofDto(
+    kind: j['kind'] as String,
+    url: j['url'] as String,
+    stage: j['stage'] as String?,
+    takenAt: _time(j['taken_at']),
+  );
+}
+
+DateTime? _time(Object? v) =>
+    v == null ? null : DateTime.parse(v as String).toLocal();
+
+class ChecklistItemDto {
+  const ChecklistItemDto({
+    required this.key,
+    required this.label,
+    this.checkedAt,
+  });
+
+  final String key;
+  final String label;
+  final DateTime? checkedAt;
+
+  factory ChecklistItemDto.fromJson(Map<String, dynamic> j) => ChecklistItemDto(
+    key: j['key'] as String,
+    label: j['label'] as String,
+    checkedAt: _time(j['checked_at']),
+  );
 }
 
 class JobDto {
@@ -94,6 +130,11 @@ class JobDto {
     required this.service,
     required this.status,
     required this.proof,
+    this.crewName,
+    this.crewSociety = '',
+    this.startedAt,
+    this.finishedAt,
+    this.checklist = const [],
   });
 
   final String id;
@@ -101,11 +142,27 @@ class JobDto {
   final String status;
   final List<ProofDto> proof;
 
+  /// The crew member's first name for the crew card (SVC-02).
+  final String? crewName;
+  final String crewSociety;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
+  final List<ChecklistItemDto> checklist;
+
+  int get checklistDone => checklist.where((c) => c.checkedAt != null).length;
+
   factory JobDto.fromJson(Map<String, dynamic> j) => JobDto(
     id: j['id'] as String,
     service: j['service'] as String,
     status: j['status'] as String,
     proof: _list(j['proof'], ProofDto.fromJson),
+    crewName: j['crew_name'] as String?,
+    crewSociety: (j['crew_society'] as String?) ?? '',
+    startedAt: _time(j['started_at']),
+    finishedAt: _time(j['finished_at']),
+    checklist: j['checklist'] == null
+        ? const []
+        : _list(j['checklist'], ChecklistItemDto.fromJson),
   );
 }
 
@@ -118,6 +175,8 @@ class VisitDetailDto {
     required this.date,
     required this.status,
     required this.jobs,
+    this.finishedAt,
+    this.rating,
   });
 
   final String id;
@@ -127,6 +186,12 @@ class VisitDetailDto {
   final DateTime date;
   final String status;
   final List<JobDto> jobs;
+
+  /// When the last job finished, for a Completed visit (SVC-01).
+  final DateTime? finishedAt;
+
+  /// The stars the customer gave this visit, or null (SVC-07).
+  final int? rating;
 
   /// Every photo and video of the visit, in job order.
   List<ProofDto> get proof => [for (final j in jobs) ...j.proof];
@@ -139,6 +204,8 @@ class VisitDetailDto {
     date: _day(j['date']),
     status: j['status'] as String,
     jobs: _list(j['jobs'], JobDto.fromJson),
+    finishedAt: _time(j['finished_at']),
+    rating: (j['rating'] as Map<String, dynamic>?)?['rating'] as int?,
   );
 }
 
@@ -150,6 +217,8 @@ class HistoryItemDto {
     required this.status,
     required this.services,
     required this.photoCount,
+    this.finishedAt,
+    this.rating,
   });
 
   final String visitId;
@@ -158,6 +227,8 @@ class HistoryItemDto {
   final String status;
   final List<String> services;
   final int photoCount;
+  final DateTime? finishedAt;
+  final int? rating;
 
   factory HistoryItemDto.fromJson(Map<String, dynamic> j) => HistoryItemDto(
     visitId: j['visit_id'] as String,
@@ -166,6 +237,8 @@ class HistoryItemDto {
     status: j['status'] as String,
     services: [for (final s in j['services'] as List<dynamic>) s as String],
     photoCount: j['photo_count'] as int,
+    finishedAt: _time(j['finished_at']),
+    rating: j['rating'] as int?,
   );
 }
 
@@ -176,6 +249,7 @@ class VehicleSummaryDto {
     required this.model,
     required this.society,
     required this.subscriptionStatus,
+    this.photoUrl,
   });
 
   final String id;
@@ -184,6 +258,10 @@ class VehicleSummaryDto {
   final String society;
   final String? subscriptionStatus;
 
+  /// A signed read URL of the vehicle photo (VEH-01). Show it with
+  /// `MediaImage`, which resolves the dev server's relative URL.
+  final String? photoUrl;
+
   factory VehicleSummaryDto.fromJson(Map<String, dynamic> j) =>
       VehicleSummaryDto(
         id: j['id'] as String,
@@ -191,6 +269,7 @@ class VehicleSummaryDto {
         model: j['model'] as String,
         society: j['society'] as String,
         subscriptionStatus: j['subscription_status'] as String?,
+        photoUrl: j['photo_url'] as String?,
       );
 }
 
@@ -201,6 +280,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     required super.model,
     required super.society,
     required super.subscriptionStatus,
+    super.photoUrl,
     required this.make,
     required this.variant,
     required this.category,
@@ -224,6 +304,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     model: j['model'] as String,
     society: j['society'] as String,
     subscriptionStatus: j['subscription_status'] as String?,
+    photoUrl: j['photo_url'] as String?,
     make: j['make'] as String,
     variant: j['variant'] as String,
     category: j['category'] as String,
@@ -339,8 +420,19 @@ class DioCustomerReadsRepository implements CustomerReadsRepository {
   ];
 
   @override
-  Future<VisitDetailDto> visit(String visitId) async =>
-      VisitDetailDto.fromJson(await _object('/v1/customer/visits/$visitId'));
+  Future<VisitDetailDto> visit(String visitId) async {
+    final j = await _object('/v1/customer/visits/$visitId');
+    // The dev store sends URLs relative to the API: make them absolute so an
+    // image or video widget can open them.
+    final base = _dio.options.baseUrl;
+    for (final job in j['jobs'] as List<dynamic>) {
+      for (final p in (job as Map<String, dynamic>)['proof'] as List<dynamic>) {
+        final m = p as Map<String, dynamic>;
+        m['url'] = absoluteMediaUrl(base, m['url'] as String);
+      }
+    }
+    return VisitDetailDto.fromJson(j);
+  }
 
   @override
   Future<List<HistoryItemDto>> history({

@@ -32,6 +32,7 @@ class CrewVehicle {
     required this.make,
     required this.model,
     required this.category,
+    this.photoUrl,
   });
 
   factory CrewVehicle.fromJson(Map<String, dynamic> j) => CrewVehicle(
@@ -40,7 +41,12 @@ class CrewVehicle {
         make: (j['make'] as String?) ?? '',
         model: (j['model'] as String?) ?? '',
         category: (j['category'] as String?) ?? '',
+        photoUrl: j['photo_url'] as String?,
       );
+
+  /// A signed, expiring read URL, relative to the API on the dev server
+  /// (CRW-SCH-03).
+  final String? photoUrl;
 
   final String id;
   final String registration;
@@ -293,12 +299,14 @@ class CrewProfileInfo {
     required this.role,
     required this.workingHours,
     required this.hasPhoto,
+    this.photoUrl,
   });
 
   /// From `GET /v1/crew/profile`. The photo comes from its own call.
   factory CrewProfileInfo.fromJson(Map<String, dynamic> j,
-          {bool hasPhoto = false}) =>
+          {bool hasPhoto = false, String? photoUrl}) =>
       CrewProfileInfo(
+        photoUrl: photoUrl,
         name: j['name'] as String,
         mobile: j['mobile'] as String,
         society: (j['society'] as String?) ?? '',
@@ -321,6 +329,9 @@ class CrewProfileInfo {
   /// One line for each working day.
   final String workingHours;
   final bool hasPhoto;
+
+  /// A signed read URL of the saved photo (CRW-PRF-01).
+  final String? photoUrl;
 
   bool get isManager => role == 'Manager';
 }
