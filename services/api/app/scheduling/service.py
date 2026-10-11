@@ -7,6 +7,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.changes.models import ScheduleChange
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
@@ -37,6 +38,9 @@ class Demand:
     service: str
     finish_by: int | None
     addon_request_id: uuid.UUID | None = None
+    # The customer skipped or paused the date before it was planned: the job is
+    # created as Skipped, as it would be had it been planned first (SKIP-, PAUSE-).
+    skipped: bool = False
 
     @property
     def duration(self) -> int:
@@ -69,6 +73,25 @@ def record(db: Session, schedule_id: uuid.UUID, admin_id: uuid.UUID | None, kind
 
 # ---- demand and capacity ---------------------------------------------------
 
+def _customer_changes(db: Session, vehicle_id: uuid.UUID,
+                      days: list[date]) -> tuple[set[date], dict[date, int]]:
+    """The dates the customer skipped or paused, and the cutoff times they set
+    for single dates (CAL-07, CAL-08), as they stand when the schedule is planned."""
+    rows = db.scalars(select(ScheduleChange).where(
+        ScheduleChange.vehicle_id == vehicle_id,
+        ScheduleChange.status.in_(("Active", "Applied")),
+        ScheduleChange.start_date <= days[-1], ScheduleChange.end_date >= days[0])
+        .order_by(ScheduleChange.created_at)).all()
+    off: set[date] = set()
+    cutoffs: dict[date, int] = {}
+    for c in rows:
+        if c.kind in ("skip", "pause"):
+            off.update(daterange(max(c.start_date, days[0]), min(c.end_date, days[-1])))
+        elif c.cutoff_time is not None:
+            cutoffs[c.start_date] = c.cutoff_time.hour * 60 + c.cutoff_time.minute
+    return off, cutoffs
+
+
 def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[Demand]:
     """Cleaning-External every day, Cleaning-Internal on the interior care day
     and a Deep Spa on the date the customer asked for (ADM-SVS-10). Only
@@ -83,13 +106,17 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
         .order_by(Vehicle.created_at, Vehicle.id)
     ).all()
     for sub, vehicle in rows:
-        cutoff = minutes_of(sub.cutoff_time)
+        default_cutoff = minutes_of(sub.cutoff_time)
+        off, own_cutoff = _customer_changes(db, vehicle.id, days)
         for day in days:
             if day < sub.first_service_date:
                 continue
-            out.append(Demand(day, vehicle.id, "Cleaning-External", cutoff))
+            cutoff = own_cutoff.get(day, default_cutoff)
+            out.append(Demand(day, vehicle.id, "Cleaning-External", cutoff,
+                              skipped=day in off))
             if sub.interior_day and WEEKDAYS[day.weekday()] == sub.interior_day:
-                out.append(Demand(day, vehicle.id, "Cleaning-Internal", cutoff))
+                out.append(Demand(day, vehicle.id, "Cleaning-Internal", cutoff,
+                                  skipped=day in off))
     addons = db.execute(
         select(AddonRequest)
         .join(Customer, AddonRequest.customer_id == Customer.id)
@@ -271,7 +298,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
         job = existing.get(key)
         if job is None:
             db.add(Job(visit_id=visit.id, service=item.service, duration_minutes=item.duration,
-                       finish_by_minute=item.finish_by, addon_request_id=item.addon_request_id))
+                       finish_by_minute=item.finish_by, addon_request_id=item.addon_request_id,
+                       status="Skipped" if item.skipped else "Scheduled"))
         else:
             job.finish_by_minute = item.finish_by
     # Work that is no longer due (a vehicle made Inactive, an add-on moved):

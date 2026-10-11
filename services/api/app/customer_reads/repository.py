@@ -41,6 +41,12 @@ class Job:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     checklist: list[ChecklistEntry] = field(default_factory=list)
+    # The assignment (CAL-10). Empty until the admin or the scheduler placed it.
+    start_minute: int | None = None
+    duration_minutes: int = 0
+    # The cutoff time of the job, in minutes after midnight.
+    finish_by_minute: int | None = None
+    addon_request_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +55,8 @@ class Visit:
     vehicle_id: str
     date: date
     status: str
+    # True when the schedule the visit belongs to is frozen (CAL-07, CAL-10).
+    frozen: bool = False
 
 
 class VisitReadRepository(Protocol):

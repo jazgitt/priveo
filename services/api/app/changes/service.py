@@ -11,12 +11,13 @@ from sqlalchemy.orm import Session
 
 from app.changes.access import parse_id
 from app.changes.cycle import cycle_window, paused_days
-from app.changes.gateway import ScheduleChangeGateway
+from app.changes.gateway import ScheduleChangeGateway, ServiceDay
 from app.changes.models import ScheduleChange
+from app.changes.projection import day_services
 from app.changes.rules import Clock, is_open, require_open, today_of
-from app.changes.schemas import ChangeOut, ChangesOut, UpcomingDay
-from app.customers.models import Customer, Subscription, Vehicle
-from app.customers.service import read_cutoff
+from app.changes.schemas import ChangeOut, ChangesOut, PreferencesOut, UpcomingDay
+from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
+from app.customers.service import read_cutoff, show_time
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
@@ -73,15 +74,25 @@ class ChangesService:
             cutoff_changes=[self._out(c) for c in self._active(vehicle.id, "cutoff", today)],
             renewal_date=renewal_for(self._db, vehicle, sub, today))
 
-    def upcoming(self, vehicle: Vehicle, count: int = 14) -> list[UpcomingDay]:
-        """The next service days with what has been done to each (SKIP-01, SKIP-06)."""
+    def upcoming(self, vehicle: Vehicle, count: int = 14,
+                 sub: Subscription | None = None) -> list[UpcomingDay]:
+        """The next service days with what has been done to each (SKIP-01, SKIP-06).
+        Days the scheduler has not planned yet come from the subscription."""
         now = self._now()
         today = today_of(now)
         skips = {c.start_date: c for c in self._active(vehicle.id, "skip", today)}
         pauses = self._active(vehicle.id, "pause", today)
         cutoffs = {c.start_date: c for c in self._active(vehicle.id, "cutoff", today)}
+        planned = {d.day: d for d in self._gateway.upcoming_days(
+            vehicle.id, today + timedelta(days=1), count)}
         days = []
-        for d in self._gateway.upcoming_days(vehicle.id, today + timedelta(days=1), count):
+        for i in range(1, count + 1):
+            day = today + timedelta(days=i)
+            known = planned.get(day)
+            services = list(known.services) if known else day_services(sub, day)
+            if not services:
+                continue
+            d = ServiceDay(day, tuple(services))
             pause = next((p for p in pauses if p.start_date <= d.day <= p.end_date), None)
             skip = skips.get(d.day)
             cut = cutoffs.get(d.day)
@@ -139,7 +150,9 @@ class ChangesService:
         if same is not None:
             return self._out(same)
         first = self._gateway.upcoming_days(vehicle.id, day, 1)
-        if not first or first[0].day != day:
+        planned = bool(first) and first[0].day == day
+        # A date beyond the planned weeks is a service day the subscription implies.
+        if not planned and not day_services(sub, day):
             raise ApiError("not_a_service_day", "There is no service on that date.", 409,
                            {"date": "not_a_service_day"})
         self._gateway.skip_day(vehicle.id, day)
@@ -250,3 +263,49 @@ class ChangesService:
             customer_id=customer.id, vehicle_id=vehicle.id, kind="cutoff", start_date=day,
             end_date=day, cutoff_time=cutoff, status="Requested" if requested else "Applied",
             actor=actor.role, actor_login_id=actor.login_id, idempotency_key=key or None)))
+
+    # --- the default cutoff time and interior day (SUB-08) -------------------
+
+    def update_preferences(self, actor: Actor, vehicle: Vehicle, sub: Subscription | None,
+                           cutoff_text: str | None, interior_day: str | None) -> PreferencesOut:
+        """DERIVED: the new default is saved at once and applies from the next
+        date still before its 9 PM cutoff. Planned dates of a draft schedule
+        get the new cutoff time now; a frozen date is not touched (the admin
+        re-runs it), and a date with its own cutoff change keeps that."""
+        self._require_active(sub)
+        assert sub is not None
+        now = self._now()
+        if cutoff_text is None and interior_day is None:
+            raise ApiError("validation_failed", "Nothing to change.", 422)
+        cutoff: time | None = None
+        if cutoff_text is not None:
+            cutoff = read_cutoff(cutoff_text)
+            if cutoff is None:
+                raise ApiError("validation_failed", "Please select your service cutoff time.",
+                               422, {"cutoff_time": "invalid"})
+        if interior_day is not None and interior_day not in WEEKDAYS:
+            raise ApiError("validation_failed", "Please select your interior care day.",
+                           422, {"interior_day": "invalid"})
+        start = today_of(now) + timedelta(days=1)
+        if actor.bound and not is_open(start, now):
+            start += timedelta(days=1)
+        frozen = 0
+        if cutoff is not None:
+            own = {c.start_date for c in self._db.scalars(select(ScheduleChange).where(
+                ScheduleChange.vehicle_id == vehicle.id, ScheduleChange.kind == "cutoff",
+                ScheduleChange.status.in_(("Applied", "Requested")),
+                ScheduleChange.start_date >= start))}
+            for d in self._gateway.upcoming_days(vehicle.id, start, 120):
+                if d.day in own:
+                    continue
+                if self._gateway.is_frozen(vehicle.id, d.day):
+                    frozen += 1
+                else:
+                    self._gateway.set_cutoff(vehicle.id, d.day, cutoff)
+            sub.cutoff_time = cutoff
+        if interior_day is not None:
+            sub.interior_day = interior_day
+        self._db.commit()
+        return PreferencesOut(
+            vehicle_id=str(vehicle.id), cutoff_time=show_time(sub.cutoff_time),
+            interior_day=sub.interior_day, applies_from=start, frozen_days_unchanged=frozen)

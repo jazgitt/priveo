@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
+import '../customer/calendar/calendar_page.dart';
+import '../customer/calendar/calendar_strings.dart';
+import '../customer/calendar/day_card.dart' show CallSupportButton;
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
@@ -143,7 +146,15 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
             const SizedBox(height: 16),
             if (!_pauseTab) ..._skipSection(days) else ..._pauseSection(changes.value),
             const SizedBox(height: 24),
-            const SectionLabel(MoneyStrings.upcoming),
+            Row(
+              children: [
+                const Expanded(child: SectionLabel(MoneyStrings.upcoming)),
+                TextButton(
+                  onPressed: () => openCalendarPage(context),
+                  child: const Text(CalStrings.viewCalendar),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             for (final d in days.take(7)) _UpcomingRow(d),
           ],
@@ -195,7 +206,25 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         busy: _busy,
         onPressed: () => _confirmSkip(days),
       ),
+      // After the 9 PM cutoff the controls close: point to support (SCHED-02).
+      if (days.any((d) => !d.canChange && d.state != 'Paused')) ...[
+        const SizedBox(height: 16),
+        Text(CalStrings.closedMessage,
+            style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 8),
+        const Align(
+            alignment: Alignment.centerLeft, child: CallSupportButton()),
+      ],
     ];
+  }
+
+  /// The visits paused and the new renewal date, before confirming
+  /// (PAUSE-02). One visit a day, and the renewal moves a day for each.
+  String _pausePreview(DateTime? renewal) {
+    final n = _to!.difference(_from!).inDays + 1;
+    final moved = renewal?.add(Duration(days: n));
+    return CalStrings.pausePreview(
+        n, renewal == null ? null : formatDate(renewal), moved == null ? null : formatDate(moved));
   }
 
   List<Widget> _pauseSection(ChangesDto? changes) {
@@ -223,6 +252,11 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
           padding: const EdgeInsets.only(top: 8),
           child: Text(_pauseError!,
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ),
+      if (_from != null && _to != null && _pauseResult == null)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Text(_pausePreview(changes?.renewalDate)),
         ),
       if (_pauseResult != null)
         Padding(

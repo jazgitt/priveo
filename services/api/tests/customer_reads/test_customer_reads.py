@@ -1,8 +1,9 @@
 """Calendar, next service, visit details with proof, history and vehicles."""
-from datetime import date
+from datetime import date, datetime
 
 from app.customer_reads.repository import Visit
 from app.customer_reads.service import CustomerReads
+from app.platform.clock import IST
 from tests.customer_reads.conftest import add_customer
 
 
@@ -11,9 +12,11 @@ def test_calendar_month_lists_visits_with_their_services(api, asha):
     assert r.status_code == 200
     body = r.json()
     assert body["month"] == "2026-11"
-    assert [v["visit_id"] for v in body["visits"]] == ["v-1", "v-2", "v-3", "v-4"]
-    assert body["visits"][0]["services"] == ["Cleaning-External", "Cleaning-Internal"]
-    assert body["visits"][1]["status"] == "Skipped"
+    # The days with no planned visit are projected from the subscription.
+    planned = [v for v in body["visits"] if v["source"] == "visit"]
+    assert [v["visit_id"] for v in planned] == ["v-1", "v-2", "v-3", "v-4"]
+    assert planned[0]["services"] == ["Cleaning-External", "Cleaning-Internal"]
+    assert planned[1]["status"] == "Skipped"
 
 
 def test_calendar_can_be_limited_to_one_vehicle(api, asha):
@@ -69,14 +72,16 @@ def test_next_service_is_the_first_visit_not_over_for_each_vehicle(db, asha, rep
     from app.customers.models import Customer
 
     login = db.query(Customer).filter_by(email="asha@example.com").one().login_id
-    reads = CustomerReads(db, repo)
-    items = reads.next_services(login, date(2026, 11, 10))
+    reads = CustomerReads(db, repo, lambda: datetime(2026, 11, 20, 10, 0, tzinfo=IST))
+    items = reads.next_services(login, date(2026, 11, 20))
     assert [(i.vehicle_id, i.visit_id, i.service) for i in items] == [
         (asha["vehicles"][0], "v-3", "Cleaning-External"),
         (asha["vehicles"][1], "v-4", ""),
     ]
-    # Visits that are over are not next, and the look-ahead is bounded.
-    assert reads.next_services(login, date(2026, 12, 2)) == []
+    # Visits that are over are not next: the subscription's next day takes over.
+    later = CustomerReads(db, repo, lambda: datetime(2026, 12, 2, 10, 0, tzinfo=IST))
+    assert [i.source for i in later.next_services(login, date(2026, 12, 2))] == [
+        "projected", "projected"]
 
 
 def test_next_service_endpoint(api, asha):

@@ -3,11 +3,13 @@ CAL-01, CAL-02, CAL-05, SVC-01 to SVC-09, HIST-01, HIST-02, VEH-02, VEH-03,
 VEH-06)."""
 import calendar
 import uuid
-from datetime import date, datetime, timedelta
+from collections.abc import Callable
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.customer_reads.calendar_view import CalendarView
 from app.customer_reads.repository import (
     TERMINAL_VISIT_STATUSES,
     Job,
@@ -16,7 +18,6 @@ from app.customer_reads.repository import (
 )
 from app.customer_reads.schemas import (
     CalendarMonth,
-    CalendarVisit,
     HistoryItem,
     HistoryMetaOut,
     JobOut,
@@ -34,6 +35,7 @@ from app.customers.service import show_registration, show_time
 from app.directory.models import Society
 from app.media.service import vehicle_photo_urls
 from app.media.store import ObjectStore, get_object_store
+from app.platform import clock
 from app.platform.errors import ApiError
 from app.support.models import VisitRating
 
@@ -55,10 +57,12 @@ def _month_range(month: str) -> tuple[date, date]:
 
 class CustomerReads:
     def __init__(self, db: Session, visits: VisitReadRepository,
-                 store: ObjectStore | None = None):
+                 store: ObjectStore | None = None,
+                 now_fn: Callable[[], datetime] | None = None):
         self._db = db
         self._visits = visits
         self._store = store or get_object_store()
+        self._view = CalendarView(db, visits, now_fn or (lambda: clock.now_ist()))
 
     def _customer(self, login_id: uuid.UUID) -> Customer:
         customer = self._db.scalar(select(Customer).where(Customer.login_id == login_id))
@@ -94,28 +98,23 @@ class CustomerReads:
     # Calendar -----------------------------------------------------------------
 
     def calendar(self, login_id: uuid.UUID, month: str, vehicle_id: str | None) -> CalendarMonth:
-        first, last = _month_range(month)
-        visits = self._visits.visits_in_range(self._scope(login_id, vehicle_id), first, last)
-        jobs = self._jobs_by_visit(visits)
-        return CalendarMonth(month=f"{first.year:04d}-{first.month:02d}", visits=[
-            CalendarVisit(visit_id=v.id, vehicle_id=v.vehicle_id, date=v.date, status=v.status,
-                          services=[j.service for j in jobs[v.id]])
-            for v in visits])
+        try:
+            year, number = (int(p) for p in month.split("-"))
+            date(year, number, 1)
+        except ValueError:
+            raise ApiError("validation_failed", "Month must look like 2026-11.", 422,
+                           {"month": "Use yyyy-mm."}) from None
+        ids = self._scope(login_id, vehicle_id)
+        return self._view.month(year, number, ids, self._owned_by_id(login_id))
+
+    def _owned_by_id(self, login_id: uuid.UUID):
+        return {str(v.id): (v, s) for v, s in self._owned(self._customer(login_id))}
 
     def next_services(self, login_id: uuid.UUID, today: date) -> list[NextServiceItem]:
-        """The next visit that is not over, for each of the customer's vehicles."""
+        """The next visit that is not over, for each of the customer's vehicles.
+        Without a planned visit, the next day the subscription implies."""
         ids = self._scope(login_id, None)
-        visits = self._visits.visits_in_range(ids, today, today + timedelta(NEXT_SERVICE_DAYS))
-        jobs = self._jobs_by_visit(visits)
-        result: dict[str, NextServiceItem] = {}
-        for v in visits:
-            if v.status in TERMINAL_VISIT_STATUSES or v.vehicle_id in result:
-                continue
-            service = jobs[v.id][0].service if jobs[v.id] else ""
-            result[v.vehicle_id] = NextServiceItem(
-                vehicle_id=v.vehicle_id, visit_id=v.id, date=v.date, service=service,
-                status=v.status)
-        return [result[i] for i in ids if i in result]
+        return self._view.next_services(today, ids, self._owned_by_id(login_id))
 
     # Visit details and history ----------------------------------------------------
 

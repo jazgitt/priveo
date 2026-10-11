@@ -14,7 +14,7 @@ from app.identity.models import Login
 from app.media.service import confirmed_proof, download_url
 from app.media.store import ObjectStore, get_object_store
 from app.scheduling.models import Job as JobRow
-from app.scheduling.models import SchedulingCrew
+from app.scheduling.models import Schedule, SchedulingCrew
 from app.scheduling.models import Visit as VisitRow
 from app.visits.models import JobChecklistProgress, JobTiming
 from app.visits.service import CHECKLISTS
@@ -40,15 +40,24 @@ def _ids(values: Sequence[str]) -> list[uuid.UUID]:
     return out
 
 
-def _visit(row: VisitRow) -> Visit:
+def _visit(row: VisitRow, frozen: bool = False) -> Visit:
     return Visit(id=str(row.id), vehicle_id=str(row.vehicle_id), date=row.date,
-                 status=_VISIT_STATUS.get(row.status, row.status))
+                 status=_VISIT_STATUS.get(row.status, row.status), frozen=frozen)
 
 
 class SqlVisitReadRepository:
     def __init__(self, db: Session, store: ObjectStore | None = None):
         self.db = db
         self.store = store or get_object_store()
+
+    def _visits(self, rows: Sequence[VisitRow]) -> list[Visit]:
+        """The visits, each with whether its schedule is frozen."""
+        schedule_ids = {r.schedule_id for r in rows}
+        frozen = set()
+        if schedule_ids:
+            frozen = set(self.db.scalars(select(Schedule.id).where(
+                Schedule.id.in_(schedule_ids), Schedule.status == "Frozen")))
+        return [_visit(r, r.schedule_id in frozen) for r in rows]
 
     def visits_in_range(self, vehicle_ids: Sequence[str], start: date, end: date):
         ids = _ids(vehicle_ids)
@@ -59,7 +68,7 @@ class SqlVisitReadRepository:
             .where(VisitRow.vehicle_id.in_(ids), VisitRow.date >= start,
                    VisitRow.date <= end)
             .order_by(VisitRow.date, VisitRow.id)).all()
-        return [_visit(r) for r in rows]
+        return self._visits(rows)
 
     def history(self, vehicle_ids: Sequence[str], statuses: Sequence[str],
                 limit: int, offset: int, start: date | None = None,
@@ -78,21 +87,24 @@ class SqlVisitReadRepository:
         rows = self.db.scalars(
             query.order_by(VisitRow.date.desc(), VisitRow.id.desc())
             .limit(limit).offset(offset)).all()
-        return [_visit(r) for r in rows]
+        return self._visits(rows)
 
     def visit(self, visit_id: str):
         ids = _ids([visit_id])
         row = self.db.get(VisitRow, ids[0]) if ids else None
-        return _visit(row) if row else None
+        return self._visits([row])[0] if row else None
 
     def jobs(self, visit_ids: Sequence[str]):
         ids = _ids(visit_ids)
         if not ids:
             return []
-        rows = self.db.scalars(
-            select(JobRow).where(JobRow.visit_id.in_(ids))
+        rows = self.db.execute(
+            select(JobRow, Login.display_name)
+            .outerjoin(SchedulingCrew, JobRow.crew_id == SchedulingCrew.id)
+            .outerjoin(Login, SchedulingCrew.login_id == Login.id)
+            .where(JobRow.visit_id.in_(ids))
             .order_by(JobRow.start_minute, JobRow.id)).all()
-        job_ids = [r.id for r in rows]
+        job_ids = [r.id for r, _ in rows]
         proof = confirmed_proof(self.db, job_ids)
         timings = {t.job_id: t for t in self.db.scalars(
             select(JobTiming).where(JobTiming.job_id.in_(job_ids)))} if job_ids else {}
@@ -101,15 +113,10 @@ class SqlVisitReadRepository:
             for p in self.db.scalars(select(JobChecklistProgress)
                                      .where(JobChecklistProgress.job_id.in_(job_ids))):
                 ticks.setdefault(p.job_id, {})[p.item_key] = p.checked_at
-        crew_ids = {r.crew_id for r in rows if r.crew_id}
-        names = {c.id: n for c, n in self.db.execute(
-            select(SchedulingCrew, Login.display_name)
-            .join(Login, Login.id == SchedulingCrew.login_id)
-            .where(SchedulingCrew.id.in_(crew_ids)))} if crew_ids else {}
         out = []
-        for r in rows:
+        for r, name in rows:
             timing = timings.get(r.id)
-            first = (names.get(r.crew_id) or "").split(" ")[0] if r.crew_id else ""
+            first = (name or "").split(" ")[0] if r.crew_id else ""
             out.append(Job(
                 id=str(r.id), visit_id=str(r.visit_id), service=r.service,
                 status=_JOB_STATUS.get(r.status, r.status),
@@ -120,5 +127,8 @@ class SqlVisitReadRepository:
                 finished_at=timing.finished_at if timing else None,
                 checklist=[ChecklistEntry(key=key, label=label,
                                           checked_at=ticks.get(r.id, {}).get(key))
-                           for key, label in CHECKLISTS.get(r.service, ())]))
+                           for key, label in CHECKLISTS.get(r.service, ())],
+                start_minute=r.start_minute, duration_minutes=r.duration_minutes,
+                finish_by_minute=r.finish_by_minute,
+                addon_request_id=str(r.addon_request_id) if r.addon_request_id else None))
         return out

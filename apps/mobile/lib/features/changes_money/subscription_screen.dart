@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
+import '../customer/calendar/calendar_strings.dart';
+import '../customer/calendar/defaults_sheet.dart';
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
@@ -91,6 +93,19 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               PrimaryButton(
                   label: MoneyStrings.payNext, busy: _busy, onPressed: _payNext),
             const SizedBox(height: 12),
+            if (s.status == 'Active')
+              OutlinedButton(
+                onPressed: () async {
+                  final saved = await showDefaultsSheet(
+                    context,
+                    vehicleId: widget.vehicleId,
+                    cutoff: s.cutoffTime,
+                    interiorDay: s.interiorDay,
+                  );
+                  if (saved) ref.invalidate(subscriptionProvider(widget.vehicleId));
+                },
+                child: const Text(CalStrings.editDefaults),
+              ),
             if (s.status == 'Active' || s.status == 'Paused')
               OutlinedButton(
                 onPressed: () => context.push(skipPausePath(widget.vehicleId)),

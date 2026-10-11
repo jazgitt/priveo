@@ -54,3 +54,19 @@ class UpcomingDay(BaseModel):
     can_change: bool
     # Frozen: a cutoff change is only a request (CAL-07).
     frozen: bool
+
+
+class PreferencesIn(BaseModel):
+    # HH:MM in 30-minute steps (ONB-16). Omit to leave it as it is.
+    cutoff_time: str | None = None
+    interior_day: str | None = None
+
+
+class PreferencesOut(BaseModel):
+    vehicle_id: str
+    cutoff_time: str | None
+    interior_day: str | None
+    # The first date the new default applies to (SCHED-01).
+    applies_from: dt.date
+    # Planned dates in a frozen schedule that keep the old cutoff time.
+    frozen_days_unchanged: int

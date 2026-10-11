@@ -1,6 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.changes.rules import Clock, get_now
 from app.customer_reads.repository import VisitReadRepository
 from app.customer_reads.service import CustomerReads
 from app.customer_reads.sql_repository import SqlVisitReadRepository
@@ -20,5 +21,5 @@ def get_visit_read_repository(db: Session = Depends(get_db),
 def get_customer_reads(db: Session = Depends(get_db),
                        visits: VisitReadRepository = Depends(get_visit_read_repository),
                        store: ObjectStore = Depends(get_object_store),
-                       ) -> CustomerReads:
-    return CustomerReads(db, visits, store)
+                       now: Clock = Depends(get_now)) -> CustomerReads:
+    return CustomerReads(db, visits, store, now)
