@@ -3,11 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.directory import lookup
 from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.support import alerts
-from app.support.config import SupportSettings, get_support_settings
 from app.support.faq import SupportFaqOut, load_faq
 from app.support.notify import (
     EmailNotifier,
@@ -25,7 +25,6 @@ from app.support.schemas import (
     ComplaintCreate,
     ComplaintDetail,
     ComplaintSummary,
-    CrewRatings,
     FeedbackAdmin,
     FeedbackCreate,
     FeedbackOut,
@@ -69,13 +68,14 @@ def get_support_service(db: Session = Depends(get_db),
 
 @customer.get("/support/contact", response_model=SupportContact)
 def contact(user: User = Depends(require_role("customer")),
-            service: SupportService = Depends(get_support_service),
-            settings: SupportSettings = Depends(get_support_settings)):
+            service: SupportService = Depends(get_support_service)):
     """The helpline and WhatsApp numbers and hours (SUP-02 to SUP-04), and the
     count of complaints in progress (SUP-01)."""
     me = service.customer_for(user.id)
-    return SupportContact(helpline=settings.support_helpline, whatsapp=settings.support_whatsapp,
-                          hours=settings.support_hours,
+    db = service.db
+    return SupportContact(helpline=lookup.setting(db, "support.helpline"),
+                          whatsapp=lookup.setting(db, "support.whatsapp"),
+                          hours=lookup.setting(db, "support.hours"),
                           complaints_in_progress=service.in_progress_count(me))
 
 
@@ -149,15 +149,6 @@ def submit_checkin(body: CheckInCreate, user: User = Depends(require_role("custo
     row = service.submit_checkin(service.customer_for(user.id), body.subscription_id,
                                  body.answers, body.comment)
     return CheckInOut(id=row.id, cycle_start=row.cycle_start)
-
-
-# Crew -----------------------------------------------------------------
-
-@crew.get("/ratings", response_model=CrewRatings)
-def crew_ratings(user: User = Depends(require_role("crew")),
-                 service: SupportService = Depends(get_support_service)):
-    """General visit ratings of the last 30 days. No names, tags or comments."""
-    return service.crew_ratings()
 
 
 # Admin ----------------------------------------------------------------

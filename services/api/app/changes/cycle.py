@@ -10,7 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.changes.models import ScheduleChange
+from app.directory import lookup
 
+# The starting value; the live one is `billing.cycle_days` (see app.directory.lookup).
 CYCLE_DAYS = 30
 
 
@@ -25,14 +27,16 @@ def paused_days(db: Session, vehicle_id: uuid.UUID) -> set[date]:
     return days
 
 
-def cycle_window(first_service_date: date, paused: int, today: date) -> tuple[date, date]:
+def cycle_window(first_service_date: date, paused: int, today: date,
+                 cycle_days: int = CYCLE_DAYS) -> tuple[date, date]:
     """(start, renewal date) of the cycle that `today` falls in."""
     anchor = first_service_date + timedelta(days=paused)
-    index = max(0, (today - anchor).days // CYCLE_DAYS)
-    start = anchor + timedelta(days=CYCLE_DAYS * index)
-    return start, start + timedelta(days=CYCLE_DAYS)
+    index = max(0, (today - anchor).days // cycle_days)
+    start = anchor + timedelta(days=cycle_days * index)
+    return start, start + timedelta(days=cycle_days)
 
 
 def renewal_date(db: Session, vehicle_id: uuid.UUID, first_service_date: date,
                  today: date) -> date:
-    return cycle_window(first_service_date, len(paused_days(db, vehicle_id)), today)[1]
+    return cycle_window(first_service_date, len(paused_days(db, vehicle_id)), today,
+                        lookup.setting(db, "billing.cycle_days"))[1]

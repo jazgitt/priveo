@@ -115,7 +115,7 @@ def test_roles_are_enforced(client, customer, admin, crew):
     assert client.get("/v1/admin/complaints", headers=customer).status_code == 403
     assert client.get("/v1/admin/alerts", headers=crew).status_code == 403
     assert client.get("/v1/customer/complaints", headers=admin).status_code == 403
-    assert client.get("/v1/crew/ratings", headers=customer).status_code == 403
+    assert client.get("/v1/crew/ratings", headers=crew).status_code == 404
     assert client.get("/v1/customer/complaints").status_code == 401
 
 
@@ -168,6 +168,15 @@ def test_contact_comes_from_settings(client, customer, monkeypatch):
     finally:
         monkeypatch.delenv("SUPPORT_HELPLINE")
         get_support_settings.cache_clear()
+
+
+def test_a_saved_helpline_and_checkin_window_win_over_the_environment(
+        client, customer, engine):
+    from tests.directory_helpers import set_setting
+    set_setting(engine, "support.helpline", "+919999999999")
+    set_setting(engine, "support.hours", "8 AM to 8 PM")
+    r = client.get("/v1/customer/support/contact", headers=customer).json()
+    assert r["helpline"] == "+919999999999" and r["hours"] == "8 AM to 8 PM"
 
 
 def test_options_start_with_the_owner_lists_and_admin_edits_them(client, customer, admin):
@@ -235,10 +244,8 @@ def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew):
     assert report["tag_counts"] == {"Glass": 1, "Timing": 1}
     assert report["items"][0]["visit_id"] == "visit-9"
 
-    # Crew see only the count and the average. No tags, comments or names.
-    mine = client.get("/v1/crew/ratings", headers=crew).json()
-    assert mine == {"period_days": 30, "count": 1, "average": 3.0,
-                    "stars": {"1": 0, "2": 0, "3": 1, "4": 0, "5": 0}}
+    # The crew app shows no ratings (CRW-RAT-01): there is no crew route.
+    assert client.get("/v1/crew/ratings", headers=crew).status_code == 404
 
 
 # Check-in -------------------------------------------------------------
@@ -280,6 +287,14 @@ def test_checkin_is_due_in_the_last_four_days_and_saved_once(client, customer, a
     report = client.get("/v1/admin/checkins", headers=admin).json()
     assert report["category_averages"] == {"Value for money": 4.0, "Schedule fit": 5.0}
     assert report["items"][0]["customer_name"] == "Aarav Mehta"
+
+
+def test_a_changed_checkin_window_is_the_one_used(client, customer, db, engine):
+    from tests.directory_helpers import set_setting
+    make_due(db, 10)
+    assert client.get("/v1/customer/checkins/pending", headers=customer).json() == []
+    set_setting(engine, "support.checkin_days_before", 12)
+    assert len(client.get("/v1/customer/checkins/pending", headers=customer).json()) == 1
 
 
 def test_checkin_rules(client, customer, db):

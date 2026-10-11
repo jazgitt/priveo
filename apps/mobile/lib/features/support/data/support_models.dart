@@ -155,30 +155,3 @@ class PendingCheckIn {
         cycleStart: j['cycle_start'] as String,
       );
 }
-
-/// General ratings only: no names, tags or comments (CRW-RAT-01).
-class CrewRatings {
-  const CrewRatings({
-    required this.periodDays,
-    required this.count,
-    required this.average,
-    required this.stars,
-  });
-
-  final int periodDays;
-  final int count;
-  final double? average;
-
-  /// Star (1 to 5) to how many ratings gave it.
-  final Map<int, int> stars;
-
-  factory CrewRatings.fromJson(Map<String, dynamic> j) => CrewRatings(
-        periodDays: j['period_days'] as int,
-        count: j['count'] as int,
-        average: (j['average'] as num?)?.toDouble(),
-        stars: {
-          for (final e in (j['stars'] as Map<String, dynamic>).entries)
-            int.parse(e.key): e.value as int
-        },
-      );
-}

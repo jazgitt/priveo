@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, Subscription, Vehicle
+from app.directory import lookup
 from app.directory.models import Society
 from app.platform.clock import today_ist
 from app.platform.db import utcnow
@@ -46,6 +47,8 @@ from app.support.schemas import (
 )
 
 REPLY_WITHIN = timedelta(hours=4)  # ISS-06, ADM-CMP-06
+# Starting values; the live ones are `support.checkin_days_before` and
+# `billing.cycle_days` (see app.directory.lookup).
 CHECKIN_DAYS_BEFORE = 4  # CHK-01
 CYCLE_DAYS = 30
 CREW_RATINGS_DAYS = 30
@@ -61,14 +64,15 @@ def display_id(number: int) -> str:
     return f"#C-{number:04d}"
 
 
-def cycle_for(first_service: date, today: date) -> tuple[date, date] | None:
+def cycle_for(first_service: date, today: date,
+              cycle_days: int = CYCLE_DAYS) -> tuple[date, date] | None:
     """The 30-day billing cycle that contains `today`, as (start, renewal date).
     None before the first service date."""
     if today < first_service:
         return None
-    whole_cycles = (today - first_service).days // CYCLE_DAYS
-    start = first_service + timedelta(days=CYCLE_DAYS * whole_cycles)
-    return start, start + timedelta(days=CYCLE_DAYS)
+    whole_cycles = (today - first_service).days // cycle_days
+    start = first_service + timedelta(days=cycle_days * whole_cycles)
+    return start, start + timedelta(days=cycle_days)
 
 
 class SupportService:
@@ -438,12 +442,14 @@ class SupportService:
             .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
             .where(Vehicle.customer_id == customer.id, Subscription.status == "Active"))
         pending = []
+        cycle_days = lookup.setting(self.db, "billing.cycle_days")
+        before = lookup.setting(self.db, "support.checkin_days_before")
         for sub, vehicle in rows:
-            cycle = cycle_for(sub.first_service_date, today)
+            cycle = cycle_for(sub.first_service_date, today, cycle_days)
             if cycle is None:
                 continue
             start, renewal = cycle
-            if today < renewal - timedelta(days=CHECKIN_DAYS_BEFORE):
+            if today < renewal - timedelta(days=before):
                 continue
             if self.db.scalar(select(CheckIn.id).where(
                     CheckIn.subscription_id == sub.id, CheckIn.cycle_start == start)):
@@ -477,7 +483,9 @@ class SupportService:
         """Sends the check-in push (CHK-01) to each customer whose renewal is
         four days away today. Run once a day by the scheduler. Matching the
         exact day is what stops it being sent twice."""
-        target = self._today() + timedelta(days=CHECKIN_DAYS_BEFORE)
+        target = self._today() + timedelta(
+            days=lookup.setting(self.db, "support.checkin_days_before"))
+        cycle_days = lookup.setting(self.db, "billing.cycle_days")
         rows = self.db.execute(
             select(Subscription, Customer)
             .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
@@ -485,7 +493,7 @@ class SupportService:
             .where(Subscription.status == "Active"))
         sent = 0
         for sub, customer in rows:
-            cycle = cycle_for(sub.first_service_date, self._today())
+            cycle = cycle_for(sub.first_service_date, self._today(), cycle_days)
             if cycle is None or cycle[1] != target:
                 continue
             self.push.push_customer(customer.login_id, "Monthly check-in",

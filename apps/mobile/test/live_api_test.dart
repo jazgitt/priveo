@@ -55,8 +55,6 @@ void main() {
 
     test('crew', () async {
       expect((await signIn('9000000002')).role, Role.crew);
-      final h = await api.crewHome();
-      expect(h.jobs, isNotEmpty);
     });
 
     test('admin', () async {

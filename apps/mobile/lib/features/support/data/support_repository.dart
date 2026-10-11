@@ -36,7 +36,6 @@ abstract class SupportRepository {
     Map<String, int> ratings,
     String comment,
   );
-  Future<CrewRatings> crewRatings();
 }
 
 class ApiSupportRepository implements SupportRepository {
@@ -152,11 +151,6 @@ class ApiSupportRepository implements SupportRepository {
             }),
         (_) {});
   }
-
-  @override
-  Future<CrewRatings> crewRatings() => _call(
-      () => _dio.get<dynamic>('/v1/crew/ratings'),
-      (d) => CrewRatings.fromJson(_map(d)));
 }
 
 final supportRepositoryProvider = Provider<SupportRepository>(
@@ -179,6 +173,3 @@ final complaintProvider =
 final pendingCheckInsProvider =
     FutureProvider.autoDispose<List<PendingCheckIn>>(
         (ref) => ref.watch(supportRepositoryProvider).pendingCheckIns());
-
-final crewRatingsProvider = FutureProvider.autoDispose<CrewRatings>(
-    (ref) => ref.watch(supportRepositoryProvider).crewRatings());

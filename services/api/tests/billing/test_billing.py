@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.billing.models import MoneyAlert, Payment, PaymentEvent
 from app.billing.service import generate_due_payments, mark_overdue_and_inactive
 from tests.changes.money_fixtures import at
+from tests.directory_helpers import set_setting
 
 
 def vehicle(m):
@@ -224,3 +225,31 @@ def test_roles_are_enforced_and_unknown_ids_are_not_found(money):
     assert m.client.get(f"/v1/customer/payments/{p['id']}", headers=m.admin).status_code == 403
     assert m.client.get("/v1/customer/payments/not-a-uuid",
                         headers=m.customer).status_code == 404
+
+
+# ---- the admin's settings are honoured (ADM-SET) -------------------------------------
+
+def test_a_changed_inactive_after_days_is_the_one_used(money):
+    m = money
+    set_setting(m.db.get_bind(), "billing.inactive_after_days", 2)
+    admin_payment(m, due_date="2026-10-20", cycle_start="2026-10-20")
+    mark_overdue_and_inactive(at(21, 1, 0), m.db)  # Over due from 21-Oct-26.
+    mark_overdue_and_inactive(at(22, 12), m.db)
+    assert m.subscription().status == "Active"
+    report = mark_overdue_and_inactive(at(23, 8), m.db)
+    assert report.inactivated == [m.subscription_id]
+
+
+def test_a_changed_pay_ahead_window_and_upi_id_are_shown(money):
+    m = money
+    set_setting(m.db.get_bind(), "billing.pay_ahead_days", 3)
+    m.clock.now = at(24, 9)  # Renewal is 31-Oct-26: seven days.
+    r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
+    assert r.status_code == 409 and r.json()["code"] == "too_early"
+    m.clock.now = at(28, 9)
+    r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
+    assert r.status_code == 200, r.text
+    set_setting(m.db.get_bind(), "payment.upi_id", "pay@bank")
+    pid = r.json()["payment"]["id"]
+    detail = m.client.get(f"/v1/customer/payments/{pid}", headers=m.customer).json()
+    assert detail["instructions"]["upi_id"] == "pay@bank"

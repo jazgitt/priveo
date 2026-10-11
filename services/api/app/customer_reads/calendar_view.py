@@ -31,6 +31,7 @@ from app.customer_reads.schemas import (
 )
 from app.customers.models import Subscription, Vehicle
 from app.customers.service import show_time
+from app.directory import lookup
 
 # How far ahead the Home card looks for the next visit.
 NEXT_SERVICE_DAYS = 60
@@ -172,7 +173,8 @@ class CalendarView:
             cutoff_time=self._cutoff(ctx, day, jobs), change_requested=requested,
             requested_cutoff_time=show_time(ctx.requested.get(day)) if requested else None,
             skip_id=ctx.skips.get(day) if status == "Skipped" else None,
-            can_change=active and status in CHANGEABLE and day > today and is_open(day, now),
+            can_change=active and status in CHANGEABLE and day > today and is_open(
+                day, now, lookup.setting(self._db, "schedule.customer_change_hour")),
             frozen=frozen, covered_on=covered, rescheduled_on=rescheduled, jobs=shown,
             crew_name=first_placed.crew_name if first_placed else None,
             start_time=first_placed.start_time if first_placed else None,
@@ -207,7 +209,8 @@ class CalendarView:
                 day += timedelta(days=1)
             renewals.extend(
                 CalendarRenewal(vehicle_id=vid, date=d) for d in renewals_between(
-                    sub.first_service_date, len(ctx.paused), first, last))
+                    sub.first_service_date, len(ctx.paused), first, last,
+                    lookup.setting(self._db, "billing.cycle_days")))
         order = {vid: i for i, vid in enumerate(ids)}
         out.sort(key=lambda c: (c.date, order[c.vehicle_id], c.visit_id or ""))
         return CalendarMonth(month=f"{year:04d}-{number:02d}", visits=out, renewals=renewals)

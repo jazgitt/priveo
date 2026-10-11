@@ -5,21 +5,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.home import admin as admin_reads
-from app.home.repository import HomeRepository
-from app.home.schemas import AdminDaySchedule, AdminHome, CrewHome
+from app.home.schemas import AdminDaySchedule, AdminHome
 from app.identity.service import User
 from app.platform.db import get_db
-from app.platform.deps import get_home_repository, require_role
+from app.platform.deps import require_role
 
+# Kept empty: the mock crew home was removed (the crew app reads /v1/crew/visits).
 crew = APIRouter(prefix="/v1/crew", tags=["crew"])
 admin = APIRouter(prefix="/v1/admin", tags=["admin"])
-
-
-@crew.get("/home", response_model=CrewHome)
-def crew_home(user: User = Depends(require_role("crew")),
-              repo: HomeRepository = Depends(get_home_repository)):
-    # Crew responses never carry a customer name or mobile number.
-    return repo.crew_home(str(user.id))
 
 
 @admin.get("/home", response_model=AdminHome)
