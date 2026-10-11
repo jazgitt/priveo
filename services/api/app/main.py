@@ -7,6 +7,7 @@ from app import (
     changes,
     crew,
     customer_reads,
+    directory,
     media,
     notifications,
     scheduling,
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
     billing.register(app)
     addons.register(app)
     webauth.register(app)
+    directory.register(app)
     return app
 
 

@@ -1,4 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["bom1"]
+  "regions": ["bom1"],
+  "crons": [
+    {"path": "/v1/internal/cron/freeze-due", "schedule": "35 14 * * *"},
+    {"path": "/v1/internal/cron/payments-generate", "schedule": "35 18 * * *"},
+    {"path": "/v1/internal/cron/payments-overdue", "schedule": "40 18 * * *"},
+    {"path": "/v1/internal/cron/renewal-reminders", "schedule": "30 4 * * *"},
+    {"path": "/v1/internal/cron/checkin-notify", "schedule": "0 5 * * *"},
+    {"path": "/v1/internal/cron/complaints-overdue", "schedule": "30 3 * * *"}
+  ]
 }
