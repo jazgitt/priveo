@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { api, ApiError } from "../../api/client";
 import {
@@ -135,7 +135,15 @@ export function SchedulePage() {
   const dayJobs = board ? board.jobs.filter((j) => j.date === day) : [];
   const schedule = board?.schedule;
 
-  const closeUnfreeze = () => { setUnfreezing(false); setCode(""); setCodeError(""); };
+  // The dialogs take stable close handlers: the Dialog refocuses itself
+  // whenever `onClose` changes, which would drop focus on every keystroke.
+  const closeUnfreeze = useCallback(() => {
+    setUnfreezing(false);
+    setCode("");
+    setCodeError("");
+  }, []);
+  const closeFreeze = useCallback(() => setFreezing(false), []);
+  const closeJob = useCallback(() => setOpen(null), []);
 
   return (
     <>
@@ -301,13 +309,13 @@ export function SchedulePage() {
         job={open}
         board={board ?? null}
         busy={move.isPending}
-        onClose={() => setOpen(null)}
+        onClose={closeJob}
         onMove={(job, crewId, startMinute) => move.mutate({ job, crewId, startMinute })}
       />
 
-      <Dialog open={freezing} title="Freeze this schedule?" onClose={() => setFreezing(false)}
+      <Dialog open={freezing} title="Freeze this schedule?" onClose={closeFreeze}
               footer={<>
-                <Button variant="secondary" onClick={() => setFreezing(false)}>Cancel</Button>
+                <Button variant="secondary" onClick={closeFreeze}>Cancel</Button>
                 <Button busy={freeze.isPending}
                         onClick={() => schedule && freeze.mutate(schedule.id)}>Freeze</Button>
               </>}>

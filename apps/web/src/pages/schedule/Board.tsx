@@ -65,7 +65,7 @@ export function DayLanes({ crew, jobs, onMove, onOpen }: {
     const job = dragging.current;
     dragging.current = null;
     if (!job) return;
-    const y = e.clientY - e.currentTarget.getBoundingClientRect().top;
+    const y = (e.clientY || 0) - e.currentTarget.getBoundingClientRect().top;
     const raw = first + Math.max(0, y) / PX_PER_MIN;
     let start = Math.round(raw / SNAP) * SNAP;
     // Keep the whole job inside this crew member's hours.

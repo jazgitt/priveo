@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { Card, SelectField, StatusChip, Table, TextField } from "../../components";
 import {
-  errorText, fmtDate, fmtHours, hhmm, nextSunday, societiesOf, useCapacity, useCrewList, weekday,
+  errorText, fmtDate, fmtHours, nextSunday, societiesOf, useCapacity, useCrewList, weekday,
   type DayCapacity,
 } from "../schedule/api";
 import "../schedule/schedule.css";
@@ -92,7 +92,6 @@ export function CapacityPage() {
             />
             <p className="muted">
               Trainees add no capacity. Working hours and exceptions are on the Crew page.
-              Hours the scheduler uses today: {hhmm(0)} to {hhmm(0)} is shown on the board.
             </p>
           </Card>
         </div>
