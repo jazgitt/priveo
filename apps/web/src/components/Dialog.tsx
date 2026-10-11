@@ -9,20 +9,26 @@ export function Dialog({ open, title, onClose, children, footer }: {
 }) {
   const titleId = useId();
   const box = useRef<HTMLDivElement>(null);
+  // Keep the latest onClose in a ref so a parent that passes a new function on
+  // every render does not re-run the effect and steal focus back to the dialog.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
     box.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
