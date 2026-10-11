@@ -108,12 +108,12 @@ export function useCrewActions(id: string) {
       call<CrewExceptionResult>(`/exceptions/${exId}`, "DELETE")),
     deactivate: useCrewMutation((v: { release_jobs: boolean }) =>
       call<CrewChange>("/deactivate", "POST", v)),
-    reactivate: useCrewMutation((_: void) => call<Crew>("/reactivate", "POST")),
+    reactivate: useCrewMutation(() => call<Crew>("/reactivate", "POST")),
     endSession: useCrewMutation((sid: string) =>
       call<{ ended: number }>(`/sessions/${sid}/logout`, "POST")),
-    endAll: useCrewMutation((_: void) => call<{ ended: number }>("/sessions/logout", "POST")),
-    resetPassword: useCrewMutation((_: void) => call<CrewPassword>("/password", "POST")),
-    unlock: useCrewMutation((_: void) => call<Crew>("/unlock", "POST")),
+    endAll: useCrewMutation(() => call<{ ended: number }>("/sessions/logout", "POST")),
+    resetPassword: useCrewMutation(() => call<CrewPassword>("/password", "POST")),
+    unlock: useCrewMutation(() => call<Crew>("/unlock", "POST")),
   };
 }
 

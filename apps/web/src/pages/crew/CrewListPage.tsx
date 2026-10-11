@@ -48,7 +48,7 @@ export function CrewListPage() {
   return (
     <>
       <h1 className="page-title">Crew</h1>
-      <Card title="Crew" actions={<Button onClick={() => setOnboarding(true)}>Onboard crew</Button>}>
+      <Card title="Crew members" actions={<Button onClick={() => setOnboarding(true)}>Onboard crew</Button>}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" }}>
           <TextField label="Search" value={search} placeholder="Name or mobile"
                      onChange={(e) => setSearch(e.target.value)} />
