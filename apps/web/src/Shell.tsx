@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "./auth/AuthContext";
+import { AlertBell } from "./components/AlertBell";
 import { Button, useToast } from "./components";
 import { NAV } from "./nav";
 
@@ -35,6 +36,7 @@ export function Shell() {
         </div>
       </aside>
       <main className="content">
+        <div className="content-top"><AlertBell /></div>
         <Outlet />
       </main>
     </div>

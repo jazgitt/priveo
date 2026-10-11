@@ -146,3 +146,5 @@ h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; }
 .brand-title { font-size: 2.25rem; color: var(--c-gold-text); }
 .signin-card .muted { margin: 0 0 1.25rem; }
 .signin-card .btn { width: 100%; }
+
+.content-top { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }

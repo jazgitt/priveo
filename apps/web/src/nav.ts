@@ -10,6 +10,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { path: "/", label: "Dashboard", about: "Today at a glance: visits, payments and issues." },
+  { path: "/alerts", label: "Alerts", about: "Support and payment alerts in one list." },
   { path: "/customers", label: "Customers", about: "Onboard, find and update customers." },
   { path: "/subscriptions", label: "Subscriptions", about: "Plan, schedule settings, start and status." },
   { path: "/crew", label: "Crew", about: "Onboard crew, accounts and exceptions." },

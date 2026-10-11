@@ -37,7 +37,10 @@ lines.push("}", "");
 const css = lines.join("\n");
 
 if (process.argv.includes("--check")) {
-  const current = existsSync(outPath) ? readFileSync(outPath, "utf8") : "";
+  // Line endings differ between Windows checkouts and CI. Compare without them.
+  const current = existsSync(outPath) ? readFileSync(outPath, "utf8").replace(/
+/g, "
+") : "";
   if (current !== css) {
     console.error("src/theme/tokens.g.css is stale. Run: npm run theme");
     process.exit(1);
