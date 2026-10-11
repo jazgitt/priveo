@@ -332,7 +332,7 @@ class CrewService:
                            paired_member_id="This Member is not active.")
         return self._sync(member, login)
 
-    def _trainees_of(self, sc: SchedulingCrew) -> list[SchedulingCrew]:
+    def _trainees_of(self, sc: SchedulingCrew) -> "list[SchedulingCrew]":
         return list(self._db.scalars(
             select(SchedulingCrew).where(SchedulingCrew.paired_member_id == sc.id,
                                          SchedulingCrew.role == "Trainee",
@@ -483,7 +483,7 @@ class CrewService:
             raise _problem("Give the time the crew member can start.", start="Use HH:MM.")
         return _minutes(start)
 
-    def _upcoming(self, sc: SchedulingCrew, from_date: date) -> list[CrewExceptionOut]:
+    def _upcoming(self, sc: SchedulingCrew, from_date: date) -> "list[CrewExceptionOut]":
         rows = self._db.scalars(
             select(SchedulingCrewException)
             .where(SchedulingCrewException.crew_id == sc.id,
@@ -492,7 +492,7 @@ class CrewService:
         return [_ex_out(e) for e in rows]
 
     def list_exceptions(self, crew_id: uuid.UUID,
-                        from_date: date | None) -> list[CrewExceptionOut]:
+                        from_date: date | None) -> "list[CrewExceptionOut]":
         crew, login = self._get(crew_id)
         sc = self._sync(crew, login)
         self._db.commit()
@@ -506,7 +506,7 @@ class CrewService:
         return ex
 
     def _result(self, crew: CrewMember, login: Login, sc: SchedulingCrew,
-                released: list[dict]) -> CrewExceptionResult:
+                released: "list[dict]") -> CrewExceptionResult:
         return CrewExceptionResult(
             crew=self._out_of(crew, login), exceptions=self._upcoming(sc, today_ist()),
             released_jobs=_released(released))
@@ -622,7 +622,7 @@ class CrewService:
 
     # ---- sessions (ADM-CRW-21) ---------------------------------------------
 
-    def sessions(self, crew_id: uuid.UUID) -> list[CrewSessionOut]:
+    def sessions(self, crew_id: uuid.UUID) -> "list[CrewSessionOut]":
         _crew, login = self._get(crew_id)
         rows = self._db.scalars(
             select(AuthSession)
