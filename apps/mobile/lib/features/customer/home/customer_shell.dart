@@ -21,9 +21,9 @@ import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
 import '../calendar/calendar_screen.dart';
-import '../data/customer_reads_repository.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
+import 'home_schedule.dart';
 
 /// Customer shell: bottom tabs Home, Calendar, Account and Support.
 /// The layout follows the prototype's dark home.
@@ -223,7 +223,6 @@ class CustomerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final b = context.brand;
     final home = ref.watch(customerHomeProvider);
     return home.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -243,13 +242,7 @@ class CustomerHomeScreen extends ConsumerWidget {
             // Leaves room for the tab bar, which floats over the list.
             padding: const EdgeInsets.only(top: 14, bottom: 110),
             children: [
-              Padding(
-                padding: _side,
-                child: Text(
-                  l.greeting,
-                  style: text.bodyMedium?.copyWith(color: b.mute),
-                ),
-              ),
+              Padding(padding: _side, child: const GreetingLine()),
               Padding(
                 padding: _side,
                 child: Text(h.greetingName, style: text.displaySmall),
@@ -275,9 +268,10 @@ class CustomerHomeScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Padding(
                   padding: _side,
-                  child: _NextServiceCard(vehicle, onCalendar: onCalendar),
+                  child: NextServiceCard(vehicle, onCalendar: onCalendar),
                 ),
               ],
+              const MonthlyCheckInCard(),
               const SizedBox(height: 24),
               Padding(padding: _side, child: SectionLabel(l.quickActions)),
               const SizedBox(height: 12),
@@ -295,12 +289,18 @@ class CustomerHomeScreen extends ConsumerWidget {
                     for (final a in h.quickActions) _QuickAction(a),
                     _QuickAction(
                       const QuickAction(
-                          key: 'subscription', label: MoneyStrings.subTitle),
+                        key: 'subscription',
+                        label: MoneyStrings.subTitle,
+                      ),
                     ),
-                    _QuickAction(
-                      const QuickAction(
-                          key: 'addons', label: MoneyStrings.addonTitle),
-                    ),
+                    // Add-ons are for a vehicle with an Active subscription (HOME-09).
+                    if (vehicle?.subscriptionStatus == 'Active')
+                      _QuickAction(
+                        const QuickAction(
+                          key: 'addons',
+                          label: MoneyStrings.addonTitle,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -528,111 +528,6 @@ class _VehicleCard extends StatelessWidget {
   }
 }
 
-/// The next visit for the selected vehicle (HOME-04). Until visits are
-/// scheduled it shows the customer's service time and interior care day.
-class _NextServiceCard extends ConsumerWidget {
-  const _NextServiceCard(this.vehicle, {required this.onCalendar});
-
-  final VehicleCard vehicle;
-  final VoidCallback onCalendar;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final text = Theme.of(context).textTheme;
-    final b = context.brand;
-    // The home data has no visit yet: ask the customer reads for it.
-    final fromVisits = ref
-        .watch(nextServicesProvider)
-        .value
-        ?.where((n) => n.vehicleId == vehicle.id)
-        .firstOrNull;
-    final next =
-        vehicle.nextService ??
-        (fromVisits == null
-            ? null
-            : NextService(
-                date: fromVisits.date,
-                service: fromVisits.service,
-                status: fromVisits.status,
-              ));
-    final cutoff = vehicle.cutoffTime;
-    final day = vehicle.interiorDay;
-    Widget detail(String service, String value) => Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          _ServiceMarker(service),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(value, style: text.bodyMedium?.copyWith(color: b.mute)),
-          ),
-        ],
-      ),
-    );
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: SectionLabel(l.nextService)),
-              if (next != null)
-                StatusChip(next.status, tone: StatusChip.toneFor(next.status)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            next == null ? l.notScheduledYet : formatDate(next.date),
-            style: text.headlineSmall,
-          ),
-          if (next != null && next.service.isNotEmpty)
-            detail(next.service, next.service),
-          if (cutoff != null)
-            detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
-          if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onCalendar,
-              icon: const Icon(Symbols.calendar_month_rounded, size: 18),
-              label: Text(l.viewCalendar),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The prototype's service markers: a green dot for exterior, a blue square
-/// for interior, a violet star for Deep Spa.
-class _ServiceMarker extends StatelessWidget {
-  const _ServiceMarker(this.service);
-
-  final String service;
-
-  @override
-  Widget build(BuildContext context) {
-    final b = context.brand;
-    final s = service.toLowerCase();
-    if (s.contains('spa')) {
-      return Icon(Symbols.star_rounded, size: 12, color: b.spa, fill: 1);
-    }
-    final interior = s.contains('internal') || s.contains('interior');
-    return Container(
-      width: 7,
-      height: 7,
-      decoration: BoxDecoration(
-        color: interior ? b.info : b.ok,
-        borderRadius: BorderRadius.circular(interior ? 2 : 4),
-      ),
-    );
-  }
-}
-
 class _QuickAction extends ConsumerWidget {
   const _QuickAction(this.action);
 
@@ -646,7 +541,9 @@ class _QuickAction extends ConsumerWidget {
     if (home != null && home.vehicles.isNotEmpty) {
       vehicleId = home
           .vehicles[selectedIndex(
-              home.vehicles, ref.read(selectedVehicleProvider))]
+            home.vehicles,
+            ref.read(selectedVehicleProvider),
+          )]
           .id;
     }
     switch (action.key) {

@@ -114,7 +114,7 @@ void main() {
     expect(find.text('The two passwords do not match.'), findsOneWidget);
     await save('carwash2026', 'carwash2026');
     expect(auth.passwordSet, 'carwash2026');
-    expect(find.text('Hello,'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
   });
 
   testWidgets('the code can be sent again when the countdown ends',
@@ -155,7 +155,7 @@ void main() {
     await pumpApp(tester);
     await passSplash(tester);
     await signIn(tester, 'customer@priveo.test', 'secret');
-    expect(find.text('Hello,'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
     expect(find.text('Aarav'), findsOneWidget);
     expect(find.text('MH 12 AB 1234'), findsOneWidget);
     expect(find.text('07-Nov-26'), findsOneWidget);

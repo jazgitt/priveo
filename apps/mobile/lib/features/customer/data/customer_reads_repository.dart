@@ -13,65 +13,187 @@ List<T> _list<T>(Object? v, T Function(Map<String, dynamic>) f) => [
   for (final e in (v as List<dynamic>)) f(e as Map<String, dynamic>),
 ];
 
+/// One job of a calendar day, with its crew member and time once the
+/// schedule is frozen (CAL-10).
+class CalendarJobDto {
+  const CalendarJobDto({
+    required this.service,
+    required this.status,
+    this.crewName,
+    this.startTime,
+    this.endTime,
+  });
+
+  final String service;
+  final String status;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
+
+  factory CalendarJobDto.fromJson(Map<String, dynamic> j) => CalendarJobDto(
+    service: j['service'] as String,
+    status: j['status'] as String,
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
+  );
+}
+
 class CalendarVisit {
   const CalendarVisit({
-    required this.visitId,
+    this.visitId,
     required this.vehicleId,
     required this.date,
     required this.status,
     required this.services,
+    this.source = 'visit',
+    this.state,
+    this.cutoffTime,
+    this.changeRequested = false,
+    this.requestedCutoffTime,
+    this.skipId,
+    this.canChange = false,
+    this.frozen = false,
+    this.coveredOn,
+    this.rescheduledOn,
+    this.jobs = const [],
+    this.crewName,
+    this.startTime,
+    this.endTime,
   });
 
-  final String visitId;
+  /// Empty for a projected day: the scheduler has not planned it yet.
+  final String? visitId;
   final String vehicleId;
   final DateTime date;
 
-  /// Scheduled, In progress, Completed, Skipped or Missed.
+  /// Scheduled, In progress, Completed, Skipped, Missed, Paused or Projected.
   final String status;
   final List<String> services;
 
+  /// `visit` or `projected`.
+  final String source;
+
+  /// What the day card shows: [status], or Covered, Rescheduled or
+  /// Change requested. Falls back to [status].
+  final String? state;
+  final String? cutoffTime;
+  final bool changeRequested;
+  final String? requestedCutoffTime;
+  final String? skipId;
+  final bool canChange;
+  final bool frozen;
+  final DateTime? coveredOn;
+  final DateTime? rescheduledOn;
+  final List<CalendarJobDto> jobs;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
+
+  bool get projected => source == 'projected';
+  String get shownState => state ?? status;
+
   factory CalendarVisit.fromJson(Map<String, dynamic> j) => CalendarVisit(
-    visitId: j['visit_id'] as String,
+    visitId: j['visit_id'] as String?,
     vehicleId: j['vehicle_id'] as String,
     date: _day(j['date']),
     status: j['status'] as String,
     services: [for (final s in j['services'] as List<dynamic>) s as String],
+    source: (j['source'] as String?) ?? 'visit',
+    state: j['state'] as String?,
+    cutoffTime: j['cutoff_time'] as String?,
+    changeRequested: (j['change_requested'] as bool?) ?? false,
+    requestedCutoffTime: j['requested_cutoff_time'] as String?,
+    skipId: j['skip_id'] as String?,
+    canChange: (j['can_change'] as bool?) ?? false,
+    frozen: (j['frozen'] as bool?) ?? false,
+    coveredOn: j['covered_on'] == null ? null : _day(j['covered_on']),
+    rescheduledOn: j['rescheduled_on'] == null
+        ? null
+        : _day(j['rescheduled_on']),
+    jobs: j['jobs'] == null
+        ? const []
+        : _list(j['jobs'], CalendarJobDto.fromJson),
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
   );
 }
 
+class CalendarRenewalDto {
+  const CalendarRenewalDto({required this.vehicleId, required this.date});
+
+  final String vehicleId;
+  final DateTime date;
+
+  factory CalendarRenewalDto.fromJson(Map<String, dynamic> j) =>
+      CalendarRenewalDto(
+        vehicleId: j['vehicle_id'] as String,
+        date: _day(j['date']),
+      );
+}
+
 class CalendarMonthDto {
-  const CalendarMonthDto({required this.month, required this.visits});
+  const CalendarMonthDto({
+    required this.month,
+    required this.visits,
+    this.renewals = const [],
+  });
 
   final String month;
   final List<CalendarVisit> visits;
+  final List<CalendarRenewalDto> renewals;
 
   factory CalendarMonthDto.fromJson(Map<String, dynamic> j) => CalendarMonthDto(
     month: j['month'] as String,
     visits: _list(j['visits'], CalendarVisit.fromJson),
+    renewals: j['renewals'] == null
+        ? const []
+        : _list(j['renewals'], CalendarRenewalDto.fromJson),
   );
 }
 
 class NextServiceDto {
   const NextServiceDto({
     required this.vehicleId,
-    required this.visitId,
+    this.visitId,
     required this.date,
     required this.service,
     required this.status,
+    this.services = const [],
+    this.source = 'visit',
+    this.cutoffTime,
+    this.crewName,
+    this.startTime,
+    this.endTime,
   });
 
   final String vehicleId;
-  final String visitId;
+  final String? visitId;
   final DateTime date;
   final String service;
   final String status;
+  final List<String> services;
+  final String source;
+  final String? cutoffTime;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
 
   factory NextServiceDto.fromJson(Map<String, dynamic> j) => NextServiceDto(
     vehicleId: j['vehicle_id'] as String,
-    visitId: j['visit_id'] as String,
+    visitId: j['visit_id'] as String?,
     date: _day(j['date']),
     service: j['service'] as String,
     status: j['status'] as String,
+    services: j['services'] == null
+        ? const []
+        : [for (final s in j['services'] as List<dynamic>) s as String],
+    source: (j['source'] as String?) ?? 'visit',
+    cutoffTime: j['cutoff_time'] as String?,
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
   );
 }
 

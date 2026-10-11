@@ -92,7 +92,7 @@ void main() {
       expect(find.text('Step 1 of 6'), findsOneWidget);
       expect(find.text('Your details'), findsOneWidget);
       expect(find.text('aarav@gmale.com'), findsOneWidget);
-      expect(find.text('Hello,'), findsNothing);
+      expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsNothing);
     });
 
     testWidgets('the customer fills the gaps, confirms and reaches Home',
@@ -162,7 +162,7 @@ void main() {
         ('v3', 'B1', '40', null, null),
       ]);
       expect(find.byType(OnboardingReviewScreen), findsNothing);
-      expect(find.text('Hello,'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
     });
 
     testWidgets('a changed mobile number must be 10 digits', (tester) async {
