@@ -76,14 +76,7 @@ def code_message(code: str, purpose: str) -> tuple[str, str, str]:
         lead = "Use this code to verify your email and sign in to Priveo."
     tail = ("The code is valid for 10 minutes. If you did not ask for it, "
             "you can ignore this email.")
-    text = f"{lead}
-
-Your code: {code}
-
-{tail}
-
-{_SIGN_OFF}
-"
+    text = f"{lead}\n\nYour code: {code}\n\n{tail}\n\n{_SIGN_OFF}\n"
     body = (f"<p>{lead}</p>"
             f"<p style=\"font-size:28px;letter-spacing:6px;font-weight:bold\">{code}</p>"
             f"<p>{tail}</p><p>{_SIGN_OFF}</p>")
@@ -99,10 +92,7 @@ def welcome_message(first_name: str) -> tuple[str, str, str]:
              "Open the Priveo app and sign in with this email address. "
              "We will send you a code to verify it, and you then set your password.",
              _SIGN_OFF]
-    text = "
-
-".join(lines) + "
-"
+    text = "\n\n".join(lines) + "\n"
     body = "".join(f"<p>{html.escape(line)}</p>" for line in lines)
     return subject, text, body
 

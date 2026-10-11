@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -11,11 +12,14 @@ import '../../../core/providers.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../support/widgets.dart' show linkOpenerProvider;
+import '../data/support_contact.dart';
+import 'auth_strings.dart';
 
 /// The steps of signing in. Everyone starts at [id]. A customer who has no
 /// password yet, or has forgotten it, goes through [code] and [newPassword]
 /// (AUTH-03, AUTH-16). Everyone else goes to [password].
-enum _Step { id, password, code, newPassword }
+enum _Step { welcome, id, password, code, newPassword }
 
 /// AUTH-12: at least 8 characters, with a letter and a number.
 bool isAcceptablePassword(String p) =>
@@ -34,7 +38,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _code = TextEditingController();
   final _newPassword = TextEditingController();
   final _confirm = TextEditingController();
-  _Step _step = _Step.id;
+  _Step _step = _Step.welcome;
+  bool _notRegistered = false;
+  late final _termsTap = TapGestureRecognizer()
+    ..onTap = () => ref.read(linkOpenerProvider)(termsUri);
+  late final _privacyTap = TapGestureRecognizer()
+    ..onTap = () => ref.read(linkOpenerProvider)(privacyUri);
   bool _obscure = true;
   bool _busy = false;
   String? _error;
@@ -48,6 +57,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _countdown?.cancel();
+    _termsTap.dispose();
+    _privacyTap.dispose();
     for (final c in [_id, _password, _code, _newPassword, _confirm]) {
       c.dispose();
     }
@@ -57,6 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _go(_Step step) => setState(() {
         _step = step;
         _error = null;
+        _notRegistered = false;
         _obscure = true;
         if (step == _Step.id) {
           _countdown?.cancel();
@@ -84,11 +96,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _notRegistered = false;
     });
     try {
       await action();
     } on ApiFailure catch (e) {
-      if (mounted) setState(() => _error = e.message ?? l.networkError);
+      if (mounted) {
+        setState(() {
+          _error = e.message ?? l.networkError;
+          _notRegistered = e.code == 'email_not_registered';
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -97,6 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _continue() async {
     if (_loginId.isEmpty) {
       setState(() => _error = AppLocalizations.of(context).enterId);
+      return;
+    }
+    if (_isEmail && !isPlausibleEmail(_loginId)) {
+      setState(() => _error = const AuthText().emailInvalid);
       return;
     }
     await _run(() async {
@@ -235,6 +257,77 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
       );
 
+  /// "Call support" and "WhatsApp support" for an email that is not
+  /// registered (AUTH-15).
+  Widget _supportButtons() {
+    final t = const AuthText();
+    final contact = ref.watch(authSupportContactProvider).asData?.value;
+    if (contact == null) return const SizedBox.shrink();
+    final open = ref.read(linkOpenerProvider);
+    final digits = contact.whatsapp.replaceAll(RegExp(r'[^0-9]'), '');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
+            icon: const Icon(Symbols.call_rounded),
+            label: Text(t.callSupport),
+            onPressed: () => open(Uri(scheme: 'tel', path: contact.helpline)),
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Symbols.chat_rounded),
+            label: Text(t.whatsappSupport),
+            onPressed: () => open(Uri.parse('https://wa.me/$digits')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The consent notice, with the Terms and the Privacy Policy as links
+  /// (AUTH-04).
+  Widget _termsNotice() {
+    final t = const AuthText();
+    final base = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: context.brand.mute);
+    final link = base?.copyWith(
+      decoration: TextDecoration.underline,
+      color: Theme.of(context).colorScheme.primary,
+    );
+    return Text.rich(
+      TextSpan(style: base, children: [
+        TextSpan(text: t.termsPrefix),
+        TextSpan(text: t.termsLink, style: link, recognizer: _termsTap),
+        TextSpan(text: t.termsAnd),
+        TextSpan(text: t.privacyLink, style: link, recognizer: _privacyTap),
+        TextSpan(text: t.termsSuffix),
+      ]),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// The first screen (AUTH-01): the tagline and two buttons. Both lead to the
+  /// email screen.
+  List<Widget> _welcomeStep(AppLocalizations l) {
+    final t = const AuthText();
+    return [
+      Text(l.tagline, style: Theme.of(context).textTheme.bodyLarge),
+      const SizedBox(height: 32),
+      PrimaryButton(label: t.getStarted, onPressed: () => _go(_Step.id)),
+      const SizedBox(height: 8),
+      Center(
+        child: TextButton(
+          onPressed: () => _go(_Step.id),
+          child: Text(t.alreadyMember),
+        ),
+      ),
+    ];
+  }
+
   List<Widget> _idStep(AppLocalizations l) {
     final config = ref.watch(appConfigProvider);
     final demos = {
@@ -255,15 +348,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
       _errorSlot(),
+      if (_notRegistered) _supportButtons(),
       PrimaryButton(label: l.continueButton, busy: _busy, onPressed: _continue),
       const SizedBox(height: 16),
-      Text(
-        l.termsNotice,
-        textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: context.brand.mute),
-      ),
+      _termsNotice(),
       if (config.showDemoAccounts) ...[
         const SizedBox(height: 24),
         SectionLabel(l.demoAccounts),
@@ -374,6 +462,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final (title, body) = switch (_step) {
+      _Step.welcome => (const AuthText().welcomeTitle, _welcomeStep(l)),
       _Step.id => (l.loginTitle, _idStep(l)),
       _Step.password => (l.loginTitle, _passwordStep(l)),
       _Step.code => (l.codeTitle, _codeStep(l)),

@@ -270,11 +270,11 @@ class AuthService:
                    else "password_reset_code")
         try:
             self._email.send_code(login.login_id, code, purpose)
-        except EmailSendError:
+        except EmailSendError as exc:
             # The customer never got it, so it does not count as one sent.
             self._db.rollback()
             raise ApiError("email_failed",
-                           "We could not send the email. Try again in a moment.", 502)
+                           "We could not send the email. Try again in a moment.", 502) from exc
         self._db.commit()
         return wait
 

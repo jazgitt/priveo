@@ -1,0 +1,13 @@
+{
+  "auth_welcome_title": "Welcome to Priveo",
+  "auth_get_started": "Get started",
+  "auth_already_member": "Already a member? Log in",
+  "auth_email_invalid": "Enter a valid email address.",
+  "auth_terms_prefix": "By continuing you accept the ",
+  "auth_terms_link": "Terms",
+  "auth_terms_and": " and the ",
+  "auth_privacy_link": "Privacy Policy",
+  "auth_terms_suffix": ".",
+  "auth_call_support": "Call support",
+  "auth_whatsapp_support": "WhatsApp support"
+}

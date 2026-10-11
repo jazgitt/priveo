@@ -1,5 +1,9 @@
+import uuid
+
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.identity.service import (
     AuthService,
@@ -9,7 +13,9 @@ from app.identity.service import (
     StartResult,
     User,
 )
+from app.platform.db import get_db
 from app.platform.deps import bearer_token, get_auth_service, require_role
+from app.platform.errors import ApiError
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 admin = APIRouter(prefix="/v1/admin", tags=["admin"])
@@ -37,9 +43,30 @@ class VerifyCodeRequest(BaseModel):
     code: str
 
 
+class AuthSupportContact(BaseModel):
+    helpline: str
+    whatsapp: str
+    hours: str
+
+
+class CustomerSessionsEnded(BaseModel):
+    ended: int
+
+
 class SetPasswordRequest(BaseModel):
     password_token: str
     password: str
+
+
+@router.get("/support-contact", response_model=AuthSupportContact)
+def support_contact():
+    """The helpline and WhatsApp numbers for the "not registered" screen, which
+    a visitor sees before signing in (AUTH-15)."""
+    from app.support.config import get_support_settings
+
+    s = get_support_settings()
+    return AuthSupportContact(helpline=s.support_helpline, whatsapp=s.support_whatsapp,
+                              hours=s.support_hours)
 
 
 @router.post("/start", response_model=StartResult)
@@ -87,3 +114,18 @@ def logout_all(user: User = Depends(require_role("admin")),
                auth: AuthService = Depends(get_auth_service)):
     """Signs the admin out of every device, this one included."""
     auth.logout_all(user)
+
+
+@admin.post("/customers/{customer_id}/sessions/logout", response_model=CustomerSessionsEnded)
+def end_customer_sessions(customer_id: uuid.UUID,
+                          _: User = Depends(require_role("admin")),
+                          auth: AuthService = Depends(get_auth_service),
+                          db: Session = Depends(get_db)):
+    """Signs a customer out on every phone (AUTH-17, ADM-CUS-21)."""
+    from app.customers.models import Customer
+
+    login_id = db.scalar(select(Customer.login_id).where(Customer.id == customer_id))
+    if login_id is None:
+        raise ApiError("not_found", "Customer not found.", 404)
+    return CustomerSessionsEnded(
+        ended=auth.end_customer_sessions(login_id, "admin_logout"))
