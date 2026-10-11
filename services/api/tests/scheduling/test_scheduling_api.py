@@ -4,10 +4,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customers.models import AddonRequest
+from app.directory import lookup
+from app.directory.models import DirectoryService
+from app.directory.seed import seed_defaults
 from app.identity.models import Login
 from app.platform.clock import IST
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
+from tests.directory_helpers import set_setting
 from tests.scheduling.conftest import SUNDAY
 from tests.test_api import auth, login
 
@@ -302,3 +306,47 @@ def test_scheduling_endpoints_are_for_their_role(api, admin, world):
 
 def db_login(world, role):
     return world.db.execute(select(Login).where(Login.role == role)).scalars().first()
+
+
+# ---- the admin's settings are honoured (ADM-SET) -------------------------------------
+
+def test_a_changed_unfreeze_code_is_the_one_that_works(api, admin, world, run_week, engine):
+    world.add_crew()
+    world.add_vehicle()
+    world.db.commit()
+    sid = run_week(days=1)["schedule_id"]
+    assert api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin).status_code == 200
+    set_setting(engine, "schedule.unfreeze_code", "open sesame")
+    old = api.post(f"{BASE}/schedules/{sid}/unfreeze", headers=admin, json={"code": "unfreeze"})
+    assert old.status_code == 403
+    new = api.post(f"{BASE}/schedules/{sid}/unfreeze", headers=admin,
+                   json={"code": "open sesame"})
+    assert new.status_code == 200 and new.json()["status"] == "Draft"
+
+
+def test_a_changed_freeze_hour_moves_the_cutoff(api, admin, world, run_week, engine):
+    world.add_crew()
+    world.add_vehicle()
+    world.db.commit()
+    run_week(days=1)
+    set_setting(engine, "schedule.freeze_hour", 18)
+    with Session(engine) as db:
+        assert service.freeze_due(db, datetime(2026, 10, 17, 17, 59, tzinfo=IST)) == []
+        assert len(service.freeze_due(db, datetime(2026, 10, 17, 18, 0, tzinfo=IST))) == 1
+
+
+def test_a_changed_service_duration_is_used_for_new_jobs(api, admin, world, run_week, engine):
+    world.add_crew(end=480)
+    world.add_vehicle()
+    world.db.commit()
+    with Session(engine) as db:
+        seed_defaults(db)
+        db.scalar(select(DirectoryService).where(
+            DirectoryService.name == "Cleaning-External")).duration_minutes = 35
+        db.commit()
+    lookup.invalidate()
+    run_week(days=1)
+    with Session(engine) as db:
+        durations = set(db.scalars(select(Job.duration_minutes).where(
+            Job.service == "Cleaning-External")))
+    assert durations == {35}

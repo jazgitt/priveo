@@ -137,9 +137,6 @@ class FakePriveoApi implements PriveoApi {
   }
 
   @override
-  Future<CrewHome> crewHome() async => CrewHome.fromJson(crewJson);
-
-  @override
   Future<AdminHome> adminHome() async => AdminHome.fromJson(adminJson);
 
   @override
@@ -248,32 +245,6 @@ const onboardingJson = {
       'cutoff_time': null,
       'asks_interior_day': false,
       'interior_day': null,
-    },
-  ],
-};
-
-const crewJson = {
-  'date': '2026-11-07',
-  'society': 'Green Meadows',
-  'total': 2,
-  'done': 1,
-  'left': 1,
-  'jobs': [
-    {
-      'id': 'j1',
-      'time': '07:00',
-      'vehicle': 'MH 12 AB 1234',
-      'parking': 'B2-14',
-      'service': 'Cleaning-External',
-      'status': 'Done',
-    },
-    {
-      'id': 'j2',
-      'time': '07:20',
-      'vehicle': 'MH 12 CD 5678',
-      'parking': 'B2-15',
-      'service': 'Cleaning-Internal',
-      'status': 'Pending',
     },
   ],
 };

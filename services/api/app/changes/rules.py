@@ -6,6 +6,7 @@ from app.platform import clock
 from app.platform.errors import ApiError
 
 Clock = Callable[[], datetime]
+# The starting value; the live one is `schedule.customer_change_hour`.
 CUTOFF_HOUR = 21
 
 
@@ -24,24 +25,25 @@ def today_of(now: datetime) -> date:
     return now.astimezone(clock.IST).date()
 
 
-def cutoff_at(day: date) -> datetime:
+def cutoff_at(day: date, hour: int = CUTOFF_HOUR) -> datetime:
     """9 PM the evening before `day`, in IST: the last moment a customer may
     change that day's schedule."""
-    return datetime.combine(day - timedelta(days=1), time(CUTOFF_HOUR, 0), tzinfo=clock.IST)
+    return datetime.combine(day - timedelta(days=1), time(hour, 0), tzinfo=clock.IST)
 
 
-def is_open(day: date, now: datetime) -> bool:
-    return now < cutoff_at(day)
+def is_open(day: date, now: datetime, hour: int = CUTOFF_HOUR) -> bool:
+    return now < cutoff_at(day, hour)
 
 
-def require_open(day: date, now: datetime, *, bound: bool) -> None:
+def require_open(day: date, now: datetime, *, bound: bool, hour: int = CUTOFF_HOUR) -> None:
     """Customers are bound by the 9 PM rule. The admin is not (ADM-CUS-11),
     but cannot change a day that is already past."""
     if bound:
-        if not is_open(day, now):
+        if not is_open(day, now, hour):
             raise ApiError(
                 "after_cutoff",
-                f"Changes for {show_date(day)} closed at 9 PM the evening before. "
+                f"Changes for {show_date(day)} closed at {hour % 12 or 12} "
+                f"{'AM' if hour < 12 else 'PM'} the evening before. "
                 "Please call support.", 409, {"date": "after_cutoff"})
     elif day < today_of(now):
         raise ApiError("date_in_past", "That date has passed.", 409, {"date": "date_in_past"})

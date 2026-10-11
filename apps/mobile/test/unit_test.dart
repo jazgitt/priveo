@@ -65,10 +65,5 @@ void main() {
           {'date': '2026-11-07', 'service': 'Cleaning-External', 'status': 'Scheduled'});
       expect(h.quickActions, hasLength(4));
     });
-    test('crew home', () {
-      final h = CrewHome.fromJson(crewJson);
-      expect(h.jobs.first.vehicle, 'MH 12 AB 1234');
-      expect(h.done + h.left, h.total);
-    });
   });
 }

@@ -23,6 +23,7 @@ from app.changes.cycle import paused_days
 from app.changes.rules import Clock, is_open, require_open, today_of
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import read_cutoff
+from app.directory import lookup
 from app.directory.models import Society
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
@@ -47,12 +48,16 @@ class AddonService:
         self._settings = settings
         self._billing = billing
 
+    @property
+    def _hour(self) -> int:
+        return lookup.setting(self._db, "schedule.customer_change_hour")
+
     def offers(self) -> list[AddonOffer]:
-        s = self._settings
+        price, list_price = lookup.addon_price(self._db)
         return [AddonOffer(
             service="Deep Spa", name="Deep Spa",
             description="A two-hour deep clean of the inside and outside of the car.",
-            price_rupees=s.deep_spa_price_rupees, list_price_rupees=s.deep_spa_list_price_rupees,
+            price_rupees=price, list_price_rupees=list_price,
             duration_minutes=120)]
 
     def _price(self, service: str) -> int:
@@ -76,7 +81,8 @@ class AddonService:
             price_rupees=b.price_rupees,
             payment_id=str(b.payment_id) if b.payment_id else None,
             payment_status=self._payment_status(b),
-            can_change=b.status in OPEN_STATUSES and is_open(b.proposed_date, self._now()),
+            can_change=b.status in OPEN_STATUSES and is_open(
+                b.proposed_date, self._now(), self._hour),
             created_at=b.created_at)
 
     def mine(self, customer: Customer) -> AddonsOut:
@@ -99,7 +105,7 @@ class AddonService:
                            "Add-ons are for a vehicle with an active subscription.", 409)
         price = self._price(body_service)
         finish = _time(finish_by)
-        require_open(day, now, bound=True)  # ADD-04
+        require_open(day, now, bound=True, hour=self._hour)  # ADD-04
         payment = self._billing.open_addon_payment(
             customer, vehicle, f"{body_service} on {day.strftime('%d-%b-%y')}", price)
         b = AddonBooking(
@@ -159,9 +165,9 @@ class AddonService:
         if b.status not in OPEN_STATUSES:
             raise ApiError("not_open", "This request can no longer be changed.", 409)
         now = self._now()
-        require_open(b.proposed_date, now, bound=True)
+        require_open(b.proposed_date, now, bound=True, hour=self._hour)
         if body.date is not None and body.date != b.proposed_date:
-            require_open(body.date, now, bound=True)
+            require_open(body.date, now, bound=True, hour=self._hour)
             b.proposed_date = body.date
         if body.finish_by is not None:
             b.finish_by = _time(body.finish_by)
@@ -172,7 +178,7 @@ class AddonService:
         b = self._own(customer, addon_id)
         if b.status not in OPEN_STATUSES:
             raise ApiError("not_open", "This request can no longer be cancelled.", 409)
-        require_open(b.proposed_date, self._now(), bound=True)
+        require_open(b.proposed_date, self._now(), bound=True, hour=self._hour)
         self._cancel(b)
         return self._out(b)
 

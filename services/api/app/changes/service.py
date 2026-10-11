@@ -18,6 +18,7 @@ from app.changes.rules import Clock, is_open, require_open, today_of
 from app.changes.schemas import ChangeOut, ChangesOut, PreferencesOut, UpcomingDay
 from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
 from app.customers.service import read_cutoff, show_time
+from app.directory import lookup
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
@@ -37,7 +38,8 @@ def renewal_for(db: Session, vehicle: Vehicle, sub: Subscription | None,
                 today: date) -> date | None:
     if sub is None:
         return None
-    return cycle_window(sub.first_service_date, len(paused_days(db, vehicle.id)), today)[1]
+    return cycle_window(sub.first_service_date, len(paused_days(db, vehicle.id)), today,
+                        lookup.setting(db, "billing.cycle_days"))[1]
 
 
 class ChangesService:
@@ -45,6 +47,10 @@ class ChangesService:
         self._db = db
         self._gateway = gateway
         self._now = now_fn
+
+    @property
+    def _hour(self) -> int:
+        return lookup.setting(self._db, "schedule.customer_change_hour")
 
     # --- reading -----------------------------------------------------------
 
@@ -102,7 +108,7 @@ class ChangesService:
                 skip_id=str(skip.id) if skip and not pause else None,
                 pause_id=str(pause.id) if pause else None,
                 cutoff_time=cut.cutoff_time.strftime("%H:%M") if cut else None,
-                can_change=is_open(d.day, now),
+                can_change=is_open(d.day, now, self._hour),
                 frozen=self._gateway.is_frozen(vehicle.id, d.day)))
         return days
 
@@ -139,7 +145,7 @@ class ChangesService:
         if again is not None:
             return self._out(again)
         self._require_active(sub)
-        require_open(day, now, bound=actor.bound)  # SKIP-02
+        require_open(day, now, bound=actor.bound, hour=self._hour)  # SKIP-02
         if self._inside_pause(vehicle.id, day):
             raise ApiError("inside_pause",
                            "That date is inside a pause, so it is already not serviced.",
@@ -168,7 +174,7 @@ class ChangesService:
         change = self._change(vehicle, change_id, "skip")
         if change.status != "Active":
             raise ApiError("not_found", "That skip was not found.", 404)
-        require_open(change.start_date, self._now(), bound=actor.bound)  # SKIP-07
+        require_open(change.start_date, self._now(), bound=actor.bound, hour=self._hour)  # SKIP-07
         self._gateway.unskip_day(vehicle.id, change.start_date)
         change.status = "Cancelled"
         change.ended_at = utcnow()
@@ -192,7 +198,7 @@ class ChangesService:
         if end < start:
             raise ApiError("validation_failed", "The end date is before the start date.",
                            422, {"to_date": "before_start"})
-        require_open(start, now, bound=actor.bound)  # PAUSE-07
+        require_open(start, now, bound=actor.bound, hour=self._hour)  # PAUSE-07
         wanted = {start + timedelta(days=i) for i in range((end - start).days + 1)}
         if wanted & paused_days(self._db, vehicle.id):
             raise ApiError("pause_overlaps", "Those dates overlap a pause you already have.",
@@ -223,12 +229,12 @@ class ChangesService:
         if pause.status != "Active" or pause.end_date < today:
             raise ApiError("pause_over", "That pause is over already.", 409)
         if pause.start_date > today:
-            require_open(pause.start_date, now, bound=actor.bound)
+            require_open(pause.start_date, now, bound=actor.bound, hour=self._hour)
             self._gateway.resume_range(vehicle.id, pause.start_date, pause.end_date)
             pause.status = "Cancelled"
         else:
             resume = today + timedelta(days=1)
-            if actor.bound and not is_open(resume, now):
+            if actor.bound and not is_open(resume, now, self._hour):
                 resume += timedelta(days=1)
             if resume > pause.end_date:
                 raise ApiError("pause_ending", "That pause ends tomorrow already.", 409)
@@ -251,7 +257,7 @@ class ChangesService:
         if cutoff is None:
             raise ApiError("validation_failed", "Please select your service cutoff time.",
                            422, {"cutoff_time": "invalid"})
-        require_open(day, self._now(), bound=actor.bound)  # SCHED-01
+        require_open(day, self._now(), bound=actor.bound, hour=self._hour)  # SCHED-01
         if self._inside_pause(vehicle.id, day):
             raise ApiError("inside_pause", "That date is inside a pause.", 409,
                            {"date": "inside_pause"})
@@ -287,7 +293,7 @@ class ChangesService:
             raise ApiError("validation_failed", "Please select your interior care day.",
                            422, {"interior_day": "invalid"})
         start = today_of(now) + timedelta(days=1)
-        if actor.bound and not is_open(start, now):
+        if actor.bound and not is_open(start, now, self._hour):
             start += timedelta(days=1)
         frozen = 0
         if cutoff is not None:

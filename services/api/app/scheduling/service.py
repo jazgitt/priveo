@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.changes.models import ScheduleChange
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
+from app.directory import lookup
 from app.directory.models import Society
 from app.identity.models import Login
 from app.notifications import emit  # notify hook
@@ -176,8 +177,9 @@ def capacity(db: Session, society_id: uuid.UUID, start: date, end: date,
     crew = load_crew(db, society_id)
     windows = availability(db, crew, days)
     demand_minutes = dict.fromkeys(days, 0)
+    durations = lookup.durations(db)
     for d in build_demand(db, society_id, days):
-        demand_minutes[d.day] += d.duration
+        demand_minutes[d.day] += durations.get(d.service, d.duration)
     scheduled = dict.fromkeys(days, 0)
     if schedule is not None:
         rows = db.execute(
@@ -280,6 +282,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     before = emit.assignment_snapshot(db, schedule)  # notify hook
     days = daterange(schedule.start_date, schedule.end_date)
     demand = build_demand(db, schedule.society_id, days)
+    durations = lookup.durations(db)
 
     visits = {(v.vehicle_id, v.date): v for v in db.execute(
         select(Visit).where(Visit.schedule_id == schedule.id)).scalars()}
@@ -297,7 +300,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             visits[(item.vehicle_id, item.day)] = visit
         job = existing.get(key)
         if job is None:
-            db.add(Job(visit_id=visit.id, service=item.service, duration_minutes=item.duration,
+            db.add(Job(visit_id=visit.id, service=item.service,
+                       duration_minutes=durations.get(item.service, item.duration),
                        finish_by_minute=item.finish_by, addon_request_id=item.addon_request_id,
                        status="Skipped" if item.skipped else "Scheduled"))
         else:
@@ -462,7 +466,7 @@ def freeze(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) -> Sched
 
 def unfreeze(db: Session, schedule: Schedule, code: str,
              admin_id: uuid.UUID | None) -> Schedule:
-    if code != rules.UNFREEZE_CODE:
+    if code != lookup.unfreeze_code(db):
         raise ApiError("wrong_code", "That code is not right.", 403)
     if schedule.status != "Frozen":
         raise ApiError("not_frozen", "This schedule is not frozen.", 409)
@@ -477,9 +481,10 @@ def unfreeze(db: Session, schedule: Schedule, code: str,
 def freeze_due(db: Session, now: datetime) -> list[uuid.UUID]:
     """Freeze every Draft whose freeze cutoff time has passed (ADM-SCH-25)."""
     frozen = []
+    hour = lookup.setting(db, "schedule.freeze_hour")
     drafts = db.execute(select(Schedule).where(Schedule.status == "Draft")).scalars().all()
     for schedule in drafts:
-        if now >= rules.freeze_deadline(schedule.start_date):
+        if now >= rules.freeze_deadline(schedule.start_date, hour):
             schedule.status = "Frozen"
             schedule.frozen_at = utcnow()
             record(db, schedule.id, None, "freeze", "at the freeze cutoff time")
@@ -552,7 +557,8 @@ def board(db: Session, schedule: Schedule) -> dict:
             "society_name": society.name if society else "",
             "start_date": schedule.start_date, "end_date": schedule.end_date,
             "status": schedule.status, "frozen_at": schedule.frozen_at,
-            "freeze_deadline": rules.freeze_deadline(schedule.start_date),
+            "freeze_deadline": rules.freeze_deadline(
+                schedule.start_date, lookup.setting(db, "schedule.freeze_hour")),
         },
         "days": capacity(db, schedule.society_id, schedule.start_date, schedule.end_date,
                          schedule),

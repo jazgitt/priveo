@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customer_reads.repository import ChecklistEntry, Job, ProofItem, Visit
+from app.directory import lookup
 from app.identity.models import Login
 from app.media.service import confirmed_proof, download_url
 from app.media.store import ObjectStore, get_object_store
@@ -17,7 +18,6 @@ from app.scheduling.models import Job as JobRow
 from app.scheduling.models import Schedule, SchedulingCrew
 from app.scheduling.models import Visit as VisitRow
 from app.visits.models import JobChecklistProgress, JobTiming
-from app.visits.service import CHECKLISTS
 
 # The scheduler's job statuses as the customer screens name them.
 _JOB_STATUS = {
@@ -94,6 +94,16 @@ class SqlVisitReadRepository:
         row = self.db.get(VisitRow, ids[0]) if ids else None
         return self._visits([row])[0] if row else None
 
+    def _checklist(self, service: str, ticked: dict[str, datetime]) -> list[ChecklistEntry]:
+        """The active items, plus any ticked item the admin has since switched
+        off, so a finished visit stays readable (ADM-CHK-05)."""
+        items = [(i.key, i.label) for i in lookup.checklist_for(self.db, service)]
+        shown = {k for k, _ in items}
+        items += [(k, lookup.checklist_label(self.db, service, k) or k)
+                  for k in ticked if k not in shown]
+        return [ChecklistEntry(key=k, label=label, checked_at=ticked.get(k))
+                for k, label in items]
+
     def jobs(self, visit_ids: Sequence[str]):
         ids = _ids(visit_ids)
         if not ids:
@@ -125,9 +135,7 @@ class SqlVisitReadRepository:
                 crew_name=first or None,
                 started_at=timing.started_at if timing else None,
                 finished_at=timing.finished_at if timing else None,
-                checklist=[ChecklistEntry(key=key, label=label,
-                                          checked_at=ticks.get(r.id, {}).get(key))
-                           for key, label in CHECKLISTS.get(r.service, ())],
+                checklist=self._checklist(r.service, ticks.get(r.id, {})),
                 start_minute=r.start_minute, duration_minutes=r.duration_minutes,
                 finish_by_minute=r.finish_by_minute,
                 addon_request_id=str(r.addon_request_id) if r.addon_request_id else None))
