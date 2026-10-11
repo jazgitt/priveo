@@ -114,7 +114,8 @@ def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingC
 
 def availability(db: Session, crew: dict[uuid.UUID, SchedulingCrew],
                  days: list[date]) -> dict[date, dict[uuid.UUID, tuple[int, int]]]:
-    """For each date, the working window of every counted crew member."""
+    """For each date, the working window of every counted crew member: the
+    weekday's hours, then the date's exception (ADM-CRW-04, ADM-CRW-09)."""
     exceptions: dict[tuple[uuid.UUID, date], SchedulingCrewException] = {}
     if crew and days:
         for ex in db.execute(
@@ -128,7 +129,11 @@ def availability(db: Session, crew: dict[uuid.UUID, SchedulingCrew],
         out[day] = {}
         for cid, c in crew.items():
             ex = exceptions.get((cid, day))
-            window = rules.window_for(c.role, c.start_minute, c.end_minute,
+            base = rules.hours_window(c.working_hours, day.weekday(), c.start_minute,
+                                      c.end_minute)
+            if base is None:
+                continue
+            window = rules.window_for(c.role, base[0], base[1],
                                       ex.kind if ex else None, ex.from_minute if ex else None)
             if window is not None:
                 out[day][cid] = window
@@ -164,6 +169,38 @@ def capacity(db: Session, society_id: uuid.UUID, start: date, end: date,
             "over_capacity": demand_minutes[day] > cap,
         })
     return out
+
+
+def release_unfit(db: Session, crew: SchedulingCrew, today: date) -> list[dict]:
+    """Takes the crew member's open jobs from `today` on that no longer fit
+    (the day is off, an exception, a shorter day, a Trainee, deactivated) and
+    puts them on the Needs scheduling list. No unfreeze code is needed
+    (ADM-CRW-12, ADM-SCH-29). Started and finished jobs stay. The caller
+    commits."""
+    rows = db.execute(
+        select(Job, Visit, Vehicle)
+        .join(Visit, Job.visit_id == Visit.id)
+        .join(Vehicle, Visit.vehicle_id == Vehicle.id)
+        .where(Job.crew_id == crew.id, Job.status == "Scheduled", Visit.date >= today)
+        .order_by(Visit.date, Job.start_minute)
+    ).all()
+    if not rows:
+        return []
+    days = sorted({visit.date for _job, visit, _v in rows})
+    windows = availability(db, {crew.id: crew}, days) if crew.active else {}
+    released = []
+    for job, visit, vehicle in rows:
+        window = windows.get(visit.date, {}).get(crew.id)
+        start = job.start_minute or 0
+        if (window is not None and start >= window[0]
+                and start + job.duration_minutes <= window[1]):
+            continue
+        job.crew_id, job.start_minute, job.late, job.manual = None, None, False, False
+        job.note = "The crew member is not available."
+        released.append({"job_id": job.id, "date": visit.date, "service": job.service,
+                         "vehicle_id": vehicle.id, "registration": vehicle.registration or ""})
+    db.flush()
+    return released
 
 
 # ---- schedules -------------------------------------------------------------

@@ -2,6 +2,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     ForeignKey,
@@ -23,10 +24,11 @@ CREW_ROLES = ("Member", "Trainee", "Manager")
 
 
 class SchedulingCrew(Base):
-    """A crew member as the scheduler sees them: the society, the role and the
-    daily working window. Stand-in for the crew directory (ADM-CRW) until that
-    module exists. Trainees count zero capacity and are never assigned
-    (ADM-CAP-02, ADM-CRW-14)."""
+    """A crew member as the scheduler sees them: the society, the role, the
+    pairing, the working hours and whether they count. This is the one
+    operational record: `CrewService` creates it with the crew member and
+    keeps it in step (ADM-CRW). Trainees count zero capacity and are never
+    assigned (ADM-CAP-02, ADM-CRW-14)."""
 
     __tablename__ = "scheduling_crew"
 
@@ -34,9 +36,13 @@ class SchedulingCrew(Base):
     login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), unique=True)
     society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
     role: Mapped[str] = mapped_column(String(8), default="Member")
-    # The working window, in minutes after midnight. The same on every day.
+    # The working window, in minutes after midnight. Used on every day when
+    # `working_hours` is empty. Otherwise the earliest start and latest end of
+    # the working days, as a summary.
     start_minute: Mapped[int] = mapped_column(Integer, default=360)
     end_minute: Mapped[int] = mapped_column(Integer, default=660)
+    # One entry for each weekday: {"day", "working", "start", "end"} (ADM-CRW-04).
+    working_hours: Mapped[list | None] = mapped_column(JSON)
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).
     paired_member_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("scheduling_crew.id"))

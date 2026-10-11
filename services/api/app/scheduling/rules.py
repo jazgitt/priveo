@@ -59,3 +59,21 @@ def window_for(role: str, start: int, end: int, exception_kind: str | None,
     if exception_kind == "Late start" and from_minute is not None:
         start = max(start, from_minute)
     return (start, end) if end > start else None
+
+
+def hours_window(working_hours: list | None, weekday: int, start: int,
+                 end: int) -> tuple[int, int] | None:
+    """The base window on a weekday (0 is Monday) from the per-weekday hours
+    (ADM-CRW-04). With no per-weekday hours the single window applies every
+    day. None on a day off."""
+    if not working_hours:
+        return (start, end)
+    entry = working_hours[weekday] if weekday < len(working_hours) else None
+    if not entry or not entry.get("working"):
+        return None
+    try:
+        s_h, s_m = entry["start"].split(":")
+        e_h, e_m = entry["end"].split(":")
+    except (KeyError, ValueError, AttributeError):
+        return None
+    return (int(s_h) * 60 + int(s_m), int(e_h) * 60 + int(e_m))
