@@ -30,8 +30,10 @@ class _PaymentsState extends ConsumerState<PaymentsToConfirmScreen> {
       }
       ref.invalidate(paymentsToConfirmProvider);
       if (mounted) {
-        showMessage(context,
-            confirm ? MoneyStrings.adminConfirmed : MoneyStrings.adminRejected);
+        showMessage(
+          context,
+          confirm ? MoneyStrings.adminConfirmed : MoneyStrings.adminRejected,
+        );
       }
     } catch (e) {
       if (mounted) showFailure(context, e);
@@ -48,16 +50,20 @@ class _PaymentsState extends ConsumerState<PaymentsToConfirmScreen> {
       body: payments.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
-            message: failureText(e),
-            onRetry: () => ref.invalidate(paymentsToConfirmProvider)),
+          message: failureText(e),
+          onRetry: () => ref.invalidate(paymentsToConfirmProvider),
+        ),
         data: (rows) => RefreshIndicator(
           onRefresh: () => ref.refresh(paymentsToConfirmProvider.future),
           child: rows.isEmpty
-              ? ListView(children: const [
-                  Padding(
+              ? ListView(
+                  children: const [
+                    Padding(
                       padding: EdgeInsets.all(24),
-                      child: Text(MoneyStrings.adminNoPayments)),
-                ])
+                      child: Text(MoneyStrings.adminNoPayments),
+                    ),
+                  ],
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: rows.length,
@@ -73,11 +79,14 @@ class _PaymentsState extends ConsumerState<PaymentsToConfirmScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                    '${p.customerName}${p.flat.isEmpty ? '' : ', ${p.flat}'}',
-                                    style: Theme.of(context).textTheme.titleSmall),
+                                  '${p.customerName}${p.flat.isEmpty ? '' : ', ${p.flat}'}',
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
                               ),
-                              Text(formatRupees(p.amountRupees),
-                                  style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                formatRupees(p.amountRupees),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                             ],
                           ),
                           Text('${p.kind}: ${p.description}'),
@@ -125,8 +134,9 @@ class AdminAlertsScreen extends ConsumerWidget {
       body: alerts.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
-            message: failureText(e),
-            onRetry: () => ref.invalidate(adminAlertsProvider)),
+          message: failureText(e),
+          onRetry: () => ref.invalidate(adminAlertsProvider),
+        ),
         data: (rows) => rows.isEmpty
             ? const Center(child: Text(MoneyStrings.adminNoAlerts))
             : ListView.separated(
@@ -142,10 +152,14 @@ class AdminAlertsScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(a.message,
-                                  style: a.read
-                                      ? null
-                                      : const TextStyle(fontWeight: FontWeight.w700)),
+                              Text(
+                                a.message,
+                                style: a.read
+                                    ? null
+                                    : const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                              ),
                               Text(formatDate(a.createdAt.toLocal())),
                             ],
                           ),
