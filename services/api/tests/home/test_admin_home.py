@@ -7,7 +7,7 @@ from app.billing.models import MoneyAlert, Payment
 from app.platform.db import utcnow
 from app.support.alerts import raise_alert
 from app.support.models import Complaint
-from tests.scheduling.conftest import SUNDAY, admin, api, run_week, world  # noqa: F401
+from tests.scheduling.conftest import SUNDAY
 from tests.test_api import auth, login
 
 
