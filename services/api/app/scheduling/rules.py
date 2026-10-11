@@ -5,6 +5,8 @@ from datetime import date, datetime, time, timedelta
 
 from app.platform.clock import IST
 
+# Starting values. The admin sets the live ones (ADM-SET-*, `schedule.*`),
+# read through `app.directory.lookup`.
 # ADM-SCH-18: the secret code that unfreezes a schedule is the word "unfreeze".
 UNFREEZE_CODE = "unfreeze"
 
@@ -12,19 +14,19 @@ FREEZE_HOUR = 20     # ADM-SCH-25: 8 PM the day before the first day.
 CUSTOMER_HOUR = 21   # SCHED-01: customers change by 9 PM the previous day.
 
 
-def freeze_deadline(first_day: date) -> datetime:
+def freeze_deadline(first_day: date, hour: int = FREEZE_HOUR) -> datetime:
     """8 PM (IST) the day before the first day of the schedule's period."""
-    return datetime.combine(first_day - timedelta(days=1), time(FREEZE_HOUR), tzinfo=IST)
+    return datetime.combine(first_day - timedelta(days=1), time(hour), tzinfo=IST)
 
 
-def customer_deadline(day: date) -> datetime:
+def customer_deadline(day: date, hour: int = CUSTOMER_HOUR) -> datetime:
     """The last moment a customer can change that date's schedule. The admin
     is not bound by it (ADM-CUS-11)."""
-    return datetime.combine(day - timedelta(days=1), time(CUSTOMER_HOUR), tzinfo=IST)
+    return datetime.combine(day - timedelta(days=1), time(hour), tzinfo=IST)
 
 
-def customer_can_change(day: date, now: datetime) -> bool:
-    return now < customer_deadline(day)
+def customer_can_change(day: date, now: datetime, hour: int = CUSTOMER_HOUR) -> bool:
+    return now < customer_deadline(day, hour)
 
 
 def visit_status(job_statuses: Iterable[str]) -> str:

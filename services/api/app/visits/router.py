@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.directory import lookup
 from app.identity.service import User
 from app.platform.clock import today_ist
 from app.platform.db import get_db
@@ -26,8 +27,8 @@ def my_jobs(day: Annotated[date | None, Query(alias="date")] = None,
 
 
 @router.get("/reasons", response_model=list[s.Reason])
-def reasons(user: User = Depends(require_role("crew"))):
-    return [s.Reason(key=k, label=label) for k, label in service.REASONS]
+def reasons(user: User = Depends(require_role("crew")), db: Session = Depends(get_db)):
+    return [s.Reason(key=r.key, label=r.label) for r in lookup.reasons(db)]
 
 
 @router.get("/jobs/{job_id}", response_model=s.JobDetail)

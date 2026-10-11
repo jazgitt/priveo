@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 
 import 'checkin_screen.dart';
 import 'complaints_screen.dart';
-import 'crew_ratings_screen.dart';
 import 'faq_screen.dart';
 import 'help_screen.dart';
 import 'report_issue_screen.dart';
@@ -15,7 +14,6 @@ class SupportRoutes {
   static const complaints = '/customer/support/complaints';
   static String complaint(String id) => '/customer/support/complaints/$id';
   static const checkin = '/customer/support/checkin';
-  static const crewRatings = '/crew/ratings';
 }
 
 /// Routes for the router to include. Open the report form for one clean with
@@ -40,7 +38,4 @@ final List<RouteBase> routes = [
     builder: (_, state) =>
         CheckInScreen(subscriptionId: state.uri.queryParameters['subscription']),
   ),
-  GoRoute(
-      path: SupportRoutes.crewRatings,
-      builder: (_, _) => const CrewRatingsScreen()),
 ];

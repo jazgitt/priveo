@@ -23,4 +23,5 @@ export const NAV: NavItem[] = [
   { path: "/operations", label: "Operations", about: "Skips by operations and daily jobs." },
   { path: "/reference", label: "Reference data", about: "Checklists, proof minimums and plans." },
   { path: "/settings", label: "Settings", about: "Cutoff times, sessions and portal settings." },
+  { path: "/audit", label: "Audit", about: "Who changed reference data and settings, and what changed." },
 ];

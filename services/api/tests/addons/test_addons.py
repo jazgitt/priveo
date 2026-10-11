@@ -127,3 +127,16 @@ def test_the_admin_lists_and_updates_requests_without_the_9pm_rule(money):
                        headers=m.admin)
     assert r.status_code == 422
     assert m.client.get("/v1/admin/addons", headers=m.customer).status_code == 403
+
+
+def test_a_changed_add_on_price_is_the_one_offered(money):
+    from app.directory.models import AddonCatalogueItem
+    from app.directory.seed import seed_defaults
+    seed_defaults(money.db)
+    row = money.db.scalar(
+        select(AddonCatalogueItem).where(AddonCatalogueItem.service == "Deep Spa"))
+    row.price_rupees = 1777
+    money.db.commit()
+    offers = money.client.get("/v1/customer/addons", headers=money.customer).json()["offers"]
+    assert offers[0]["price_rupees"] == 1777
+    assert request(money).json()["price_rupees"] == 1777

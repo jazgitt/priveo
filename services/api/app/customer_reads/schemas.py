@@ -172,6 +172,8 @@ class VehicleDetail(VehicleSummary):
     parking_basement: str
     parking_number: str
     parking: str
+    # Uploaded or Not uploaded (VEH-03). Derived: there is no admin check yet.
+    rc_status: str = "Not uploaded"
     monthly_price_rupees: int | None
     cutoff_time: str | None
     interior_day: str | None

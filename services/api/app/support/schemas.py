@@ -83,7 +83,9 @@ class ComplaintSummary(BaseModel):
 
 
 class ComplaintDetail(ComplaintSummary):
+    # Upload IDs of the photos (ISS-04), and signed read URLs in the same order.
     photo_keys: list[str]
+    photo_urls: list[str] = []
     updates: list[UpdateOut]
 
 
@@ -97,6 +99,7 @@ class AdminComplaintSummary(ComplaintSummary):
 
 class AdminComplaintDetail(AdminComplaintSummary):
     photo_keys: list[str]
+    photo_urls: list[str] = []
     updates: list[UpdateOut]
 
 

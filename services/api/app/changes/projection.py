@@ -22,14 +22,15 @@ def day_services(sub: Subscription | None, day: date) -> list[str]:
     return services
 
 
-def renewals_between(first_service_date: date, paused: int, start: date, end: date) -> list[date]:
+def renewals_between(first_service_date: date, paused: int, start: date, end: date,
+                     cycle_days: int = CYCLE_DAYS) -> list[date]:
     """The renewal dates in [start, end]. Every day paused moves them one day
     on (PAUSE-02), the same rule as `cycle.cycle_window`."""
     anchor = first_service_date + timedelta(days=paused)
     out = []
-    n = max(1, (start - anchor).days // CYCLE_DAYS)
+    n = max(1, (start - anchor).days // cycle_days)
     while True:
-        d = anchor + timedelta(days=CYCLE_DAYS * n)
+        d = anchor + timedelta(days=cycle_days * n)
         if d > end:
             return out
         if d >= start:

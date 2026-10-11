@@ -312,28 +312,6 @@ void main() {
     });
   });
 
-  group('crew ratings', () {
-    testWidgets('shows the average and count, and nothing personal',
-        (tester) async {
-      await pumpSupport(tester, initial: SupportRoutes.crewRatings);
-      expect(find.text('4.5'), findsOneWidget);
-      expect(find.text('4 ratings in the last 30 days'), findsOneWidget);
-      expect(
-          find.text(
-              'Customers rate each visit as a whole. A rating is never given to a crew member.'),
-          findsOneWidget);
-    });
-
-    testWidgets('says so when there are none', (tester) async {
-      final repo = FakeSupportRepository()
-        ..ratings = const CrewRatings(
-            periodDays: 30, count: 0, average: null, stars: {});
-      await pumpSupport(tester,
-          initial: SupportRoutes.crewRatings, repo: repo);
-      expect(find.text('No ratings yet.'), findsOneWidget);
-    });
-  });
-
   group('admin alerts', () {
     AdminAlert alert(String id, String title, {bool read = false}) =>
         AdminAlert(
@@ -419,16 +397,6 @@ void main() {
           'https://wa.me/919876543210');
     });
 
-    test('crew ratings JSON', () {
-      final r = CrewRatings.fromJson({
-        'period_days': 30,
-        'count': 1,
-        'average': 3.0,
-        'stars': {'1': 0, '3': 1},
-      });
-      expect(r.stars[3], 1);
-      expect(r.average, 3.0);
-    });
   });
 }
 

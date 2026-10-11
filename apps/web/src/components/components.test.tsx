@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -37,6 +38,24 @@ describe("components", () => {
     expect(screen.getByRole("dialog", { name: "Confirm" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Dialog keeps focus on the field being typed in when the parent re-renders", async () => {
+    function Host() {
+      const [v, setV] = useState("");
+      // A new onClose function on every render.
+      return (
+        <Dialog open title="Edit" onClose={() => setV("")}>
+          <TextField label="Name" value={v} onChange={(e) => setV(e.target.value)} />
+        </Dialog>
+      );
+    }
+    render(<Host />);
+    const input = screen.getByLabelText("Name");
+    await userEvent.click(input);
+    await userEvent.keyboard("abc");
+    expect(input).toHaveValue("abc");
+    expect(input).toHaveFocus();
   });
 
   it("Toast shows a message", async () => {

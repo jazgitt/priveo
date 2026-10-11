@@ -410,8 +410,16 @@ class VehicleDetailDto extends VehicleSummaryDto {
     required this.monthlyPriceRupees,
     required this.cutoffTime,
     required this.interiorDay,
+    this.parkingBasement = '',
+    this.parkingNumber = '',
+    this.rcStatus = 'Not uploaded',
   });
 
+  final String parkingBasement;
+  final String parkingNumber;
+
+  /// Uploaded or Not uploaded (VEH-03).
+  final String rcStatus;
   final String make;
   final String variant;
   final String category;
@@ -434,6 +442,9 @@ class VehicleDetailDto extends VehicleSummaryDto {
     monthlyPriceRupees: j['monthly_price_rupees'] as int?,
     cutoffTime: j['cutoff_time'] as String?,
     interiorDay: j['interior_day'] as String?,
+    parkingBasement: (j['parking_basement'] as String?) ?? '',
+    parkingNumber: (j['parking_number'] as String?) ?? '',
+    rcStatus: (j['rc_status'] as String?) ?? 'Not uploaded',
   );
 }
 

@@ -8,10 +8,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, Subscription, Vehicle
+from app.directory import lookup
 from app.directory.models import Society
+from app.media import service as media
+from app.media.models import STATUS_CONFIRMED, MediaUpload
+from app.media.store import get_object_store
 from app.platform.clock import today_ist
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
+from app.scheduling.models import Visit
 from app.support import alerts, defaults
 from app.support.models import (
     COMPLAINT_STATUSES,
@@ -46,6 +51,8 @@ from app.support.schemas import (
 )
 
 REPLY_WITHIN = timedelta(hours=4)  # ISS-06, ADM-CMP-06
+# Starting values; the live ones are `support.checkin_days_before` and
+# `billing.cycle_days` (see app.directory.lookup).
 CHECKIN_DAYS_BEFORE = 4  # CHK-01
 CYCLE_DAYS = 30
 CREW_RATINGS_DAYS = 30
@@ -61,14 +68,15 @@ def display_id(number: int) -> str:
     return f"#C-{number:04d}"
 
 
-def cycle_for(first_service: date, today: date) -> tuple[date, date] | None:
+def cycle_for(first_service: date, today: date,
+              cycle_days: int = CYCLE_DAYS) -> tuple[date, date] | None:
     """The 30-day billing cycle that contains `today`, as (start, renewal date).
     None before the first service date."""
     if today < first_service:
         return None
-    whole_cycles = (today - first_service).days // CYCLE_DAYS
-    start = first_service + timedelta(days=CYCLE_DAYS * whole_cycles)
-    return start, start + timedelta(days=CYCLE_DAYS)
+    whole_cycles = (today - first_service).days // cycle_days
+    start = first_service + timedelta(days=cycle_days * whole_cycles)
+    return start, start + timedelta(days=cycle_days)
 
 
 class SupportService:
@@ -195,6 +203,38 @@ class SupportService:
         return UpdateOut(id=u.id, author_role=u.author_role, note=u.note, status=u.status,
                          created_at=u.created_at)
 
+    def _check_visit(self, customer: Customer, visit_id: str | None) -> None:
+        """The linked visit must be a visit of one of the customer's vehicles."""
+        if visit_id is None:
+            return
+        error = ApiError("validation_failed", "Choose one of your visits.", 422,
+                         {"visit_id": "Choose one of your visits."})
+        try:
+            visit = self.db.get(Visit, uuid.UUID(visit_id))
+        except ValueError:
+            raise error from None
+        owned = self.db.scalar(select(Vehicle.id).where(
+            Vehicle.id == (visit.vehicle_id if visit else None),
+            Vehicle.customer_id == customer.id))
+        if visit is None or owned is None:
+            raise error
+
+    def _check_photos(self, customer: Customer, keys: list[str]) -> list[str]:
+        """Photo keys are IDs of the customer's own confirmed complaint uploads."""
+        out: list[str] = []
+        for key in keys:
+            try:
+                upload = self.db.get(MediaUpload, uuid.UUID(key))
+            except ValueError:
+                upload = None
+            if (upload is None or upload.owner_login_id != customer.login_id
+                    or upload.purpose != "complaint" or upload.status != STATUS_CONFIRMED):
+                raise ApiError("validation_failed", "A photo could not be used.", 422,
+                               {"photo_keys": "Upload the photo again."})
+            if str(upload.id) not in out:
+                out.append(str(upload.id))
+        return out
+
     def create_complaint(self, customer: Customer, category: str, description: str,
                          visit_id: str | None, photo_keys: list[str]) -> ComplaintDetail:
         if category not in ISSUE_CATEGORIES:  # ISS-05
@@ -203,6 +243,9 @@ class SupportService:
         if not description.strip():
             raise ApiError("validation_failed", "Describe what happened.", 422,
                            {"description": "Describe what happened."})
+        visit_id = (visit_id or "").strip() or None
+        self._check_visit(customer, visit_id)  # ISS-02
+        photo_keys = self._check_photos(customer, photo_keys)  # ISS-04
         number = (self.db.scalar(select(func.max(Complaint.number))) or 0) + 1
         now = self._now()
         complaint = Complaint(number=number, customer_id=customer.id, category=category,
@@ -239,7 +282,9 @@ class SupportService:
         c = self._own(customer, complaint_id)
         updates = self._updates(c.id)
         notes = self._latest_notes([c.id])
-        return ComplaintDetail(**self._summary(c, notes.get(c.id)), photo_keys=c.photo_keys or [],
+        keys = c.photo_keys or []
+        return ComplaintDetail(**self._summary(c, notes.get(c.id)), photo_keys=keys,
+                               photo_urls=media.upload_urls(self.db, get_object_store(), keys),
                                updates=[self._update_out(u) for u in updates])
 
     def customer_message(self, customer: Customer, complaint_id: uuid.UUID,
@@ -288,6 +333,7 @@ class SupportService:
         names = self._names({c.customer_id})
         return AdminComplaintDetail(
             **self._admin_summary(c, notes.get(c.id), names), photo_keys=c.photo_keys or [],
+            photo_urls=media.upload_urls(self.db, get_object_store(), c.photo_keys or []),
             updates=[self._update_out(u) for u in self._updates(c.id)])
 
     def _push_customer(self, c: Complaint, body: str) -> None:
@@ -438,12 +484,14 @@ class SupportService:
             .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
             .where(Vehicle.customer_id == customer.id, Subscription.status == "Active"))
         pending = []
+        cycle_days = lookup.setting(self.db, "billing.cycle_days")
+        before = lookup.setting(self.db, "support.checkin_days_before")
         for sub, vehicle in rows:
-            cycle = cycle_for(sub.first_service_date, today)
+            cycle = cycle_for(sub.first_service_date, today, cycle_days)
             if cycle is None:
                 continue
             start, renewal = cycle
-            if today < renewal - timedelta(days=CHECKIN_DAYS_BEFORE):
+            if today < renewal - timedelta(days=before):
                 continue
             if self.db.scalar(select(CheckIn.id).where(
                     CheckIn.subscription_id == sub.id, CheckIn.cycle_start == start)):
@@ -477,7 +525,9 @@ class SupportService:
         """Sends the check-in push (CHK-01) to each customer whose renewal is
         four days away today. Run once a day by the scheduler. Matching the
         exact day is what stops it being sent twice."""
-        target = self._today() + timedelta(days=CHECKIN_DAYS_BEFORE)
+        target = self._today() + timedelta(
+            days=lookup.setting(self.db, "support.checkin_days_before"))
+        cycle_days = lookup.setting(self.db, "billing.cycle_days")
         rows = self.db.execute(
             select(Subscription, Customer)
             .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
@@ -485,7 +535,7 @@ class SupportService:
             .where(Subscription.status == "Active"))
         sent = 0
         for sub, customer in rows:
-            cycle = cycle_for(sub.first_service_date, self._today())
+            cycle = cycle_for(sub.first_service_date, self._today(), cycle_days)
             if cycle is None or cycle[1] != target:
                 continue
             self.push.push_customer(customer.login_id, "Monthly check-in",

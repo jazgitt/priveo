@@ -38,7 +38,9 @@ def test_health_and_config(client):
 def test_login_and_home(client, role):
     data = login(client, role)
     assert data["role"] == role
-    r = client.get(f"/v1/{role}/home", headers=auth(data["access_token"]))
+    # The crew app reads its cards from /v1/crew/visits (no mock crew home).
+    path = "visits" if role == "crew" else "home"
+    r = client.get(f"/v1/{role}/{path}", headers=auth(data["access_token"]))
     assert r.status_code == 200
 
 
@@ -121,13 +123,13 @@ def test_an_inactive_login_cannot_sign_in(client, db):
     db.commit()
     assert sign_in(client, "crew").status_code == 401
     # The session it already had ends at once (CRW-ACC-11).
-    assert client.get("/v1/crew/home", headers=auth(data["access_token"])).status_code == 401
+    assert client.get("/v1/crew/visits", headers=auth(data["access_token"])).status_code == 401
 
 
 def test_role_is_enforced(client):
     token = login(client, "customer")["access_token"]
     assert client.get("/v1/admin/home", headers=auth(token)).status_code == 403
-    assert client.get("/v1/crew/home").status_code == 401
+    assert client.get("/v1/crew/visits").status_code == 401
 
 
 def test_refresh_gives_new_tokens_and_the_old_one_stops(client):
@@ -136,11 +138,11 @@ def test_refresh_gives_new_tokens_and_the_old_one_stops(client):
     assert r.status_code == 200
     new = r.json()
     assert new["refresh_token"] != data["refresh_token"]
-    assert client.get("/v1/crew/home", headers=auth(new["access_token"])).status_code == 200
+    assert client.get("/v1/crew/visits", headers=auth(new["access_token"])).status_code == 200
     again = client.post("/v1/auth/refresh", json={"refresh_token": data["refresh_token"]})
     assert again.status_code == 401
     # A refresh token must not work as an access token.
-    assert client.get("/v1/crew/home", headers=auth(new["refresh_token"])).status_code == 401
+    assert client.get("/v1/crew/visits", headers=auth(new["refresh_token"])).status_code == 401
 
 
 def test_logout_ends_the_session_at_once(client):
@@ -167,7 +169,7 @@ def test_admin_signs_out_of_all_devices(client, db):
         assert client.get("/v1/admin/home",
                           headers=auth(device["access_token"])).status_code == 401
     # Other people stay signed in, and the action is recorded with its time.
-    assert client.get("/v1/crew/home", headers=auth(crew["access_token"])).status_code == 200
+    assert client.get("/v1/crew/visits", headers=auth(crew["access_token"])).status_code == 200
     event = db.scalar(select(AuthEvent).where(AuthEvent.kind == "logout_all"))
     assert event is not None and event.at is not None
 
@@ -188,7 +190,7 @@ def test_admin_phone_signs_out_after_24_idle_hours(client, db):
     r = client.post("/v1/auth/refresh", json={"refresh_token": admin["refresh_token"]})
     assert r.status_code == 401
     # Crew and customers have no idle time-out (CRW-ACC-11, AUTH-17).
-    assert client.get("/v1/crew/home", headers=auth(crew["access_token"])).status_code == 200
+    assert client.get("/v1/crew/visits", headers=auth(crew["access_token"])).status_code == 200
 
 
 def test_demo_logins_are_not_seeded_unless_asked(monkeypatch, db, settings):
@@ -200,9 +202,9 @@ def test_demo_logins_are_not_seeded_unless_asked(monkeypatch, db, settings):
     assert db.scalar(select(Login).where(Login.role == "crew")) is None
 
 
-def test_crew_home_has_no_customer_details(client):
+def test_crew_visits_have_no_customer_details(client):
     token = login(client, "crew")["access_token"]
-    text = client.get("/v1/crew/home", headers=auth(token)).text.lower()
+    text = client.get("/v1/crew/visits", headers=auth(token)).text.lower()
     assert "customer" not in text and "mobile" not in text and "phone" not in text
 
 

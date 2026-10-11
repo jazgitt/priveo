@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.changes.extension import extend_for_skipped_job
 from app.customers.models import Vehicle
+from app.directory import lookup
 from app.directory.models import Society
 from app.identity.models import Login
 from app.media.models import STATUS_CONFIRMED, MediaUpload
@@ -32,38 +33,8 @@ from app.visits.models import (
 
 JOB_CLOSED = ("Completed", "Skipped", "Could not complete")
 
-# DERIVED. The admin sets the checklists and minimums (ADM-CHK-01, ADM-CHK-06)
-# but that module does not exist yet. Cleaning-External is the starting list
-# of ADM-CHK-07. The other two are placeholders: OPEN until the owner
-# supplies them. Each item is (key, label); the key is what is stored.
-CHECKLISTS: dict[str, tuple[tuple[str, str], ...]] = {
-    "Cleaning-External": (
-        ("body", "Exterior body cleaned"), ("glass", "Glass cleaned"),
-        ("wheels", "Wheels cleaned"), ("tyres", "Tyres dressed"),
-        ("inspection", "Final inspection completed")),
-    "Cleaning-Internal": (
-        ("seats", "Seats and mats vacuumed"), ("dashboard", "Dashboard and panels wiped"),
-        ("glass", "Interior glass cleaned"), ("inspection", "Final inspection completed")),
-    "Deep Spa": (
-        ("body", "Exterior body cleaned"), ("vacuum", "Interior vacuumed"),
-        ("dashboard", "Dashboard and panels wiped"), ("glass", "Glass cleaned"),
-        ("wheels", "Wheels cleaned"), ("inspection", "Final inspection completed")),
-}
-# DERIVED. (photos, videos) a crew member must upload for each service.
-PROOF_MINIMUMS: dict[str, tuple[int, int]] = {
-    "Cleaning-External": (2, 1),
-    "Cleaning-Internal": (2, 1),
-    "Deep Spa": (2, 1),
-}
-# DERIVED. The admin will manage this list (ADM-CNC-01).
-REASONS: tuple[tuple[str, str], ...] = (
-    ("car_not_in_spot", "Car not in the parking spot"),
-    ("car_locked", "Car is locked"),
-    ("customer_did_not_allow", "Customer did not allow"),
-    ("bad_weather", "Bad weather"),
-    ("other", "Other"),
-)
-REASON_KEYS = {k for k, _ in REASONS}
+# The checklists, proof minimums and reasons are reference data the admin
+# manages (ADM-CHK-01, ADM-CHK-06, ADM-CNC-01): see `app.directory.lookup`.
 
 
 # ---- Who can see what ---------------------------------------------------------
@@ -163,7 +134,7 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
             society=societies.get(schedules[visit.schedule_id].society_id, ""),
             parking=parking, start_time=rules.hhmm(job.start_minute),
             finish_by=rules.hhmm(job.finish_by_minute),
-            checklist_total=len(CHECKLISTS.get(job.service, ())),
+            checklist_total=len(lookup.checklist_for(db, job.service)),
             checklist_done=checked.get(job.id, 0),
             assigned_to=(s.CrewRef(id=str(job.crew_id), name=names.get(job.crew_id, ""))
                          if job.crew_id else None)))
@@ -204,12 +175,12 @@ def _progress(db: Session, job: Job) -> dict[str, JobChecklistProgress]:
         select(JobChecklistProgress).where(JobChecklistProgress.job_id == job.id))}
 
 
-def _missing(job: Job, progress: dict, counts: dict[str, int]) -> list[str]:
+def _missing(db: Session, job: Job, progress: dict, counts: dict[str, int]) -> list[str]:
     missing = []
-    left = sum(1 for key, _ in CHECKLISTS.get(job.service, ()) if key not in progress)
+    left = sum(1 for item in lookup.checklist_for(db, job.service) if item.key not in progress)
     if left:
         missing.append(f"{left} checklist item{'s' if left != 1 else ''} not checked")
-    need_photos, need_videos = PROOF_MINIMUMS.get(job.service, (0, 0))
+    need_photos, need_videos = lookup.proof_minimums(db, job.service)
     for kind, need, have in (("photo", need_photos, counts["photos"]),
                              ("video", need_videos, counts["videos"])):
         if have < need:
@@ -229,14 +200,18 @@ def job_detail(db: Session, job: Job) -> s.JobDetail:
         .order_by(MediaUpload.created_at)))
     outcome = db.scalar(select(JobOutcome).where(JobOutcome.job_id == job.id))
     timing = db.get(JobTiming, job.id)
-    missing = _missing(job, progress, counts)
-    photos, videos = PROOF_MINIMUMS.get(job.service, (0, 0))
+    missing = _missing(db, job, progress, counts)
+    photos, videos = lookup.proof_minimums(db, job.service)
+    items = [(i.key, i.label) for i in lookup.checklist_for(db, job.service)]
+    # An item the admin switched off after it was ticked stays on the job.
+    items += [(key, lookup.checklist_label(db, job.service, key) or key)
+              for key in progress if key not in {k for k, _ in items}]
     return s.JobDetail(
         job=_cards(db, [job])[0],
         checklist=[s.ChecklistItem(id=key, label=label,
                                    checked_at=progress[key].checked_at if key in progress
                                    else None)
-                   for key, label in CHECKLISTS.get(job.service, ())],
+                   for key, label in items],
         requirements=s.Requirements(
             photos_required=photos, videos_required=videos,
             photos_confirmed=counts["photos"], videos_confirmed=counts["videos"],
@@ -279,7 +254,7 @@ def start_job(db: Session, job: Job) -> Job:
 def set_checked(db: Session, job: Job, item_key: str, checked: bool,
                 login_id: uuid.UUID) -> None:
     _open_job(job)
-    if item_key not in {k for k, _ in CHECKLISTS.get(job.service, ())}:
+    if item_key not in {i.key for i in lookup.checklist_for(db, job.service)}:
         raise ApiError("not_found", "This checklist item was not found.", 404)
     row = db.scalar(select(JobChecklistProgress).where(
         JobChecklistProgress.job_id == job.id, JobChecklistProgress.item_key == item_key))
@@ -301,7 +276,7 @@ def complete_job(db: Session, job: Job) -> Job:
     """CRW-SVC-08: every item checked, the minimum proof confirmed, and no
     upload left waiting."""
     _open_job(job)
-    missing = _missing(job, _progress(db, job), proof_counts(db, job.id))
+    missing = _missing(db, job, _progress(db, job), proof_counts(db, job.id))
     if missing:
         raise ApiError("job_not_ready", "This job cannot be completed yet.", 409,
                        {f"missing_{i + 1}": m for i, m in enumerate(missing)})
@@ -310,7 +285,7 @@ def complete_job(db: Session, job: Job) -> Job:
 
 
 def _check_reason(db: Session, body: s.CouldNotComplete, job: Job) -> uuid.UUID | None:
-    if body.reason_key not in REASON_KEYS:
+    if body.reason_key not in lookup.reason_keys(db):
         raise ApiError("validation_failed", "Please choose a reason.", 422,
                        {"reason_key": "Choose a reason from the list."})
     if body.upload_id is None:
