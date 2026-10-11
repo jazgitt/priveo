@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.customers.models import Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
+from app.notifications import emit  # notify hook
 from app.media.models import STATUS_CONFIRMED, MediaUpload
 from app.media.service import proof_counts
 from app.platform.db import utcnow
@@ -381,6 +382,7 @@ def manager_reassign(db: Session, job: Job, manager: SchedulingCrew, crew_id: st
     job.crew_id = target.id
     job.manual = True
     db.commit()
+    emit.job_reassigned(db, job)  # notify hook
     return job
 
 

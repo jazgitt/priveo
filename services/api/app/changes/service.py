@@ -17,6 +17,7 @@ from app.changes.rules import Clock, is_open, require_open, today_of
 from app.changes.schemas import ChangeOut, ChangesOut, UpcomingDay
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import read_cutoff
+from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 
@@ -142,10 +143,13 @@ class ChangesService:
             raise ApiError("not_a_service_day", "There is no service on that date.", 409,
                            {"date": "not_a_service_day"})
         self._gateway.skip_day(vehicle.id, day)
-        return self._out(self._save(ScheduleChange(
+        change = self._save(ScheduleChange(
             customer_id=customer.id, vehicle_id=vehicle.id, kind="skip", start_date=day,
             end_date=day, status="Active", actor=actor.role, actor_login_id=actor.login_id,
-            idempotency_key=key or None)))
+            idempotency_key=key or None))
+        emit.visits_removed(self._db, vehicle.id, day, day, "skip")  # notify hook
+        emit.customer_skipped(self._db, vehicle, day)  # notify hook
+        return self._out(change)
 
     def unskip(self, actor: Actor, vehicle: Vehicle, change_id: str) -> None:
         change = self._change(vehicle, change_id, "skip")
@@ -192,6 +196,7 @@ class ChangesService:
             customer_id=customer.id, vehicle_id=vehicle.id, kind="pause", start_date=start,
             end_date=end, status="Active", actor=actor.role, actor_login_id=actor.login_id,
             idempotency_key=key or None))
+        emit.visits_removed(self._db, vehicle.id, start, end, "pause")  # notify hook
         return self._out(change, visits=visits,
                          renewal=renewal_for(self._db, vehicle, sub, today_of(now)))
 

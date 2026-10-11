@@ -48,8 +48,11 @@ crew = APIRouter(prefix="/v1/crew", tags=["support"])
 admin = APIRouter(prefix="/v1/admin", tags=["support"])
 
 
-def get_push_notifier() -> PushNotifier:
-    return LoggingPushNotifier()
+def get_push_notifier(db: Session = Depends(get_db)) -> PushNotifier:
+    # The inbox and push of the notifications module (CMP-04, CHK-01).
+    from app.notifications.bridge import SupportNotifier
+
+    return SupportNotifier(db)
 
 
 def get_email_notifier() -> EmailNotifier:

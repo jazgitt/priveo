@@ -295,7 +295,9 @@ class SupportService:
         if customer is not None:
             # CMP-04: the "Complaint update" push.
             self.push.push_customer(customer.login_id, "Complaint update",
-                                    f"{display_id(c.number)}: {body}")
+                                    f"{display_id(c.number)}: {body}",
+                                    event="complaint_update", ref_type="complaint",
+                                    ref_id=str(c.id))  # notify hook
 
     def admin_update(self, admin_id: uuid.UUID, complaint_id: uuid.UUID, status: str | None,
                      note: str) -> AdminComplaintDetail:
@@ -487,7 +489,10 @@ class SupportService:
             if cycle is None or cycle[1] != target:
                 continue
             self.push.push_customer(customer.login_id, "Monthly check-in",
-                                    "How is Priveo doing? Take a minute to tell us.")
+                                    "How is Priveo doing? Take a minute to tell us.",
+                                    event="monthly_check_in", ref_type="checkin",
+                                    ref_id=str(sub.id),
+                                    dedupe_key=f"checkin:{sub.id}:{target}")  # notify hook
             sent += 1
         return sent
 

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
+from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 from app.scheduling import rules
@@ -212,6 +213,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     nothing moves: only jobs without a crew member are placed, without
     unfreezing (ADM-SCH-27)."""
     frozen = schedule.status == "Frozen"
+    before = emit.assignment_snapshot(db, schedule)  # notify hook
     days = daterange(schedule.start_date, schedule.end_date)
     demand = build_demand(db, schedule.society_id, days)
 
@@ -303,6 +305,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     record(db, schedule.id, admin_id, "assign-late" if frozen else "rerun",
            f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}")
     db.commit()
+    emit.late_assignments(db, schedule, before)  # notify hook
     return summary
 
 
@@ -337,11 +340,13 @@ def move_job(db: Session, job_id: uuid.UUID, crew_id: uuid.UUID | None,
     if job.status != "Scheduled":
         raise ApiError("job_not_open", "That job has already started or finished.", 409)
     if crew_id is None:
+        previous_crew_id = job.crew_id  # notify hook
         job.crew_id, job.start_minute, job.late = None, None, False
         job.manual = True
         job.note = "Taken off the schedule by the admin."
         record(db, schedule.id, admin_id, "move", f"job {job.id} taken off")
         db.commit()
+        emit.job_taken_off(db, job, previous_crew_id)  # notify hook
         return job
     if schedule.status == "Frozen":
         raise ApiError("schedule_frozen",
@@ -386,6 +391,7 @@ def freeze(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) -> Sched
     schedule.frozen_by = admin_id
     record(db, schedule.id, admin_id, "freeze")
     db.commit()
+    emit.schedules_frozen(db, [schedule.id])  # notify hook
     return schedule
 
 
@@ -414,6 +420,7 @@ def freeze_due(db: Session, now: datetime) -> list[uuid.UUID]:
             record(db, schedule.id, None, "freeze", "at the freeze cutoff time")
             frozen.append(schedule.id)
     db.commit()
+    emit.schedules_frozen(db, frozen)  # notify hook
     return frozen
 
 
@@ -426,6 +433,7 @@ def set_job_status(db: Session, job_id: uuid.UUID, status: str) -> Job:
     db.flush()
     refresh_visit_status(db, job.visit_id)
     db.commit()
+    emit.job_status_changed(db, job)  # notify hook
     return job
 
 
