@@ -17,6 +17,7 @@ import '../../changes_money/routes.dart' as money;
 import '../../changes_money/strings.dart';
 import '../../common/signout_button.dart';
 import '../../support/feedback_sheet.dart';
+import '../../support/feedback_tab.dart';
 import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
@@ -51,20 +52,22 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
     }
     return Scaffold(
       extendBody: true,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _TopBar(onAvatar: () => _go(_accountTab)),
-            Expanded(
-              child: switch (_index) {
-                0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
-                _calendarTab => const CalendarScreen(),
-                _accountTab => const AccountScreen(),
-                _ => const HelpScreen(),
-              },
-            ),
-          ],
+      body: FeedbackSideTab(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _TopBar(onAvatar: () => _go(_accountTab)),
+              Expanded(
+                child: switch (_index) {
+                  0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
+                  _calendarTab => const CalendarScreen(),
+                  _accountTab => const AccountScreen(),
+                  _ => const HelpScreen(),
+                },
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _TabBar(
@@ -295,11 +298,15 @@ class CustomerHomeScreen extends ConsumerWidget {
                     for (final a in h.quickActions) _QuickAction(a),
                     _QuickAction(
                       const QuickAction(
-                          key: 'subscription', label: MoneyStrings.subTitle),
+                        key: 'subscription',
+                        label: MoneyStrings.subTitle,
+                      ),
                     ),
                     _QuickAction(
                       const QuickAction(
-                          key: 'addons', label: MoneyStrings.addonTitle),
+                        key: 'addons',
+                        label: MoneyStrings.addonTitle,
+                      ),
                     ),
                   ],
                 ),
@@ -646,7 +653,9 @@ class _QuickAction extends ConsumerWidget {
     if (home != null && home.vehicles.isNotEmpty) {
       vehicleId = home
           .vehicles[selectedIndex(
-              home.vehicles, ref.read(selectedVehicleProvider))]
+            home.vehicles,
+            ref.read(selectedVehicleProvider),
+          )]
           .id;
     }
     switch (action.key) {

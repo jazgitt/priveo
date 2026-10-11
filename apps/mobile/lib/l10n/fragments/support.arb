@@ -21,6 +21,9 @@
     }
   },
   "support_give_feedback": "Give feedback",
+  "support_faq": "Frequently asked questions",
+  "support_faq_empty": "There are no questions yet.",
+  "support_feedback_tab": "Feedback",
   "support_monthly_checkin": "Monthly check-in",
   "support_cannot_open": "We could not open that. Please try again.",
   "support_report_title": "Report an issue",

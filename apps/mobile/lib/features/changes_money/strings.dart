@@ -80,6 +80,10 @@ class MoneyStrings {
   static const invoice = 'Invoice';
   static const invoiceTitle = 'GST invoice';
   static const gstIncluded = 'Price includes GST.';
+  static const invoiceCopy = 'Copy invoice';
+  static const invoiceCopied = 'Invoice copied.';
+  static const invoiceEmail = 'Email invoice';
+  static const invoiceNoMail = 'No email app was found on this phone.';
 
   // Deep Spa (ADD-)
   static const addonTitle = 'Deep Spa';

@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'checkin_screen.dart';
 import 'complaints_screen.dart';
 import 'crew_ratings_screen.dart';
+import 'faq_screen.dart';
 import 'help_screen.dart';
 import 'report_issue_screen.dart';
 
 /// Paths of the support screens.
 class SupportRoutes {
   static const help = '/customer/support';
+  static const faq = '/customer/support/faq';
   static const report = '/customer/support/report';
   static const complaints = '/customer/support/complaints';
   static String complaint(String id) => '/customer/support/complaints/$id';
@@ -20,6 +22,7 @@ class SupportRoutes {
 /// `/customer/support/report?visit=<visit id>`.
 final List<RouteBase> routes = [
   GoRoute(path: SupportRoutes.help, builder: (_, _) => const HelpScreen()),
+  GoRoute(path: SupportRoutes.faq, builder: (_, _) => const FaqScreen()),
   GoRoute(
     path: SupportRoutes.report,
     builder: (_, state) =>
