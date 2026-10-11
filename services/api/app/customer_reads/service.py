@@ -1,12 +1,13 @@
 """What a customer reads of their own vehicles and visits (HOME-04, CAL-01,
 CAL-02, CAL-05, SVC-01, SVC-04, SVC-09, VEH-02, VEH-03, VEH-06)."""
-import calendar
 import uuid
-from datetime import date, timedelta
+from collections.abc import Callable
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.customer_reads.calendar_view import CalendarView
 from app.customer_reads.repository import (
     TERMINAL_VISIT_STATUSES,
     Job,
@@ -15,7 +16,6 @@ from app.customer_reads.repository import (
 )
 from app.customer_reads.schemas import (
     CalendarMonth,
-    CalendarVisit,
     HistoryItem,
     JobOut,
     NextServiceItem,
@@ -27,16 +27,16 @@ from app.customer_reads.schemas import (
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
 from app.directory.models import Society
+from app.platform import clock
 from app.platform.errors import ApiError
-
-# How far ahead the Home card looks for the next visit.
-NEXT_SERVICE_DAYS = 60
 
 
 class CustomerReads:
-    def __init__(self, db: Session, visits: VisitReadRepository):
+    def __init__(self, db: Session, visits: VisitReadRepository,
+                 now_fn: Callable[[], datetime] | None = None):
         self._db = db
         self._visits = visits
+        self._view = CalendarView(db, visits, now_fn or (lambda: clock.now_ist()))
 
     def _customer(self, login_id: uuid.UUID) -> Customer:
         customer = self._db.scalar(select(Customer).where(Customer.login_id == login_id))
@@ -74,32 +74,21 @@ class CustomerReads:
     def calendar(self, login_id: uuid.UUID, month: str, vehicle_id: str | None) -> CalendarMonth:
         try:
             year, number = (int(p) for p in month.split("-"))
-            first = date(year, number, 1)
+            date(year, number, 1)
         except ValueError:
             raise ApiError("validation_failed", "Month must look like 2026-11.", 422,
                            {"month": "Use yyyy-mm."}) from None
-        last = date(year, number, calendar.monthrange(year, number)[1])
-        visits = self._visits.visits_in_range(self._scope(login_id, vehicle_id), first, last)
-        jobs = self._jobs_by_visit(visits)
-        return CalendarMonth(month=f"{year:04d}-{number:02d}", visits=[
-            CalendarVisit(visit_id=v.id, vehicle_id=v.vehicle_id, date=v.date, status=v.status,
-                          services=[j.service for j in jobs[v.id]])
-            for v in visits])
+        ids = self._scope(login_id, vehicle_id)
+        return self._view.month(year, number, ids, self._owned_by_id(login_id))
+
+    def _owned_by_id(self, login_id: uuid.UUID):
+        return {str(v.id): (v, s) for v, s in self._owned(self._customer(login_id))}
 
     def next_services(self, login_id: uuid.UUID, today: date) -> list[NextServiceItem]:
-        """The next visit that is not over, for each of the customer's vehicles."""
+        """The next visit that is not over, for each of the customer's vehicles.
+        Without a planned visit, the next day the subscription implies."""
         ids = self._scope(login_id, None)
-        visits = self._visits.visits_in_range(ids, today, today + timedelta(NEXT_SERVICE_DAYS))
-        jobs = self._jobs_by_visit(visits)
-        result: dict[str, NextServiceItem] = {}
-        for v in visits:
-            if v.status in TERMINAL_VISIT_STATUSES or v.vehicle_id in result:
-                continue
-            service = jobs[v.id][0].service if jobs[v.id] else ""
-            result[v.vehicle_id] = NextServiceItem(
-                vehicle_id=v.vehicle_id, visit_id=v.id, date=v.date, service=service,
-                status=v.status)
-        return [result[i] for i in ids if i in result]
+        return self._view.next_services(today, ids, self._owned_by_id(login_id))
 
     # Visit details and history ----------------------------------------------------
 
