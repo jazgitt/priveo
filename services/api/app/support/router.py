@@ -11,7 +11,6 @@ from app.support.config import SupportSettings, get_support_settings
 from app.support.notify import (
     EmailNotifier,
     LoggingEmailNotifier,
-    LoggingPushNotifier,
     PushNotifier,
 )
 from app.support.schemas import (

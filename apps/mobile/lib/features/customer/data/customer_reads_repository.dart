@@ -243,6 +243,8 @@ class NotificationDto {
     required this.visitId,
     required this.createdAt,
     required this.read,
+    this.refType,
+    this.refId,
   });
 
   final String id;
@@ -250,6 +252,11 @@ class NotificationDto {
   final String title;
   final String body;
   final String? visitId;
+
+  /// What a tap opens besides a visit: `payment`, `complaint` or `checkin`,
+  /// with its ID.
+  final String? refType;
+  final String? refId;
   final DateTime createdAt;
   final bool read;
 
@@ -259,6 +266,8 @@ class NotificationDto {
     title: j['title'] as String,
     body: j['body'] as String,
     visitId: j['visit_id'] as String?,
+    refType: j['ref_type'] as String?,
+    refId: j['ref_id'] as String?,
     createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
     read: j['read'] as bool,
   );

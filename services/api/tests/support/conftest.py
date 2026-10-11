@@ -20,7 +20,7 @@ class RecordingPush:
     def push_admin(self, title, body):
         self.admin.append((title, body))
 
-    def push_customer(self, login_id, title, body):
+    def push_customer(self, login_id, title, body, **_ref):
         self.customer.append((login_id, title, body))
 
 

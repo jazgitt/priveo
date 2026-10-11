@@ -9,6 +9,7 @@ import '../cust_strings.dart';
 import '../data/customer_reads_repository.dart';
 import '../history/history_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../settings/settings_screen.dart';
 import '../vehicles/vehicles_screen.dart';
 
 /// The account tab: who is signed in, links to the customer's lists, and
@@ -63,9 +64,10 @@ class AccountScreen extends ConsumerWidget {
         const SizedBox(height: 20),
         SectionLabel(CustStrings.settingsHeading),
         const SizedBox(height: 8),
-        Text(
-          CustStrings.settingsNote,
-          style: text.bodyMedium?.copyWith(color: b.mute),
+        link(
+          Symbols.tune_rounded,
+          CustStrings.accountSettings,
+          () => openSettings(context),
         ),
         const SizedBox(height: 24),
         OutlinedButton.icon(
