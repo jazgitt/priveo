@@ -33,3 +33,20 @@ class ScheduleChange(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+
+
+class PlanExtension(Base):
+    """One day added to a subscription's plan because a Cleaning-External
+    visit was skipped by operations (ADM-OPS-03). The renewal date moves
+    forward one day for each row and the customer pays nothing extra. One row
+    for each skipped job, so a retry never adds a second day."""
+
+    __tablename__ = "plan_extensions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), unique=True)
+    # The service day that was skipped.
+    on_date: Mapped[date] = mapped_column(Date)
+    by_login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

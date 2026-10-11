@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.changes.access import parse_id
-from app.changes.cycle import cycle_window, paused_days
+from app.changes.cycle import cycle_window, paused_days, shift_days
 from app.changes.gateway import ScheduleChangeGateway, ServiceDay
 from app.changes.models import ScheduleChange
 from app.changes.projection import day_services
@@ -37,7 +37,7 @@ def renewal_for(db: Session, vehicle: Vehicle, sub: Subscription | None,
                 today: date) -> date | None:
     if sub is None:
         return None
-    return cycle_window(sub.first_service_date, len(paused_days(db, vehicle.id)), today)[1]
+    return cycle_window(sub.first_service_date, shift_days(db, vehicle.id), today)[1]
 
 
 class ChangesService:

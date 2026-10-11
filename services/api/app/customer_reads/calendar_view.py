@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.changes.cycle import paused_days
+from app.changes.cycle import extension_days, paused_days
 from app.changes.models import ScheduleChange
 from app.changes.projection import day_services, renewals_between
 from app.changes.rules import is_open, today_of
@@ -207,7 +207,8 @@ class CalendarView:
                 day += timedelta(days=1)
             renewals.extend(
                 CalendarRenewal(vehicle_id=vid, date=d) for d in renewals_between(
-                    sub.first_service_date, len(ctx.paused), first, last))
+                    sub.first_service_date,
+                    len(ctx.paused) + extension_days(self._db, vehicle.id), first, last))
         order = {vid: i for i, vid in enumerate(ids)}
         out.sort(key=lambda c: (c.date, order[c.vehicle_id], c.visit_id or ""))
         return CalendarMonth(month=f"{year:04d}-{number:02d}", visits=out, renewals=renewals)

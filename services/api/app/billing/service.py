@@ -30,7 +30,7 @@ from app.billing.schemas import (
     SubscriptionView,
 )
 from app.changes.access import parse_id
-from app.changes.cycle import CYCLE_DAYS, cycle_window, paused_days
+from app.changes.cycle import CYCLE_DAYS, cycle_window, paused_days, shift_days
 from app.changes.rules import Clock, show_date, today_of
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration
@@ -131,7 +131,7 @@ class BillingService:
             raise ApiError("no_subscription", "This vehicle has no subscription.", 404)
         today = today_of(self._now())
         start, renewal = cycle_window(sub.first_service_date,
-                                      len(paused_days(self._db, vehicle.id)), today)
+                                      shift_days(self._db, vehicle.id), today)
         plan = self._db.get(Plan, sub.plan_id) if sub.plan_id else None
         society = self._db.get(Society, customer.society_id)
         latest = self._db.scalar(
@@ -201,7 +201,7 @@ class BillingService:
             return PaymentDetail(payment=self._outs([unpaid])[0],
                                  instructions=self.instructions(unpaid))
         _, renewal = cycle_window(sub.first_service_date,
-                                  len(paused_days(self._db, vehicle.id)), today)
+                                  shift_days(self._db, vehicle.id), today)
         if (renewal - today).days > PAY_AHEAD_DAYS:
             opens = renewal - timedelta(days=PAY_AHEAD_DAYS)
             raise ApiError("too_early", f"You can pay from {show_date(opens)}.", 409)
@@ -454,7 +454,7 @@ class BillingService:
         for sub in list(subs):
             vehicle = self._db.get(Vehicle, sub.vehicle_id)
             _, renewal = cycle_window(sub.first_service_date,
-                                      len(paused_days(self._db, vehicle.id)), today)
+                                      shift_days(self._db, vehicle.id), today)
             due = self._db.scalar(select(Payment).where(
                 Payment.subscription_id == sub.id, Payment.kind == "Plan",
                 Payment.status == "Due", Payment.voided_at.is_(None),
