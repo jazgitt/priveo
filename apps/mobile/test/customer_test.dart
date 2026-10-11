@@ -12,6 +12,7 @@ import 'support/fakes.dart';
 Future<FakePriveoApi> openAsCustomer(
   WidgetTester tester, {
   bool confirmed = true,
+  bool hasPhoto = true,
 }) async {
   // A tall phone, so a whole step is on screen.
   tester.view.physicalSize = const Size(800, 2400);
@@ -20,7 +21,12 @@ Future<FakePriveoApi> openAsCustomer(
   final store = MemorySessionStore();
   await store.write(customerSession);
   final api = FakePriveoApi(onboardingConfirmed: confirmed);
-  await pumpApp(tester, store: store, api: api);
+  await pumpApp(
+    tester,
+    store: store,
+    api: api,
+    account: PhotoAccount(hasPhoto: hasPhoto),
+  );
   await passSplash(tester);
   return api;
 }
@@ -117,6 +123,9 @@ void main() {
       expect(find.text('Vehicle 1 of 3'), findsOneWidget);
       expect(find.text('Your spot: B2 · 14'), findsOneWidget);
       expect(find.text('7:00 AM'), findsOneWidget);
+      // The photo above pushes the day pills down: scroll them clear of the bar.
+      await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Sun'));
       await tester.pumpAndSettle();
       await next(tester);
@@ -163,6 +172,18 @@ void main() {
       ]);
       expect(find.byType(OnboardingReviewScreen), findsNothing);
       expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
+    });
+
+    testWidgets('a vehicle without its photo cannot continue (ONB-22)',
+        (tester) async {
+      await openAsCustomer(tester, confirmed: false, hasPhoto: false);
+      await tester.enterText(find.byType(TextField).at(1), 'Mehta');
+      await next(tester);
+      await next(tester);
+      expect(find.text('Vehicle 1 of 3'), findsOneWidget);
+      await next(tester);
+      expect(find.text('Add a photo of your car to continue.'), findsOneWidget);
+      expect(find.text('Vehicle 1 of 3'), findsOneWidget);
     });
 
     testWidgets('a changed mobile number must be 10 digits', (tester) async {

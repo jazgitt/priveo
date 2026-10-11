@@ -12,6 +12,8 @@ from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
 from app.directory.models import Plan, Society
 from app.home.schemas import CustomerHome, QuickAction, VehicleCard
 from app.identity.models import Login
+from app.media import service as media
+from app.media.store import ObjectStore, get_object_store
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 
@@ -40,6 +42,9 @@ class OnboardingVehicle(BaseModel):
     # Whether the plan includes interior cleaning, so the day is asked (ONB-18).
     asks_interior_day: bool
     interior_day: str | None
+    # The vehicle photo is required before Home opens (ONB-22).
+    has_photo: bool = False
+    photo_url: str | None = None
 
 
 class Onboarding(BaseModel):
@@ -87,8 +92,9 @@ def read_cutoff(text: str | None) -> time | None:
 
 
 class CustomerService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, store: ObjectStore | None = None):
         self._db = db
+        self._store = store or get_object_store()
 
     def _customer(self, login_id: uuid.UUID) -> Customer:
         customer = self._db.scalar(select(Customer).where(Customer.login_id == login_id))
@@ -123,12 +129,16 @@ class CustomerService:
         customer = self._customer(login_id)
         society = self._db.get(Society, customer.society_id).name
         cards = []
-        for vehicle, sub in self._vehicles(customer):
+        owned = self._vehicles(customer)
+        photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
+        for vehicle, sub in owned:
             parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
             cards.append(VehicleCard(
                 id=str(vehicle.id),
                 registration=show_registration(vehicle.registration),
                 model=vehicle.model,
+                variant=vehicle.variant,
+                photo_url=photos.get(vehicle.id),
                 society=society,
                 parking=parking,
                 subscription_status=sub.status if sub else None,
@@ -148,7 +158,9 @@ class CustomerService:
     def onboarding(self, login_id: uuid.UUID) -> Onboarding:
         customer = self._customer(login_id)
         vehicles = []
-        for vehicle, sub in self._vehicles(customer):
+        owned = self._vehicles(customer)
+        photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
+        for vehicle, sub in owned:
             plan = self._plan(sub)
             vehicles.append(OnboardingVehicle(
                 id=str(vehicle.id),
@@ -162,6 +174,8 @@ class CustomerService:
                 cutoff_time=show_time(sub.cutoff_time) if sub else None,
                 asks_interior_day=self._asks_interior_day(sub),
                 interior_day=sub.interior_day if sub else None,
+                has_photo=vehicle.id in photos,
+                photo_url=photos.get(vehicle.id),
             ))
         return Onboarding(
             confirmed=customer.onboarding_confirmed_at is not None,
@@ -204,6 +218,9 @@ class CustomerService:
             at = f"vehicles.{index}"
             basement = answer.parking_basement.strip().upper()
             number = answer.parking_number.strip()
+            if not media.has_confirmed(
+                    self._db, f"{media.VEHICLE_PHOTO_PREFIX}/{vehicle.id}"):
+                errors[f"{at}.photo"] = "Add a photo of your car."  # ONB-22
             if basement not in BASEMENTS:
                 errors[f"{at}.parking_basement"] = "Select the basement."
             if not re.fullmatch(r"\d{1,5}", number):

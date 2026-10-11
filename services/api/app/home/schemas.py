@@ -23,6 +23,9 @@ class VehicleCard(BaseModel):
     # "HH:MM", the time by which the daily clean is done (ONB-16).
     cutoff_time: str | None
     interior_day: str | None
+    variant: str = ""
+    # A signed read URL of the customer's own vehicle photo (HOME-02, VEH-01).
+    photo_url: str | None = None
     # Empty until a visit is scheduled.
     next_service: NextService | None
 

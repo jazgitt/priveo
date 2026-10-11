@@ -13,6 +13,7 @@ abstract class SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   });
   Future<List<Complaint>> complaints();
   Future<Complaint> complaint(String id);
@@ -69,12 +70,14 @@ class ApiSupportRepository implements SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   }) =>
       _call(
           () => _dio.post<dynamic>('/v1/customer/complaints', data: {
                 'category': category,
                 'description': description,
                 'visit_id': ?visitId,
+                'photo_keys': photoKeys,
               }),
           (d) => Complaint.fromJson(_map(d)));
 

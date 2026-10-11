@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
+import '../../core/util/format.dart';
+import '../customer/account/account_strings.dart';
+import '../customer/account/photo_widgets.dart' show ComplaintPhotosField;
+import '../customer/data/customer_reads_repository.dart';
 import 'data/support_repository.dart';
 import 'routes.dart';
 import 'support_strings.dart';
@@ -26,6 +30,14 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
   String? _descriptionError;
   String? _failure;
   bool _busy = false;
+  String? _visitId;
+  List<String> _photoKeys = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _visitId = widget.visitId;
+  }
 
   @override
   void dispose() {
@@ -50,7 +62,8 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
       await ref.read(supportRepositoryProvider).createComplaint(
             category: _category!,
             description: _description.text.trim(),
-            visitId: widget.visitId,
+            visitId: _visitId,
+            photoKeys: _photoKeys,
           );
       ref.invalidate(complaintsProvider);
       ref.invalidate(supportContactProvider);
@@ -98,11 +111,11 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
               ],
             ),
             FormError(_categoryError),
-            if (widget.visitId != null) ...[
-              const SizedBox(height: 16),
-              Text(t('support_issue_linked_visit'),
-                  style: Theme.of(context).textTheme.bodySmall),
-            ],
+            const SizedBox(height: 16),
+            _VisitSelector(
+              selected: _visitId,
+              onChanged: (v) => setState(() => _visitId = v),
+            ), // ISS-02
             const SizedBox(height: 16),
             TextField(
               controller: _description,
@@ -114,6 +127,10 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
                 errorText: _descriptionError,
               ),
             ),
+            const SizedBox(height: 16),
+            ComplaintPhotosField(
+              onChanged: (keys) => _photoKeys = keys,
+            ), // ISS-04
             FormError(_failure),
             const SizedBox(height: 16),
             PrimaryButton(
@@ -127,3 +144,54 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     );
   }
 }
+
+/// Which visit the report is about (ISS-02). It starts on the visit the
+/// customer came from. The list is the customer's recent visits that are over.
+class _VisitSelector extends ConsumerWidget {
+  const _VisitSelector({required this.selected, required this.onChanged});
+
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visits = ref.watch(_recentVisitsProvider).value ?? const [];
+    // The visit the customer came from stays on the list even when it is not
+    // in the recent ones.
+    final ids = {for (final v in visits) v.visitId};
+    return DropdownButtonFormField<String?>(
+      initialValue: selected,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: AccountStrings.linkedVisit),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text(AccountStrings.noLinkedVisit),
+        ),
+        if (selected != null && !ids.contains(selected))
+          DropdownMenuItem<String?>(
+            value: selected,
+            child: Text(t('support_issue_linked_visit')),
+          ),
+        for (final v in visits)
+          DropdownMenuItem<String?>(
+            value: v.visitId,
+            child: Text(
+              '${formatDate(v.date)} · ${v.services.join(', ')}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
+
+final _recentVisitsProvider =
+    FutureProvider.autoDispose<List<HistoryItemDto>>((ref) async {
+  try {
+    return await ref.watch(customerReadsProvider).history();
+  } catch (_) {
+    return const [];
+  }
+});

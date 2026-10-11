@@ -19,11 +19,15 @@ from app.platform.errors import ApiError
 
 MB = 1024 * 1024
 # CRW-SVC-06, rule 17 of the customer file: photos under 10 MB, videos under 25 MB.
-MAX_BYTES = {"photo": 10 * MB, "video": 25 * MB}
+# ONB-12: an RC document keeps its own 5 MB limit and its own kind.
+MAX_BYTES = {"photo": 10 * MB, "video": 25 * MB, "document": 5 * MB}
 CONTENT_TYPES = {
     "photo": ("image/jpeg", "image/png", "image/heic", "image/heif", "image/webp"),
     "video": ("video/mp4", "video/quicktime", "video/3gpp", "video/x-m4v"),
+    "document": ("image/jpeg", "image/png", "application/pdf"),
 }
+# What a customer may upload (VEH-01, ISS-04, ONB-12) and the kind each stores.
+CUSTOMER_PURPOSES = {"vehicle": "photo", "complaint": "photo", "rc": "document"}
 UPLOAD_WINDOW = timedelta(minutes=30)
 # How long a read URL works. The screens ask again each time they load.
 DOWNLOAD_WINDOW = timedelta(hours=1)
@@ -65,6 +69,53 @@ def request_upload(db: Session, store: ObjectStore, *, owner_id: uuid.UUID,
     signed = store.presign_upload(str(upload_id), upload.object_key, upload.content_type,
                                   utcnow() + UPLOAD_WINDOW)
     return upload, signed
+
+
+def request_customer_upload(db: Session, store: ObjectStore, *, owner_id: uuid.UUID,
+                            purpose: str, subject_id: uuid.UUID | None, content_type: str,
+                            size_bytes: int) -> tuple[MediaUpload, SignedUpload]:
+    """A customer's vehicle photo, complaint photo or RC document. The key
+    holds the vehicle (or the login, for a complaint photo) so a read can
+    find it: `vehicle/<vehicle_id>/<upload_id>` (VEHICLE_PHOTO_PREFIX)."""
+    kind = CUSTOMER_PURPOSES.get(purpose)
+    fields: dict[str, str] = {}
+    if kind is None:
+        fields["purpose"] = "Use vehicle, complaint or rc."
+    elif content_type.lower() not in CONTENT_TYPES[kind]:
+        fields["content_type"] = "This file format is not accepted."
+    elif size_bytes <= 0 or size_bytes > MAX_BYTES[kind]:
+        fields["size_bytes"] = f"The file must be under {MAX_BYTES[kind] // MB} MB."
+    if fields or kind is None:
+        raise ApiError("validation_failed", "Please check the file.", 422, fields)
+    upload_id = uuid.uuid4()
+    upload = MediaUpload(
+        id=upload_id, owner_login_id=owner_id, job_id=None, purpose=purpose, kind=kind,
+        stage=None, content_type=content_type.lower(), declared_size_bytes=size_bytes,
+        object_key=f"{purpose}/{subject_id or owner_id}/{upload_id}")
+    db.add(upload)
+    db.commit()
+    signed = store.presign_upload(str(upload_id), upload.object_key, upload.content_type,
+                                  utcnow() + UPLOAD_WINDOW)
+    return upload, signed
+
+
+def upload_urls(db: Session, store: ObjectStore, upload_ids: Iterable[str]) -> list[str]:
+    """Read URLs of confirmed uploads, in the order given. Unknown ones are left out."""
+    out = []
+    for raw in upload_ids:
+        try:
+            upload = db.get(MediaUpload, uuid.UUID(str(raw)))
+        except ValueError:
+            continue
+        if upload is not None and upload.status == STATUS_CONFIRMED:
+            out.append(download_url(store, upload))
+    return out
+
+
+def has_confirmed(db: Session, prefix: str) -> bool:
+    return db.scalar(select(MediaUpload.id).where(
+        MediaUpload.object_key.like(f"{prefix}/%"),
+        MediaUpload.status == STATUS_CONFIRMED).limit(1)) is not None
 
 
 def confirm_upload(db: Session, store: ObjectStore, upload: MediaUpload) -> MediaUpload:
