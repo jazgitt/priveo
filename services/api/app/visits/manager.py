@@ -23,6 +23,7 @@ from app.crew.service import (
     _summary,
     check_hours,
 )
+from app.customers.models import WEEKDAYS, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
 from app.platform.clock import today_ist
@@ -36,7 +37,6 @@ from app.scheduling.models import (
     SchedulingCrewException,
     Visit,
 )
-from app.customers.models import Vehicle
 from app.visits import manager_schemas as m
 from app.visits.models import CrewManagerChange
 
@@ -187,7 +187,7 @@ def _hours_out(sc: SchedulingCrew, name: str) -> m.CrewManagerHours:
         # A record with one window for every day (older rows and tests).
         window = (_hhmm(sc.start_minute), _hhmm(sc.end_minute))
         hours = [{"day": d, "working": True, "start": window[0], "end": window[1]}
-                 for d in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")]
+                 for d in WEEKDAYS]
     return m.CrewManagerHours(crew_id=str(sc.id), name=name, role=sc.role,
                               working_hours=[DayHours(**h) for h in hours])
 
@@ -270,7 +270,7 @@ def reassign_problem(db: Session, job: Job, visit: Visit,
         start = _first_slot(window, busy, job.duration_minutes)
         if start is None:
             return "no_slot", "Has no free time that day.", None
-        return None if True else None  # a slot was found
+        return None
     end = start + job.duration_minutes
     if start < window[0] or end > window[1]:
         return ("outside_hours",

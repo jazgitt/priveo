@@ -1,0 +1,51 @@
+{
+  "crew_mgr_attendance": "Attendance",
+  "crew_mgr_working_hours": "Working hours",
+  "crew_mgr_present": "Present",
+  "crew_mgr_sick": "Sick",
+  "crew_mgr_leave": "Leave",
+  "crew_mgr_late_start": "Late start",
+  "crew_mgr_day_off": "Day off",
+  "crew_mgr_working": "Working",
+  "crew_mgr_start_time": "Start",
+  "crew_mgr_end_time": "End",
+  "crew_mgr_save": "Save",
+  "crew_mgr_hours_saved": "Working hours saved.",
+  "crew_mgr_attendance_saved": "Attendance saved.",
+  "crew_mgr_late_start_from": "Starts at",
+  "crew_mgr_choose_late_start": "Choose the start time",
+  "crew_mgr_no_crew": "No crew members.",
+  "crew_mgr_cannot_reassign": "Cannot take this job",
+  "crew_mgr_open_jobs_count": "{count, plural, =1{1 open job} other{{count} open jobs}}",
+  "@crew_mgr_open_jobs_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_mgr_late_start_at": "Late start, from {time}",
+  "@crew_mgr_late_start_at": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_mgr_released_moved": "{count, plural, =1{1 job moved to someone else} other{{count} jobs moved to someone else}}",
+  "@crew_mgr_released_moved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_mgr_released_waiting": "{count, plural, =1{1 job needs scheduling} other{{count} jobs need scheduling}}",
+  "@crew_mgr_released_waiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

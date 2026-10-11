@@ -60,12 +60,44 @@ abstract final class CrewText {
   static const reassign = 'Reassign';
   static const reassignTo = 'Reassign to';
   static const jobReassigned = 'Job reassigned.';
+
+  // Manager attendance and working hours (CRW-MGR-04, CRW-MGR-05). They
+  // mirror `lib/l10n/fragments/crew_manager.arb` (keys `crew_mgr_*`).
+  static const attendance = 'Attendance';
+  static const workingHours = 'Working hours';
+  static const attendancePresent = 'Present';
+  static const attendanceSick = 'Sick';
+  static const attendanceLeave = 'Leave';
+  static const attendanceLateStart = 'Late start';
+  static const dayOff = 'Day off';
+  static const working = 'Working';
+  static const startTime = 'Start';
+  static const endTime = 'End';
+  static const save = 'Save';
+  static const hoursSaved = 'Working hours saved.';
+  static const attendanceSaved = 'Attendance saved.';
+  static const lateStartFrom = 'Starts at';
+  static const chooseLateStart = 'Choose the start time';
+  static const noCrew = 'No crew members.';
+  static const cannotReassign = 'Cannot take this job';
+  static String openJobsCount(int n) => n == 1 ? '1 open job' : '$n open jobs';
+  static String lateStartAt(String time) => 'Late start, from $time';
+  static String releasedJobs(int moved, int waiting) {
+    final parts = <String>[
+      if (moved > 0)
+        moved == 1 ? '1 job moved to someone else' : '$moved jobs moved to someone else',
+      if (waiting > 0)
+        waiting == 1
+            ? '1 job needs scheduling'
+            : '$waiting jobs need scheduling',
+    ];
+    return '${parts.join('. ')}.';
+  }
   static const photoSaved = 'Photo saved';
   static const noPhoto = 'No photo yet';
   static const name = 'Name';
   static const mobile = 'Mobile number';
   static const role = 'Role';
-  static const workingHours = 'Working hours';
 
   static String finishBy(String time) => 'Finish by $time';
   static String finishedAt(String date) => 'Finished on $date';

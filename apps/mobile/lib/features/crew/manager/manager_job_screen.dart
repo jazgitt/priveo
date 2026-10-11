@@ -61,14 +61,18 @@ class _State extends ConsumerState<ManagerJobScreen> {
       context: context,
       builder: (_) => Consumer(
         builder: (context, ref, _) {
-          final crew = ref.watch(managerCrewProvider);
-          return crew.when(
+          // Each person comes with what the server's checks say: working
+          // that day, within hours, no job at that time (CRW-MGR-03).
+          final options =
+              ref.watch(managerReassignOptionsProvider(widget.jobId));
+          return options.when(
             loading: () => const SizedBox(
                 height: 160,
                 child: Center(child: CircularProgressIndicator())),
             error: (e, _) => ErrorView(
                 message: failureText(e),
-                onRetry: () => ref.invalidate(managerCrewProvider)),
+                onRetry: () => ref
+                    .invalidate(managerReassignOptionsProvider(widget.jobId))),
             data: (list) => ListView(
               shrinkWrap: true,
               children: [
@@ -77,11 +81,17 @@ class _State extends ConsumerState<ManagerJobScreen> {
                   child: Text(CrewText.reassignTo,
                       style: Theme.of(context).textTheme.titleMedium),
                 ),
-                for (final c in list.where((c) => c.id != currentId))
+                for (final c in list.where((c) => c.crewId != currentId))
                   ListTile(
-                    key: ValueKey('assign-${c.id}'),
+                    key: ValueKey('assign-${c.crewId}'),
+                    enabled: c.canAssign,
                     title: Text(c.name),
-                    onTap: () => Navigator.of(context).pop(c.id),
+                    subtitle: c.canAssign
+                        ? null
+                        : Text('${CrewText.cannotReassign}. ${c.problem}'),
+                    onTap: c.canAssign
+                        ? () => Navigator.of(context).pop(c.crewId)
+                        : null,
                   ),
               ],
             ),
