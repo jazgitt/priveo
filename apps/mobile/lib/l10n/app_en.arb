@@ -18,12 +18,24 @@
   "forgotPassword": "Forgot password?",
   "codeTitle": "Enter the code",
   "codeSentTo": "We sent a 6-digit code to {email}. It works for 10 minutes.",
-  "@codeSentTo": {"placeholders": {"email": {"type": "String"}}},
+  "@codeSentTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "codeLabel": "6-digit code",
   "enterCode": "Enter the 6-digit code.",
   "verifyButton": "Verify",
   "resendIn": "Resend code in {time}",
-  "@resendIn": {"placeholders": {"time": {"type": "String"}}},
+  "@resendIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "resendCode": "Resend code",
   "newPasswordTitle": "Set a password",
   "passwordRule": "Use at least 8 characters, with a letter and a number.",
@@ -43,20 +55,56 @@
   "nextService": "Next service",
   "notScheduledYet": "Not scheduled yet",
   "dailyCleanBy": "Daily clean by {time}",
-  "@dailyCleanBy": {"placeholders": {"time": {"type": "String"}}},
+  "@dailyCleanBy": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "interiorCareOn": "Interior care on {day}",
-  "@interiorCareOn": {"placeholders": {"day": {"type": "String"}}},
+  "@interiorCareOn": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "noVehicles": "No vehicle is on your account yet. Contact Priveo.",
   "noRegistration": "Number to be added",
   "noParking": "Parking to be added",
   "noSubscription": "No subscription",
   "noPlan": "No plan",
   "pricePerMonth": "{price} a month",
-  "@pricePerMonth": {"placeholders": {"price": {"type": "String"}}},
+  "@pricePerMonth": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "vehicleOf": "Vehicle {number} of {total}",
-  "@vehicleOf": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "@vehicleOf": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "stepOf": "Step {number} of {total}",
-  "@stepOf": {"placeholders": {"number": {"type": "int"}, "total": {"type": "int"}}},
+  "@stepOf": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingIntro": "Check what we have, and fill in anything that is missing.",
   "reviewIntro": "Check everything once more, then confirm.",
   "yourDetails": "Your details",
@@ -76,7 +124,13 @@
   "basement": "Basement",
   "parkingNumber": "Parking number",
   "parkingPreview": "Your spot: {spot}",
-  "@parkingPreview": {"placeholders": {"spot": {"type": "String"}}},
+  "@parkingPreview": {
+    "placeholders": {
+      "spot": {
+        "type": "String"
+      }
+    }
+  },
   "servicePreferences": "Service preferences",
   "cutoffTime": "Service cutoff time",
   "chooseTime": "Choose a time",
@@ -118,5 +172,522 @@
   "demoAdmin": "Admin",
   "signOutAll": "Sign out of all devices",
   "signOutAllBody": "This signs you out on every phone and browser, including this one.",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "cust_calendar_title": "Service calendar",
+  "cust_previous_month": "Previous month",
+  "cust_next_month": "Next month",
+  "cust_legend_done": "Completed",
+  "cust_legend_interior": "Exterior + Interior",
+  "cust_legend_spa": "Deep Spa",
+  "cust_legend_scheduled": "Scheduled",
+  "cust_legend_skipped": "Skipped",
+  "cust_legend_missed": "Missed",
+  "cust_no_visit": "No visit on this day.",
+  "cust_no_visit_chip": "No visit",
+  "cust_view_details": "View service details",
+  "cust_proof_after_visit": "Proof appears after the visit.",
+  "cust_you_skipped": "You skipped this date.",
+  "cust_missed_note": "This service was missed.",
+  "cust_scheduled_by": "Scheduled to be completed by {time}. Proof appears after the visit.",
+  "@cust_scheduled_by": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "cust_history_title": "Service history",
+  "cust_history_empty": "No services yet.",
+  "cust_photo_count": "{count, plural, =1{1 photo} other{{count} photos}}",
+  "@cust_photo_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cust_visit_title": "Service details",
+  "cust_jobs_heading": "Jobs",
+  "cust_photos_heading": "Photos",
+  "cust_videos_heading": "Videos",
+  "cust_no_proof_yet": "Photos and videos appear once the service is done.",
+  "cust_play_video": "Play video",
+  "cust_photo_unavailable": "Photo unavailable",
+  "cust_close": "Close",
+  "cust_photo_position": "{index} / {total}",
+  "@cust_photo_position": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "cust_vehicles_title": "My vehicles",
+  "cust_vehicles_empty": "No vehicles yet.",
+  "cust_no_subscription": "No subscription",
+  "cust_number_to_be_added": "Number to be added",
+  "cust_vehicle_title": "Vehicle",
+  "cust_field_registration": "Registration",
+  "cust_field_car": "Make and model",
+  "cust_field_variant": "Variant",
+  "cust_field_category": "Category",
+  "cust_field_society": "Society",
+  "cust_field_parking": "Parking",
+  "cust_field_plan": "Plan",
+  "cust_field_cutoff": "Service cutoff time",
+  "cust_field_interior_day": "Interior care day",
+  "cust_not_on_file": "Not on file",
+  "cust_car_details_via_support": "Car details change only through Priveo support.",
+  "cust_account_title": "My account",
+  "cust_account_vehicles": "My vehicles",
+  "cust_account_history": "Service history",
+  "cust_account_notifications": "Notifications",
+  "cust_account_sign_out": "Sign out",
+  "cust_settings_heading": "Settings",
+  "cust_settings_note": "Notification choices will be available in a later update.",
+  "cust_notifications_title": "Notifications",
+  "cust_notifications_empty": "No notifications yet.",
+  "cust_mark_all_read": "Mark all as read",
+  "cust_next_service_heading": "Next service",
+  "people_crewProfileTitle": "My profile",
+  "people_role": "Role",
+  "people_workingHours": "Working hours",
+  "people_dayOff": "Off",
+  "people_hoursRange": "{start} to {end}",
+  "@people_hoursRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "people_profileNote": "Your name, mobile number, society and role are set by Priveo.",
+  "people_profileMissing": "Your details are not set up yet. Contact Priveo.",
+  "people_vehiclesTitle": "My vehicles",
+  "people_vehicleDetails": "Vehicle details",
+  "people_subscriptionStatus": "Subscription status",
+  "people_monthlyAmount": "Monthly amount",
+  "people_vehicleNotFound": "This vehicle is not on your account.",
+  "support_title": "Help and support",
+  "support_call": "Call support",
+  "support_whatsapp": "WhatsApp support",
+  "support_hours": "Support hours: {hours}",
+  "@support_hours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "support_report_issue": "Report an issue",
+  "support_my_complaints": "My complaints",
+  "support_complaints_in_progress": "{count} in progress",
+  "@support_complaints_in_progress": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "support_give_feedback": "Give feedback",
+  "support_monthly_checkin": "Monthly check-in",
+  "support_cannot_open": "We could not open that. Please try again.",
+  "support_report_title": "Report an issue",
+  "support_issue_category": "What went wrong?",
+  "support_issue_choose": "Choose what went wrong.",
+  "support_issue_linked_visit": "This report is linked to the clean you came from.",
+  "support_issue_description": "Describe what happened",
+  "support_issue_description_required": "Describe what happened.",
+  "support_issue_send": "Send report",
+  "support_issue_sent": "Thank you. We will reply within 4 hours.",
+  "support_complaints_title": "My complaints",
+  "support_complaints_empty": "You have not raised any complaints.",
+  "support_complaint_raised_on": "Raised {date}",
+  "@support_complaint_raised_on": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "support_complaint_reply_hint": "Write a reply",
+  "support_complaint_send": "Send",
+  "support_complaint_resolved": "This complaint is resolved. Raise a new one if the problem is back.",
+  "support_thread_you": "You",
+  "support_thread_priveo": "Priveo",
+  "support_status_changed": "Status: {status}",
+  "@support_status_changed": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "support_feedback_title": "Give feedback",
+  "support_feedback_category": "What is it about? (optional)",
+  "support_feedback_rating": "Your rating",
+  "support_feedback_comment": "Comments",
+  "support_feedback_testimonial": "Priveo may quote my feedback as a testimonial.",
+  "support_feedback_send": "Send",
+  "support_feedback_thanks": "Thank you for your feedback.",
+  "support_star": "Rate {n} out of 5",
+  "@support_star": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "support_rate_title": "Rate this clean",
+  "support_rate_positive_tags": "What went well? (optional)",
+  "support_rate_issue_tags": "What could be better? (optional)",
+  "support_rate_thanks": "Thank you for rating this clean.",
+  "support_checkin_title": "Monthly check-in",
+  "support_checkin_intro": "How is Priveo doing for {vehicle}? Tap a star for any of these.",
+  "@support_checkin_intro": {
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "support_checkin_comment": "Anything else? (optional)",
+  "support_checkin_submit": "Submit",
+  "support_checkin_thanks": "Thank you. Your check-in is saved.",
+  "support_checkin_none": "There is no check-in to give right now.",
+  "support_crew_ratings_title": "Ratings",
+  "support_crew_ratings_note": "Customers rate each visit as a whole. A rating is never given to a crew member.",
+  "support_crew_ratings_average": "Average rating",
+  "support_crew_ratings_count": "{count} ratings in the last {days} days",
+  "@support_crew_ratings_count": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "support_crew_ratings_none": "No ratings yet.",
+  "support_alerts_title": "Alerts",
+  "support_alerts_unread": "{count} unread",
+  "@support_alerts_unread": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "support_alerts_empty": "No alerts.",
+  "support_alerts_mark_all": "Mark all as read",
+  "crew_offline": "Could not reach Priveo. Check the connection and try again.",
+  "crew_team": "Team",
+  "crew_profile": "My profile",
+  "crew_all_jobs": "All jobs",
+  "crew_all": "All",
+  "crew_previous_day": "Previous day",
+  "crew_next_day": "Next day",
+  "crew_no_jobs": "No jobs for this day.",
+  "crew_job_title": "Job",
+  "crew_start_job": "Start job",
+  "crew_continue_job": "Continue",
+  "crew_could_not_complete": "Could not complete",
+  "crew_service": "Service",
+  "crew_car": "Car",
+  "crew_category": "Category",
+  "crew_society": "Society",
+  "crew_parking": "Parking",
+  "crew_finish_by_label": "Finish by",
+  "crew_slot": "Slot",
+  "crew_date": "Date",
+  "crew_checklist": "Checklist",
+  "crew_assigned_to": "Assigned to",
+  "crew_skipped_by_manager": "Skipped by a Manager",
+  "crew_perform_title": "Perform service",
+  "crew_proof": "Photos and video",
+  "crew_take_photo": "Take photo",
+  "crew_choose_photo": "Choose photo",
+  "crew_record_video": "Record video",
+  "crew_choose_video": "Choose video",
+  "crew_format_not_accepted": "This file format is not accepted.",
+  "crew_photo_too_large": "A photo must be under 10 MB.",
+  "crew_video_too_large": "A video must be under 25 MB.",
+  "crew_added_to_queue": "Saved. It will upload when there is a connection.",
+  "crew_capture_failed": "Could not get the file. Please try again.",
+  "crew_job_completed": "Job completed.",
+  "crew_mark_complete": "Mark complete",
+  "crew_before_complete": "Before you can mark this complete:",
+  "crew_waiting_to_send": "Waiting to send",
+  "crew_video": "Video",
+  "crew_photo": "Photo",
+  "crew_send_failed": "Could not send",
+  "crew_retry": "Retry",
+  "crew_reason": "Reason",
+  "crew_note_optional": "Note (optional)",
+  "crew_add_photo": "Add a photo (optional)",
+  "crew_photo_attached": "Photo attached",
+  "crew_confirm": "Confirm",
+  "crew_marked_could_not_complete": "Marked as could not complete.",
+  "crew_unassigned": "Not assigned",
+  "crew_skip_job": "Skip job",
+  "crew_skip_job_body": "The job is skipped by operations. This cannot be undone here.",
+  "crew_cancel": "Cancel",
+  "crew_job_skipped": "Job skipped.",
+  "crew_reassign": "Reassign",
+  "crew_reassign_to": "Reassign to",
+  "crew_job_reassigned": "Job reassigned.",
+  "crew_photo_saved": "Photo saved",
+  "crew_no_photo": "No photo yet",
+  "crew_name": "Name",
+  "crew_mobile": "Mobile number",
+  "crew_role": "Role",
+  "crew_working_hours": "Working hours",
+  "crew_finish_by": "Finish by {time}",
+  "@crew_finish_by": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_finished_at": "Finished on {date}",
+  "@crew_finished_at": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_uploads_waiting": "{count, plural, =1{1 upload waiting to send} other{{count} uploads waiting to send}}",
+  "@crew_uploads_waiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_uploads_failed": "{count, plural, =1{1 upload could not be sent} other{{count} uploads could not be sent}}",
+  "@crew_uploads_failed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_photos_progress": "Photos: {have} of {need} uploaded",
+  "@crew_photos_progress": {
+    "placeholders": {
+      "have": {
+        "type": "int"
+      },
+      "need": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_videos_progress": "Videos: {have} of {need} uploaded",
+  "@crew_videos_progress": {
+    "placeholders": {
+      "have": {
+        "type": "int"
+      },
+      "need": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_jobs_count": "{count, plural, =1{1 job} other{{count} jobs}}",
+  "@crew_jobs_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_stage_before": "Before",
+  "crew_stage_during": "During",
+  "crew_stage_after": "After",
+  "crew_reason_car_not_in_spot": "Car not in the parking spot",
+  "crew_reason_car_locked": "Car is locked",
+  "crew_reason_customer_did_not_allow": "Customer did not allow",
+  "crew_reason_bad_weather": "Bad weather",
+  "crew_reason_other": "Other",
+  "money_skipTitle": "Skip or pause",
+  "money_skipTab": "Skip",
+  "money_pauseTab": "Pause",
+  "money_skipInstruction": "Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.",
+  "money_skipConfirm": "Confirm skip",
+  "money_skipPickFirst": "Pick a date to skip first.",
+  "money_skipped": "Skipped",
+  "money_paused": "Paused",
+  "money_undoSkip": "Undo skip",
+  "money_upcoming": "Upcoming schedule",
+  "money_pauseFrom": "From",
+  "money_pauseTo": "To",
+  "money_pauseChoose": "Choose the start and end dates first.",
+  "money_pauseConfirm": "Confirm pause",
+  "money_endPause": "End pause",
+  "money_yourPauses": "Your pauses",
+  "money_pauseEnded": "The pause has ended. Visits resume.",
+  "money_callSupport": "Call support",
+  "money_cutoffClosed": "Closed",
+  "money_subTitle": "My subscription",
+  "money_cycle": "Billing cycle",
+  "money_monthly": "Monthly amount",
+  "money_paymentMethod": "Payment method",
+  "money_upi": "UPI",
+  "money_latestPayment": "Latest payment",
+  "money_payNext": "Pay for next month",
+  "money_pauseService": "Pause service",
+  "money_billingHistory": "View billing history",
+  "money_addons": "Add-ons",
+  "money_plan": "Plan",
+  "money_cutoff": "Service cutoff time",
+  "money_interiorDay": "Interior care day",
+  "money_noPlanName": "Plan",
+  "money_statusOverdue": "Over due",
+  "money_statusInitiated": "Initiated",
+  "money_statusReceived": "Received",
+  "money_payTitle": "Pay by UPI",
+  "money_payAmount": "Amount to pay",
+  "money_qrMissing": "The UPI QR code will be shown here.",
+  "money_payHow": "Scan the QR code or pay to the UPI ID from any UPI app.",
+  "money_upiId": "UPI ID",
+  "money_copy": "Copy UPI ID",
+  "money_copied": "UPI ID copied",
+  "money_ivePaid": "I've paid",
+  "money_submittedTitle": "Payment submitted",
+  "money_goHome": "Go to home",
+  "money_historyTitle": "Billing history",
+  "money_historyEmpty": "No payments yet.",
+  "money_invoice": "Invoice",
+  "money_invoiceTitle": "GST invoice",
+  "money_gstIncluded": "Price includes GST.",
+  "money_addonTitle": "Deep Spa",
+  "money_addonDate": "Preferred date",
+  "money_addonFinishBy": "Finish by",
+  "money_addonPickDate": "Choose a date",
+  "money_addonConfirm": "Confirm & pay",
+  "money_addonRequests": "Your requests",
+  "money_addonNone": "No requests yet.",
+  "money_addonCancel": "Cancel request",
+  "money_addonCancelled": "The request is cancelled. You are not charged.",
+  "money_standaloneTitle": "Deep Spa without a subscription",
+  "money_standaloneBody": "Tell us when you would like it. Priveo will call you to agree the date, price and payment.",
+  "money_contactMobile": "Mobile number to call",
+  "money_notes": "Notes (optional)",
+  "money_sendRequest": "Send request",
+  "money_standaloneDone": "Request sent. Priveo will call you.",
+  "money_standaloneLink": "Deep Spa without a subscription",
+  "money_adminPaymentsTitle": "Payments to confirm",
+  "money_adminNoPayments": "Nothing to confirm.",
+  "money_adminConfirm": "Confirm",
+  "money_adminReject": "Reject",
+  "money_adminConfirmed": "Payment confirmed.",
+  "money_adminRejected": "Payment sent back.",
+  "money_adminAlertsTitle": "Alerts",
+  "money_adminNoAlerts": "No alerts.",
+  "money_adminMarkRead": "Mark read",
+  "money_skipNote": "No cleaning on {date}. Your plan isn't charged for this visit.",
+  "@money_skipNote": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "money_skipDone": "Skipped {date}. The crew has been told.",
+  "@money_skipDone": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "money_unskipDone": "{date} is back on. The crew has been told.",
+  "@money_unskipDone": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "money_pauseDone": "Paused {from} to {to}. Plan now renews {renewal}.",
+  "@money_pauseDone": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "renewal": {
+        "type": "String"
+      }
+    }
+  },
+  "money_pausePeriod": "{from} to {to}",
+  "@money_pausePeriod": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "money_statusDue": "Due by {date}",
+  "@money_statusDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "money_submittedBody": "Priveo will confirm your payment of {amount}. Status: Initiated.",
+  "@money_submittedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "money_addonSummary": "{date}, finish by {time}. Total {total}, GST included.",
+  "@money_addonSummary": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "money_daysLeft": "{n} days left",
+  "@money_daysLeft": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "money_addonDuration": "{minutes} minutes",
+  "@money_addonDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  }
 }

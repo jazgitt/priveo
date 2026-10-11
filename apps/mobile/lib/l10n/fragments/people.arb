@@ -1,0 +1,15 @@
+{
+  "people_crewProfileTitle": "My profile",
+  "people_role": "Role",
+  "people_workingHours": "Working hours",
+  "people_dayOff": "Off",
+  "people_hoursRange": "{start} to {end}",
+  "@people_hoursRange": {"placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
+  "people_profileNote": "Your name, mobile number, society and role are set by Priveo.",
+  "people_profileMissing": "Your details are not set up yet. Contact Priveo.",
+  "people_vehiclesTitle": "My vehicles",
+  "people_vehicleDetails": "Vehicle details",
+  "people_subscriptionStatus": "Subscription status",
+  "people_monthlyAmount": "Monthly amount",
+  "people_vehicleNotFound": "This vehicle is not on your account."
+}

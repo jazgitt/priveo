@@ -1,0 +1,134 @@
+{
+  "crew_offline": "Could not reach Priveo. Check the connection and try again.",
+  "crew_team": "Team",
+  "crew_profile": "My profile",
+  "crew_all_jobs": "All jobs",
+  "crew_all": "All",
+  "crew_previous_day": "Previous day",
+  "crew_next_day": "Next day",
+  "crew_no_jobs": "No jobs for this day.",
+  "crew_job_title": "Job",
+  "crew_start_job": "Start job",
+  "crew_continue_job": "Continue",
+  "crew_could_not_complete": "Could not complete",
+  "crew_service": "Service",
+  "crew_car": "Car",
+  "crew_category": "Category",
+  "crew_society": "Society",
+  "crew_parking": "Parking",
+  "crew_finish_by_label": "Finish by",
+  "crew_slot": "Slot",
+  "crew_date": "Date",
+  "crew_checklist": "Checklist",
+  "crew_assigned_to": "Assigned to",
+  "crew_skipped_by_manager": "Skipped by a Manager",
+  "crew_perform_title": "Perform service",
+  "crew_proof": "Photos and video",
+  "crew_take_photo": "Take photo",
+  "crew_choose_photo": "Choose photo",
+  "crew_record_video": "Record video",
+  "crew_choose_video": "Choose video",
+  "crew_format_not_accepted": "This file format is not accepted.",
+  "crew_photo_too_large": "A photo must be under 10 MB.",
+  "crew_video_too_large": "A video must be under 25 MB.",
+  "crew_added_to_queue": "Saved. It will upload when there is a connection.",
+  "crew_capture_failed": "Could not get the file. Please try again.",
+  "crew_job_completed": "Job completed.",
+  "crew_mark_complete": "Mark complete",
+  "crew_before_complete": "Before you can mark this complete:",
+  "crew_waiting_to_send": "Waiting to send",
+  "crew_video": "Video",
+  "crew_photo": "Photo",
+  "crew_send_failed": "Could not send",
+  "crew_retry": "Retry",
+  "crew_reason": "Reason",
+  "crew_note_optional": "Note (optional)",
+  "crew_add_photo": "Add a photo (optional)",
+  "crew_photo_attached": "Photo attached",
+  "crew_confirm": "Confirm",
+  "crew_marked_could_not_complete": "Marked as could not complete.",
+  "crew_unassigned": "Not assigned",
+  "crew_skip_job": "Skip job",
+  "crew_skip_job_body": "The job is skipped by operations. This cannot be undone here.",
+  "crew_cancel": "Cancel",
+  "crew_job_skipped": "Job skipped.",
+  "crew_reassign": "Reassign",
+  "crew_reassign_to": "Reassign to",
+  "crew_job_reassigned": "Job reassigned.",
+  "crew_photo_saved": "Photo saved",
+  "crew_no_photo": "No photo yet",
+  "crew_name": "Name",
+  "crew_mobile": "Mobile number",
+  "crew_role": "Role",
+  "crew_working_hours": "Working hours",
+  "crew_finish_by": "Finish by {time}",
+  "@crew_finish_by": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_finished_at": "Finished on {date}",
+  "@crew_finished_at": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_uploads_waiting": "{count, plural, =1{1 upload waiting to send} other{{count} uploads waiting to send}}",
+  "@crew_uploads_waiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_uploads_failed": "{count, plural, =1{1 upload could not be sent} other{{count} uploads could not be sent}}",
+  "@crew_uploads_failed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_photos_progress": "Photos: {have} of {need} uploaded",
+  "@crew_photos_progress": {
+    "placeholders": {
+      "have": {
+        "type": "int"
+      },
+      "need": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_videos_progress": "Videos: {have} of {need} uploaded",
+  "@crew_videos_progress": {
+    "placeholders": {
+      "have": {
+        "type": "int"
+      },
+      "need": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_jobs_count": "{count, plural, =1{1 job} other{{count} jobs}}",
+  "@crew_jobs_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_stage_before": "Before",
+  "crew_stage_during": "During",
+  "crew_stage_after": "After",
+  "crew_reason_car_not_in_spot": "Car not in the parking spot",
+  "crew_reason_car_locked": "Car is locked",
+  "crew_reason_customer_did_not_allow": "Customer did not allow",
+  "crew_reason_bad_weather": "Bad weather",
+  "crew_reason_other": "Other"
+}

@@ -363,4 +363,954 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancel => 'Cancel';
+
+  @override
+  String get cust_calendar_title => 'Service calendar';
+
+  @override
+  String get cust_previous_month => 'Previous month';
+
+  @override
+  String get cust_next_month => 'Next month';
+
+  @override
+  String get cust_legend_done => 'Completed';
+
+  @override
+  String get cust_legend_interior => 'Exterior + Interior';
+
+  @override
+  String get cust_legend_spa => 'Deep Spa';
+
+  @override
+  String get cust_legend_scheduled => 'Scheduled';
+
+  @override
+  String get cust_legend_skipped => 'Skipped';
+
+  @override
+  String get cust_legend_missed => 'Missed';
+
+  @override
+  String get cust_no_visit => 'No visit on this day.';
+
+  @override
+  String get cust_no_visit_chip => 'No visit';
+
+  @override
+  String get cust_view_details => 'View service details';
+
+  @override
+  String get cust_proof_after_visit => 'Proof appears after the visit.';
+
+  @override
+  String get cust_you_skipped => 'You skipped this date.';
+
+  @override
+  String get cust_missed_note => 'This service was missed.';
+
+  @override
+  String cust_scheduled_by(String time) {
+    return 'Scheduled to be completed by $time. Proof appears after the visit.';
+  }
+
+  @override
+  String get cust_history_title => 'Service history';
+
+  @override
+  String get cust_history_empty => 'No services yet.';
+
+  @override
+  String cust_photo_count(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cust_visit_title => 'Service details';
+
+  @override
+  String get cust_jobs_heading => 'Jobs';
+
+  @override
+  String get cust_photos_heading => 'Photos';
+
+  @override
+  String get cust_videos_heading => 'Videos';
+
+  @override
+  String get cust_no_proof_yet =>
+      'Photos and videos appear once the service is done.';
+
+  @override
+  String get cust_play_video => 'Play video';
+
+  @override
+  String get cust_photo_unavailable => 'Photo unavailable';
+
+  @override
+  String get cust_close => 'Close';
+
+  @override
+  String cust_photo_position(int index, int total) {
+    return '$index / $total';
+  }
+
+  @override
+  String get cust_vehicles_title => 'My vehicles';
+
+  @override
+  String get cust_vehicles_empty => 'No vehicles yet.';
+
+  @override
+  String get cust_no_subscription => 'No subscription';
+
+  @override
+  String get cust_number_to_be_added => 'Number to be added';
+
+  @override
+  String get cust_vehicle_title => 'Vehicle';
+
+  @override
+  String get cust_field_registration => 'Registration';
+
+  @override
+  String get cust_field_car => 'Make and model';
+
+  @override
+  String get cust_field_variant => 'Variant';
+
+  @override
+  String get cust_field_category => 'Category';
+
+  @override
+  String get cust_field_society => 'Society';
+
+  @override
+  String get cust_field_parking => 'Parking';
+
+  @override
+  String get cust_field_plan => 'Plan';
+
+  @override
+  String get cust_field_cutoff => 'Service cutoff time';
+
+  @override
+  String get cust_field_interior_day => 'Interior care day';
+
+  @override
+  String get cust_not_on_file => 'Not on file';
+
+  @override
+  String get cust_car_details_via_support =>
+      'Car details change only through Priveo support.';
+
+  @override
+  String get cust_account_title => 'My account';
+
+  @override
+  String get cust_account_vehicles => 'My vehicles';
+
+  @override
+  String get cust_account_history => 'Service history';
+
+  @override
+  String get cust_account_notifications => 'Notifications';
+
+  @override
+  String get cust_account_sign_out => 'Sign out';
+
+  @override
+  String get cust_settings_heading => 'Settings';
+
+  @override
+  String get cust_settings_note =>
+      'Notification choices will be available in a later update.';
+
+  @override
+  String get cust_notifications_title => 'Notifications';
+
+  @override
+  String get cust_notifications_empty => 'No notifications yet.';
+
+  @override
+  String get cust_mark_all_read => 'Mark all as read';
+
+  @override
+  String get cust_next_service_heading => 'Next service';
+
+  @override
+  String get people_crewProfileTitle => 'My profile';
+
+  @override
+  String get people_role => 'Role';
+
+  @override
+  String get people_workingHours => 'Working hours';
+
+  @override
+  String get people_dayOff => 'Off';
+
+  @override
+  String people_hoursRange(String start, String end) {
+    return '$start to $end';
+  }
+
+  @override
+  String get people_profileNote =>
+      'Your name, mobile number, society and role are set by Priveo.';
+
+  @override
+  String get people_profileMissing =>
+      'Your details are not set up yet. Contact Priveo.';
+
+  @override
+  String get people_vehiclesTitle => 'My vehicles';
+
+  @override
+  String get people_vehicleDetails => 'Vehicle details';
+
+  @override
+  String get people_subscriptionStatus => 'Subscription status';
+
+  @override
+  String get people_monthlyAmount => 'Monthly amount';
+
+  @override
+  String get people_vehicleNotFound => 'This vehicle is not on your account.';
+
+  @override
+  String get support_title => 'Help and support';
+
+  @override
+  String get support_call => 'Call support';
+
+  @override
+  String get support_whatsapp => 'WhatsApp support';
+
+  @override
+  String support_hours(String hours) {
+    return 'Support hours: $hours';
+  }
+
+  @override
+  String get support_report_issue => 'Report an issue';
+
+  @override
+  String get support_my_complaints => 'My complaints';
+
+  @override
+  String support_complaints_in_progress(String count) {
+    return '$count in progress';
+  }
+
+  @override
+  String get support_give_feedback => 'Give feedback';
+
+  @override
+  String get support_monthly_checkin => 'Monthly check-in';
+
+  @override
+  String get support_cannot_open => 'We could not open that. Please try again.';
+
+  @override
+  String get support_report_title => 'Report an issue';
+
+  @override
+  String get support_issue_category => 'What went wrong?';
+
+  @override
+  String get support_issue_choose => 'Choose what went wrong.';
+
+  @override
+  String get support_issue_linked_visit =>
+      'This report is linked to the clean you came from.';
+
+  @override
+  String get support_issue_description => 'Describe what happened';
+
+  @override
+  String get support_issue_description_required => 'Describe what happened.';
+
+  @override
+  String get support_issue_send => 'Send report';
+
+  @override
+  String get support_issue_sent => 'Thank you. We will reply within 4 hours.';
+
+  @override
+  String get support_complaints_title => 'My complaints';
+
+  @override
+  String get support_complaints_empty => 'You have not raised any complaints.';
+
+  @override
+  String support_complaint_raised_on(String date) {
+    return 'Raised $date';
+  }
+
+  @override
+  String get support_complaint_reply_hint => 'Write a reply';
+
+  @override
+  String get support_complaint_send => 'Send';
+
+  @override
+  String get support_complaint_resolved =>
+      'This complaint is resolved. Raise a new one if the problem is back.';
+
+  @override
+  String get support_thread_you => 'You';
+
+  @override
+  String get support_thread_priveo => 'Priveo';
+
+  @override
+  String support_status_changed(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get support_feedback_title => 'Give feedback';
+
+  @override
+  String get support_feedback_category => 'What is it about? (optional)';
+
+  @override
+  String get support_feedback_rating => 'Your rating';
+
+  @override
+  String get support_feedback_comment => 'Comments';
+
+  @override
+  String get support_feedback_testimonial =>
+      'Priveo may quote my feedback as a testimonial.';
+
+  @override
+  String get support_feedback_send => 'Send';
+
+  @override
+  String get support_feedback_thanks => 'Thank you for your feedback.';
+
+  @override
+  String support_star(String n) {
+    return 'Rate $n out of 5';
+  }
+
+  @override
+  String get support_rate_title => 'Rate this clean';
+
+  @override
+  String get support_rate_positive_tags => 'What went well? (optional)';
+
+  @override
+  String get support_rate_issue_tags => 'What could be better? (optional)';
+
+  @override
+  String get support_rate_thanks => 'Thank you for rating this clean.';
+
+  @override
+  String get support_checkin_title => 'Monthly check-in';
+
+  @override
+  String support_checkin_intro(String vehicle) {
+    return 'How is Priveo doing for $vehicle? Tap a star for any of these.';
+  }
+
+  @override
+  String get support_checkin_comment => 'Anything else? (optional)';
+
+  @override
+  String get support_checkin_submit => 'Submit';
+
+  @override
+  String get support_checkin_thanks => 'Thank you. Your check-in is saved.';
+
+  @override
+  String get support_checkin_none => 'There is no check-in to give right now.';
+
+  @override
+  String get support_crew_ratings_title => 'Ratings';
+
+  @override
+  String get support_crew_ratings_note =>
+      'Customers rate each visit as a whole. A rating is never given to a crew member.';
+
+  @override
+  String get support_crew_ratings_average => 'Average rating';
+
+  @override
+  String support_crew_ratings_count(String count, String days) {
+    return '$count ratings in the last $days days';
+  }
+
+  @override
+  String get support_crew_ratings_none => 'No ratings yet.';
+
+  @override
+  String get support_alerts_title => 'Alerts';
+
+  @override
+  String support_alerts_unread(String count) {
+    return '$count unread';
+  }
+
+  @override
+  String get support_alerts_empty => 'No alerts.';
+
+  @override
+  String get support_alerts_mark_all => 'Mark all as read';
+
+  @override
+  String get crew_offline =>
+      'Could not reach Priveo. Check the connection and try again.';
+
+  @override
+  String get crew_team => 'Team';
+
+  @override
+  String get crew_profile => 'My profile';
+
+  @override
+  String get crew_all_jobs => 'All jobs';
+
+  @override
+  String get crew_all => 'All';
+
+  @override
+  String get crew_previous_day => 'Previous day';
+
+  @override
+  String get crew_next_day => 'Next day';
+
+  @override
+  String get crew_no_jobs => 'No jobs for this day.';
+
+  @override
+  String get crew_job_title => 'Job';
+
+  @override
+  String get crew_start_job => 'Start job';
+
+  @override
+  String get crew_continue_job => 'Continue';
+
+  @override
+  String get crew_could_not_complete => 'Could not complete';
+
+  @override
+  String get crew_service => 'Service';
+
+  @override
+  String get crew_car => 'Car';
+
+  @override
+  String get crew_category => 'Category';
+
+  @override
+  String get crew_society => 'Society';
+
+  @override
+  String get crew_parking => 'Parking';
+
+  @override
+  String get crew_finish_by_label => 'Finish by';
+
+  @override
+  String get crew_slot => 'Slot';
+
+  @override
+  String get crew_date => 'Date';
+
+  @override
+  String get crew_checklist => 'Checklist';
+
+  @override
+  String get crew_assigned_to => 'Assigned to';
+
+  @override
+  String get crew_skipped_by_manager => 'Skipped by a Manager';
+
+  @override
+  String get crew_perform_title => 'Perform service';
+
+  @override
+  String get crew_proof => 'Photos and video';
+
+  @override
+  String get crew_take_photo => 'Take photo';
+
+  @override
+  String get crew_choose_photo => 'Choose photo';
+
+  @override
+  String get crew_record_video => 'Record video';
+
+  @override
+  String get crew_choose_video => 'Choose video';
+
+  @override
+  String get crew_format_not_accepted => 'This file format is not accepted.';
+
+  @override
+  String get crew_photo_too_large => 'A photo must be under 10 MB.';
+
+  @override
+  String get crew_video_too_large => 'A video must be under 25 MB.';
+
+  @override
+  String get crew_added_to_queue =>
+      'Saved. It will upload when there is a connection.';
+
+  @override
+  String get crew_capture_failed => 'Could not get the file. Please try again.';
+
+  @override
+  String get crew_job_completed => 'Job completed.';
+
+  @override
+  String get crew_mark_complete => 'Mark complete';
+
+  @override
+  String get crew_before_complete => 'Before you can mark this complete:';
+
+  @override
+  String get crew_waiting_to_send => 'Waiting to send';
+
+  @override
+  String get crew_video => 'Video';
+
+  @override
+  String get crew_photo => 'Photo';
+
+  @override
+  String get crew_send_failed => 'Could not send';
+
+  @override
+  String get crew_retry => 'Retry';
+
+  @override
+  String get crew_reason => 'Reason';
+
+  @override
+  String get crew_note_optional => 'Note (optional)';
+
+  @override
+  String get crew_add_photo => 'Add a photo (optional)';
+
+  @override
+  String get crew_photo_attached => 'Photo attached';
+
+  @override
+  String get crew_confirm => 'Confirm';
+
+  @override
+  String get crew_marked_could_not_complete => 'Marked as could not complete.';
+
+  @override
+  String get crew_unassigned => 'Not assigned';
+
+  @override
+  String get crew_skip_job => 'Skip job';
+
+  @override
+  String get crew_skip_job_body =>
+      'The job is skipped by operations. This cannot be undone here.';
+
+  @override
+  String get crew_cancel => 'Cancel';
+
+  @override
+  String get crew_job_skipped => 'Job skipped.';
+
+  @override
+  String get crew_reassign => 'Reassign';
+
+  @override
+  String get crew_reassign_to => 'Reassign to';
+
+  @override
+  String get crew_job_reassigned => 'Job reassigned.';
+
+  @override
+  String get crew_photo_saved => 'Photo saved';
+
+  @override
+  String get crew_no_photo => 'No photo yet';
+
+  @override
+  String get crew_name => 'Name';
+
+  @override
+  String get crew_mobile => 'Mobile number';
+
+  @override
+  String get crew_role => 'Role';
+
+  @override
+  String get crew_working_hours => 'Working hours';
+
+  @override
+  String crew_finish_by(String time) {
+    return 'Finish by $time';
+  }
+
+  @override
+  String crew_finished_at(String date) {
+    return 'Finished on $date';
+  }
+
+  @override
+  String crew_uploads_waiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uploads waiting to send',
+      one: '1 upload waiting to send',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_uploads_failed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uploads could not be sent',
+      one: '1 upload could not be sent',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_photos_progress(int have, int need) {
+    return 'Photos: $have of $need uploaded';
+  }
+
+  @override
+  String crew_videos_progress(int have, int need) {
+    return 'Videos: $have of $need uploaded';
+  }
+
+  @override
+  String crew_jobs_count(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs',
+      one: '1 job',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get crew_stage_before => 'Before';
+
+  @override
+  String get crew_stage_during => 'During';
+
+  @override
+  String get crew_stage_after => 'After';
+
+  @override
+  String get crew_reason_car_not_in_spot => 'Car not in the parking spot';
+
+  @override
+  String get crew_reason_car_locked => 'Car is locked';
+
+  @override
+  String get crew_reason_customer_did_not_allow => 'Customer did not allow';
+
+  @override
+  String get crew_reason_bad_weather => 'Bad weather';
+
+  @override
+  String get crew_reason_other => 'Other';
+
+  @override
+  String get money_skipTitle => 'Skip or pause';
+
+  @override
+  String get money_skipTab => 'Skip';
+
+  @override
+  String get money_pauseTab => 'Pause';
+
+  @override
+  String get money_skipInstruction =>
+      'Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.';
+
+  @override
+  String get money_skipConfirm => 'Confirm skip';
+
+  @override
+  String get money_skipPickFirst => 'Pick a date to skip first.';
+
+  @override
+  String get money_skipped => 'Skipped';
+
+  @override
+  String get money_paused => 'Paused';
+
+  @override
+  String get money_undoSkip => 'Undo skip';
+
+  @override
+  String get money_upcoming => 'Upcoming schedule';
+
+  @override
+  String get money_pauseFrom => 'From';
+
+  @override
+  String get money_pauseTo => 'To';
+
+  @override
+  String get money_pauseChoose => 'Choose the start and end dates first.';
+
+  @override
+  String get money_pauseConfirm => 'Confirm pause';
+
+  @override
+  String get money_endPause => 'End pause';
+
+  @override
+  String get money_yourPauses => 'Your pauses';
+
+  @override
+  String get money_pauseEnded => 'The pause has ended. Visits resume.';
+
+  @override
+  String get money_callSupport => 'Call support';
+
+  @override
+  String get money_cutoffClosed => 'Closed';
+
+  @override
+  String get money_subTitle => 'My subscription';
+
+  @override
+  String get money_cycle => 'Billing cycle';
+
+  @override
+  String get money_monthly => 'Monthly amount';
+
+  @override
+  String get money_paymentMethod => 'Payment method';
+
+  @override
+  String get money_upi => 'UPI';
+
+  @override
+  String get money_latestPayment => 'Latest payment';
+
+  @override
+  String get money_payNext => 'Pay for next month';
+
+  @override
+  String get money_pauseService => 'Pause service';
+
+  @override
+  String get money_billingHistory => 'View billing history';
+
+  @override
+  String get money_addons => 'Add-ons';
+
+  @override
+  String get money_plan => 'Plan';
+
+  @override
+  String get money_cutoff => 'Service cutoff time';
+
+  @override
+  String get money_interiorDay => 'Interior care day';
+
+  @override
+  String get money_noPlanName => 'Plan';
+
+  @override
+  String get money_statusOverdue => 'Over due';
+
+  @override
+  String get money_statusInitiated => 'Initiated';
+
+  @override
+  String get money_statusReceived => 'Received';
+
+  @override
+  String get money_payTitle => 'Pay by UPI';
+
+  @override
+  String get money_payAmount => 'Amount to pay';
+
+  @override
+  String get money_qrMissing => 'The UPI QR code will be shown here.';
+
+  @override
+  String get money_payHow =>
+      'Scan the QR code or pay to the UPI ID from any UPI app.';
+
+  @override
+  String get money_upiId => 'UPI ID';
+
+  @override
+  String get money_copy => 'Copy UPI ID';
+
+  @override
+  String get money_copied => 'UPI ID copied';
+
+  @override
+  String get money_ivePaid => 'I\'ve paid';
+
+  @override
+  String get money_submittedTitle => 'Payment submitted';
+
+  @override
+  String get money_goHome => 'Go to home';
+
+  @override
+  String get money_historyTitle => 'Billing history';
+
+  @override
+  String get money_historyEmpty => 'No payments yet.';
+
+  @override
+  String get money_invoice => 'Invoice';
+
+  @override
+  String get money_invoiceTitle => 'GST invoice';
+
+  @override
+  String get money_gstIncluded => 'Price includes GST.';
+
+  @override
+  String get money_addonTitle => 'Deep Spa';
+
+  @override
+  String get money_addonDate => 'Preferred date';
+
+  @override
+  String get money_addonFinishBy => 'Finish by';
+
+  @override
+  String get money_addonPickDate => 'Choose a date';
+
+  @override
+  String get money_addonConfirm => 'Confirm & pay';
+
+  @override
+  String get money_addonRequests => 'Your requests';
+
+  @override
+  String get money_addonNone => 'No requests yet.';
+
+  @override
+  String get money_addonCancel => 'Cancel request';
+
+  @override
+  String get money_addonCancelled =>
+      'The request is cancelled. You are not charged.';
+
+  @override
+  String get money_standaloneTitle => 'Deep Spa without a subscription';
+
+  @override
+  String get money_standaloneBody =>
+      'Tell us when you would like it. Priveo will call you to agree the date, price and payment.';
+
+  @override
+  String get money_contactMobile => 'Mobile number to call';
+
+  @override
+  String get money_notes => 'Notes (optional)';
+
+  @override
+  String get money_sendRequest => 'Send request';
+
+  @override
+  String get money_standaloneDone => 'Request sent. Priveo will call you.';
+
+  @override
+  String get money_standaloneLink => 'Deep Spa without a subscription';
+
+  @override
+  String get money_adminPaymentsTitle => 'Payments to confirm';
+
+  @override
+  String get money_adminNoPayments => 'Nothing to confirm.';
+
+  @override
+  String get money_adminConfirm => 'Confirm';
+
+  @override
+  String get money_adminReject => 'Reject';
+
+  @override
+  String get money_adminConfirmed => 'Payment confirmed.';
+
+  @override
+  String get money_adminRejected => 'Payment sent back.';
+
+  @override
+  String get money_adminAlertsTitle => 'Alerts';
+
+  @override
+  String get money_adminNoAlerts => 'No alerts.';
+
+  @override
+  String get money_adminMarkRead => 'Mark read';
+
+  @override
+  String money_skipNote(String date) {
+    return 'No cleaning on $date. Your plan isn\'t charged for this visit.';
+  }
+
+  @override
+  String money_skipDone(String date) {
+    return 'Skipped $date. The crew has been told.';
+  }
+
+  @override
+  String money_unskipDone(String date) {
+    return '$date is back on. The crew has been told.';
+  }
+
+  @override
+  String money_pauseDone(String from, String to, String renewal) {
+    return 'Paused $from to $to. Plan now renews $renewal.';
+  }
+
+  @override
+  String money_pausePeriod(String from, String to) {
+    return '$from to $to';
+  }
+
+  @override
+  String money_statusDue(String date) {
+    return 'Due by $date';
+  }
+
+  @override
+  String money_submittedBody(String amount) {
+    return 'Priveo will confirm your payment of $amount. Status: Initiated.';
+  }
+
+  @override
+  String money_addonSummary(String date, String time, String total) {
+    return '$date, finish by $time. Total $total, GST included.';
+  }
+
+  @override
+  String money_daysLeft(int n) {
+    return '$n days left';
+  }
+
+  @override
+  String money_addonDuration(int minutes) {
+    return '$minutes minutes';
+  }
 }

@@ -1,0 +1,554 @@
+"""Scheduling on the database: demand, capacity, runs, manual changes, the
+freeze rules and the read models for the customer and crew apps."""
+import uuid
+from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
+from app.directory.models import Society
+from app.identity.models import Login
+from app.platform.db import utcnow
+from app.platform.errors import ApiError
+from app.scheduling import rules
+from app.scheduling.models import (
+    DURATIONS,
+    Job,
+    Schedule,
+    SchedulingCrew,
+    SchedulingCrewException,
+    SchedulingEvent,
+    Visit,
+)
+from app.scheduling.solver import SolverCrew, SolverJob, solve_day
+
+DAY_DONE = ("Completed", "Skipped")
+
+
+@dataclass(frozen=True)
+class Demand:
+    """A job that is due: one service for one vehicle on one date (ADM-CAP-03)."""
+
+    day: date
+    vehicle_id: uuid.UUID
+    service: str
+    finish_by: int | None
+    addon_request_id: uuid.UUID | None = None
+
+    @property
+    def duration(self) -> int:
+        return DURATIONS[self.service]
+
+
+@dataclass
+class RunSummary:
+    schedule_id: uuid.UUID
+    society_id: uuid.UUID
+    status: str
+    placed: int
+    unscheduled: int
+    late: int
+
+
+def daterange(start: date, end: date) -> list[date]:
+    return [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+
+def minutes_of(t: time | None) -> int | None:
+    return None if t is None else t.hour * 60 + t.minute
+
+
+def record(db: Session, schedule_id: uuid.UUID, admin_id: uuid.UUID | None, kind: str,
+           detail: str = "") -> None:
+    db.add(SchedulingEvent(schedule_id=schedule_id, admin_login_id=admin_id, kind=kind,
+                           detail=detail))
+
+
+# ---- demand and capacity ---------------------------------------------------
+
+def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[Demand]:
+    """Cleaning-External every day, Cleaning-Internal on the interior care day
+    and a Deep Spa on the date the customer asked for (ADM-SVS-10). Only
+    Active subscriptions count (ADM-SUB-02)."""
+    out: list[Demand] = []
+    rows = db.execute(
+        select(Subscription, Vehicle)
+        .join(Vehicle, Subscription.vehicle_id == Vehicle.id)
+        .join(Customer, Vehicle.customer_id == Customer.id)
+        .where(Customer.society_id == society_id, Subscription.status == "Active",
+               Vehicle.active.is_(True))
+        .order_by(Vehicle.created_at, Vehicle.id)
+    ).all()
+    for sub, vehicle in rows:
+        cutoff = minutes_of(sub.cutoff_time)
+        for day in days:
+            if day < sub.first_service_date:
+                continue
+            out.append(Demand(day, vehicle.id, "Cleaning-External", cutoff))
+            if sub.interior_day and WEEKDAYS[day.weekday()] == sub.interior_day:
+                out.append(Demand(day, vehicle.id, "Cleaning-Internal", cutoff))
+    addons = db.execute(
+        select(AddonRequest)
+        .join(Customer, AddonRequest.customer_id == Customer.id)
+        .join(Vehicle, AddonRequest.vehicle_id == Vehicle.id)
+        .where(Customer.society_id == society_id, AddonRequest.service == "Deep Spa",
+               AddonRequest.service_date.in_(days), Vehicle.active.is_(True))
+        .order_by(AddonRequest.created_at, AddonRequest.id)
+    ).scalars().all()
+    for addon in addons:
+        # The finish-by time of an add-on is not stored yet (ADM-SCH-30).
+        out.append(Demand(addon.service_date, addon.vehicle_id, "Deep Spa", None, addon.id))
+    return out
+
+
+def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingCrew]:
+    rows = db.execute(
+        select(SchedulingCrew)
+        .where(SchedulingCrew.society_id == society_id, SchedulingCrew.active.is_(True))
+        .order_by(SchedulingCrew.id)
+    ).scalars().all()
+    return {c.id: c for c in rows}
+
+
+def availability(db: Session, crew: dict[uuid.UUID, SchedulingCrew],
+                 days: list[date]) -> dict[date, dict[uuid.UUID, tuple[int, int]]]:
+    """For each date, the working window of every counted crew member."""
+    exceptions: dict[tuple[uuid.UUID, date], SchedulingCrewException] = {}
+    if crew and days:
+        for ex in db.execute(
+            select(SchedulingCrewException)
+            .where(SchedulingCrewException.crew_id.in_(list(crew)),
+                   SchedulingCrewException.on_date.in_(days))
+        ).scalars():
+            exceptions[(ex.crew_id, ex.on_date)] = ex
+    out: dict[date, dict[uuid.UUID, tuple[int, int]]] = {}
+    for day in days:
+        out[day] = {}
+        for cid, c in crew.items():
+            ex = exceptions.get((cid, day))
+            window = rules.window_for(c.role, c.start_minute, c.end_minute,
+                                      ex.kind if ex else None, ex.from_minute if ex else None)
+            if window is not None:
+                out[day][cid] = window
+    return out
+
+
+def capacity(db: Session, society_id: uuid.UUID, start: date, end: date,
+             schedule: Schedule | None = None) -> list[dict]:
+    """Crew minutes against the minutes of work due, for each date (ADM-CAP-01
+    to ADM-CAP-04)."""
+    days = daterange(start, end)
+    crew = load_crew(db, society_id)
+    windows = availability(db, crew, days)
+    demand_minutes = dict.fromkeys(days, 0)
+    for d in build_demand(db, society_id, days):
+        demand_minutes[d.day] += d.duration
+    scheduled = dict.fromkeys(days, 0)
+    if schedule is not None:
+        rows = db.execute(
+            select(Visit.date, Job.duration_minutes)
+            .join(Job, Job.visit_id == Visit.id)
+            .where(Visit.schedule_id == schedule.id, Job.crew_id.is_not(None))
+        ).all()
+        for day, minutes in rows:
+            if day in scheduled:
+                scheduled[day] += minutes
+    out = []
+    for day in days:
+        cap = sum(e - s for s, e in windows[day].values())
+        out.append({
+            "date": day, "capacity_minutes": cap, "demand_minutes": demand_minutes[day],
+            "scheduled_minutes": scheduled[day],
+            "over_capacity": demand_minutes[day] > cap,
+        })
+    return out
+
+
+# ---- schedules -------------------------------------------------------------
+
+def get_schedule(db: Session, schedule_id: uuid.UUID) -> Schedule:
+    schedule = db.get(Schedule, schedule_id)
+    if schedule is None:
+        raise ApiError("not_found", "That schedule does not exist.", 404)
+    return schedule
+
+
+def get_or_create_schedule(db: Session, society_id: uuid.UUID, start: date,
+                           days: int) -> Schedule:
+    if db.get(Society, society_id) is None:
+        raise ApiError("not_found", "That society does not exist.", 404)
+    schedule = db.execute(
+        select(Schedule).where(Schedule.society_id == society_id, Schedule.start_date == start)
+    ).scalar_one_or_none()
+    end = start + timedelta(days=days - 1)
+    if schedule is None:
+        schedule = Schedule(society_id=society_id, start_date=start, end_date=end)
+        db.add(schedule)
+        db.flush()
+    elif schedule.status == "Draft":
+        schedule.end_date = end
+    return schedule
+
+
+def _jobs_of(db: Session, schedule_id: uuid.UUID) -> list[tuple[Job, Visit]]:
+    return list(db.execute(
+        select(Job, Visit).join(Visit, Job.visit_id == Visit.id)
+        .where(Visit.schedule_id == schedule_id)
+        .order_by(Visit.date, Job.id)
+    ).all())
+
+
+def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
+    visit = db.get(Visit, visit_id)
+    statuses = db.execute(select(Job.status).where(Job.visit_id == visit_id)).scalars().all()
+    visit.status = rules.visit_status(statuses)
+
+
+def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) -> RunSummary:
+    """Plan a schedule. On a Draft, every job not placed by hand is planned
+    again and hand-made changes stay (ADM-SCH-14). On a Frozen schedule
+    nothing moves: only jobs without a crew member are placed, without
+    unfreezing (ADM-SCH-27)."""
+    frozen = schedule.status == "Frozen"
+    days = daterange(schedule.start_date, schedule.end_date)
+    demand = build_demand(db, schedule.society_id, days)
+
+    visits = {(v.vehicle_id, v.date): v for v in db.execute(
+        select(Visit).where(Visit.schedule_id == schedule.id)).scalars()}
+    existing = {(v.vehicle_id, v.date, j.service, j.addon_request_id): j
+                for j, v in _jobs_of(db, schedule.id)}
+    wanted = set()
+    for item in demand:
+        key = (item.vehicle_id, item.day, item.service, item.addon_request_id)
+        wanted.add(key)
+        visit = visits.get((item.vehicle_id, item.day))
+        if visit is None:
+            visit = Visit(schedule_id=schedule.id, vehicle_id=item.vehicle_id, date=item.day)
+            db.add(visit)
+            db.flush()
+            visits[(item.vehicle_id, item.day)] = visit
+        job = existing.get(key)
+        if job is None:
+            db.add(Job(visit_id=visit.id, service=item.service, duration_minutes=item.duration,
+                       finish_by_minute=item.finish_by, addon_request_id=item.addon_request_id))
+        else:
+            job.finish_by_minute = item.finish_by
+    # Work that is no longer due (a vehicle made Inactive, an add-on moved):
+    # removing it needs no code (ADM-SCH-29).
+    for key, job in existing.items():
+        if key not in wanted and job.status == "Scheduled":
+            db.delete(job)
+    db.flush()
+    for visit in list(visits.values()):
+        if not db.execute(select(Job.id).where(Job.visit_id == visit.id).limit(1)).first():
+            db.delete(visit)
+    db.flush()
+
+    crew = load_crew(db, schedule.society_id)
+    windows = availability(db, crew, days)
+    rows = _jobs_of(db, schedule.id)
+    by_day: dict[date, list[tuple[Job, Visit]]] = {}
+    for job, visit in rows:
+        by_day.setdefault(visit.date, []).append((job, visit))
+
+    for day, items in by_day.items():
+        day_windows = windows.get(day, {})
+        free: list[tuple[Job, Visit]] = []
+        solver_jobs: list[SolverJob] = []
+        for job, visit in items:
+            if job.crew_id is not None and job.crew_id not in day_windows:
+                # The crew member is away that day: the job goes back to the pool.
+                job.crew_id, job.start_minute, job.manual = None, None, False
+            if not frozen and not job.manual and job.status == "Scheduled":
+                job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
+            if job.crew_id is None and job.manual:
+                job.note = "Taken off the schedule by the admin."
+                continue
+            if job.crew_id is None and job.status != "Scheduled":
+                continue
+            fixed = None
+            if job.crew_id is not None:
+                fixed = (str(job.crew_id), job.start_minute or 0)
+            else:
+                free.append((job, visit))
+            solver_jobs.append(SolverJob(str(job.id), str(visit.vehicle_id),
+                                         job.duration_minutes, job.finish_by_minute, fixed))
+        if not solver_jobs:
+            continue
+        crew_in = [SolverCrew(str(cid), s, e) for cid, (s, e) in day_windows.items()]
+        result = solve_day(crew_in, solver_jobs)
+        for job, _visit in items:
+            key = str(job.id)
+            if key in result.placed:
+                crew_key, start = result.placed[key]
+                job.crew_id = uuid.UUID(crew_key)
+                job.start_minute = start
+                job.note = ""
+            elif key in result.unplaced:
+                job.crew_id, job.start_minute = None, None
+                job.note = result.unplaced[key]
+            job.late = key in result.late
+    db.flush()
+    for _job, visit in rows:
+        refresh_visit_status(db, visit.id)
+
+    all_jobs = [j for j, _v in _jobs_of(db, schedule.id)]
+    summary = RunSummary(
+        schedule_id=schedule.id, society_id=schedule.society_id, status=schedule.status,
+        placed=sum(1 for j in all_jobs if j.crew_id is not None),
+        unscheduled=sum(1 for j in all_jobs if j.crew_id is None and j.status == "Scheduled"),
+        late=sum(1 for j in all_jobs if j.late))
+    record(db, schedule.id, admin_id, "assign-late" if frozen else "rerun",
+           f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}")
+    db.commit()
+    return summary
+
+
+def run(db: Session, society_id: uuid.UUID | None, start: date, days: int,
+        admin_id: uuid.UUID | None) -> list[RunSummary]:
+    """Start scheduling for one society, or all active societies (ADM-SCH-01)."""
+    if society_id is not None:
+        society_ids = [society_id]
+    else:
+        society_ids = list(db.execute(
+            select(Society.id).where(Society.active.is_(True)).order_by(Society.name)
+        ).scalars())
+    out = []
+    for sid in society_ids:
+        schedule = get_or_create_schedule(db, sid, start, days)
+        out.append(run_schedule(db, schedule, admin_id))
+    return out
+
+
+# ---- manual changes and the freeze ----------------------------------------
+
+def move_job(db: Session, job_id: uuid.UUID, crew_id: uuid.UUID | None,
+             start_minute: int | None, admin_id: uuid.UUID | None) -> Job:
+    """Place a job by hand, or take it off its crew member (ADM-SCH-13).
+    On a Frozen schedule only taking it off is allowed (ADM-SCH-29); adding or
+    moving needs the schedule unfrozen with the code (ADM-SCH-17)."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise ApiError("not_found", "That job does not exist.", 404)
+    visit = db.get(Visit, job.visit_id)
+    schedule = db.get(Schedule, visit.schedule_id)
+    if job.status != "Scheduled":
+        raise ApiError("job_not_open", "That job has already started or finished.", 409)
+    if crew_id is None:
+        job.crew_id, job.start_minute, job.late = None, None, False
+        job.manual = True
+        job.note = "Taken off the schedule by the admin."
+        record(db, schedule.id, admin_id, "move", f"job {job.id} taken off")
+        db.commit()
+        return job
+    if schedule.status == "Frozen":
+        raise ApiError("schedule_frozen",
+                       "This schedule is frozen. Unfreeze it with the code to move work.", 409)
+    if start_minute is None:
+        raise ApiError("validation_failed", "Please give a start time.", 422,
+                       {"start_minute": "Required."})
+    crew = load_crew(db, schedule.society_id)
+    member = crew.get(crew_id)
+    if member is None:
+        raise ApiError("crew_not_found", "That crew member is not in this society.", 404)
+    window = availability(db, {crew_id: member}, [visit.date])[visit.date].get(crew_id)
+    if window is None:
+        raise ApiError("crew_unavailable", "That crew member is not working that day.", 409)
+    if start_minute < window[0] or start_minute + job.duration_minutes > window[1]:
+        raise ApiError("outside_hours", "That time is outside the crew member's hours.", 409)
+    end = start_minute + job.duration_minutes
+    others = db.execute(
+        select(Job, Visit).join(Visit, Job.visit_id == Visit.id)
+        .where(Visit.schedule_id == schedule.id, Visit.date == visit.date, Job.id != job.id,
+               Job.crew_id.is_not(None))
+    ).all()
+    for other, other_visit in others:
+        if other.crew_id != crew_id and other_visit.vehicle_id != visit.vehicle_id:
+            continue
+        o_start = other.start_minute or 0
+        if start_minute < o_start + other.duration_minutes and o_start < end:
+            raise ApiError("overlap", "That time overlaps another job.", 409)
+    job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
+    job.late = job.finish_by_minute is not None and end > job.finish_by_minute
+    record(db, schedule.id, admin_id, "move",
+           f"job {job.id} to {rules.hhmm(start_minute)}")
+    db.commit()
+    return job
+
+
+def freeze(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) -> Schedule:
+    if schedule.status == "Frozen":
+        raise ApiError("already_frozen", "This schedule is already frozen.", 409)
+    schedule.status = "Frozen"
+    schedule.frozen_at = utcnow()
+    schedule.frozen_by = admin_id
+    record(db, schedule.id, admin_id, "freeze")
+    db.commit()
+    return schedule
+
+
+def unfreeze(db: Session, schedule: Schedule, code: str,
+             admin_id: uuid.UUID | None) -> Schedule:
+    if code != rules.UNFREEZE_CODE:
+        raise ApiError("wrong_code", "That code is not right.", 403)
+    if schedule.status != "Frozen":
+        raise ApiError("not_frozen", "This schedule is not frozen.", 409)
+    schedule.status = "Draft"
+    schedule.frozen_at = None
+    schedule.frozen_by = None
+    record(db, schedule.id, admin_id, "unfreeze")
+    db.commit()
+    return schedule
+
+
+def freeze_due(db: Session, now: datetime) -> list[uuid.UUID]:
+    """Freeze every Draft whose freeze cutoff time has passed (ADM-SCH-25)."""
+    frozen = []
+    drafts = db.execute(select(Schedule).where(Schedule.status == "Draft")).scalars().all()
+    for schedule in drafts:
+        if now >= rules.freeze_deadline(schedule.start_date):
+            schedule.status = "Frozen"
+            schedule.frozen_at = utcnow()
+            record(db, schedule.id, None, "freeze", "at the freeze cutoff time")
+            frozen.append(schedule.id)
+    db.commit()
+    return frozen
+
+
+def set_job_status(db: Session, job_id: uuid.UUID, status: str) -> Job:
+    """Used by the crew module when a job starts, finishes or cannot complete."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise ApiError("not_found", "That job does not exist.", 404)
+    job.status = status
+    db.flush()
+    refresh_visit_status(db, job.visit_id)
+    db.commit()
+    return job
+
+
+# ---- reads -----------------------------------------------------------------
+
+def vehicle_label(v: Vehicle) -> str:
+    return " ".join(p for p in (v.make, v.model) if p)
+
+
+def _job_dict(job: Job, visit: Visit, vehicle: Vehicle, customer: Customer | None,
+              crew_name: str | None, schedule: Schedule) -> dict:
+    end = None if job.start_minute is None else job.start_minute + job.duration_minutes
+    return {
+        "id": job.id, "visit_id": visit.id, "schedule_id": schedule.id,
+        "schedule_status": schedule.status, "date": visit.date, "vehicle_id": vehicle.id,
+        "registration": vehicle.registration or "", "vehicle": vehicle_label(vehicle),
+        "customer_name": (f"{customer.first_name} {customer.last_name}".strip()
+                          if customer else ""),
+        "service": job.service, "status": job.status, "duration_minutes": job.duration_minutes,
+        "crew_id": job.crew_id, "crew_name": crew_name, "start_minute": job.start_minute,
+        "start_time": rules.hhmm(job.start_minute), "end_time": rules.hhmm(end),
+        "finish_by": rules.hhmm(job.finish_by_minute), "late": job.late, "manual": job.manual,
+        "reason": job.note,
+    }
+
+
+def job_rows(db: Session, *where) -> list[dict]:
+    rows = db.execute(
+        select(Job, Visit, Vehicle, Customer, Schedule, Login.display_name)
+        .join(Visit, Job.visit_id == Visit.id)
+        .join(Schedule, Visit.schedule_id == Schedule.id)
+        .join(Vehicle, Visit.vehicle_id == Vehicle.id)
+        .join(Customer, Vehicle.customer_id == Customer.id)
+        .outerjoin(SchedulingCrew, Job.crew_id == SchedulingCrew.id)
+        .outerjoin(Login, SchedulingCrew.login_id == Login.id)
+        .where(*where)
+        .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Vehicle.id,
+                  Job.service)
+    ).all()
+    return [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
+
+
+def board(db: Session, schedule: Schedule) -> dict:
+    society = db.get(Society, schedule.society_id)
+    crew = load_crew(db, schedule.society_id)
+    names = {row.id: row.display_name for row in db.execute(
+        select(Login).where(Login.id.in_([c.login_id for c in crew.values()]))).scalars()}
+    return {
+        "schedule": {
+            "id": schedule.id, "society_id": schedule.society_id,
+            "society_name": society.name if society else "",
+            "start_date": schedule.start_date, "end_date": schedule.end_date,
+            "status": schedule.status, "frozen_at": schedule.frozen_at,
+            "freeze_deadline": rules.freeze_deadline(schedule.start_date),
+        },
+        "days": capacity(db, schedule.society_id, schedule.start_date, schedule.end_date,
+                         schedule),
+        "crew": [{"id": c.id, "name": names.get(c.login_id, ""), "role": c.role,
+                  "start_minute": c.start_minute, "end_minute": c.end_minute}
+                 for c in crew.values()],
+        "jobs": job_rows(db, Visit.schedule_id == schedule.id),
+    }
+
+
+def needs_scheduling(db: Session, society_id: uuid.UUID | None) -> list[dict]:
+    """Jobs with no crew member: Unscheduled in a draft, or on the Needs
+    scheduling list of a frozen schedule (ADM-SCH-08, ADM-SCH-28)."""
+    where = [Job.crew_id.is_(None), Job.status == "Scheduled"]
+    if society_id is not None:
+        where.append(Schedule.society_id == society_id)
+    return job_rows(db, *where)
+
+
+def customer_next_job(db: Session, login_id: uuid.UUID, from_date: date) -> dict | None:
+    """The next open job on the customer's vehicles, from frozen schedules only:
+    a customer sees the assigned crew member and time once it is assigned
+    (CAL-10)."""
+    customer = db.execute(select(Customer).where(Customer.login_id == login_id)
+                          ).scalar_one_or_none()
+    if customer is None:
+        return None
+    rows = job_rows(
+        db, Vehicle.customer_id == customer.id, Visit.date >= from_date,
+        Schedule.status == "Frozen", Job.status.in_(("Scheduled", "In progress")))
+    return rows[0] if rows else None
+
+
+def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
+    """A crew member's jobs for one date, from frozen schedules only
+    (CRW-SCH-11). A Trainee sees the paired Member's jobs (CRW-SCH-10)."""
+    me = db.execute(select(SchedulingCrew).where(SchedulingCrew.login_id == login_id)
+                    ).scalar_one_or_none()
+    empty = {"date": day, "society": "", "total": 0, "done": 0, "left": 0, "jobs": []}
+    if me is None:
+        return empty
+    society = db.get(Society, me.society_id)
+    empty["society"] = society.name if society else ""
+    target = me.id
+    if me.role == "Trainee":
+        if me.paired_member_id is None:
+            return empty
+        target = me.paired_member_id
+    rows = db.execute(
+        select(Job, Visit, Vehicle)
+        .join(Visit, Job.visit_id == Visit.id)
+        .join(Schedule, Visit.schedule_id == Schedule.id)
+        .join(Vehicle, Visit.vehicle_id == Vehicle.id)
+        .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
+        .order_by(Job.start_minute, Job.id)
+    ).all()
+    jobs = []
+    for job, visit, vehicle in rows:
+        end = None if job.start_minute is None else job.start_minute + job.duration_minutes
+        jobs.append({
+            "id": job.id, "visit_id": visit.id, "vehicle_id": vehicle.id,
+            "registration": vehicle.registration or "", "make": vehicle.make,
+            "model": vehicle.model, "category": vehicle.category,
+            "parking_basement": vehicle.parking_basement,
+            "parking_number": vehicle.parking_number, "society": empty["society"],
+            "service": job.service, "status": job.status,
+            "start_time": rules.hhmm(job.start_minute), "end_time": rules.hhmm(end),
+            "finish_by": rules.hhmm(job.finish_by_minute),
+        })
+    done = sum(1 for j in jobs if j["status"] in DAY_DONE)
+    empty.update(total=len(jobs), done=done, left=len(jobs) - done, jobs=jobs)
+    return empty

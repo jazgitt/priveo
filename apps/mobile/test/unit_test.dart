@@ -45,6 +45,8 @@ void main() {
       expect(redirectFor('/login', crewSession), '/crew');
       expect(redirectFor('/admin', crewSession), '/crew');
       expect(redirectFor('/crew', crewSession), isNull);
+      expect(redirectFor('/crew/profile', crewSession), isNull);
+      expect(redirectFor('/customer/vehicles', crewSession), '/crew');
     });
     test('the splash is never redirected', () {
       expect(redirectFor('/splash', null), isNull);

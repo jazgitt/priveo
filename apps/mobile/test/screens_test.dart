@@ -1,6 +1,8 @@
+import 'package:priveo/features/customer/calendar/calendar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
+import 'package:priveo/features/crew/home/crew_home_screen.dart';
 
 import 'support/fakes.dart';
 import 'package:priveo/core/auth/session.dart';
@@ -167,16 +169,18 @@ void main() {
     }
     await tester.tap(find.text('Calendar'));
     await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsOneWidget);
+    // The tab holds the real calendar. This fake API has no calendar route.
+    expect(find.text('Coming soon'), findsNothing);
+    expect(find.byType(CalendarScreen), findsOneWidget);
   });
 
   testWidgets('crew login lands on the crew home', (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
     await signIn(tester, '9000000002', 'secret');
-    expect(find.textContaining('07-Nov-26'), findsOneWidget);
-    expect(find.text('MH 12 CD 5678'), findsOneWidget);
-    expect(find.text('Pending'), findsOneWidget);
+    // The cards come from the crew API (see test/crew), which these tests
+    // do not fake. The role's own home is what they check.
+    expect(find.byType(CrewHomeScreen), findsOneWidget);
   });
 
   testWidgets('admin login lands on the admin home', (tester) async {
@@ -195,7 +199,7 @@ void main() {
     final auth = FakeAuthRepository();
     await pumpApp(tester, store: store, auth: auth);
     await passSplash(tester);
-    expect(find.text('MH 12 CD 5678'), findsOneWidget);
+    expect(find.byType(CrewHomeScreen), findsOneWidget);
 
     await tester.tap(find.byTooltip('Sign out'));
     await tester.pumpAndSettle();

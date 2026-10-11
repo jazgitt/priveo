@@ -8,6 +8,10 @@ import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
+import 'package:priveo/features/crew/crew_providers.dart';
+import 'package:priveo/features/crew/upload/upload_queue.dart';
+
+import '../crew/support.dart' show FakeCrewBackend;
 
 const customerSession = Session(
     role: Role.customer,
@@ -292,6 +296,7 @@ Future<ProviderContainer> pumpApp(
   FakePriveoApi? api,
   Brightness brightness = Brightness.light,
 }) async {
+  final crewBackend = FakeCrewBackend();
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   final container = ProviderContainer(overrides: [
@@ -299,6 +304,12 @@ Future<ProviderContainer> pumpApp(
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
     apiProvider.overrideWithValue(api ?? FakePriveoApi()),
+    // The crew home reads its own endpoints and starts the upload queue. A
+    // test has no network, no SQLite and no connectivity plugin.
+    crewRepositoryProvider.overrideWithValue(crewBackend),
+    uploadApiProvider.overrideWithValue(crewBackend),
+    uploadQueueStoreProvider.overrideWithValue(MemoryUploadQueueStore()),
+    onlineEventsProvider.overrideWithValue(null),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(

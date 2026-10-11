@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/api/api.g.dart';
@@ -12,11 +13,19 @@ import '../../../core/ui/tokens.g.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../changes_money/routes.dart' as money;
+import '../../changes_money/strings.dart';
 import '../../common/signout_button.dart';
+import '../../support/feedback_sheet.dart';
+import '../../support/routes.dart' show SupportRoutes;
+import '../../support/help_screen.dart';
+import '../account/account_screen.dart';
+import '../calendar/calendar_screen.dart';
+import '../data/customer_reads_repository.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
 
-/// Customer shell: bottom tabs. Only Home has content so far.
+/// Customer shell: bottom tabs Home, Calendar, Account and Support.
 /// The layout follows the prototype's dark home.
 class CustomerShell extends ConsumerStatefulWidget {
   const CustomerShell({super.key});
@@ -48,9 +57,12 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
           children: [
             _TopBar(onAvatar: () => _go(_accountTab)),
             Expanded(
-              child: _index == 0
-                  ? CustomerHomeScreen(onCalendar: () => _go(_calendarTab))
-                  : const ComingSoon(),
+              child: switch (_index) {
+                0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
+                _calendarTab => const CalendarScreen(),
+                _accountTab => const AccountScreen(),
+                _ => const HelpScreen(),
+              },
             ),
           ],
         ),
@@ -279,7 +291,17 @@ class CustomerHomeScreen extends ConsumerWidget {
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.4,
-                  children: [for (final a in h.quickActions) _QuickAction(a)],
+                  children: [
+                    for (final a in h.quickActions) _QuickAction(a),
+                    _QuickAction(
+                      const QuickAction(
+                          key: 'subscription', label: MoneyStrings.subTitle),
+                    ),
+                    _QuickAction(
+                      const QuickAction(
+                          key: 'addons', label: MoneyStrings.addonTitle),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -508,18 +530,32 @@ class _VehicleCard extends StatelessWidget {
 
 /// The next visit for the selected vehicle (HOME-04). Until visits are
 /// scheduled it shows the customer's service time and interior care day.
-class _NextServiceCard extends StatelessWidget {
+class _NextServiceCard extends ConsumerWidget {
   const _NextServiceCard(this.vehicle, {required this.onCalendar});
 
   final VehicleCard vehicle;
   final VoidCallback onCalendar;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final b = context.brand;
-    final next = vehicle.nextService;
+    // The home data has no visit yet: ask the customer reads for it.
+    final fromVisits = ref
+        .watch(nextServicesProvider)
+        .value
+        ?.where((n) => n.vehicleId == vehicle.id)
+        .firstOrNull;
+    final next =
+        vehicle.nextService ??
+        (fromVisits == null
+            ? null
+            : NextService(
+                date: fromVisits.date,
+                service: fromVisits.service,
+                status: fromVisits.status,
+              ));
     final cutoff = vehicle.cutoffTime;
     final day = vehicle.interiorDay;
     Widget detail(String service, String value) => Padding(
@@ -551,7 +587,8 @@ class _NextServiceCard extends StatelessWidget {
             next == null ? l.notScheduledYet : formatDate(next.date),
             style: text.headlineSmall,
           ),
-          if (next != null) detail(next.service, next.service),
+          if (next != null && next.service.isNotEmpty)
+            detail(next.service, next.service),
           if (cutoff != null)
             detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
           if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
@@ -596,12 +633,41 @@ class _ServiceMarker extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickAction extends ConsumerWidget {
   const _QuickAction(this.action);
 
   final QuickAction action;
 
+  /// Where a quick action leads. The money screens belong to one vehicle: the
+  /// one selected on Home.
+  void _open(BuildContext context, WidgetRef ref) {
+    final home = ref.read(customerHomeProvider).value;
+    String? vehicleId;
+    if (home != null && home.vehicles.isNotEmpty) {
+      vehicleId = home
+          .vehicles[selectedIndex(
+              home.vehicles, ref.read(selectedVehicleProvider))]
+          .id;
+    }
+    switch (action.key) {
+      case 'history':
+        context.push('/customer/history');
+      case 'feedback':
+        showFeedbackSheet(context);
+      case 'report_issue':
+        context.push(SupportRoutes.report);
+      case 'skip_pause' when vehicleId != null:
+        context.push(money.skipPausePath(vehicleId));
+      case 'subscription' when vehicleId != null:
+        context.push(money.subscriptionPath(vehicleId));
+      case 'addons' when vehicleId != null:
+        context.push(money.addonsPath(vehicleId));
+    }
+  }
+
   static IconData _iconFor(String key) => switch (key) {
+    'subscription' => Symbols.workspace_premium_rounded,
+    'addons' => Symbols.auto_awesome_rounded,
     'skip_pause' => Symbols.pause_circle_rounded,
     'history' => Symbols.history_rounded,
     'feedback' => Symbols.star_rounded,
@@ -610,7 +676,7 @@ class _QuickAction extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final b = context.brand;
     final radius = BorderRadius.circular(18);
     return Material(
@@ -621,7 +687,7 @@ class _QuickAction extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: radius,
-        onTap: () {},
+        onTap: () => _open(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
