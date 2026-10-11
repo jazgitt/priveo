@@ -4,6 +4,7 @@ import { routes as alerts } from "./pages/alerts";
 import { routes as audit } from "./pages/audit";
 import { routes as capacity } from "./pages/capacity";
 import { routes as complaints } from "./pages/complaints";
+import { routes as crew } from "./pages/crew";
 import { routes as dashboard } from "./pages/dashboard";
 import { routes as feedback } from "./pages/feedback";
 import { routes as payments } from "./pages/payments";
@@ -25,4 +26,5 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...reference,
   ...settings,
   ...audit,
+  ...crew,
 ];
