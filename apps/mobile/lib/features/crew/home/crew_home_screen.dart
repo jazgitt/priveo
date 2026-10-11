@@ -11,6 +11,8 @@ import '../crew_text.dart';
 import '../crew_ui.dart';
 import '../job/job_card_screen.dart';
 import '../manager/manager_schedule_screen.dart';
+import '../notifications/crew_notifications.dart';
+import '../../common/push/push_registration.dart';
 import '../profile/crew_profile_screen.dart';
 import '../upload/upload_queue.dart';
 import 'crew_home_data.dart';
@@ -27,6 +29,7 @@ class CrewHomeScreen extends ConsumerWidget {
     final visits = ref.watch(crewVisitsProvider(key));
     final isManager = ref.watch(crewProfileProvider).value?.isManager ?? false;
     final queued = ref.watch(queuedUploadsProvider).value ?? const [];
+    ref.watch(pushRegistrationProvider); // registers the phone for push
 
     return Scaffold(
       appBar: AppBar(
@@ -39,6 +42,13 @@ class CrewHomeScreen extends ConsumerWidget {
               onPressed: () =>
                   Navigator.of(context).push(crewRoute(const ManagerScheduleScreen())),
             ),
+          IconButton(
+            tooltip: CrewNotificationText.tooltip,
+            icon: const Icon(Symbols.notifications_rounded),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(crewRoute(const CrewNotificationsScreen())),
+          ),
           IconButton(
             tooltip: CrewText.profile,
             icon: const Icon(Symbols.person_rounded),

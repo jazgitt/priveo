@@ -35,6 +35,7 @@ from app.changes.rules import Clock, show_date, today_of
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration
 from app.directory.models import Plan, Society
+from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 
@@ -108,6 +109,7 @@ class BillingService:
         self._db.add(MoneyAlert(kind=kind, message=message,
                                 payment_id=payment.id if payment else None,
                                 subscription_id=sub_id))
+        emit.admin_push(self._db, "Payment alert", message)  # notify hook
 
     # --- the customer ------------------------------------------------------
 

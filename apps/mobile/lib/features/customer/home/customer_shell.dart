@@ -15,6 +15,7 @@ import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../changes_money/routes.dart' as money;
 import '../../changes_money/strings.dart';
+import '../../common/push/push_registration.dart';
 import '../../common/signout_button.dart';
 import '../../support/feedback_sheet.dart';
 import '../../support/routes.dart' show SupportRoutes;
@@ -45,6 +46,7 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    ref.watch(pushRegistrationProvider); // registers the phone for push
     // Home opens only after the customer has confirmed their details (ONB-25).
     final home = ref.watch(customerHomeProvider).value;
     if (home != null && !home.onboardingConfirmed) {

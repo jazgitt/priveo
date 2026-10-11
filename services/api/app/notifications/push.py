@@ -31,3 +31,18 @@ class LoggingPushSender:
     def send(self, tokens, title, body, data):
         self.sent.append(SentPush(tuple(tokens), title, body, dict(data)))
         log.info("push to %d device(s): %s", len(tokens), title)
+
+
+_sender: PushSender = LoggingPushSender()
+
+
+def get_default_sender() -> PushSender:
+    """The one sender the whole API shares: the events emitted by other
+    modules and the notifications routes. FCM replaces it with
+    `set_default_sender` when the Firebase account exists."""
+    return _sender
+
+
+def set_default_sender(sender: PushSender) -> None:
+    global _sender
+    _sender = sender

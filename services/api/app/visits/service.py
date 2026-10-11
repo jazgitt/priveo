@@ -13,6 +13,7 @@ from app.identity.models import Login
 from app.media.models import STATUS_CONFIRMED, MediaUpload
 from app.media.service import profile_photo_url, proof_counts, vehicle_photo_urls
 from app.media.store import get_object_store
+from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 from app.scheduling import rules
@@ -181,6 +182,7 @@ def list_jobs(db: Session, login_id: uuid.UUID, day: date | None) -> s.VisitList
     (CRW-SCH-06). Only Frozen schedules show (CRW-SCH-11)."""
     ids = _my_crew_ids(db, login_id)
     where = [Job.crew_id.in_(ids)] if ids else [Job.id.is_(None)]
+    where.append(Job.status != "Skipped")  # CRW-SCH-08: a skipped job leaves the cards
     if day is not None:
         where.append(Visit.date == day)
     cards = _cards(db, _jobs_where(db, *where))
@@ -385,6 +387,7 @@ def manager_reassign(db: Session, job: Job, manager: SchedulingCrew, crew_id: st
     job.crew_id = target.id
     job.manual = True
     db.commit()
+    emit.job_reassigned(db, job)  # notify hook
     return job
 
 

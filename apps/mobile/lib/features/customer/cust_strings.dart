@@ -67,6 +67,12 @@ class CustStrings {
   static const settingsHeading = 'Settings';
   static const settingsNote =
       'Notification choices will be available in a later update.';
+  static const settingsNotifications = 'Notifications';
+  static const settingsIntro =
+      'Choose which messages Priveo sends you. All are on to start.';
+  static const settingsSaveFailed =
+      'Could not save this choice. Please try again.';
+  static const accountSettings = 'Notification settings';
 
   static const notificationsTitle = 'Notifications';
   static const notificationsEmpty = 'No notifications yet.';

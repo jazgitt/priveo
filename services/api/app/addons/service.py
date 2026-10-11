@@ -24,6 +24,7 @@ from app.changes.rules import Clock, is_open, require_open, today_of
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import read_cutoff
 from app.directory.models import Society
+from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 
@@ -180,6 +181,7 @@ class AddonService:
         b.cancelled_at = utcnow()
         self._billing.void_unpaid(b.payment_id)  # A cancelled add-on is not charged.
         self._db.commit()
+        emit.addon_cancelled(self._db, b)  # notify hook
 
     # --- the admin ---------------------------------------------------------
 
