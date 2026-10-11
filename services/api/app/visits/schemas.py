@@ -10,6 +10,8 @@ class VehicleInfo(BaseModel):
     make: str
     model: str
     category: str
+    # A signed, expiring read URL of the vehicle photo, or None (CRW-SCH-03).
+    photo_url: str | None = None
 
 
 class CrewRef(BaseModel):
@@ -115,6 +117,8 @@ class ProfilePhoto(BaseModel):
 
 class PhotoState(BaseModel):
     upload_id: str | None
+    # A signed, expiring read URL of the saved photo (CRW-PRF-01).
+    url: str | None = None
 
 
 class TeamMember(BaseModel):
