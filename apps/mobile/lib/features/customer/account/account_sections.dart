@@ -7,7 +7,6 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
-import '../../changes_money/data/money_repository.dart';
 import '../../changes_money/routes.dart' as money;
 import '../../support/routes.dart';
 import '../calendar/calendar_page.dart';
@@ -84,7 +83,7 @@ class AccountSubscriptionCards extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vehicles = ref.watch(vehiclesProvider).value ?? const [];
+    final vehicles = ref.watch(accountVehiclesProvider).value ?? const [];
     final subscribed = [
       for (final v in vehicles)
         if (v.subscriptionStatus != null) v,
@@ -111,7 +110,7 @@ class _SubscriptionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final b = context.brand;
-    final sub = ref.watch(subscriptionProvider(vehicle.id)).value;
+    final sub = ref.watch(accountSubscriptionProvider(vehicle.id)).value;
     final status = sub?.status ?? vehicle.subscriptionStatus!;
     final car = vehicle.registration.isEmpty
         ? vehicle.model
@@ -158,7 +157,7 @@ class _SubscriptionCard extends ConsumerWidget {
 
 /// The vehicle a menu action is for: the only one, or the customer's choice.
 Future<String?> _chooseVehicle(BuildContext context, WidgetRef ref) async {
-  final vehicles = await ref.read(vehiclesProvider.future);
+  final vehicles = await ref.read(accountVehiclesProvider.future);
   if (vehicles.isEmpty || !context.mounted) return null;
   if (vehicles.length == 1) return vehicles.first.id;
   return showModalBottomSheet<String>(

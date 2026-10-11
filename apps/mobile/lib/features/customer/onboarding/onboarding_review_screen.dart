@@ -335,7 +335,12 @@ class _ReviewState extends ConsumerState<_Review> {
       const SizedBox(height: 24),
       const SectionLabel(AccountStrings.vehiclePhoto),
       const SizedBox(height: 12),
-      VehiclePhotoField(vehicleId: v.id, reportDone: true),
+      VehiclePhotoField(
+        key: ValueKey(v.id),
+        vehicleId: v.id,
+        reportDone: true,
+        height: 90,
+      ),
       _error('photo'),
       const SizedBox(height: 24),
       SectionLabel(l.parking),

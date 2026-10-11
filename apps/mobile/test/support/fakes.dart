@@ -1,3 +1,4 @@
+import 'package:priveo/features/customer/account/account_data.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -301,8 +302,31 @@ class FakeAdminQuickHome extends ApiAdminQuickRepository {
 }
 
 /// Starts the real app with fake data sources.
+/// The customer's account calls with one thing: whether each vehicle has its
+/// photo (ONB-22). Everything else answers with nothing.
+class PhotoAccount implements AccountRepository {
+  PhotoAccount({this.hasPhoto = true});
+
+  bool hasPhoto;
+
+  @override
+  Future<VehicleAccountDto> vehicleAccount(String vehicleId) async =>
+      VehicleAccountDto(
+        id: vehicleId,
+        parkingBasement: '',
+        parkingNumber: '',
+        photoUrl: hasPhoto ? 'https://media.test/car.jpg' : null,
+        rcStatus: 'Not uploaded',
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName}');
+}
+
 Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
+  AccountRepository? account,
   SessionStore? store,
   FakeAuthRepository? auth,
   FakePriveoApi? api,
@@ -316,6 +340,7 @@ Future<ProviderContainer> pumpApp(
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
     apiProvider.overrideWithValue(api ?? FakePriveoApi()),
+    accountRepositoryProvider.overrideWithValue(account ?? PhotoAccount()),
     adminQuickRepositoryProvider.overrideWithValue(FakeAdminQuickHome()),
     // The crew home reads its own endpoints and starts the upload queue. A
     // test has no network, no SQLite and no connectivity plugin.

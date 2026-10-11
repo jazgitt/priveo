@@ -138,6 +138,7 @@ class _EditParkingState extends ConsumerState<_EditParking> {
           );
       ref.invalidate(vehicleDetailProvider(widget.vehicle.id));
       ref.invalidate(vehiclesProvider);
+      ref.invalidate(accountVehiclesProvider);
       ref.invalidate(customerHomeProvider);
       messenger.showSnackBar(
         const SnackBar(content: Text(AccountStrings.parkingSaved)),

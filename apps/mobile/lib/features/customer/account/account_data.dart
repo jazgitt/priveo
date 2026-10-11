@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 
 import '../../../core/network/api_failure.dart';
 import '../../../core/providers.dart';
+import '../../changes_money/data/money_models.dart' show SubscriptionDto;
+import '../../changes_money/data/money_repository.dart';
 import '../../crew/capture/media_capture.dart';
+import '../data/customer_reads_repository.dart';
 
 // Hand-written DTOs for the account endpoints (/v1/customer/profile, the
 // vehicle edit and the customer uploads). They move to the generated client
@@ -253,7 +256,30 @@ final accountRepositoryProvider = Provider<AccountRepository>(
 
 final profileProvider = FutureProvider.autoDispose<ProfileDto>(
   (ref) => ref.watch(accountRepositoryProvider).profile(),
+  retry: (_, _) => null,
 );
+
+/// The vehicles for the Account cards and the Home photo. A failed look-up is
+/// an empty list: those screens work without it, so nothing retries.
+final accountVehiclesProvider =
+    FutureProvider.autoDispose<List<VehicleSummaryDto>>((ref) async {
+      try {
+        return await ref.watch(customerReadsProvider).vehicles();
+      } catch (_) {
+        return const [];
+      }
+    });
+
+/// A vehicle's subscription for its Account card, or null when it cannot be
+/// read (ACC-02).
+final accountSubscriptionProvider = FutureProvider.autoDispose
+    .family<SubscriptionDto?, String>((ref, vehicleId) async {
+      try {
+        return await ref.watch(moneyRepositoryProvider).subscription(vehicleId);
+      } catch (_) {
+        return null;
+      }
+    });
 
 /// Whether a vehicle has its photo, for the onboarding review (ONB-22). The
 /// photo field sets it when it loads and after each upload.

@@ -20,6 +20,7 @@ Future<UploadedFile?> captureAndUpload(
   WidgetRef ref, {
   required String purpose,
   String? vehicleId,
+  VoidCallback? onSending,
 }) async {
   final camera = await showModalBottomSheet<bool>(
     context: context,
@@ -53,6 +54,7 @@ Future<UploadedFile?> captureAndUpload(
     case null:
       break;
   }
+  onSending?.call();
   try {
     return await ref
         .read(accountRepositoryProvider)
@@ -129,6 +131,7 @@ class _VehiclePhotoFieldState extends ConsumerState<VehiclePhotoField> {
         ref,
         purpose: 'vehicle',
         vehicleId: widget.vehicleId,
+        onSending: () => setState(() => _busy = true),
       );
       if (done == null || !mounted) return;
       setState(() {
@@ -138,6 +141,7 @@ class _VehiclePhotoFieldState extends ConsumerState<VehiclePhotoField> {
       });
       _report();
       ref.invalidate(vehiclesProvider);
+      ref.invalidate(accountVehiclesProvider);
       ref.invalidate(vehicleDetailProvider(widget.vehicleId));
       ref.invalidate(customerHomeProvider);
     } on String catch (message) {
@@ -183,10 +187,7 @@ class _VehiclePhotoFieldState extends ConsumerState<VehiclePhotoField> {
           OutlinedButton.icon(
             onPressed: !_loaded
                 ? null
-                : () {
-                    setState(() => _busy = true);
-                    _change();
-                  },
+                : _change,
             icon: const Icon(Symbols.photo_camera_rounded, size: 18),
             label: Text(
               has ? AccountStrings.changePhoto : AccountStrings.addPhoto,
@@ -227,7 +228,7 @@ class VehiclePhotoThumb extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final url = ref
-        .watch(vehiclesProvider)
+        .watch(accountVehiclesProvider)
         .value
         ?.where((v) => v.id == vehicleId)
         .map((v) => v.photoUrl)
@@ -267,12 +268,14 @@ class _ComplaintPhotosFieldState extends ConsumerState<ComplaintPhotosField> {
   static const _max = 10;
 
   Future<void> _add() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    setState(() => _error = null);
     try {
-      final done = await captureAndUpload(context, ref, purpose: 'complaint');
+      final done = await captureAndUpload(
+        context,
+        ref,
+        purpose: 'complaint',
+        onSending: () => setState(() => _busy = true),
+      );
       if (done != null && mounted) {
         setState(() => _photos.add(done));
         widget.onChanged([for (final p in _photos) p.id]);
