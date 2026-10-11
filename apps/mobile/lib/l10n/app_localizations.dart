@@ -2463,6 +2463,384 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{minutes} minutes'**
   String money_addonDuration(int minutes);
+
+  /// No description provided for @adminq_home_complaints.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaints'**
+  String get adminq_home_complaints;
+
+  /// No description provided for @adminq_home_feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback and ratings'**
+  String get adminq_home_feedback;
+
+  /// No description provided for @adminq_home_needs_scheduling.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminq_home_needs_scheduling;
+
+  /// No description provided for @adminq_home_day.
+  ///
+  /// In en, this message translates to:
+  /// **'Day schedule'**
+  String get adminq_home_day;
+
+  /// No description provided for @adminq_home_capacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get adminq_home_capacity;
+
+  /// No description provided for @adminq_home_open_complaints.
+  ///
+  /// In en, this message translates to:
+  /// **'Open complaints'**
+  String get adminq_home_open_complaints;
+
+  /// No description provided for @adminq_home_to_confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'To confirm'**
+  String get adminq_home_to_confirm;
+
+  /// No description provided for @adminq_home_more_payments.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more to confirm'**
+  String adminq_home_more_payments(String count);
+
+  /// No description provided for @adminq_filter_all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get adminq_filter_all;
+
+  /// No description provided for @adminq_status_raised.
+  ///
+  /// In en, this message translates to:
+  /// **'Raised'**
+  String get adminq_status_raised;
+
+  /// No description provided for @adminq_status_in_progress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get adminq_status_in_progress;
+
+  /// No description provided for @adminq_status_resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get adminq_status_resolved;
+
+  /// No description provided for @adminq_complaints_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaints'**
+  String get adminq_complaints_title;
+
+  /// No description provided for @adminq_complaints_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No complaints.'**
+  String get adminq_complaints_empty;
+
+  /// No description provided for @adminq_complaint_overdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Open for more than 4 hours'**
+  String get adminq_complaint_overdue;
+
+  /// No description provided for @adminq_complaint_raised_on.
+  ///
+  /// In en, this message translates to:
+  /// **'Raised {date}'**
+  String adminq_complaint_raised_on(String date);
+
+  /// No description provided for @adminq_complaint_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get adminq_complaint_status;
+
+  /// No description provided for @adminq_complaint_note_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note'**
+  String get adminq_complaint_note_hint;
+
+  /// No description provided for @adminq_complaint_note_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note first.'**
+  String get adminq_complaint_note_required;
+
+  /// No description provided for @adminq_complaint_add_note.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get adminq_complaint_add_note;
+
+  /// No description provided for @adminq_complaint_save_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Save status'**
+  String get adminq_complaint_save_status;
+
+  /// No description provided for @adminq_complaint_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get adminq_complaint_saved;
+
+  /// No description provided for @adminq_complaint_thread.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get adminq_complaint_thread;
+
+  /// No description provided for @adminq_complaint_by_customer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get adminq_complaint_by_customer;
+
+  /// No description provided for @adminq_complaint_by_admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo'**
+  String get adminq_complaint_by_admin;
+
+  /// No description provided for @adminq_complaint_status_changed.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String adminq_complaint_status_changed(String status);
+
+  /// No description provided for @adminq_feedback_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback and ratings'**
+  String get adminq_feedback_title;
+
+  /// No description provided for @adminq_feedback_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No feedback yet.'**
+  String get adminq_feedback_empty;
+
+  /// No description provided for @adminq_feedback_ratings.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit ratings'**
+  String get adminq_feedback_ratings;
+
+  /// No description provided for @adminq_feedback_average.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {average} from {count} ratings'**
+  String adminq_feedback_average(String average, String count);
+
+  /// No description provided for @adminq_feedback_no_ratings.
+  ///
+  /// In en, this message translates to:
+  /// **'No ratings yet.'**
+  String get adminq_feedback_no_ratings;
+
+  /// No description provided for @adminq_feedback_stars.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} stars'**
+  String adminq_feedback_stars(String n);
+
+  /// No description provided for @adminq_needs_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminq_needs_title;
+
+  /// No description provided for @adminq_needs_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Every job has a crew member.'**
+  String get adminq_needs_empty;
+
+  /// No description provided for @adminq_day_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Day schedule'**
+  String get adminq_day_title;
+
+  /// No description provided for @adminq_day_summary.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} jobs, {done} done, {left} left'**
+  String adminq_day_summary(String total, String done, String left);
+
+  /// No description provided for @adminq_day_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs on this date.'**
+  String get adminq_day_empty;
+
+  /// No description provided for @adminq_day_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule: {status}'**
+  String adminq_day_status(String status);
+
+  /// No description provided for @adminq_day_all_societies.
+  ///
+  /// In en, this message translates to:
+  /// **'All societies'**
+  String get adminq_day_all_societies;
+
+  /// No description provided for @adminq_day_previous.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get adminq_day_previous;
+
+  /// No description provided for @adminq_day_next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get adminq_day_next;
+
+  /// No description provided for @adminq_day_late.
+  ///
+  /// In en, this message translates to:
+  /// **'Late'**
+  String get adminq_day_late;
+
+  /// No description provided for @adminq_day_no_time.
+  ///
+  /// In en, this message translates to:
+  /// **'No time'**
+  String get adminq_day_no_time;
+
+  /// No description provided for @adminq_capacity_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get adminq_capacity_title;
+
+  /// No description provided for @adminq_capacity_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a society to see its capacity.'**
+  String get adminq_capacity_empty;
+
+  /// No description provided for @adminq_capacity_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew {capacity} min, work {demand} min, placed {scheduled} min'**
+  String adminq_capacity_line(String capacity, String demand, String scheduled);
+
+  /// No description provided for @adminq_capacity_over.
+  ///
+  /// In en, this message translates to:
+  /// **'Over capacity'**
+  String get adminq_capacity_over;
+
+  /// No description provided for @adminq_capacity_previous.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get adminq_capacity_previous;
+
+  /// No description provided for @adminq_capacity_next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get adminq_capacity_next;
+
+  /// No description provided for @adminq_society.
+  ///
+  /// In en, this message translates to:
+  /// **'Society'**
+  String get adminq_society;
+
+  /// No description provided for @cust_proof_crew_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo crew'**
+  String get cust_proof_crew_line;
+
+  /// No description provided for @cust_proof_crew_pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew member not assigned yet'**
+  String get cust_proof_crew_pending;
+
+  /// No description provided for @cust_proof_checklist_heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist'**
+  String get cust_proof_checklist_heading;
+
+  /// No description provided for @cust_proof_after_label.
+  ///
+  /// In en, this message translates to:
+  /// **'AFTER'**
+  String get cust_proof_after_label;
+
+  /// No description provided for @cust_proof_rate_clean.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate this clean'**
+  String get cust_proof_rate_clean;
+
+  /// No description provided for @cust_proof_change_rating.
+  ///
+  /// In en, this message translates to:
+  /// **'Change rating'**
+  String get cust_proof_change_rating;
+
+  /// No description provided for @cust_proof_report_issue.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an issue with this clean'**
+  String get cust_proof_report_issue;
+
+  /// No description provided for @cust_proof_load_more.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get cust_proof_load_more;
+
+  /// No description provided for @cust_proof_no_rating.
+  ///
+  /// In en, this message translates to:
+  /// **'Not rated'**
+  String get cust_proof_no_rating;
+
+  /// No description provided for @cust_proof_history_month_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No services in this month.'**
+  String get cust_proof_history_month_empty;
+
+  /// No description provided for @cust_proof_today_done.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s clean is done'**
+  String get cust_proof_today_done;
+
+  /// No description provided for @cust_proof_view_proof.
+  ///
+  /// In en, this message translates to:
+  /// **'View proof'**
+  String get cust_proof_view_proof;
+
+  /// No description provided for @cust_proof_rate_today.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate today\'s clean'**
+  String get cust_proof_rate_today;
 }
 
 class _AppLocalizationsDelegate

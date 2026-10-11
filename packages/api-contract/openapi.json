@@ -4030,7 +4030,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Options"
+                  "$ref": "#/components/schemas/SupportOptionsOut"
                 }
               }
             }
@@ -18238,46 +18238,6 @@
         "type": "object",
         "title": "OptionPatch"
       },
-      "Options": {
-        "properties": {
-          "issue_categories": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Issue Categories"
-          },
-          "feedback_categories": {
-            "items": {
-              "$ref": "#/components/schemas/OptionOut"
-            },
-            "type": "array",
-            "title": "Feedback Categories"
-          },
-          "positive_tags": {
-            "items": {
-              "$ref": "#/components/schemas/OptionOut"
-            },
-            "type": "array",
-            "title": "Positive Tags"
-          },
-          "checkin_categories": {
-            "items": {
-              "$ref": "#/components/schemas/OptionOut"
-            },
-            "type": "array",
-            "title": "Checkin Categories"
-          }
-        },
-        "type": "object",
-        "required": [
-          "issue_categories",
-          "feedback_categories",
-          "positive_tags",
-          "checkin_categories"
-        ],
-        "title": "Options"
-      },
       "Outcome": {
         "properties": {
           "kind": {
@@ -19557,6 +19517,46 @@
           "complaints_in_progress"
         ],
         "title": "SupportContact"
+      },
+      "SupportOptionsOut": {
+        "properties": {
+          "issue_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issue Categories"
+          },
+          "feedback_categories": {
+            "items": {
+              "$ref": "#/components/schemas/OptionOut"
+            },
+            "type": "array",
+            "title": "Feedback Categories"
+          },
+          "positive_tags": {
+            "items": {
+              "$ref": "#/components/schemas/OptionOut"
+            },
+            "type": "array",
+            "title": "Positive Tags"
+          },
+          "checkin_categories": {
+            "items": {
+              "$ref": "#/components/schemas/OptionOut"
+            },
+            "type": "array",
+            "title": "Checkin Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issue_categories",
+          "feedback_categories",
+          "positive_tags",
+          "checkin_categories"
+        ],
+        "title": "SupportOptionsOut"
       },
       "TeamMember": {
         "properties": {

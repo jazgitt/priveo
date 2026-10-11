@@ -32,13 +32,13 @@ from app.support.schemas import (
     OptionAdmin,
     OptionCreate,
     OptionPatch,
-    Options,
     PendingCheckIn,
     RatingCreate,
     RatingOut,
     RatingsReport,
     StatusChange,
     SupportContact,
+    SupportOptionsOut,
 )
 from app.support.service import SupportService
 
@@ -78,7 +78,7 @@ def contact(user: User = Depends(require_role("customer")),
                           complaints_in_progress=service.in_progress_count(me))
 
 
-@customer.get("/support/options", response_model=Options)
+@customer.get("/support/options", response_model=SupportOptionsOut)
 def options(user: User = Depends(require_role("customer")),
             service: SupportService = Depends(get_support_service)):
     """The lists the forms use: issue categories (ISS-01), feedback categories

@@ -88,16 +88,30 @@ void _writeModel(StringBuffer b, String name, Map<String, dynamic> schema) {
   final props = (schema['properties'] as Map<String, dynamic>? ?? {})
       .cast<String, Map<String, dynamic>>();
   final required = ((schema['required'] as List?) ?? const []).toSet();
+  final optionalFields = <String>{};
   final fields = <(String json, String dart, _Type type)>[];
   props.forEach((json, s) {
-    if (!required.contains(json)) _unsupported('optional field', '$name.$json');
-    fields.add((json, _camel(json), _typeOf(s, '$name.$json')));
+    var type = _typeOf(s, '$name.$json');
+    if (!required.contains(json) && !type.dart.endsWith('?')) {
+      // A field with a default may be left out: read it as nullable.
+      final inner = type;
+      type = _Type('${inner.dart}?',
+          (j) => '$j == null ? null : ${inner.read(j)}', (v) {
+        final plain = inner.write(v);
+        if (plain == v) return v;
+        if (plain.startsWith('$v.')) return '$v?${plain.substring(v.length)}';
+        return '$v == null ? null : ${inner.write('$v!')}';
+      });
+      optionalFields.add(json);
+    }
+    fields.add((json, _camel(json), type));
   });
 
   b.writeln('class $name {');
   b.writeln('  const $name({');
   for (final f in fields) {
-    b.writeln('    required this.${f.$2},');
+    final req = optionalFields.contains(f.$1) ? '' : 'required ';
+    b.writeln('    $req this.${f.$2},'.replaceAll('  this', ' this'));
   }
   b.writeln('  });\n');
   for (final f in fields) {

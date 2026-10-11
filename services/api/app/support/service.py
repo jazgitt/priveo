@@ -37,11 +37,11 @@ from app.support.schemas import (
     FeedbackAdmin,
     OptionAdmin,
     OptionOut,
-    Options,
     PendingCheckIn,
     RatingAdmin,
     RatingOut,
     RatingsReport,
+    SupportOptionsOut,
     UpdateOut,
 )
 
@@ -118,10 +118,10 @@ class SupportService:
             .where(SupportOption.kind == kind, SupportOption.active.is_(True))
             .order_by(SupportOption.sort_order, SupportOption.name)))
 
-    def options(self) -> Options:
+    def options(self) -> SupportOptionsOut:
         def out(rows):
             return [OptionOut(id=o.id, name=o.name, description=o.description) for o in rows]
-        return Options(
+        return SupportOptionsOut(
             issue_categories=list(ISSUE_CATEGORIES),
             feedback_categories=out(self._active("feedback_category")),
             positive_tags=out(self._active("positive_tag")),

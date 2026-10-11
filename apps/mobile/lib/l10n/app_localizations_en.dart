@@ -1313,4 +1313,213 @@ class AppLocalizationsEn extends AppLocalizations {
   String money_addonDuration(int minutes) {
     return '$minutes minutes';
   }
+
+  @override
+  String get adminq_home_complaints => 'Complaints';
+
+  @override
+  String get adminq_home_feedback => 'Feedback and ratings';
+
+  @override
+  String get adminq_home_needs_scheduling => 'Needs scheduling';
+
+  @override
+  String get adminq_home_day => 'Day schedule';
+
+  @override
+  String get adminq_home_capacity => 'Capacity';
+
+  @override
+  String get adminq_home_open_complaints => 'Open complaints';
+
+  @override
+  String get adminq_home_to_confirm => 'To confirm';
+
+  @override
+  String adminq_home_more_payments(String count) {
+    return '$count more to confirm';
+  }
+
+  @override
+  String get adminq_filter_all => 'All';
+
+  @override
+  String get adminq_status_raised => 'Raised';
+
+  @override
+  String get adminq_status_in_progress => 'In progress';
+
+  @override
+  String get adminq_status_resolved => 'Resolved';
+
+  @override
+  String get adminq_complaints_title => 'Complaints';
+
+  @override
+  String get adminq_complaints_empty => 'No complaints.';
+
+  @override
+  String get adminq_complaint_overdue => 'Open for more than 4 hours';
+
+  @override
+  String adminq_complaint_raised_on(String date) {
+    return 'Raised $date';
+  }
+
+  @override
+  String get adminq_complaint_status => 'Status';
+
+  @override
+  String get adminq_complaint_note_hint => 'Write a note';
+
+  @override
+  String get adminq_complaint_note_required => 'Write a note first.';
+
+  @override
+  String get adminq_complaint_add_note => 'Add note';
+
+  @override
+  String get adminq_complaint_save_status => 'Save status';
+
+  @override
+  String get adminq_complaint_saved => 'Saved.';
+
+  @override
+  String get adminq_complaint_thread => 'History';
+
+  @override
+  String get adminq_complaint_by_customer => 'Customer';
+
+  @override
+  String get adminq_complaint_by_admin => 'Priveo';
+
+  @override
+  String adminq_complaint_status_changed(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get adminq_feedback_title => 'Feedback and ratings';
+
+  @override
+  String get adminq_feedback_empty => 'No feedback yet.';
+
+  @override
+  String get adminq_feedback_ratings => 'Visit ratings';
+
+  @override
+  String adminq_feedback_average(String average, String count) {
+    return 'Average $average from $count ratings';
+  }
+
+  @override
+  String get adminq_feedback_no_ratings => 'No ratings yet.';
+
+  @override
+  String adminq_feedback_stars(String n) {
+    return '$n stars';
+  }
+
+  @override
+  String get adminq_needs_title => 'Needs scheduling';
+
+  @override
+  String get adminq_needs_empty => 'Every job has a crew member.';
+
+  @override
+  String get adminq_day_title => 'Day schedule';
+
+  @override
+  String adminq_day_summary(String total, String done, String left) {
+    return '$total jobs, $done done, $left left';
+  }
+
+  @override
+  String get adminq_day_empty => 'No jobs on this date.';
+
+  @override
+  String adminq_day_status(String status) {
+    return 'Schedule: $status';
+  }
+
+  @override
+  String get adminq_day_all_societies => 'All societies';
+
+  @override
+  String get adminq_day_previous => 'Previous day';
+
+  @override
+  String get adminq_day_next => 'Next day';
+
+  @override
+  String get adminq_day_late => 'Late';
+
+  @override
+  String get adminq_day_no_time => 'No time';
+
+  @override
+  String get adminq_capacity_title => 'Capacity';
+
+  @override
+  String get adminq_capacity_empty => 'Choose a society to see its capacity.';
+
+  @override
+  String adminq_capacity_line(
+    String capacity,
+    String demand,
+    String scheduled,
+  ) {
+    return 'Crew $capacity min, work $demand min, placed $scheduled min';
+  }
+
+  @override
+  String get adminq_capacity_over => 'Over capacity';
+
+  @override
+  String get adminq_capacity_previous => 'Previous week';
+
+  @override
+  String get adminq_capacity_next => 'Next week';
+
+  @override
+  String get adminq_society => 'Society';
+
+  @override
+  String get cust_proof_crew_line => 'Priveo crew';
+
+  @override
+  String get cust_proof_crew_pending => 'Crew member not assigned yet';
+
+  @override
+  String get cust_proof_checklist_heading => 'Checklist';
+
+  @override
+  String get cust_proof_after_label => 'AFTER';
+
+  @override
+  String get cust_proof_rate_clean => 'Rate this clean';
+
+  @override
+  String get cust_proof_change_rating => 'Change rating';
+
+  @override
+  String get cust_proof_report_issue => 'Report an issue with this clean';
+
+  @override
+  String get cust_proof_load_more => 'Load more';
+
+  @override
+  String get cust_proof_no_rating => 'Not rated';
+
+  @override
+  String get cust_proof_history_month_empty => 'No services in this month.';
+
+  @override
+  String get cust_proof_today_done => 'Today\'s clean is done';
+
+  @override
+  String get cust_proof_view_proof => 'View proof';
+
+  @override
+  String get cust_proof_rate_today => 'Rate today\'s clean';
 }

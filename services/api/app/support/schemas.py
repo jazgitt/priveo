@@ -24,7 +24,7 @@ class OptionAdmin(OptionOut):
     active: bool
 
 
-class Options(BaseModel):
+class SupportOptionsOut(BaseModel):
     issue_categories: list[str]
     feedback_categories: list[OptionOut]
     positive_tags: list[OptionOut]
