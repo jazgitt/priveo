@@ -15,9 +15,23 @@ def asha(db, headers_for):
     return {"headers": headers_for("asha@example.com"), "login_id": login_id}
 
 
+_sessions: list[Session] = []
+
+
+@pytest.fixture(autouse=True)
+def _close_sessions(engine):
+    """Closes the sessions `service` opens before the engine drops the tables.
+    An open transaction would block the drop on PostgreSQL."""
+    yield
+    for session in _sessions:
+        session.close()
+    _sessions.clear()
+
+
 def service(engine, push=None):
-    return NotificationService(Session(engine, expire_on_commit=False),
-                               push or LoggingPushSender())
+    session = Session(engine, expire_on_commit=False)
+    _sessions.append(session)
+    return NotificationService(session, push or LoggingPushSender())
 
 
 def test_inbox_lists_newest_first_with_unread_count(api, asha, engine):
