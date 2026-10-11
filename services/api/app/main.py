@@ -12,6 +12,7 @@ from app import (
     scheduling,
     support,
     visits,
+    webauth,
 )
 from app.customers import router as customers
 from app.home import router as home
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     changes.register(app)
     billing.register(app)
     addons.register(app)
+    webauth.register(app)
     return app
 
 
