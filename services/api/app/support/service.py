@@ -9,9 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, Subscription, Vehicle
 from app.directory.models import Society
+from app.media import service as media
+from app.media.models import STATUS_CONFIRMED, MediaUpload
+from app.media.store import get_object_store
 from app.platform.clock import today_ist
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
+from app.scheduling.models import Visit
 from app.support import alerts, defaults
 from app.support.models import (
     COMPLAINT_STATUSES,
@@ -195,6 +199,38 @@ class SupportService:
         return UpdateOut(id=u.id, author_role=u.author_role, note=u.note, status=u.status,
                          created_at=u.created_at)
 
+    def _check_visit(self, customer: Customer, visit_id: str | None) -> None:
+        """The linked visit must be a visit of one of the customer's vehicles."""
+        if visit_id is None:
+            return
+        error = ApiError("validation_failed", "Choose one of your visits.", 422,
+                         {"visit_id": "Choose one of your visits."})
+        try:
+            visit = self.db.get(Visit, uuid.UUID(visit_id))
+        except ValueError:
+            raise error from None
+        owned = self.db.scalar(select(Vehicle.id).where(
+            Vehicle.id == (visit.vehicle_id if visit else None),
+            Vehicle.customer_id == customer.id))
+        if visit is None or owned is None:
+            raise error
+
+    def _check_photos(self, customer: Customer, keys: list[str]) -> list[str]:
+        """Photo keys are IDs of the customer's own confirmed complaint uploads."""
+        out: list[str] = []
+        for key in keys:
+            try:
+                upload = self.db.get(MediaUpload, uuid.UUID(key))
+            except ValueError:
+                upload = None
+            if (upload is None or upload.owner_login_id != customer.login_id
+                    or upload.purpose != "complaint" or upload.status != STATUS_CONFIRMED):
+                raise ApiError("validation_failed", "A photo could not be used.", 422,
+                               {"photo_keys": "Upload the photo again."})
+            if str(upload.id) not in out:
+                out.append(str(upload.id))
+        return out
+
     def create_complaint(self, customer: Customer, category: str, description: str,
                          visit_id: str | None, photo_keys: list[str]) -> ComplaintDetail:
         if category not in ISSUE_CATEGORIES:  # ISS-05
@@ -203,6 +239,9 @@ class SupportService:
         if not description.strip():
             raise ApiError("validation_failed", "Describe what happened.", 422,
                            {"description": "Describe what happened."})
+        visit_id = (visit_id or "").strip() or None
+        self._check_visit(customer, visit_id)  # ISS-02
+        photo_keys = self._check_photos(customer, photo_keys)  # ISS-04
         number = (self.db.scalar(select(func.max(Complaint.number))) or 0) + 1
         now = self._now()
         complaint = Complaint(number=number, customer_id=customer.id, category=category,
@@ -239,7 +278,9 @@ class SupportService:
         c = self._own(customer, complaint_id)
         updates = self._updates(c.id)
         notes = self._latest_notes([c.id])
-        return ComplaintDetail(**self._summary(c, notes.get(c.id)), photo_keys=c.photo_keys or [],
+        keys = c.photo_keys or []
+        return ComplaintDetail(**self._summary(c, notes.get(c.id)), photo_keys=keys,
+                               photo_urls=media.upload_urls(self.db, get_object_store(), keys),
                                updates=[self._update_out(u) for u in updates])
 
     def customer_message(self, customer: Customer, complaint_id: uuid.UUID,
@@ -288,6 +329,7 @@ class SupportService:
         names = self._names({c.customer_id})
         return AdminComplaintDetail(
             **self._admin_summary(c, notes.get(c.id), names), photo_keys=c.photo_keys or [],
+            photo_urls=media.upload_urls(self.db, get_object_store(), c.photo_keys or []),
             updates=[self._update_out(u) for u in self._updates(c.id)])
 
     def _push_customer(self, c: Complaint, body: str) -> None:

@@ -33,7 +33,7 @@ from app.customer_reads.schemas import (
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
 from app.directory.models import Society
-from app.media.service import vehicle_photo_urls
+from app.media.service import has_confirmed, vehicle_photo_urls
 from app.media.store import ObjectStore, get_object_store
 from app.platform import clock
 from app.platform.errors import ApiError
@@ -244,6 +244,8 @@ class CustomerReads:
                     make=v.make, variant=v.variant, category=v.category,
                     parking_basement=v.parking_basement, parking_number=v.parking_number,
                     parking="-".join(p for p in (v.parking_basement, v.parking_number) if p),
+                    rc_status=("Uploaded" if has_confirmed(self._db, f"rc/{v.id}")
+                               else "Not uploaded"),
                     monthly_price_rupees=s.monthly_price_rupees if s else None,
                     cutoff_time=show_time(s.cutoff_time) if s else None,
                     interior_day=s.interior_day if s else None)

@@ -92,3 +92,20 @@ class AddonRequest(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     source_ref: Mapped[str | None] = mapped_column(String(40), unique=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class EmailChange(Base):
+    """A new email waiting for its 6-digit code (ACC-08). The old email stays
+    the sign-in until the code is entered. Only a keyed hash is stored."""
+
+    __tablename__ = "email_changes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
+    new_email: Mapped[str] = mapped_column(String(254))
+    code_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    wrong_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    # Set when the code is used, replaced or given up on.
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
