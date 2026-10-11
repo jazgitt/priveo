@@ -8,6 +8,7 @@ from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.support import alerts
 from app.support.config import SupportSettings, get_support_settings
+from app.support.faq import SupportFaqOut, load_faq
 from app.support.notify import (
     EmailNotifier,
     LoggingEmailNotifier,
@@ -82,6 +83,12 @@ def options(user: User = Depends(require_role("customer")),
     """The lists the forms use: issue categories (ISS-01), feedback categories
     (FDBK-06), positive tags (SVC-11), check-in categories (CHK-03)."""
     return service.options()
+
+
+@customer.get("/faq", response_model=SupportFaqOut)
+def faq(user: User = Depends(require_role("customer"))):
+    """The Frequently asked questions in order (SUP-05)."""
+    return SupportFaqOut(items=load_faq())
 
 
 @customer.post("/complaints", response_model=ComplaintDetail, status_code=201)
