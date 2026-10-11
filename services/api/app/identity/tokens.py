@@ -23,12 +23,12 @@ class AccessClaims:
 
 
 def issue_access(settings: Settings, login_id: uuid.UUID, session_id: uuid.UUID,
-                 role: str) -> str:
+                 role: str, minutes: int | None = None) -> str:
     payload = {
         "sub": str(login_id),
         "sid": str(session_id),
         "role": role,
-        "exp": utcnow() + timedelta(minutes=settings.access_token_minutes),
+        "exp": utcnow() + timedelta(minutes=minutes or settings.access_token_minutes),
     }
     return jwt.encode(payload, settings.token_secret, algorithm=_ALGORITHM)
 

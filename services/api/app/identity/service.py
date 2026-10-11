@@ -19,6 +19,9 @@ from app.platform.errors import ApiError
 MAX_WRONG_ATTEMPTS = 5  # CRW-ACC-07, AUTH-13
 CUSTOMER_BLOCK = timedelta(minutes=15)  # AUTH-13
 ADMIN_MOBILE_IDLE = timedelta(hours=24)  # ADM-ACC-13
+# A browser session has no refresh token, so its one access token lasts a
+# working day. The server session behind it can still be ended at any time.
+WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
 CODE_LIFETIME = timedelta(minutes=10)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
@@ -126,12 +129,15 @@ class AuthService:
         self._db.add(AuthEvent(login_id=login.id if login else None, kind=kind))
 
     def _result(self, login: Login, session: AuthSession, refresh_token: str) -> LoginResult:
+        minutes = (WEB_SESSION_MINUTES if session.channel == "web"
+                   else self._s.access_token_minutes)
         return LoginResult(
             role=login.role,
             display_name=login.display_name,
-            access_token=tokens.issue_access(self._s, login.id, session.id, login.role),
+            access_token=tokens.issue_access(
+                self._s, login.id, session.id, login.role, minutes),
             refresh_token=refresh_token,
-            expires_in=self._s.access_token_minutes * 60,
+            expires_in=minutes * 60,
         )
 
     def _end(self, session: AuthSession, reason: str) -> None:

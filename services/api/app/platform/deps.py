@@ -1,4 +1,4 @@
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from sqlalchemy.orm import Session
 
 from app.home.repository import HomeRepository, MockHomeRepository
@@ -6,6 +6,7 @@ from app.identity.service import AuthService, User
 from app.platform.config import Settings, get_settings
 from app.platform.db import get_db
 from app.platform.errors import ApiError
+from app.platform.websession import SAFE_METHODS, SESSION_COOKIE, check_csrf
 
 
 def get_auth_service(settings: Settings = Depends(get_settings),
@@ -24,14 +25,26 @@ def bearer_token(authorization: str | None) -> str | None:
 
 
 def require_role(role: str):
+    """The signed-in person, when they hold `role`. A bearer token (the mobile
+    app) or the portal's session cookie both work. A request that changes data
+    and comes by cookie must also carry the matching CSRF header."""
+
     def dependency(
+        request: Request,
         authorization: str | None = Header(default=None),
         auth: AuthService = Depends(get_auth_service),
+        settings: Settings = Depends(get_settings),
     ) -> User:
         token = bearer_token(authorization)
+        by_cookie = False
+        if token is None:
+            token = request.cookies.get(SESSION_COOKIE)
+            by_cookie = token is not None
         if token is None:
             raise ApiError("unauthorized", "Please sign in.", 401)
         user = auth.authenticate(token)
+        if by_cookie and request.method not in SAFE_METHODS:
+            check_csrf(settings, request, user.session_id)
         if user.role != role:
             raise ApiError("forbidden", "You cannot open this.", 403)
         return user
