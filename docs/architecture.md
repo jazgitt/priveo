@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Technical Architecture
 
-**Status:** v0.2 DRAFT, 9 Oct 2026, for owner review. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
+**Status:** v0.3 DRAFT, 11 Oct 2026 (adds section 7.1, network and access checkpoints), for owner review. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
 **Basis:** the three requirements files in `docs/reqs/` and `docs/tech-stack.md`.
 **Build order:** see `docs/build-plan.md`. For Phase 0 it supersedes the phase table in section 8.
 
@@ -291,6 +291,36 @@ apps/admin-web/src/
 | Observability | Structured JSON logs with `request_id` and user role (no personal data), CloudWatch alarms, Sentry or Crashlytics for errors |
 | Config and secrets | Environment variables and AWS Secrets Manager. The admin password comes from `.env` at seed time and is never committed |
 | Environments | `dev` and `prod` from the start, each with its own database and bucket. `staging` is added in phase 6 (owner decision), before payments and store submission |
+
+### 7.1 Network and access checkpoints
+
+**Target (Derived from the reviewer's security requirement, not an Owner decision):** one public entry point to the backend. The database and every other backend part are private. Use this list for the move from `dev` to `prod` and in each security review. Mark each line with the date and who checked it.
+
+**What `dev` is.** `dev` runs on Vercel with a Neon database (`docs/build-and-release.md`). Neon is reached over the public internet with TLS and credentials only, and GitHub Actions connects to it directly to migrate and seed. So `dev` does not meet the target. Keep real customer data out of `dev`. `prod` is on AWS Mumbai (`DEPLOY_PROVIDER=aws`) and must meet every checkpoint below before launch.
+
+| # | Checkpoint | Pass when |
+|---|---|---|
+| N1 | Single public entry | The only public endpoint to the backend is the load balancer (optionally behind CloudFront with WAF). TLS only, HTTP redirects to HTTPS. No other public IP or DNS name reaches the backend |
+| N2 | API tasks are private | ECS Fargate tasks run in private subnets with no public IP. Their security group accepts traffic only from the load balancer's security group |
+| N3 | Database is private | RDS has `PubliclyAccessible=false` and sits in private subnets. Its security group accepts port 5432 only from the API's security group (or RDS Proxy, which accepts only the API). No `0.0.0.0/0` rule |
+| N4 | Database encrypted | Encryption at rest is on. Connections require TLS. Automated backups are on, and the restore test of phase 8 has passed |
+| N5 | No DB route from CI or laptops | GitHub Actions has no `DATABASE_URL` for `prod`. Migrations and seeding run as a one-off ECS task inside the VPC. Admin access to the database is through a break-glass path (SSM Session Manager or a bastion with no public SSH), logged, and off by default |
+| N6 | CI deploys by OIDC | GitHub Actions assumes an AWS role by OIDC with least privilege. No long-lived AWS keys in GitHub |
+| N7 | Secrets | Database password, `TOKEN_SECRET`, the Resend and FCM keys live in Secrets Manager and are injected into the task. None are in the repo, the image, GitHub secrets for `prod`, or logs. The admin password comes from the environment at seed time only |
+| N8 | Outbound only as needed | Private subnets reach Resend and FCM through a NAT gateway. S3 is reached through a VPC gateway endpoint. Security groups allow no other outbound by default where practical |
+| N9 | Scheduler and jobs stay inside | EventBridge Scheduler starts tasks inside the VPC. It does not call a public URL. The in-process scheduler (section 10, decision 3) needs no inbound path |
+| N10 | Media bucket | The S3 bucket blocks all public access. Access is by short-lived signed URLs only. Uploads restrict content type and size, and use a prefix per visit. Customers get URLs only for their own visits. This is the one deliberate second public path, because the app talks to S3 directly for uploads; keep it narrow |
+| N11 | Edge protection | WAF with rate limits on the sign-in and code endpoints. Lockout and rate limits also hold in the API |
+| N12 | Separate environments | `prod` has its own VPC or account, database, bucket and secrets. `dev` credentials never work on `prod`, and `prod` data is never copied to `dev` |
+| N13 | Logs and alarms | Load balancer, WAF and VPC flow logs go to CloudWatch. Alarms fire on repeated 401s, 5xx spikes, and any change to a security group, the RDS public flag or the bucket policy |
+| N14 | No stray public parts | No public admin or docs route in `prod` (turn off `/docs` and `/openapi.json` or protect them). No debug endpoints. The fixed dev sign-in code (`MOCK_EMAIL_CODE`) is off in `prod` |
+
+**Security review procedure.** Before launch and at each review: (1) list public endpoints from DNS, the load balancer, security groups and the bucket policy, and confirm only N1 and N10 appear; (2) try a connection to the database port from outside the VPC and expect it to fail; (3) confirm the checkpoints in the table and record the date. A failed line blocks release.
+
+**Open:**
+- Whether `prod` uses its own AWS account or a separate VPC in one account. Decide before the AWS build.
+- Whether to use CloudFront in front of the load balancer in MVP, or only the load balancer with WAF.
+- When to move `dev` to AWS too, so `dev` and `prod` have the same network shape (`DEPLOY_PROVIDER=aws` already supports it).
 
 ## 8. Build plan
 
