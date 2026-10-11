@@ -1,22 +1,17 @@
 from typing import Protocol
 
-from app.home.schemas import (
-    AdminHome,
-    CrewHome,
-    JobCard,
-    PaymentToConfirm,
-)
+from app.home.schemas import CrewHome, JobCard
 from app.platform.clock import today_ist
 
 
 class HomeRepository(Protocol):
     def crew_home(self, user_id: str) -> CrewHome: ...
-    def admin_home(self, user_id: str) -> AdminHome: ...
 
 
 class MockHomeRepository:
-    """Mock data for the crew and admin homes, until their modules exist.
-    The customer home reads the database (app.customers.service)."""
+    """Mock data for the crew home, until its module exists. The customer home
+    reads the database (app.customers.service), the admin home too
+    (app.home.admin)."""
 
     def crew_home(self, user_id: str) -> CrewHome:
         jobs = [
@@ -32,15 +27,3 @@ class MockHomeRepository:
         done = sum(1 for j in jobs if j.status == "Done")
         return CrewHome(date=today_ist(), society="Green Meadows", total=len(jobs),
                         done=done, left=len(jobs) - done, jobs=jobs)
-
-    def admin_home(self, user_id: str) -> AdminHome:
-        return AdminHome(
-            alert_count=3,
-            payments_to_confirm=[
-                PaymentToConfirm(id="p1", customer_label="Flat A-101", amount_rupees=1499,
-                                 reference="UPI 4021"),
-                PaymentToConfirm(id="p2", customer_label="Flat C-304", amount_rupees=1499,
-                                 reference="UPI 7788"),
-            ],
-            needs_scheduling_count=2,
-        )

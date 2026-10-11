@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,8 @@ import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
+import 'package:priveo/features/admin_quick/data/admin_quick_models.dart';
+import 'package:priveo/features/admin_quick/data/admin_quick_repository.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
 import 'package:priveo/features/crew/crew_providers.dart';
 import 'package:priveo/features/crew/upload/upload_queue.dart';
@@ -288,6 +291,15 @@ const adminJson = {
   ],
 };
 
+/// The admin home reads its own endpoint. Everything else is not used by the
+/// app tests, so it goes to a Dio with no server.
+class FakeAdminQuickHome extends ApiAdminQuickRepository {
+  FakeAdminQuickHome() : super(Dio());
+
+  @override
+  Future<QuickHome> home() async => QuickHome.fromJson(adminJson);
+}
+
 /// Starts the real app with fake data sources.
 Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
@@ -304,6 +316,7 @@ Future<ProviderContainer> pumpApp(
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
     apiProvider.overrideWithValue(api ?? FakePriveoApi()),
+    adminQuickRepositoryProvider.overrideWithValue(FakeAdminQuickHome()),
     // The crew home reads its own endpoints and starts the upload queue. A
     // test has no network, no SQLite and no connectivity plugin.
     crewRepositoryProvider.overrideWithValue(crewBackend),

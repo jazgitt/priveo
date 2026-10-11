@@ -29,16 +29,16 @@ class AdminPaymentDto {
   final String vehicle;
 
   factory AdminPaymentDto.fromJson(Map<String, dynamic> j) => AdminPaymentDto(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        description: j['description'] as String,
-        amountRupees: j['amount_rupees'] as int,
-        status: j['status'] as String,
-        dueDate: DateTime.parse(j['due_date'] as String),
-        customerName: j['customer_name'] as String,
-        flat: j['flat'] as String,
-        vehicle: j['vehicle'] as String,
-      );
+    id: j['id'] as String,
+    kind: j['kind'] as String,
+    description: j['description'] as String,
+    amountRupees: j['amount_rupees'] as int,
+    status: j['status'] as String,
+    dueDate: DateTime.parse(j['due_date'] as String),
+    customerName: j['customer_name'] as String,
+    flat: j['flat'] as String,
+    vehicle: j['vehicle'] as String,
+  );
 }
 
 class AdminAlertDto {
@@ -57,12 +57,12 @@ class AdminAlertDto {
   final bool read;
 
   factory AdminAlertDto.fromJson(Map<String, dynamic> j) => AdminAlertDto(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        message: j['message'] as String,
-        createdAt: DateTime.parse(j['created_at'] as String),
-        read: j['read'] as bool,
-      );
+    id: j['id'] as String,
+    kind: j['kind'] as String,
+    message: j['message'] as String,
+    createdAt: DateTime.parse(j['created_at'] as String),
+    read: j['read'] as bool,
+  );
 }
 
 /// The admin's quick actions for money (ADM-ACC-07 b). They call the same
@@ -80,8 +80,10 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
 
   final Dio _dio;
 
-  Future<T> _call<T>(Future<Response<dynamic>> Function() send,
-      T Function(dynamic data) read) async {
+  Future<T> _call<T>(
+    Future<Response<dynamic>> Function() send,
+    T Function(dynamic data) read,
+  ) async {
     try {
       return read((await send()).data);
     } on DioException catch (e) {
@@ -91,12 +93,15 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
 
   @override
   Future<List<AdminPaymentDto>> toConfirm() => _call(
-      () => _dio.get<dynamic>('/v1/admin/payments',
-          queryParameters: {'status': 'Initiated'}),
-      (d) => [
-            for (final x in d as List)
-              AdminPaymentDto.fromJson(x as Map<String, dynamic>)
-          ]);
+    () => _dio.get<dynamic>(
+      '/v1/admin/payments',
+      queryParameters: {'status': 'Initiated'},
+    ),
+    (d) => [
+      for (final x in d as List)
+        AdminPaymentDto.fromJson(x as Map<String, dynamic>),
+    ],
+  );
 
   @override
   Future<void> confirm(String id) =>
@@ -107,22 +112,30 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
       _call(() => _dio.post<dynamic>('/v1/admin/payments/$id/reject'), (_) {});
 
   @override
-  Future<List<AdminAlertDto>> alerts() =>
-      _call(() => _dio.get<dynamic>('/v1/admin/payment-alerts'), (d) => [
-            for (final x in d as List)
-              AdminAlertDto.fromJson(x as Map<String, dynamic>)
-          ]);
+  Future<List<AdminAlertDto>> alerts() => _call(
+    () => _dio.get<dynamic>('/v1/admin/payment-alerts'),
+    (d) => [
+      for (final x in d as List)
+        AdminAlertDto.fromJson(x as Map<String, dynamic>),
+    ],
+  );
 
   @override
-  Future<void> markRead(String id) =>
-      _call(() => _dio.post<dynamic>('/v1/admin/payment-alerts/$id/read'), (_) {});
+  Future<void> markRead(String id) => _call(
+    () => _dio.post<dynamic>('/v1/admin/payment-alerts/$id/read'),
+    (_) {},
+  );
 }
 
 final adminPaymentsRepositoryProvider = Provider<AdminPaymentsRepository>(
-    (ref) => DioAdminPaymentsRepository(ref.watch(dioProvider)));
+  (ref) => DioAdminPaymentsRepository(ref.watch(dioProvider)),
+);
 
-final paymentsToConfirmProvider = FutureProvider.autoDispose<List<AdminPaymentDto>>(
-    (ref) => ref.watch(adminPaymentsRepositoryProvider).toConfirm());
+final paymentsToConfirmProvider =
+    FutureProvider.autoDispose<List<AdminPaymentDto>>(
+      (ref) => ref.watch(adminPaymentsRepositoryProvider).toConfirm(),
+    );
 
 final adminAlertsProvider = FutureProvider.autoDispose<List<AdminAlertDto>>(
-    (ref) => ref.watch(adminPaymentsRepositoryProvider).alerts());
+  (ref) => ref.watch(adminPaymentsRepositoryProvider).alerts(),
+);

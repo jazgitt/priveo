@@ -216,12 +216,14 @@ void main() {
     await pumpApp(tester, store: store, auth: auth);
     await passSplash(tester);
 
+    await tester.scrollUntilVisible(find.text('Sign out of all devices'), 200);
     await tester.tap(find.text('Sign out of all devices'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(auth.logoutAllCalls, 0);
 
+    await tester.scrollUntilVisible(find.text('Sign out of all devices'), 200);
     await tester.tap(find.text('Sign out of all devices'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
