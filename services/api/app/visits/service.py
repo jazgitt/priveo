@@ -11,7 +11,8 @@ from app.customers.models import Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
 from app.media.models import STATUS_CONFIRMED, MediaUpload
-from app.media.service import proof_counts
+from app.media.service import profile_photo_url, proof_counts, vehicle_photo_urls
+from app.media.store import get_object_store
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 from app.scheduling import rules
@@ -142,6 +143,8 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
         .join(Login, Login.id == SchedulingCrew.login_id)
         .where(SchedulingCrew.id.in_(crew_ids)))} if crew_ids else {}
 
+    photos = vehicle_photo_urls(db, get_object_store(), vehicles.keys())
+
     cards = []
     for job in jobs:
         visit = visits[job.visit_id]
@@ -152,7 +155,8 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
             date=visit.date, service=job.service, status=job.status,
             vehicle=s.VehicleInfo(id=str(vehicle.id), registration=vehicle.registration or "",
                                   make=vehicle.make, model=vehicle.model,
-                                  category=vehicle.category),
+                                  category=vehicle.category,
+                                  photo_url=photos.get(vehicle.id)),
             society=societies.get(schedules[visit.schedule_id].society_id, ""),
             parking=parking, start_time=rules.hhmm(job.start_minute),
             finish_by=rules.hhmm(job.finish_by_minute),
@@ -400,7 +404,11 @@ def crew_options(db: Session, manager: SchedulingCrew) -> list[s.CrewRef]:
 
 def photo_state(db: Session, login_id: uuid.UUID) -> s.PhotoState:
     row = db.get(CrewPhoto, login_id)
-    return s.PhotoState(upload_id=str(row.upload_id) if row else None)
+    if row is None:
+        return s.PhotoState(upload_id=None, url=None)
+    # A signed read URL for the profile screen (CRW-PRF-01).
+    return s.PhotoState(upload_id=str(row.upload_id),
+                        url=profile_photo_url(db, get_object_store(), row.upload_id))
 
 
 def set_profile_photo(db: Session, login_id: uuid.UUID, upload_id: str) -> s.PhotoState:

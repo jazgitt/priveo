@@ -24,6 +24,7 @@ import '../calendar/calendar_screen.dart';
 import '../data/customer_reads_repository.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
+import 'todays_clean_strip.dart';
 
 /// Customer shell: bottom tabs Home, Calendar, Account and Support.
 /// The layout follows the prototype's dark home.
@@ -278,7 +279,9 @@ class CustomerHomeScreen extends ConsumerWidget {
                   child: _NextServiceCard(vehicle, onCalendar: onCalendar),
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+              const Padding(padding: _side, child: TodaysCleanStrip()),
+              const SizedBox(height: 10),
               Padding(padding: _side, child: SectionLabel(l.quickActions)),
               const SizedBox(height: 12),
               Padding(

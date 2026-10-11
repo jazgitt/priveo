@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterable
 from datetime import timedelta
 
 from sqlalchemy import func, select
@@ -24,6 +25,12 @@ CONTENT_TYPES = {
     "video": ("video/mp4", "video/quicktime", "video/3gpp", "video/x-m4v"),
 }
 UPLOAD_WINDOW = timedelta(minutes=30)
+# How long a read URL works. The screens ask again each time they load.
+DOWNLOAD_WINDOW = timedelta(hours=1)
+# A customer's vehicle photo is stored under this key prefix, then the vehicle
+# ID. The customer upload route (WP5) follows this key shape.
+VEHICLE_PHOTO_PREFIX = "vehicle"
+STAGE_ORDER = {stage: i for i, stage in enumerate(STAGES)}
 
 
 def request_upload(db: Session, store: ObjectStore, *, owner_id: uuid.UUID,
@@ -93,3 +100,52 @@ def proof_counts(db: Session, job_id: uuid.UUID) -> dict[str, int]:
         elif status == STATUS_REQUESTED:
             counts["pending"] += n
     return counts
+
+
+# ---- Read URLs -------------------------------------------------------------------
+
+def download_url(store: ObjectStore, upload: MediaUpload) -> str:
+    """A signed, expiring URL to read a confirmed upload."""
+    return store.presign_download(str(upload.id), upload.object_key, upload.content_type,
+                                  utcnow() + DOWNLOAD_WINDOW)
+
+
+def confirmed_proof(db: Session,
+                    job_ids: Iterable[uuid.UUID]) -> dict[uuid.UUID, list[MediaUpload]]:
+    """The confirmed proof photos and videos of these jobs: Before, During,
+    then After, and by time inside a stage."""
+    ids = list(job_ids)
+    out: dict[uuid.UUID, list[MediaUpload]] = {i: [] for i in ids}
+    if not ids:
+        return out
+    rows = db.scalars(
+        select(MediaUpload)
+        .where(MediaUpload.job_id.in_(ids), MediaUpload.purpose == "proof",
+               MediaUpload.status == STATUS_CONFIRMED)
+        .order_by(MediaUpload.confirmed_at, MediaUpload.id)).all()
+    for row in sorted(rows, key=lambda r: STAGE_ORDER.get(r.stage or "", 9)):
+        out[row.job_id].append(row)
+    return out
+
+
+def vehicle_photo_urls(db: Session, store: ObjectStore,
+                       vehicle_ids: Iterable[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """The newest confirmed photo of each vehicle that has one, as a signed
+    read URL. A vehicle with no photo is left out."""
+    out: dict[uuid.UUID, str] = {}
+    for vehicle_id in set(vehicle_ids):
+        row = db.scalar(
+            select(MediaUpload)
+            .where(MediaUpload.object_key.like(f"{VEHICLE_PHOTO_PREFIX}/{vehicle_id}/%"),
+                   MediaUpload.status == STATUS_CONFIRMED)
+            .order_by(MediaUpload.confirmed_at.desc()).limit(1))
+        if row is not None:
+            out[vehicle_id] = download_url(store, row)
+    return out
+
+
+def profile_photo_url(db: Session, store: ObjectStore, upload_id: uuid.UUID) -> str | None:
+    upload = db.get(MediaUpload, upload_id)
+    if upload is None or upload.status != STATUS_CONFIRMED:
+        return None
+    return download_url(store, upload)

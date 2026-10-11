@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../core/ui/media_image.dart';
 import '../../../core/ui/widgets.dart';
 import '../capture/media_capture.dart';
 import '../crew_providers.dart';
@@ -81,9 +82,24 @@ class _State extends ConsumerState<CrewProfileScreen> {
             Center(
               child: CircleAvatar(
                 radius: 40,
-                child: Text(
-                    p.name.isEmpty ? '?' : p.name.characters.first.toUpperCase(),
-                    style: text.headlineMedium),
+                child: p.photoUrl != null
+                    ? ClipOval(
+                        child: MediaImage(
+                          p.photoUrl!,
+                          width: 80,
+                          height: 80,
+                          fallback: Text(
+                              p.name.isEmpty
+                                  ? '?'
+                                  : p.name.characters.first.toUpperCase(),
+                              style: text.headlineMedium),
+                        ),
+                      )
+                    : Text(
+                        p.name.isEmpty
+                            ? '?'
+                            : p.name.characters.first.toUpperCase(),
+                        style: text.headlineMedium),
               ),
             ),
             const SizedBox(height: 8),
