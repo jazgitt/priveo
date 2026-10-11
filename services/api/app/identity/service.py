@@ -14,6 +14,13 @@ from app.identity import tokens
 from app.identity.models import AuthEvent, AuthSession, EmailCode, Login
 from app.platform.config import Settings
 from app.platform.db import utcnow
+from app.platform.email import (
+    EmailSender,
+    EmailSendError,
+    email_connected,
+    get_email_sender,
+    new_code,
+)
 from app.platform.errors import ApiError
 
 MAX_WRONG_ATTEMPTS = 5  # CRW-ACC-07, AUTH-13
@@ -121,9 +128,11 @@ def _signed_out() -> ApiError:
 
 
 class AuthService:
-    def __init__(self, settings: Settings, db: Session):
+    def __init__(self, settings: Settings, db: Session,
+                 email: EmailSender | None = None):
         self._s = settings
         self._db = db
+        self._email = email or get_email_sender(settings)
 
     def _event(self, login: Login | None, kind: str) -> None:
         self._db.add(AuthEvent(login_id=login.id if login else None, kind=kind))
@@ -242,10 +251,11 @@ class AuthService:
             raise ApiError("too_many_codes",
                            "Too many codes were requested. Try again in an hour.", 429)
 
-        code = self._s.fixed_email_code
-        if code is None:
-            # Email is not connected yet. Nothing is stored and nothing is sent.
+        if not email_connected(self._s):
+            # Prod without a Resend key: nothing is stored and nothing is sent.
             raise ApiError("not_configured", "Email is not set up yet.", 503)
+        # A random code, or the fixed MOCK_EMAIL_CODE on dev.
+        code = new_code(self._s)
 
         self._db.execute(
             update(EmailCode)
@@ -256,6 +266,15 @@ class AuthService:
         row.code_hash = self._code_hash(row.id, code)
         self._db.add(row)
         self._event(login, "code_sent")
+        purpose = ("sign_in_code" if login.password_hash is None
+                   else "password_reset_code")
+        try:
+            self._email.send_code(login.login_id, code, purpose)
+        except EmailSendError:
+            # The customer never got it, so it does not count as one sent.
+            self._db.rollback()
+            raise ApiError("email_failed",
+                           "We could not send the email. Try again in a moment.", 502)
         self._db.commit()
         return wait
 
@@ -365,6 +384,18 @@ class AuthService:
             self._end(session, "logout")
             self._event(self._db.get(Login, session.login_id), "logout")
             self._db.commit()
+
+    def end_customer_sessions(self, customer_login_id: uuid.UUID, reason: str) -> int:
+        """Signs a customer out on every phone (AUTH-17, ADM-CUS-21). Returns
+        how many sessions were ended."""
+        result = self._db.execute(
+            update(AuthSession)
+            .where(AuthSession.login_id == customer_login_id,
+                   AuthSession.ended_at.is_(None))
+            .values(ended_at=utcnow(), ended_reason=reason))
+        self._event(self._db.get(Login, customer_login_id), "sessions_ended")
+        self._db.commit()
+        return result.rowcount or 0
 
     def logout_all(self, user: User) -> None:
         """Ends every session of this login, the one in use included (ADM-ACC-14)."""
