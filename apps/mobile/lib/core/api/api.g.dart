@@ -5504,6 +5504,42 @@ class SupportContact {
       };
 }
 
+class SupportFaqItem {
+  const SupportFaqItem({
+    required this.question,
+    required this.answer,
+  });
+
+  final String question;
+  final String answer;
+
+  factory SupportFaqItem.fromJson(Map<String, dynamic> j) => SupportFaqItem(
+        question: j['question'] as String,
+        answer: j['answer'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'question': question,
+        'answer': answer,
+      };
+}
+
+class SupportFaqOut {
+  const SupportFaqOut({
+    required this.items,
+  });
+
+  final List<SupportFaqItem> items;
+
+  factory SupportFaqOut.fromJson(Map<String, dynamic> j) => SupportFaqOut(
+        items: [for (final x in j['items'] as List) SupportFaqItem.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'items': [for (final x in items) x.toJson()],
+      };
+}
+
 class SupportOptionsOut {
   const SupportOptionsOut({
     required this.issueCategories,
@@ -6511,6 +6547,16 @@ class PriveoApi {
     try {
       final r = await _dio.get<Map<String, dynamic>>('/v1/customer/support/options');
       return SupportOptionsOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Faq
+  Future<SupportFaqOut> faq() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/customer/faq');
+      return SupportFaqOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

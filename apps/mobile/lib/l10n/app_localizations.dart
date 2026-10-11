@@ -2841,6 +2841,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rate today\'s clean'**
   String get cust_proof_rate_today;
+
+  /// No description provided for @money_invoiceCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy invoice'**
+  String get money_invoiceCopy;
+
+  /// No description provided for @money_invoiceCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice copied.'**
+  String get money_invoiceCopied;
+
+  /// No description provided for @money_invoiceEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email invoice'**
+  String get money_invoiceEmail;
+
+  /// No description provided for @money_invoiceNoMail.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app was found on this phone.'**
+  String get money_invoiceNoMail;
+
+  /// No description provided for @support_faq.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently asked questions'**
+  String get support_faq;
+
+  /// No description provided for @support_faq_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no questions yet.'**
+  String get support_faq_empty;
+
+  /// No description provided for @support_feedback_tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get support_feedback_tab;
 }
 
 class _AppLocalizationsDelegate

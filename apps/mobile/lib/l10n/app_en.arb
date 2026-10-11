@@ -823,5 +823,12 @@
   "cust_proof_history_month_empty": "No services in this month.",
   "cust_proof_today_done": "Today's clean is done",
   "cust_proof_view_proof": "View proof",
-  "cust_proof_rate_today": "Rate today's clean"
+  "cust_proof_rate_today": "Rate today's clean",
+  "money_invoiceCopy": "Copy invoice",
+  "money_invoiceCopied": "Invoice copied.",
+  "money_invoiceEmail": "Email invoice",
+  "money_invoiceNoMail": "No email app was found on this phone.",
+  "support_faq": "Frequently asked questions",
+  "support_faq_empty": "There are no questions yet.",
+  "support_feedback_tab": "Feedback"
 }

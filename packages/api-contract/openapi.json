@@ -4048,6 +4048,56 @@
         }
       }
     },
+    "/v1/customer/faq": {
+      "get": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Faq",
+        "description": "The Frequently asked questions in order (SUP-05).",
+        "operationId": "faq_v1_customer_faq_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportFaqOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/complaints": {
       "post": {
         "tags": [
@@ -19517,6 +19567,40 @@
           "complaints_in_progress"
         ],
         "title": "SupportContact"
+      },
+      "SupportFaqItem": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "SupportFaqItem"
+      },
+      "SupportFaqOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SupportFaqItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SupportFaqOut"
       },
       "SupportOptionsOut": {
         "properties": {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/admin_quick/home/admin_home_screen.dart';
 import '../../features/admin_quick/alerts/routes.dart' as alerts;
 import '../../features/admin_quick/payments/routes.dart' as payments;
+import '../../features/admin_quick/routes.dart' as admin_quick;
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/changes_money/routes.dart' as money;
 import '../../features/crew/home/crew_home_screen.dart';
@@ -50,16 +51,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: customer_pages.routes,
       ),
       GoRoute(
-          path: '/crew',
-          builder: (_, _) =>
-              Theme(data: crewTheme, child: const CrewHomeScreen())),
+        path: '/crew',
+        builder: (_, _) =>
+            Theme(data: crewTheme, child: const CrewHomeScreen()),
+      ),
       GoRoute(
-          path: '/admin',
-          builder: (_, _) =>
-              Theme(data: adminTheme, child: const AdminHomeScreen())),
+        path: '/admin',
+        builder: (_, _) =>
+            Theme(data: adminTheme, child: const AdminHomeScreen()),
+      ),
       ...support.routes,
       ...alerts.routes,
       ...payments.routes,
+      ...admin_quick.routes,
       ...money.routes,
       // The people slice's vehicle pages are replaced by the customer slice's.
       ...people.routes.where((r) => r is GoRoute && r.path == '/crew/profile'),

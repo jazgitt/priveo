@@ -1522,4 +1522,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cust_proof_rate_today => 'Rate today\'s clean';
+
+  @override
+  String get money_invoiceCopy => 'Copy invoice';
+
+  @override
+  String get money_invoiceCopied => 'Invoice copied.';
+
+  @override
+  String get money_invoiceEmail => 'Email invoice';
+
+  @override
+  String get money_invoiceNoMail => 'No email app was found on this phone.';
+
+  @override
+  String get support_faq => 'Frequently asked questions';
+
+  @override
+  String get support_faq_empty => 'There are no questions yet.';
+
+  @override
+  String get support_feedback_tab => 'Feedback';
 }
