@@ -11,6 +11,7 @@ import '../history/history_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../settings/settings_screen.dart';
 import '../vehicles/vehicles_screen.dart';
+import 'account_sections.dart';
 
 /// The account tab: who is signed in, links to the customer's lists, and
 /// sign-out. It is a body; the customer shell supplies the scaffold.
@@ -21,7 +22,6 @@ class AccountScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final b = context.brand;
-    final name = ref.watch(authControllerProvider).value?.displayName ?? '';
     final unread = ref.watch(inboxProvider).value?.unreadCount ?? 0;
     Widget link(
       IconData icon,
@@ -42,8 +42,9 @@ class AccountScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
       children: [
         Text(CustStrings.accountTitle, style: text.displaySmall),
-        const SizedBox(height: 4),
-        Text(name, style: text.bodyLarge?.copyWith(color: b.mute)),
+        const SizedBox(height: 12),
+        const AccountProfileHeader(), // ACC-01
+        const AccountSubscriptionCards(), // ACC-02
         const SizedBox(height: 20),
         link(
           Symbols.directions_car_rounded,
@@ -61,6 +62,7 @@ class AccountScreen extends ConsumerWidget {
           () => openNotifications(context),
           badge: unread > 0 ? '$unread' : null,
         ),
+        const AccountMoreLinks(), // ACC-03
         const SizedBox(height: 20),
         SectionLabel(CustStrings.settingsHeading),
         const SizedBox(height: 8),

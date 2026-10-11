@@ -22,6 +22,7 @@ import '../../support/feedback_tab.dart';
 import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
+import '../account/photo_widgets.dart' show VehiclePhotoThumb;
 import '../calendar/calendar_screen.dart';
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
@@ -513,11 +514,18 @@ class _VehicleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            vehicle.model,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.titleLarge,
+          Row(
+            children: [
+              VehiclePhotoThumb(vehicle.id), // HOME-02
+              Expanded(
+                child: Text(
+                  vehicle.model,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleLarge,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           line(Symbols.location_on_rounded, vehicle.society),

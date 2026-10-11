@@ -102,12 +102,14 @@ class FakeSupportRepository implements SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   }) async {
     _maybeFail();
     created.add({
       'category': category,
       'description': description,
       'visitId': visitId,
+      if (photoKeys.isNotEmpty) 'photoKeys': photoKeys,
     });
     final c = makeComplaint(
         id: 'new', displayId: '#C-0009', description: description);

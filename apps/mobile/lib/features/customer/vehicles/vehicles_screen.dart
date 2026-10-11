@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/media_image.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../cust_strings.dart';
 import '../cust_ui.dart';
+import '../account/vehicle_account_section.dart';
 import '../data/customer_reads_repository.dart';
 
 /// Opens My vehicles over the current screen.
@@ -52,6 +54,18 @@ class VehiclesScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
+                        if (v.photoUrl != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: SizedBox(
+                                width: 52,
+                                height: 52,
+                                child: MediaImage(v.photoUrl!),
+                              ),
+                            ),
+                          ),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +103,8 @@ class VehiclesScreen extends ConsumerWidget {
   }
 }
 
-/// One vehicle's details (VEH-02, VEH-03). Editing is not in this slice.
+/// One vehicle's details (VEH-02, VEH-03) with the photo and parking edits
+/// (VEH-01, VEH-04).
 class VehicleDetailScreen extends ConsumerWidget {
   const VehicleDetailScreen({super.key, required this.vehicleId});
 
@@ -159,6 +174,8 @@ class VehicleDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              VehicleAccountSection(vehicle: v), // VEH-01, VEH-03, VEH-04
               const SizedBox(height: 12),
               Text(
                 CustStrings.carDetailsViaSupport,

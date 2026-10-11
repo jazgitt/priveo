@@ -11,6 +11,9 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../account/account_data.dart' show vehiclePhotoDoneProvider;
+import '../account/account_strings.dart';
+import '../account/photo_widgets.dart' show VehiclePhotoField;
 import '../home/customer_home_data.dart';
 
 final onboardingProvider = FutureProvider.autoDispose<Onboarding>(
@@ -132,6 +135,10 @@ class _ReviewState extends ConsumerState<_Review> {
       }
     } else if (step >= 2 && step < _steps - 1) {
       final d = _drafts[step - 2];
+      // ONB-22: the vehicle photo is required.
+      if (!ref.read(vehiclePhotoDoneProvider(d.vehicle.id))) {
+        errors['photo'] = AccountStrings.photoRequired;
+      }
       if (d.basement == null) errors['basement'] = l.selectBasement;
       if (!RegExp(r'^\d{1,5}$').hasMatch(d.number.text.trim())) {
         errors['number'] = l.enterParkingNumber;
@@ -325,6 +332,11 @@ class _ReviewState extends ConsumerState<_Review> {
       ),
       const SizedBox(height: 8),
       _Note(l.onlyPriveoCanChange),
+      const SizedBox(height: 24),
+      const SectionLabel(AccountStrings.vehiclePhoto),
+      const SizedBox(height: 12),
+      VehiclePhotoField(vehicleId: v.id, reportDone: true),
+      _error('photo'),
       const SizedBox(height: 24),
       SectionLabel(l.parking),
       const SizedBox(height: 12),
