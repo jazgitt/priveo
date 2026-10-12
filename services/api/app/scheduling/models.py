@@ -44,8 +44,7 @@ class SchedulingCrew(Base):
     # One entry for each weekday: {"day", "working", "start", "end"} (ADM-CRW-04).
     working_hours: Mapped[list | None] = mapped_column(JSON)
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).
-    paired_member_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("scheduling_crew.id"))
+    paired_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -84,13 +83,17 @@ class Visit(Base):
     skipped (CLAUDE.md domain facts)."""
 
     __tablename__ = "visits"
-    __table_args__ = (UniqueConstraint("schedule_id", "vehicle_id", "date"),)
+    __table_args__ = (
+        UniqueConstraint("schedule_id", "vehicle_id", "date", "addon_key", name="uq_visit_service"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     schedule_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("schedules.id"), index=True)
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
     date: Mapped[date] = mapped_column(Date, index=True)
     status: Mapped[str] = mapped_column(String(20), default="Scheduled")
+    # Empty for the plan visit, booking UUID for a separate add-on visit.
+    addon_key: Mapped[str] = mapped_column(String(64), default="")
 
 
 class Job(Base):
@@ -104,13 +107,14 @@ class Job(Base):
     status: Mapped[str] = mapped_column(String(20), default="Scheduled")
     duration_minutes: Mapped[int] = mapped_column(Integer)
     # Empty while the job is Unscheduled or on the Needs scheduling list.
-    crew_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("scheduling_crew.id"), index=True)
+    crew_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"), index=True)
     start_minute: Mapped[int | None] = mapped_column(Integer)
     # The customer's cutoff time, in minutes after midnight.
     finish_by_minute: Mapped[int | None] = mapped_column(Integer)
-    addon_request_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("addon_requests.id"))
+    addon_request_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("addon_requests.id"))
+    addon_booking_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("addon_bookings.id"), index=True
+    )
     # Set when the admin placed or removed it by hand. A re-run keeps it (ADM-SCH-14).
     manual: Mapped[bool] = mapped_column(Boolean, default=False)
     # Placed, but it finishes after the customer's cutoff time (ADM-SCH-07).

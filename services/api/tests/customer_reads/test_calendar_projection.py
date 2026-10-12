@@ -1,6 +1,7 @@
 """The projected calendar: dates the scheduler has not planned yet come from
 the subscription, planned visits win, and the day states are marked
 (CAL-01, CAL-02, CAL-05 to CAL-10, SUB-08)."""
+
 import uuid
 from datetime import date, datetime, time
 
@@ -20,7 +21,7 @@ from app.platform.clock import IST
 @pytest.fixture
 def clock(api):
     holder = {"now": datetime(2026, 10, 11, 10, 0, tzinfo=IST)}
-    api.app.dependency_overrides[get_now] = lambda: (lambda: holder["now"])
+    api.app.dependency_overrides[get_now] = lambda: lambda: holder["now"]
     changes.register(api.app)
     gateway = InMemoryScheduleChangeGateway()
     api.app.dependency_overrides[get_schedule_gateway] = lambda: gateway
@@ -28,8 +29,10 @@ def clock(api):
 
 
 def month(api, asha, text, vehicle=0):
-    r = api.get(f"/v1/customer/calendar?month={text}&vehicle_id={asha['vehicles'][vehicle]}",
-                headers=asha["headers"])
+    r = api.get(
+        f"/v1/customer/calendar?month={text}&vehicle_id={asha['vehicles'][vehicle]}",
+        headers=asha["headers"],
+    )
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -59,6 +62,17 @@ def test_planned_visits_win_over_projected_days(api, asha, clock):
     assert days["2026-11-20"]["source"] == "visit"
 
 
+def test_spa_visit_does_not_replace_the_projected_plan_clean(api, asha, clock, repo):
+    repo.visit_rows.append(Visit("spa", asha["vehicles"][0], date(2026, 11, 22), "Scheduled"))
+    repo.job_rows.append(Job("spa-job", "spa", "Deep Spa", "Scheduled"))
+    body = month(api, asha, "2026-11")
+    assert len(body["visits"]) == 31
+    spa_day = [v for v in body["visits"] if v["date"] == "2026-11-22"]
+    assert len(spa_day) == 2
+    assert any(v["source"] == "projected" for v in spa_day)
+    assert any(v["services"] == ["Deep Spa"] for v in spa_day)
+
+
 def test_no_projection_for_the_past_or_without_an_active_subscription(api, asha, clock, db):
     assert month(api, asha, "2026-09")["visits"] == []
     for sub in db.query(Subscription).all():
@@ -79,14 +93,20 @@ def test_skip_pause_and_cutoff_change_on_projected_days(api, asha, clock):
     r = api.delete(f"/v1/customer/vehicles/{vid}/skips/{r.json()['id']}", headers=h)
     assert r.status_code == 204
     assert by_date(month(api, asha, "2026-12"))["2026-12-05"]["status"] == "Projected"
-    r = api.post(f"/v1/customer/vehicles/{vid}/pauses",
-                 json={"from_date": "2026-12-10", "to_date": "2026-12-11"}, headers=h)
+    r = api.post(
+        f"/v1/customer/vehicles/{vid}/pauses",
+        json={"from_date": "2026-12-10", "to_date": "2026-12-11"},
+        headers=h,
+    )
     assert r.status_code == 201, r.text
     body = month(api, asha, "2026-12")
     assert by_date(body)["2026-12-10"]["status"] == "Paused"
     assert by_date(body)["2026-12-10"]["can_change"] is False
-    r = api.post(f"/v1/customer/vehicles/{vid}/cutoff-changes",
-                 json={"date": "2026-12-12", "cutoff_time": "08:30"}, headers=h)
+    r = api.post(
+        f"/v1/customer/vehicles/{vid}/cutoff-changes",
+        json={"date": "2026-12-12", "cutoff_time": "08:30"},
+        headers=h,
+    )
     assert r.status_code == 201
     assert by_date(month(api, asha, "2026-12"))["2026-12-12"]["cutoff_time"] == "08:30"
 
@@ -95,19 +115,29 @@ def test_renewal_dates_move_with_a_pause(api, asha, clock):
     vid = asha["vehicles"][0]
     # First service 14-Sep-26: renewals on 14-Oct-26, 13-Nov-26, 13-Dec-26.
     assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-13"]
-    api.post(f"/v1/customer/vehicles/{vid}/pauses",
-             json={"from_date": "2026-12-20", "to_date": "2026-12-21"},
-             headers=asha["headers"])
+    api.post(
+        f"/v1/customer/vehicles/{vid}/pauses",
+        json={"from_date": "2026-12-20", "to_date": "2026-12-21"},
+        headers=asha["headers"],
+    )
     # Two paused days: the renewals before the pause move two days on.
     assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-15"]
 
 
 def test_a_requested_cutoff_change_keeps_the_current_value(api, asha, clock, db):
     customer = db.query(Customer).filter_by(email="asha@example.com").one()
-    db.add(ScheduleChange(customer_id=customer.id, vehicle_id=uuid.UUID(asha["vehicles"][0]),
-                          kind="cutoff", start_date=date(2026, 11, 20),
-                          end_date=date(2026, 11, 20), cutoff_time=time(9, 0),
-                          status="Requested", actor="customer"))
+    db.add(
+        ScheduleChange(
+            customer_id=customer.id,
+            vehicle_id=uuid.UUID(asha["vehicles"][0]),
+            kind="cutoff",
+            start_date=date(2026, 11, 20),
+            end_date=date(2026, 11, 20),
+            cutoff_time=time(9, 0),
+            status="Requested",
+            actor="customer",
+        )
+    )
     db.commit()
     day = by_date(month(api, asha, "2026-11"))["2026-11-20"]
     assert day["change_requested"] is True and day["state"] == "Change requested"
@@ -117,19 +147,23 @@ def test_a_requested_cutoff_change_keeps_the_current_value(api, asha, clock, db)
 
 def test_missed_visits_show_covered_and_rescheduled_dates(api, asha, clock, repo):
     vid = asha["vehicles"][0]
-    repo.visit_rows.extend([
-        Visit("m-1", vid, date(2026, 10, 5), "Missed"),
-        Visit("m-2", vid, date(2026, 10, 6), "Scheduled"),
-        Visit("m-3", vid, date(2026, 10, 2), "Missed"),
-        Visit("m-4", vid, date(2026, 10, 7), "Scheduled"),
-    ])
-    repo.job_rows.extend([
-        Job("mj-1", "m-1", "Cleaning-External", "Missed"),
-        Job("mj-2", "m-2", "Cleaning-External", "Pending"),
-        # A missed interior clean on a Friday, done again on a Wednesday.
-        Job("mj-3", "m-3", "Cleaning-Internal", "Missed"),
-        Job("mj-4", "m-4", "Cleaning-Internal", "Pending"),
-    ])
+    repo.visit_rows.extend(
+        [
+            Visit("m-1", vid, date(2026, 10, 5), "Missed"),
+            Visit("m-2", vid, date(2026, 10, 6), "Scheduled"),
+            Visit("m-3", vid, date(2026, 10, 2), "Missed"),
+            Visit("m-4", vid, date(2026, 10, 7), "Scheduled"),
+        ]
+    )
+    repo.job_rows.extend(
+        [
+            Job("mj-1", "m-1", "Cleaning-External", "Missed"),
+            Job("mj-2", "m-2", "Cleaning-External", "Pending"),
+            # A missed interior clean on a Friday, done again on a Wednesday.
+            Job("mj-3", "m-3", "Cleaning-Internal", "Missed"),
+            Job("mj-4", "m-4", "Cleaning-Internal", "Pending"),
+        ]
+    )
     days = by_date(month(api, asha, "2026-10"))
     assert days["2026-10-05"]["state"] == "Covered"
     assert days["2026-10-05"]["covered_on"] == "2026-10-06"
@@ -139,16 +173,34 @@ def test_missed_visits_show_covered_and_rescheduled_dates(api, asha, clock, repo
 
 def test_assignment_shows_only_for_a_frozen_schedule(api, asha, clock, repo):
     vid = asha["vehicles"][0]
-    repo.visit_rows.extend([
-        Visit("f-1", vid, date(2026, 10, 12), "Scheduled", frozen=True),
-        Visit("f-2", vid, date(2026, 10, 13), "Scheduled", frozen=False),
-    ])
-    repo.job_rows.extend([
-        Job("fj-1", "f-1", "Cleaning-External", "Pending", crew_name="Ravi Kumar",
-            start_minute=420, duration_minutes=20),
-        Job("fj-2", "f-2", "Cleaning-External", "Pending", crew_name="Ravi Kumar",
-            start_minute=420, duration_minutes=20),
-    ])
+    repo.visit_rows.extend(
+        [
+            Visit("f-1", vid, date(2026, 10, 12), "Scheduled", frozen=True),
+            Visit("f-2", vid, date(2026, 10, 13), "Scheduled", frozen=False),
+        ]
+    )
+    repo.job_rows.extend(
+        [
+            Job(
+                "fj-1",
+                "f-1",
+                "Cleaning-External",
+                "Pending",
+                crew_name="Ravi Kumar",
+                start_minute=420,
+                duration_minutes=20,
+            ),
+            Job(
+                "fj-2",
+                "f-2",
+                "Cleaning-External",
+                "Pending",
+                crew_name="Ravi Kumar",
+                start_minute=420,
+                duration_minutes=20,
+            ),
+        ]
+    )
     days = by_date(month(api, asha, "2026-10"))
     assert days["2026-10-12"]["crew_name"] == "Ravi Kumar"
     assert days["2026-10-12"]["start_time"] == "07:00"
@@ -163,16 +215,19 @@ def test_next_service_is_projected_without_a_planned_visit(db, asha, repo):
     reads = CustomerReads(db, repo, lambda: now)
     items = reads.next_services(login, date(2026, 12, 20))
     assert [(i.date, i.source, i.visit_id) for i in items] == [
-        (date(2026, 12, 21), "projected", None)] * 2
+        (date(2026, 12, 21), "projected", None)
+    ] * 2
     assert items[0].services == ["Cleaning-External"]
     assert items[0].cutoff_time == "07:00"
 
 
 def test_preferences_change_the_default_cutoff_and_interior_day(api, asha, clock, db):
     vid = asha["vehicles"][0]
-    r = api.patch(f"/v1/customer/vehicles/{vid}/preferences",
-                  json={"cutoff_time": "08:30", "interior_day": "Wednesday"},
-                  headers=asha["headers"])
+    r = api.patch(
+        f"/v1/customer/vehicles/{vid}/preferences",
+        json={"cutoff_time": "08:30", "interior_day": "Wednesday"},
+        headers=asha["headers"],
+    )
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["cutoff_time"] == "08:30" and body["interior_day"] == "Wednesday"
@@ -182,15 +237,25 @@ def test_preferences_change_the_default_cutoff_and_interior_day(api, asha, clock
     assert days["2026-12-02"]["services"] == ["Cleaning-External", "Cleaning-Internal"]
     assert days["2026-12-04"]["services"] == ["Cleaning-External"]
     assert days["2026-12-04"]["cutoff_time"] == "08:30"
-    bad = api.patch(f"/v1/customer/vehicles/{vid}/preferences",
-                    json={"cutoff_time": "08:15"}, headers=asha["headers"])
+    bad = api.patch(
+        f"/v1/customer/vehicles/{vid}/preferences",
+        json={"cutoff_time": "08:15"},
+        headers=asha["headers"],
+    )
     assert bad.status_code == 422
-    assert api.patch(f"/v1/customer/vehicles/{vid}/preferences", json={},
-                     headers=asha["headers"]).status_code == 422
+    assert (
+        api.patch(
+            f"/v1/customer/vehicles/{vid}/preferences", json={}, headers=asha["headers"]
+        ).status_code
+        == 422
+    )
 
 
 def test_preferences_after_9pm_apply_from_the_day_after(api, asha, clock):
     clock["now"] = datetime(2026, 10, 11, 21, 30, tzinfo=IST)
-    r = api.patch(f"/v1/customer/vehicles/{asha['vehicles'][0]}/preferences",
-                  json={"cutoff_time": "09:00"}, headers=asha["headers"])
+    r = api.patch(
+        f"/v1/customer/vehicles/{asha['vehicles'][0]}/preferences",
+        json={"cutoff_time": "09:00"},
+        headers=asha["headers"],
+    )
     assert r.json()["applies_from"] == "2026-10-13"

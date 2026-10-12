@@ -7,6 +7,8 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../cust_strings.dart';
 import '../cust_ui.dart';
+import 'add_vehicle_screen.dart';
+import '../../../l10n/app_localizations.dart';
 import '../account/vehicle_account_section.dart';
 import '../data/customer_reads_repository.dart';
 
@@ -28,6 +30,9 @@ class VehiclesScreen extends ConsumerWidget {
     final b = context.brand;
     return CustPage(
       title: CustStrings.vehiclesTitle,
+      actions: [IconButton(tooltip: AppLocalizations.of(context).addVehicleTitle,
+        icon: const Icon(Icons.add), onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const AddVehicleScreen())))],
       body: AsyncBody<List<VehicleSummaryDto>>(
         value: ref.watch(vehiclesProvider),
         onRetry: () => ref.invalidate(vehiclesProvider),

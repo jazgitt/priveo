@@ -24,6 +24,8 @@ class AddonBooking(Base):
     standalone: Mapped[bool] = mapped_column(Boolean, default=False)
     proposed_date: Mapped[date] = mapped_column(Date)
     finish_by: Mapped[time] = mapped_column(Time)
+    requested_date: Mapped[date | None] = mapped_column(Date)
+    requested_finish_by: Mapped[time | None] = mapped_column(Time)
     status: Mapped[str] = mapped_column(String(12), default="Requested")
     price_rupees: Mapped[int | None] = mapped_column(Integer)
     payment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("payments.id"))

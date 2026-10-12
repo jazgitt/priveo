@@ -47,6 +47,28 @@
         }
       }
     },
+    "/v1/auth/support-contact": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Support Contact",
+        "description": "The helpline and WhatsApp numbers for the \"not registered\" screen, which\na visitor sees before signing in (AUTH-15).",
+        "operationId": "support_contact_v1_auth_support_contact_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSupportContact"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/start": {
       "post": {
         "tags": [
@@ -381,6 +403,713 @@
         }
       }
     },
+    "/v1/admin/customers/{customer_id}/sessions/logout": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "End Customer Sessions",
+        "description": "Signs a customer out on every phone (AUTH-17, ADM-CUS-21).",
+        "operationId": "end_customer_sessions_v1_admin_customers__customer_id__sessions_logout_post",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerSessionsEnded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/profile": {
+      "get": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Get Profile",
+        "operationId": "get_profile_v1_customer_profile_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Patch Profile",
+        "operationId": "patch_profile_v1_customer_profile_patch",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountProfileEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/profile/email": {
+      "post": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Start Email Change",
+        "description": "Sends a code to the new email. The old email stays until it is verified.",
+        "operationId": "start_email_change_v1_customer_profile_email_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEmailChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountEmailCodeSent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/profile/email/verify": {
+      "post": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Verify Email Change",
+        "operationId": "verify_email_change_v1_customer_profile_email_verify_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEmailCode"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/password": {
+      "post": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Change Password",
+        "operationId": "change_password_v1_customer_password_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountPasswordChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/vehicles/{vehicle_id}": {
+      "patch": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Patch Vehicle",
+        "description": "Parking basement and number (VEH-04).",
+        "operationId": "patch_vehicle_v1_customer_vehicles__vehicle_id__patch",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountVehicleEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountVehicleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "customer"
+        ],
+        "summary": "Vehicle",
+        "description": "One vehicle's details (VEH-02, VEH-03).",
+        "operationId": "vehicle_v1_customer_vehicles__vehicle_id__get",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/vehicles/{vehicle_id}/account": {
+      "get": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Vehicle Account",
+        "operationId": "vehicle_account_v1_customer_vehicles__vehicle_id__account_get",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountVehicleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/uploads": {
+      "post": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Request Upload",
+        "description": "A signed upload URL for a vehicle photo, complaint photo or RC document.",
+        "operationId": "request_upload_v1_customer_uploads_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountUploadTicket"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/uploads/{upload_id}/confirm": {
+      "post": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Confirm Upload",
+        "operationId": "confirm_upload_v1_customer_uploads__upload_id__confirm_post",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountUploadState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/uploads/{upload_id}": {
+      "get": {
+        "tags": [
+          "customer",
+          "customer"
+        ],
+        "summary": "Get Upload",
+        "operationId": "get_upload_v1_customer_uploads__upload_id__get",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountUploadState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/home": {
       "get": {
         "tags": [
@@ -533,13 +1262,1062 @@
         }
       }
     },
-    "/v1/crew/home": {
+    "/v1/admin/customers": {
       "get": {
         "tags": [
-          "crew"
+          "customer-administration"
         ],
-        "summary": "Crew Home",
-        "operationId": "crew_home_v1_crew_home_get",
+        "summary": "List Customers",
+        "operationId": "list_customers_v1_admin_customers_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Create Customer",
+        "operationId": "create_customer_v1_admin_customers_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Customer Detail",
+        "operationId": "customer_detail_v1_admin_customers__customer_id__get",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Edit Customer",
+        "operationId": "edit_customer_v1_admin_customers__customer_id__patch",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/vehicles": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Admin Add Vehicle",
+        "operationId": "admin_add_vehicle_v1_admin_customers__customer_id__vehicles_post",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/email": {
+      "patch": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Correct Email",
+        "operationId": "correct_email_v1_admin_customers__customer_id__email_patch",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCorrection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/reset-password": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_v1_admin_customers__customer_id__reset_password_post",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/resend-welcome": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Resend Welcome",
+        "operationId": "resend_welcome_v1_admin_customers__customer_id__resend_welcome_post",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/sessions": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Sessions",
+        "operationId": "sessions_v1_admin_customers__customer_id__sessions_get",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/sessions/{session_id}/logout": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "End Session",
+        "operationId": "end_session_v1_admin_customers__customer_id__sessions__session_id__logout_post",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/subscriptions/{subscription_id}": {
+      "patch": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Edit Subscription",
+        "operationId": "edit_subscription_v1_admin_subscriptions__subscription_id__patch",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/vehicles/{vehicle_id}": {
+      "patch": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Edit Vehicle",
+        "operationId": "edit_vehicle_v1_admin_vehicles__vehicle_id__patch",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customer-uploads": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Admin Upload",
+        "operationId": "admin_upload_v1_admin_customer_uploads_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customer-uploads/{upload_id}/confirm": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Admin Confirm Upload",
+        "operationId": "admin_confirm_upload_v1_admin_customer_uploads__upload_id__confirm_post",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Upload Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/customers/{customer_id}/notification-preferences": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Notification Preferences",
+        "operationId": "notification_preferences_v1_admin_customers__customer_id__notification_preferences_get",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Set Notification Preferences",
+        "operationId": "set_notification_preferences_v1_admin_customers__customer_id__notification_preferences_put",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferencesIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/vehicles": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Customer Add Vehicle",
+        "operationId": "customer_add_vehicle_v1_customer_vehicles_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "customer"
+        ],
+        "summary": "Vehicles",
+        "description": "My vehicles (VEH-06).",
+        "operationId": "vehicles_v1_customer_vehicles_get",
         "parameters": [
           {
             "name": "authorization",
@@ -564,8 +2342,406 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CrewHome"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VehicleSummary"
+                  },
+                  "title": "Response Vehicles V1 Customer Vehicles Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/onboarding-summary": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Onboarding Summary",
+        "operationId": "onboarding_summary_v1_customer_onboarding_summary_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/session-device": {
+      "put": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Session Device",
+        "operationId": "session_device_v1_customer_session_device_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDevice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/jobs/swap": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Swap Jobs",
+        "operationId": "swap_jobs_v1_admin_scheduling_jobs_swap_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/schedules/{schedule_id}/suggestions": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Suggestions",
+        "operationId": "suggestions_v1_admin_scheduling_schedules__schedule_id__suggestions_get",
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schedule Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/schedules/{schedule_id}/suggestions/apply": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Apply Suggestions",
+        "operationId": "apply_suggestions_v1_admin_scheduling_schedules__schedule_id__suggestions_apply_post",
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schedule Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionApply"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/cutoff-requests": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Cutoff Requests",
+        "operationId": "cutoff_requests_v1_admin_scheduling_cutoff_requests_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/cutoff-requests/{request_id}/handle": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Handle Cutoff",
+        "operationId": "handle_cutoff_v1_admin_scheduling_cutoff_requests__request_id__handle_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveCutoff"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -3067,119 +5243,6 @@
         }
       }
     },
-    "/v1/customer/vehicles": {
-      "get": {
-        "tags": [
-          "customer"
-        ],
-        "summary": "Vehicles",
-        "description": "My vehicles (VEH-06).",
-        "operationId": "vehicles_v1_customer_vehicles_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/VehicleSummary"
-                  },
-                  "title": "Response Vehicles V1 Customer Vehicles Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/customer/vehicles/{vehicle_id}": {
-      "get": {
-        "tags": [
-          "customer"
-        ],
-        "summary": "Vehicle",
-        "description": "One vehicle's details (VEH-02, VEH-03).",
-        "operationId": "vehicle_v1_customer_vehicles__vehicle_id__get",
-        "parameters": [
-          {
-            "name": "vehicle_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Vehicle Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VehicleDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/customer/notifications": {
       "get": {
         "tags": [
@@ -4560,56 +6623,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CheckInOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/crew/ratings": {
-      "get": {
-        "tags": [
-          "support"
-        ],
-        "summary": "Crew Ratings",
-        "description": "General visit ratings of the last 30 days. No names, tags or comments.",
-        "operationId": "crew_ratings_v1_crew_ratings_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CrewRatings"
                 }
               }
             }
@@ -6335,6 +8348,323 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/attendance": {
+      "get": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Attendance",
+        "operationId": "manager_attendance_v1_crew_manager_attendance_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewManagerAttendance"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/attendance/{crew_id}": {
+      "put": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Set Attendance",
+        "operationId": "manager_set_attendance_v1_crew_manager_attendance__crew_id__put",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewManagerAttendanceSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewManagerAttendanceResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/hours": {
+      "get": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Hours",
+        "operationId": "manager_hours_v1_crew_manager_hours_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrewManagerHours"
+                  },
+                  "title": "Response Manager Hours V1 Crew Manager Hours Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/hours/{crew_id}": {
+      "put": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Set Hours",
+        "operationId": "manager_set_hours_v1_crew_manager_hours__crew_id__put",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewManagerHoursSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewManagerHoursResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/jobs/{job_id}/reassign-options": {
+      "get": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Reassign Options",
+        "operationId": "manager_reassign_options_v1_crew_manager_jobs__job_id__reassign_options_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrewManagerReassignOption"
+                  },
+                  "title": "Response Manager Reassign Options V1 Crew Manager Jobs  Job Id  Reassign Options Get"
                 }
               }
             }
@@ -8129,6 +10459,64 @@
         }
       }
     },
+    "/v1/admin/payments/{payment_id}": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Admin Payment Detail",
+        "operationId": "admin_payment_detail_v1_admin_payments__payment_id__get",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payment Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPaymentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/payments/{payment_id}/status": {
       "put": {
         "tags": [
@@ -8926,6 +11314,73 @@
             }
           },
           {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            }
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -8953,6 +11408,63 @@
                     "$ref": "#/components/schemas/AdminAddonOut"
                   },
                   "title": "Response List Addons V1 Admin Addons Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "addons"
+        ],
+        "summary": "Admin Request Addon",
+        "operationId": "admin_request_addon_v1_admin_addons_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAddonCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAddonOut"
                 }
               }
             }
@@ -12232,6 +14744,325 @@
   },
   "components": {
     "schemas": {
+      "AccountEmailChange": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "AccountEmailChange"
+      },
+      "AccountEmailCode": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "AccountEmailCode"
+      },
+      "AccountEmailCodeSent": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "title": "Expires In Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "expires_in_seconds"
+        ],
+        "title": "AccountEmailCodeSent"
+      },
+      "AccountPasswordChange": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "AccountPasswordChange"
+      },
+      "AccountProfileEdit": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "mobile"
+        ],
+        "title": "AccountProfileEdit"
+      },
+      "AccountProfileOut": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          },
+          "society": {
+            "type": "string",
+            "title": "Society"
+          },
+          "flat": {
+            "type": "string",
+            "title": "Flat"
+          },
+          "initials": {
+            "type": "string",
+            "title": "Initials"
+          },
+          "member_since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Since"
+          },
+          "pending_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "email",
+          "mobile",
+          "society",
+          "flat",
+          "initials",
+          "member_since"
+        ],
+        "title": "AccountProfileOut"
+      },
+      "AccountUploadRequest": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "vehicle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Id"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "AccountUploadRequest"
+      },
+      "AccountUploadState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "purpose"
+        ],
+        "title": "AccountUploadState"
+      },
+      "AccountUploadTicket": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Headers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "upload_url",
+          "method",
+          "headers"
+        ],
+        "title": "AccountUploadTicket"
+      },
+      "AccountVehicleEdit": {
+        "properties": {
+          "parking_basement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Number"
+          }
+        },
+        "type": "object",
+        "title": "AccountVehicleEdit"
+      },
+      "AccountVehicleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "parking_basement": {
+            "type": "string",
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "type": "string",
+            "title": "Parking Number"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "rc_status": {
+            "type": "string",
+            "title": "Rc Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parking_basement",
+          "parking_number",
+          "photo_url",
+          "rc_status"
+        ],
+        "title": "AccountVehicleOut"
+      },
       "AddonChangeIn": {
         "properties": {
           "date": {
@@ -12385,6 +15216,67 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "requested_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Date"
+          },
+          "requested_finish_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Finish By"
+          },
+          "change_requested": {
+            "type": "boolean",
+            "title": "Change Requested",
+            "default": false
+          },
+          "crew_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crew Name"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
           }
         },
         "type": "object",
@@ -12452,6 +15344,35 @@
         ],
         "title": "AddonsOut"
       },
+      "AdminAddonCreate": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "default": "Deep Spa"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "finish_by": {
+            "type": "string",
+            "title": "Finish By"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "title": "Vehicle Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "finish_by",
+          "vehicle_id"
+        ],
+        "title": "AdminAddonCreate"
+      },
       "AdminAddonIn": {
         "properties": {
           "status": {
@@ -12487,6 +15408,16 @@
               }
             ],
             "title": "Finish By"
+          },
+          "resolve_change": {
+            "type": "boolean",
+            "title": "Resolve Change",
+            "default": false
+          },
+          "reject_change": {
+            "type": "boolean",
+            "title": "Reject Change",
+            "default": false
           }
         },
         "type": "object",
@@ -12571,6 +15502,67 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "requested_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Date"
+          },
+          "requested_finish_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Finish By"
+          },
+          "change_requested": {
+            "type": "boolean",
+            "title": "Change Requested",
+            "default": false
+          },
+          "crew_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crew Name"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
           },
           "customer_name": {
             "type": "string",
@@ -12701,6 +15693,14 @@
             },
             "type": "array",
             "title": "Photo Keys"
+          },
+          "photo_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Photo Urls",
+            "default": []
           },
           "updates": {
             "items": {
@@ -13507,6 +16507,29 @@
         ],
         "title": "AppConfig"
       },
+      "AuthSupportContact": {
+        "properties": {
+          "helpline": {
+            "type": "string",
+            "title": "Helpline"
+          },
+          "whatsapp": {
+            "type": "string",
+            "title": "Whatsapp"
+          },
+          "hours": {
+            "type": "string",
+            "title": "Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "helpline",
+          "whatsapp",
+          "hours"
+        ],
+        "title": "AuthSupportContact"
+      },
       "Board": {
         "properties": {
           "schedule": {
@@ -14285,6 +17308,14 @@
             "type": "array",
             "title": "Photo Keys"
           },
+          "photo_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Photo Urls",
+            "default": []
+          },
           "updates": {
             "items": {
               "$ref": "#/components/schemas/UpdateOut"
@@ -14745,48 +17776,6 @@
         ],
         "title": "CrewExceptionResult"
       },
-      "CrewHome": {
-        "properties": {
-          "date": {
-            "type": "string",
-            "format": "date",
-            "title": "Date"
-          },
-          "society": {
-            "type": "string",
-            "title": "Society"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "done": {
-            "type": "integer",
-            "title": "Done"
-          },
-          "left": {
-            "type": "integer",
-            "title": "Left"
-          },
-          "jobs": {
-            "items": {
-              "$ref": "#/components/schemas/JobCard"
-            },
-            "type": "array",
-            "title": "Jobs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "date",
-          "society",
-          "total",
-          "done",
-          "left",
-          "jobs"
-        ],
-        "title": "CrewHome"
-      },
       "CrewHoursChange": {
         "properties": {
           "working_hours": {
@@ -14900,6 +17889,281 @@
           "assigned_to"
         ],
         "title": "CrewJobCard"
+      },
+      "CrewManagerAttendance": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "society": {
+            "type": "string",
+            "title": "Society"
+          },
+          "crew": {
+            "items": {
+              "$ref": "#/components/schemas/CrewManagerAttendanceEntry"
+            },
+            "type": "array",
+            "title": "Crew"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "society",
+          "crew"
+        ],
+        "title": "CrewManagerAttendance"
+      },
+      "CrewManagerAttendanceEntry": {
+        "properties": {
+          "crew_id": {
+            "type": "string",
+            "title": "Crew Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "working": {
+            "type": "boolean",
+            "title": "Working"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "default": ""
+          },
+          "end": {
+            "type": "string",
+            "title": "End",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "late_start": {
+            "type": "string",
+            "title": "Late Start",
+            "default": ""
+          },
+          "open_jobs": {
+            "type": "integer",
+            "title": "Open Jobs",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "crew_id",
+          "name",
+          "role",
+          "working",
+          "status"
+        ],
+        "title": "CrewManagerAttendanceEntry"
+      },
+      "CrewManagerAttendanceResult": {
+        "properties": {
+          "attendance": {
+            "$ref": "#/components/schemas/CrewManagerAttendance"
+          },
+          "released_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/CrewManagerReleasedJob"
+            },
+            "type": "array",
+            "title": "Released Jobs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "attendance"
+        ],
+        "title": "CrewManagerAttendanceResult"
+      },
+      "CrewManagerAttendanceSet": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date",
+            "title": "From Date"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "from_date"
+        ],
+        "title": "CrewManagerAttendanceSet"
+      },
+      "CrewManagerHours": {
+        "properties": {
+          "crew_id": {
+            "type": "string",
+            "title": "Crew Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "working_hours": {
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "type": "array",
+            "title": "Working Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "crew_id",
+          "name",
+          "role",
+          "working_hours"
+        ],
+        "title": "CrewManagerHours"
+      },
+      "CrewManagerHoursResult": {
+        "properties": {
+          "hours": {
+            "$ref": "#/components/schemas/CrewManagerHours"
+          },
+          "released_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/CrewManagerReleasedJob"
+            },
+            "type": "array",
+            "title": "Released Jobs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "hours"
+        ],
+        "title": "CrewManagerHoursResult"
+      },
+      "CrewManagerHoursSet": {
+        "properties": {
+          "working_hours": {
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "type": "array",
+            "title": "Working Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "working_hours"
+        ],
+        "title": "CrewManagerHoursSet"
+      },
+      "CrewManagerReassignOption": {
+        "properties": {
+          "crew_id": {
+            "type": "string",
+            "title": "Crew Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "can_assign": {
+            "type": "boolean",
+            "title": "Can Assign"
+          },
+          "problem_code": {
+            "type": "string",
+            "title": "Problem Code",
+            "default": ""
+          },
+          "problem": {
+            "type": "string",
+            "title": "Problem",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "crew_id",
+          "name",
+          "role",
+          "can_assign"
+        ],
+        "title": "CrewManagerReassignOption"
+      },
+      "CrewManagerReleasedJob": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "reassigned": {
+            "type": "boolean",
+            "title": "Reassigned",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "date",
+          "service",
+          "registration"
+        ],
+        "title": "CrewManagerReleasedJob"
       },
       "CrewOut": {
         "properties": {
@@ -15055,45 +18319,6 @@
         "title": "CrewProfile",
         "description": "What a crew member sees of themselves (CRW-PRF-01). The photo comes\nwith the media slice."
       },
-      "CrewRatings": {
-        "properties": {
-          "period_days": {
-            "type": "integer",
-            "title": "Period Days"
-          },
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "average": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Average"
-          },
-          "stars": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Stars"
-          }
-        },
-        "type": "object",
-        "required": [
-          "period_days",
-          "count",
-          "average",
-          "stars"
-        ],
-        "title": "CrewRatings",
-        "description": "General ratings of visits, with no names, tags or comments (CRW-RAT-01)."
-      },
       "CrewRef": {
         "properties": {
           "id": {
@@ -15213,6 +18438,75 @@
           "ended"
         ],
         "title": "CrewSessionsEnded"
+      },
+      "CustomerCreate": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          },
+          "flat": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Flat",
+            "default": ""
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/VehicleCreate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "email",
+          "mobile",
+          "vehicle"
+        ],
+        "title": "CustomerCreate"
+      },
+      "CustomerEdit": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "mobile": {
+            "type": "string",
+            "title": "Mobile"
+          },
+          "flat": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Flat",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "mobile"
+        ],
+        "title": "CustomerEdit"
       },
       "CustomerHome": {
         "properties": {
@@ -15366,6 +18660,19 @@
           "job"
         ],
         "title": "CustomerNextService"
+      },
+      "CustomerSessionsEnded": {
+        "properties": {
+          "ended": {
+            "type": "integer",
+            "title": "Ended"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ended"
+        ],
+        "title": "CustomerSessionsEnded"
       },
       "CutoffChangeIn": {
         "properties": {
@@ -16015,6 +19322,11 @@
       },
       "DirectoryCustomerVehicleOut": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "make": {
             "type": "string",
             "title": "Make"
@@ -16034,6 +19346,7 @@
         },
         "type": "object",
         "required": [
+          "id",
           "make",
           "model",
           "variant",
@@ -16924,6 +20237,20 @@
         "type": "object",
         "title": "DirectoryVehicleUpdate"
       },
+      "EmailCorrection": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "EmailCorrection"
+      },
       "FeedbackAdmin": {
         "properties": {
           "id": {
@@ -17294,44 +20621,6 @@
         ],
         "title": "InvoiceOut"
       },
-      "JobCard": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "time": {
-            "type": "string",
-            "title": "Time"
-          },
-          "vehicle": {
-            "type": "string",
-            "title": "Vehicle"
-          },
-          "parking": {
-            "type": "string",
-            "title": "Parking"
-          },
-          "service": {
-            "type": "string",
-            "title": "Service"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "time",
-          "vehicle",
-          "parking",
-          "service",
-          "status"
-        ],
-        "title": "JobCard"
-      },
       "JobDetail": {
         "properties": {
           "job": {
@@ -17643,6 +20932,14 @@
             },
             "type": "array",
             "title": "Jobs"
+          },
+          "pending_addons": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Pending Addons"
           }
         },
         "type": "object",
@@ -18128,6 +21425,22 @@
               }
             ],
             "title": "Interior Day"
+          },
+          "has_photo": {
+            "type": "boolean",
+            "title": "Has Photo",
+            "default": false
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
           }
         },
         "type": "object",
@@ -19044,6 +22357,19 @@
         ],
         "title": "Requirements"
       },
+      "ResolveCutoff": {
+        "properties": {
+          "apply": {
+            "type": "boolean",
+            "title": "Apply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "apply"
+        ],
+        "title": "ResolveCutoff"
+      },
       "RunRequest": {
         "properties": {
           "society_id": {
@@ -19064,11 +22390,17 @@
             "title": "Start Date"
           },
           "days": {
-            "type": "integer",
-            "maximum": 31.0,
-            "minimum": 1.0,
-            "title": "Days",
-            "default": 7
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
           }
         },
         "type": "object",
@@ -19228,6 +22560,33 @@
         ],
         "title": "SchedulingCrewOut"
       },
+      "SessionDevice": {
+        "properties": {
+          "device_name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Device Name"
+          },
+          "platform": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Platform"
+          },
+          "app_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "App Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "device_name",
+          "platform",
+          "app_version"
+        ],
+        "title": "SessionDevice"
+      },
       "SetPasswordRequest": {
         "properties": {
           "password_token": {
@@ -19368,6 +22727,47 @@
           "status"
         ],
         "title": "StatusIn"
+      },
+      "SubscriptionEdit": {
+        "properties": {
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "cutoff_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Time"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SubscriptionEdit"
       },
       "SubscriptionStatusIn": {
         "properties": {
@@ -19540,6 +22940,28 @@
         "title": "SubscriptionView",
         "description": "My Subscription (SUB-01, SUB-02, SUB-10)."
       },
+      "SuggestionApply": {
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "job_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Job Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "job_ids"
+        ],
+        "title": "SuggestionApply"
+      },
       "SupportContact": {
         "properties": {
           "helpline": {
@@ -19641,6 +23063,26 @@
           "checkin_categories"
         ],
         "title": "SupportOptionsOut"
+      },
+      "SwapIn": {
+        "properties": {
+          "first_job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "First Job Id"
+          },
+          "second_job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Second Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_job_id",
+          "second_job_id"
+        ],
+        "title": "SwapIn"
       },
       "TeamMember": {
         "properties": {
@@ -19861,6 +23303,30 @@
           "created_at"
         ],
         "title": "UpdateOut"
+      },
+      "UploadIn": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "purpose",
+          "content_type",
+          "size_bytes"
+        ],
+        "title": "UploadIn"
       },
       "UploadInfo": {
         "properties": {
@@ -20167,6 +23633,22 @@
             ],
             "title": "Interior Day"
           },
+          "variant": {
+            "type": "string",
+            "title": "Variant",
+            "default": ""
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
           "next_service": {
             "anyOf": [
               {
@@ -20192,6 +23674,87 @@
           "next_service"
         ],
         "title": "VehicleCard"
+      },
+      "VehicleCreate": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "catalogue_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Catalogue Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "parking_basement": {
+            "type": "string",
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "type": "string",
+            "title": "Parking Number"
+          },
+          "plan_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Plan Id"
+          },
+          "cutoff_time": {
+            "type": "string",
+            "title": "Cutoff Time"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          },
+          "photo_upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Upload Id"
+          },
+          "rc_upload_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rc Upload Id"
+          },
+          "first_payment_status": {
+            "type": "string",
+            "title": "First Payment Status",
+            "default": "Due"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "society_id",
+          "catalogue_id",
+          "registration",
+          "parking_basement",
+          "parking_number",
+          "plan_id",
+          "cutoff_time",
+          "photo_upload_id"
+        ],
+        "title": "VehicleCreate"
       },
       "VehicleDetail": {
         "properties": {
@@ -20257,6 +23820,11 @@
             "type": "string",
             "title": "Parking"
           },
+          "rc_status": {
+            "type": "string",
+            "title": "Rc Status",
+            "default": "Not uploaded"
+          },
           "monthly_price_rupees": {
             "anyOf": [
               {
@@ -20309,6 +23877,93 @@
           "interior_day"
         ],
         "title": "VehicleDetail"
+      },
+      "VehicleEdit": {
+        "properties": {
+          "registration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration"
+          },
+          "catalogue_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogue Id"
+          },
+          "parking_basement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Basement"
+          },
+          "parking_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parking Number"
+          },
+          "photo_upload_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Upload Id"
+          },
+          "rc_upload_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rc Upload Id"
+          },
+          "rc_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rc Verified"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "VehicleEdit"
       },
       "VehicleInfo": {
         "properties": {

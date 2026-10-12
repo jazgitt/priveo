@@ -211,12 +211,67 @@ def test_crew_cannot_get_a_code(client):
     assert r.status_code == 404
 
 
-@pytest.mark.parametrize("env", [{"MOCK_EMAIL_CODE": ""}, {"MOCK_EMAIL_CODE": "12345"},
-                                 {"ENVIRONMENT": "prod"}])
-def test_without_a_fixed_code_no_code_is_made(client, db, customer, monkeypatch, env):
+@pytest.fixture
+def sent():
+    from app.platform.email import _fake
+    _fake.sent.clear()
+    return _fake.sent
+
+
+def test_the_code_is_emailed_and_the_welcome_has_none(client, customer, sent):
+    start(client)
+    assert [(m.to, m.purpose, m.code) for m in sent] == [(EMAIL, "sign_in_code", CODE)]
+    token = verify(client).json()["password_token"]
+    set_password(client, token)
+    sent.clear()
+    client.post("/v1/auth/code", json={"email": EMAIL})
+    assert sent[0].purpose == "password_reset_code"
+
+
+@pytest.mark.parametrize("env", [{"MOCK_EMAIL_CODE": ""}, {"MOCK_EMAIL_CODE": "12345"}])
+def test_without_a_fixed_code_a_random_one_is_sent(client, db, customer, monkeypatch,
+                                                   sent, env):
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     get_settings.cache_clear()
+    assert start(client).status_code == 200
+    code = sent[0].code
+    assert len(code) == 6 and code.isdigit()
+    assert verify(client, code).status_code == 200
+
+
+def test_in_prod_without_resend_no_code_is_made(client, db, customer, monkeypatch, sent):
+    monkeypatch.setenv("ENVIRONMENT", "prod")
+    get_settings.cache_clear()
     r = start(client)
     assert r.status_code == 503 and r.json()["code"] == "not_configured"
+    assert db.scalar(select(EmailCode)) is None and not sent
+
+
+def test_a_failed_send_stores_nothing(client, db, customer, monkeypatch):
+    from app.platform import email as mail
+
+    def boom(self, to, code, purpose):
+        raise mail.EmailSendError("down")
+
+    monkeypatch.setattr(mail.FakeEmailSender, "send_code", boom)
+    r = start(client)
+    assert r.status_code == 502 and r.json()["code"] == "email_failed"
     assert db.scalar(select(EmailCode)) is None
+
+
+def test_the_support_contact_needs_no_sign_in(client):
+    r = client.get("/v1/auth/support-contact")
+    assert r.status_code == 200 and set(r.json()) == {"helpline", "whatsapp", "hours"}
+
+
+def test_the_admin_ends_a_customers_sessions(client, db):
+    old = login(client, "customer")
+    admin = login(client, "admin")
+    cid = db.scalar(select(Customer.id).where(Customer.email == LOGIN_IDS["customer"]))
+    assert cid is not None
+    r = client.post(f"/v1/admin/customers/{cid}/sessions/logout",
+                    headers=auth(admin["access_token"]))
+    assert r.status_code == 200 and r.json()["ended"] >= 1
+    assert client.get("/v1/customer/home",
+                      headers=auth(old["access_token"])).status_code == 401

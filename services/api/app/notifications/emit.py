@@ -156,7 +156,7 @@ def _visit_context(db: Session, job):
 
 def _service_completed(db: Session, job) -> None:
     visit, vehicle = _visit_context(db, job)
-    addon = job.addon_request_id is not None
+    addon = job.addon_request_id is not None or job.addon_booking_id is not None
     # A visit is Completed only when all its jobs are done or skipped. An
     # add-on job is separate from the day's visit and tells on its own
     # (CRW-SVC-09, ADD-13).
@@ -324,6 +324,13 @@ def job_reassigned(db: Session, job) -> None:
 
 # Skip, pause and add-ons ----------------------------------------------------
 
+
+@_safe
+def cutoff_requested(db: Session, change, vehicle) -> None:
+    _alert_once(db, "cutoff_requested", "Cutoff change requested",
+                f"{_vehicle_text(vehicle)} on {_show(change.start_date)}: "
+                f"finish by {change.cutoff_time:%H:%M}.", "cutoff_request", str(change.id))
+
 @_safe
 def customer_skipped(db: Session, vehicle, day: date) -> None:
     """NOTIF-04: the customer gets "Service skipped" when they skip a visit
@@ -375,7 +382,7 @@ def addon_cancelled(db: Session, booking) -> None:
     rows = db.execute(
         select(Job, Visit, Schedule).join(Visit, Visit.id == Job.visit_id)
         .join(Schedule, Schedule.id == Visit.schedule_id)
-        .where(Job.addon_request_id == booking.id, Job.status == "Scheduled")).all()
+        .where(Job.addon_booking_id == booking.id, Job.status == "Scheduled")).all()
     for job, visit, schedule in rows:
         vehicle = db.get(Vehicle, visit.vehicle_id)
         job.status = "Skipped"

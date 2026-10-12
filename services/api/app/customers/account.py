@@ -30,7 +30,13 @@ from app.media.store import ObjectStore, get_object_store
 from app.platform.config import Settings, get_settings
 from app.platform.db import get_db, utcnow
 from app.platform.deps import require_role
-from app.platform.email import EmailSender, get_email_sender, new_code
+from app.platform.email import (
+    EmailSender,
+    EmailSendError,
+    email_connected,
+    get_email_sender,
+    new_code,
+)
 from app.platform.errors import ApiError
 
 router = APIRouter(tags=["customer"])
@@ -179,6 +185,8 @@ class AccountService:
         if new == c.email or taken:
             raise ApiError("email_in_use", "This email is already in use.", 409,
                            {"email": "This email is already in use."})
+        if not email_connected(self.s):
+            raise ApiError("not_configured", "Email is not set up yet.", 503)
         now = utcnow()
         self.db.execute(update(EmailChange).where(
             EmailChange.customer_id == c.id, EmailChange.ended_at.is_(None)
@@ -188,8 +196,13 @@ class AccountService:
                           created_at=now, expires_at=now + CHANGE_CODE_LIFETIME)
         row.code_hash = tokens.keyed_hash(self.s, f"{row.id}:{code}")
         self.db.add(row)
+        try:
+            self.email.send_code(new, code, "email_change_code")
+        except EmailSendError as exc:
+            self.db.rollback()
+            raise ApiError("email_failed",
+                           "We could not send the email. Try again in a moment.", 502) from exc
         self.db.commit()
-        self.email.send_code(new, code, "email_change_code")
         return AccountEmailCodeSent(
             email=new, expires_in_seconds=int(CHANGE_CODE_LIFETIME.total_seconds()))
 
@@ -213,6 +226,7 @@ class AccountService:
             raise ApiError("email_in_use", "This email is already in use.", 409)
         row.ended_at = utcnow()
         c.email = row.new_email
+        c.email_verified_at = utcnow()
         self.db.get(Login, c.login_id).login_id = row.new_email
         self.db.commit()
         return self.profile(login_id)
@@ -252,7 +266,8 @@ class AccountService:
         photo = media.vehicle_photo_urls(self.db, self.store, [v.id]).get(v.id)
         return AccountVehicleOut(
             id=str(v.id), parking_basement=v.parking_basement, parking_number=v.parking_number,
-            photo_url=photo, rc_status=rc_status(self.db, v.id))
+            photo_url=photo, rc_status="Verified" if v.rc_verified else "Uploaded"
+                if v.rc_upload_id else rc_status(self.db, v.id))
 
     def edit_vehicle(self, login_id: uuid.UUID, vehicle_id: str,
                      body: AccountVehicleEdit) -> AccountVehicleOut:
@@ -263,7 +278,7 @@ class AccountService:
         basement = number = None
         if body.parking_basement is not None:
             basement = body.parking_basement.strip().upper()
-            if basement not in society_basements(self.db, c.society_id):
+            if basement not in society_basements(self.db, v.society_id or c.society_id):
                 errors["parking_basement"] = "Select the basement."
         if body.parking_number is not None:
             number = body.parking_number.strip()
@@ -288,10 +303,8 @@ class AccountService:
         c = self.customer(login_id)
         subject = None
         if body.purpose in ("vehicle", "rc"):
-            if body.vehicle_id is None:
-                raise ApiError("validation_failed", "Please check the file.", 422,
-                               {"vehicle_id": "Choose the vehicle."})
-            subject = self._vehicle(c, body.vehicle_id).id
+            if body.vehicle_id is not None:
+                subject = self._vehicle(c, body.vehicle_id).id
         upload, signed = media.request_customer_upload(
             self.db, self.store, owner_id=login_id, purpose=body.purpose, subject_id=subject,
             content_type=body.content_type, size_bytes=body.size_bytes)
@@ -317,7 +330,18 @@ class AccountService:
     def confirm_upload(self, login_id: uuid.UUID, upload_id: str) -> AccountUploadState:
         upload = self._own_upload(login_id, upload_id)
         # Confirming a vehicle photo makes it the vehicle's photo (newest wins).
-        return self._state(media.confirm_upload(self.db, self.store, upload))
+        confirmed = media.confirm_upload(self.db, self.store, upload)
+        # Replacing an attached vehicle photo also updates the explicit reference.
+        parts = upload.object_key.split("/")
+        if upload.purpose == "vehicle" and len(parts) == 3:
+            try:
+                v = self.db.get(Vehicle, uuid.UUID(parts[1]))
+            except ValueError:
+                v = None
+            if v is not None and v.customer_id == self.customer(login_id).id:
+                v.photo_upload_id = upload.id
+                self.db.commit()
+        return self._state(confirmed)
 
     def upload_state(self, login_id: uuid.UUID, upload_id: str) -> AccountUploadState:
         return self._state(self._own_upload(login_id, upload_id))

@@ -1,5 +1,7 @@
 # Crew requirements: coverage audit
 
+**Historical audit:** the verdicts and totals below predate subsequent integration. Crew/scheduler linking, directory checklists, proof reads and manager attendance/hours/reassignment have since changed. See [the current handoff](../codex-handoff-plan.md) for verification; these counts are not current completion metrics.
+
 Audited against `docs/reqs/crew-functional-requirements.md` (v0.5) at commit `e3f91b7` (`integration/complete-build`). Verdicts come from reading the code, not from `docs/feature-status.json` or the overnight build report.
 
 Code read: `services/api/app/{crew,visits,media,scheduling,support,identity,notifications,changes,addons,customer_reads}` with `services/api/tests/{crew,visits,media,scheduling,support}` and `tests/test_api.py`; `apps/mobile/lib/features/{crew,people}`, `apps/mobile/test/crew` and `test/screens_test.dart`.

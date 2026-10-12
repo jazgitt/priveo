@@ -1543,4 +1543,242 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get support_feedback_tab => 'Feedback';
+
+  @override
+  String get auth_welcome_title => 'Welcome to Priveo';
+
+  @override
+  String get auth_get_started => 'Get started';
+
+  @override
+  String get auth_already_member => 'Already a member? Log in';
+
+  @override
+  String get auth_email_invalid => 'Enter a valid email address.';
+
+  @override
+  String get auth_terms_prefix => 'By continuing you accept the ';
+
+  @override
+  String get auth_terms_link => 'Terms';
+
+  @override
+  String get auth_terms_and => ' and the ';
+
+  @override
+  String get auth_privacy_link => 'Privacy Policy';
+
+  @override
+  String get auth_terms_suffix => '.';
+
+  @override
+  String get auth_call_support => 'Call support';
+
+  @override
+  String get auth_whatsapp_support => 'WhatsApp support';
+
+  @override
+  String get crew_mgr_attendance => 'Attendance';
+
+  @override
+  String get crew_mgr_working_hours => 'Working hours';
+
+  @override
+  String get crew_mgr_present => 'Present';
+
+  @override
+  String get crew_mgr_sick => 'Sick';
+
+  @override
+  String get crew_mgr_leave => 'Leave';
+
+  @override
+  String get crew_mgr_late_start => 'Late start';
+
+  @override
+  String get crew_mgr_day_off => 'Day off';
+
+  @override
+  String get crew_mgr_working => 'Working';
+
+  @override
+  String get crew_mgr_start_time => 'Start';
+
+  @override
+  String get crew_mgr_end_time => 'End';
+
+  @override
+  String get crew_mgr_save => 'Save';
+
+  @override
+  String get crew_mgr_hours_saved => 'Working hours saved.';
+
+  @override
+  String get crew_mgr_attendance_saved => 'Attendance saved.';
+
+  @override
+  String get crew_mgr_late_start_from => 'Starts at';
+
+  @override
+  String get crew_mgr_choose_late_start => 'Choose the start time';
+
+  @override
+  String get crew_mgr_no_crew => 'No crew members.';
+
+  @override
+  String get crew_mgr_cannot_reassign => 'Cannot take this job';
+
+  @override
+  String crew_mgr_open_jobs_count(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open jobs',
+      one: '1 open job',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_mgr_late_start_at(String time) {
+    return 'Late start, from $time';
+  }
+
+  @override
+  String crew_mgr_released_moved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs moved to someone else',
+      one: '1 job moved to someone else',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_mgr_released_waiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs need scheduling',
+      one: '1 job needs scheduling',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addVehicleTitle => 'Add vehicle';
+
+  @override
+  String get addVehicleSociety => 'Society';
+
+  @override
+  String get addVehicleCar => 'Vehicle details';
+
+  @override
+  String get addVehicleParking => 'Parking';
+
+  @override
+  String get addVehiclePlan => 'Plan';
+
+  @override
+  String get addVehiclePreferences => 'Service preferences';
+
+  @override
+  String get addVehicleReview => 'Review and payment';
+
+  @override
+  String get addVehicleSearch => 'Search societies';
+
+  @override
+  String get addVehicleNoSocieties =>
+      'No serviced societies available at the moment.';
+
+  @override
+  String get addVehicleSocietyFixed =>
+      'Your vehicle\'s society cannot be changed after it is added.';
+
+  @override
+  String get addVehicleMake => 'Make';
+
+  @override
+  String get addVehicleModel => 'Model';
+
+  @override
+  String get addVehicleVariant => 'Variant';
+
+  @override
+  String get addVehicleStandard => 'Standard';
+
+  @override
+  String get addVehicleAuto => 'Auto-detected';
+
+  @override
+  String get addVehicleRegistration => 'Registration number';
+
+  @override
+  String get addVehiclePhoto => 'Add vehicle photo (required)';
+
+  @override
+  String get addVehicleReplacePhoto => 'Replace vehicle photo';
+
+  @override
+  String get addVehicleRc => 'Upload RC document (optional)';
+
+  @override
+  String get addVehicleRcUploaded => 'RC uploaded · Replace';
+
+  @override
+  String get addVehicleRcLimit =>
+      'Choose a JPG, PNG or PDF document up to 5 MB.';
+
+  @override
+  String get addVehicleBasement => 'Basement';
+
+  @override
+  String get addVehicleParkingNumber => 'Parking number';
+
+  @override
+  String get addVehicleCancel => 'Cancel anytime';
+
+  @override
+  String get addVehicleCutoff => 'Service cutoff time';
+
+  @override
+  String get addVehicleSlotNote =>
+      'Choose when your clean should be finished. Priveo assigns the exact slot.';
+
+  @override
+  String get addVehicleInterior => 'Interior care day';
+
+  @override
+  String get addVehicleTotal => 'Total payable today includes GST.';
+
+  @override
+  String get addVehicleStartNote => 'Priveo will confirm the start date.';
+
+  @override
+  String get addVehicleBack => 'Back';
+
+  @override
+  String get addVehicleConfirm => 'Confirm & pay';
+
+  @override
+  String get addVehicleRequired =>
+      'Complete the required details before continuing.';
+
+  @override
+  String get addonChangeRequest => 'Change requested, awaiting Priveo';
+
+  @override
+  String get addonChangeAction => 'Change date or time';
+
+  @override
+  String get addonNoOffers => 'No add-ons are available at the moment.';
+
+  @override
+  String get addonSupportClosed => 'Changes are closed. Call support for help.';
+
+  @override
+  String get addonViewProof => 'View service details';
 }

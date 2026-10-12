@@ -9,7 +9,7 @@ class RunRequest(BaseModel):
     society_id: uuid.UUID | None = None
     start_date: date
     # A week by default (ADM-SCH-09).
-    days: int = Field(default=7, ge=1, le=31)
+    days: int | None = Field(default=None, ge=1, le=31)
 
 
 class RunResult(BaseModel):
@@ -96,6 +96,7 @@ class Board(BaseModel):
 
 class NeedsScheduling(BaseModel):
     jobs: list[AdminJob]
+    pending_addons: list[dict] = Field(default_factory=list)
 
 
 class FreezeDue(BaseModel):

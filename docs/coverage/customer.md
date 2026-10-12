@@ -1,5 +1,7 @@
 # Customer requirements: coverage audit
 
+**Historical audit:** the verdicts and totals below predate subsequent integration. Email delivery, sign-in entry screens, account, proof, calendar and notification work have since changed. See [the current handoff](../codex-handoff-plan.md) for verification; these counts are not current completion metrics.
+
 Audit date: 11-Oct-26. Branch `audit/customer`, from `integration/complete-build` at `e3f91b7`.
 
 Scope: every ID row in `docs/reqs/customer-app-functional-requirements.md` (v0.10), checked against the code in `apps/mobile/lib`, `apps/mobile/test`, `services/api/app` and `services/api/tests`. `docs/feature-status.json` and `docs/overnight-build-report.md` were not used as evidence.

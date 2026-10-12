@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import 'capture/media_capture.dart';
 import 'data/crew_models.dart';
 import 'data/crew_repository.dart';
+import 'data/manager_models.dart';
 import 'upload/sqlite_store.dart';
 import 'upload/upload_queue.dart';
 
@@ -86,3 +87,15 @@ final managerScheduleProvider = FutureProvider.autoDispose
 
 final managerCrewProvider = FutureProvider.autoDispose<List<CrewRef>>(
     (ref) => ref.watch(crewRepositoryProvider).managerCrew());
+
+/// `yyyy-mm-dd` for the day of the attendance list.
+final managerAttendanceProvider = FutureProvider.autoDispose
+    .family<AttendanceDay, String>((ref, key) =>
+        ref.watch(crewRepositoryProvider).managerAttendance(DateTime.parse(key)));
+
+final managerHoursProvider = FutureProvider.autoDispose<List<CrewHours>>(
+    (ref) => ref.watch(crewRepositoryProvider).managerHours());
+
+final managerReassignOptionsProvider = FutureProvider.autoDispose
+    .family<List<ReassignOption>, String>((ref, jobId) =>
+        ref.watch(crewRepositoryProvider).managerReassignOptions(jobId));

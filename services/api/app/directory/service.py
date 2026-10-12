@@ -86,12 +86,13 @@ def society_counts(db: Session, society_id: uuid.UUID) -> tuple[int, int, int]:
     """(cars serviced, live subscriptions, active crew)."""
     cars = db.scalar(
         select(func.count()).select_from(Vehicle).join(Customer, Customer.id == Vehicle.customer_id)
-        .where(Customer.society_id == society_id, Vehicle.active.is_(True))) or 0
+        .where(func.coalesce(Vehicle.society_id, Customer.society_id) == society_id,
+               Vehicle.active.is_(True))) or 0
     subs = db.scalar(
         select(func.count()).select_from(Subscription)
         .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
         .join(Customer, Customer.id == Vehicle.customer_id)
-        .where(Customer.society_id == society_id,
+        .where(func.coalesce(Vehicle.society_id, Customer.society_id) == society_id,
                Subscription.status.in_(LIVE_SUBSCRIPTION))) or 0
     crew = db.scalar(
         select(func.count()).select_from(CrewMember)

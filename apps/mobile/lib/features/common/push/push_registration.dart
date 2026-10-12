@@ -42,6 +42,25 @@ final pushRegistrationProvider = FutureProvider<void>((ref) async {
   final session = ref.watch(authControllerProvider).value;
   if (session == null) return;
   final provider = ref.watch(pushTokenProvider);
+  if (session.role == Role.customer) {
+    try {
+      await ref
+          .read(dioProvider)
+          .put<void>(
+            '/v1/customer/session-device',
+            data: {
+              'device_name': '${provider.platform} phone',
+              'platform': provider.platform,
+              'app_version': const String.fromEnvironment(
+                'APP_VERSION',
+                defaultValue: '0.1.0',
+              ),
+            },
+          );
+    } catch (_) {
+      // Session metadata is best effort; push registration still runs.
+    }
+  }
   try {
     final token = await provider.token();
     if (token == null || token.isEmpty) return;

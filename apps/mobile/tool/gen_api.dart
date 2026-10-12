@@ -130,11 +130,17 @@ void _writeModel(StringBuffer b, String name, Map<String, dynamic> schema) {
   b.writeln('}\n');
 }
 
-void _writeMethod(
-    StringBuffer b, String path, String verb, Map<String, dynamic> op) {
+String _methodName(String id) =>
+    _camel(id.contains('_v1_') ? id.split('_v1_').first : id);
+
+void _writeMethod(StringBuffer b, String path, String verb,
+    Map<String, dynamic> op, Set<String> collisions) {
   // FastAPI names an operation "<function>_v1_<path>_<verb>".
   final id = op['operationId'] as String;
-  final name = _camel(id.contains('_v1_') ? id.split('_v1_').first : id);
+  final shortName = _methodName(id);
+  // Routers can use the same Python function name. Keep the full operation
+  // ID for those methods so the generated client has no duplicate members.
+  final name = collisions.contains(shortName) ? _camel(id) : shortName;
 
   final params = (op['parameters'] as List? ?? const [])
       .cast<Map<String, dynamic>>();
@@ -242,12 +248,29 @@ void main() {
     ..writeln('  PriveoApi(this._dio);\n')
     ..writeln('  final Dio _dio;\n')
     ..writeln("  static final _noAuth = Options(extra: {'noAuth': true});\n");
-  (contract['paths'] as Map<String, dynamic>).forEach((path, verbs) {
+  final paths = contract['paths'] as Map<String, dynamic>;
+  final nameCounts = <String, int>{};
+  for (final entry in paths.entries) {
+    if (entry.key.contains('{')) continue;
+    for (final operation in (entry.value as Map<String, dynamic>).entries) {
+      final op = operation.value as Map<String, dynamic>;
+      if (refsSkipped(op)) continue;
+      try {
+        _writeMethod(StringBuffer(), entry.key, operation.key, op, {});
+        final name = _methodName(op['operationId'] as String);
+        nameCounts[name] = (nameCounts[name] ?? 0) + 1;
+      } on UnsupportedError {
+        // Count only emitted methods, preserving names used by the app.
+      }
+    }
+  }
+  final collisions = nameCounts.keys.where((n) => nameCounts[n]! > 1).toSet();
+  paths.forEach((path, verbs) {
     (verbs as Map<String, dynamic>).forEach((verb, op) {
       if (path.contains('{') || refsSkipped(op)) return;
       try {
         final sb = StringBuffer();
-        _writeMethod(sb, path, verb, op as Map<String, dynamic>);
+        _writeMethod(sb, path, verb, op as Map<String, dynamic>, collisions);
         b.write(sb);
       } on UnsupportedError {
         // Left to a hand-written call.

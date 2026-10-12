@@ -8,6 +8,286 @@ String _date(DateTime d) =>
     '${d.month.toString().padLeft(2, '0')}-'
     '${d.day.toString().padLeft(2, '0')}';
 
+class AccountEmailChange {
+  const AccountEmailChange({
+    required this.email,
+  });
+
+  final String email;
+
+  factory AccountEmailChange.fromJson(Map<String, dynamic> j) => AccountEmailChange(
+        email: j['email'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+      };
+}
+
+class AccountEmailCode {
+  const AccountEmailCode({
+    required this.code,
+  });
+
+  final String code;
+
+  factory AccountEmailCode.fromJson(Map<String, dynamic> j) => AccountEmailCode(
+        code: j['code'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+      };
+}
+
+class AccountEmailCodeSent {
+  const AccountEmailCodeSent({
+    required this.email,
+    required this.expiresInSeconds,
+  });
+
+  final String email;
+  final int expiresInSeconds;
+
+  factory AccountEmailCodeSent.fromJson(Map<String, dynamic> j) => AccountEmailCodeSent(
+        email: j['email'] as String,
+        expiresInSeconds: j['expires_in_seconds'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+        'expires_in_seconds': expiresInSeconds,
+      };
+}
+
+class AccountPasswordChange {
+  const AccountPasswordChange({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  final String currentPassword;
+  final String newPassword;
+
+  factory AccountPasswordChange.fromJson(Map<String, dynamic> j) => AccountPasswordChange(
+        currentPassword: j['current_password'] as String,
+        newPassword: j['new_password'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      };
+}
+
+class AccountProfileEdit {
+  const AccountProfileEdit({
+    required this.firstName,
+    required this.lastName,
+    required this.mobile,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String mobile;
+
+  factory AccountProfileEdit.fromJson(Map<String, dynamic> j) => AccountProfileEdit(
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        mobile: j['mobile'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_name': firstName,
+        'last_name': lastName,
+        'mobile': mobile,
+      };
+}
+
+class AccountProfileOut {
+  const AccountProfileOut({
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.mobile,
+    required this.society,
+    required this.flat,
+    required this.initials,
+    required this.memberSince,
+    required this.pendingEmail,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String mobile;
+  final String society;
+  final String flat;
+  final String initials;
+  final String? memberSince;
+  final String? pendingEmail;
+
+  factory AccountProfileOut.fromJson(Map<String, dynamic> j) => AccountProfileOut(
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        email: j['email'] as String,
+        mobile: j['mobile'] as String,
+        society: j['society'] as String,
+        flat: j['flat'] as String,
+        initials: j['initials'] as String,
+        memberSince: j['member_since'] == null ? null : j['member_since'] as String,
+        pendingEmail: j['pending_email'] == null ? null : j['pending_email'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': email,
+        'mobile': mobile,
+        'society': society,
+        'flat': flat,
+        'initials': initials,
+        'member_since': memberSince,
+        'pending_email': pendingEmail,
+      };
+}
+
+class AccountUploadRequest {
+  const AccountUploadRequest({
+    required this.purpose,
+    required this.vehicleId,
+    required this.contentType,
+    required this.sizeBytes,
+  });
+
+  final String purpose;
+  final String? vehicleId;
+  final String contentType;
+  final int sizeBytes;
+
+  factory AccountUploadRequest.fromJson(Map<String, dynamic> j) => AccountUploadRequest(
+        purpose: j['purpose'] as String,
+        vehicleId: j['vehicle_id'] == null ? null : j['vehicle_id'] as String,
+        contentType: j['content_type'] as String,
+        sizeBytes: j['size_bytes'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'purpose': purpose,
+        'vehicle_id': vehicleId,
+        'content_type': contentType,
+        'size_bytes': sizeBytes,
+      };
+}
+
+class AccountUploadState {
+  const AccountUploadState({
+    required this.id,
+    required this.status,
+    required this.purpose,
+    required this.url,
+  });
+
+  final String id;
+  final String status;
+  final String purpose;
+  final String? url;
+
+  factory AccountUploadState.fromJson(Map<String, dynamic> j) => AccountUploadState(
+        id: j['id'] as String,
+        status: j['status'] as String,
+        purpose: j['purpose'] as String,
+        url: j['url'] == null ? null : j['url'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'status': status,
+        'purpose': purpose,
+        'url': url,
+      };
+}
+
+class AccountUploadTicket {
+  const AccountUploadTicket({
+    required this.id,
+    required this.uploadUrl,
+    required this.method,
+    required this.headers,
+  });
+
+  final String id;
+  final String uploadUrl;
+  final String method;
+  final Map<String, dynamic> headers;
+
+  factory AccountUploadTicket.fromJson(Map<String, dynamic> j) => AccountUploadTicket(
+        id: j['id'] as String,
+        uploadUrl: j['upload_url'] as String,
+        method: j['method'] as String,
+        headers: j['headers'] as Map<String, dynamic>,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'upload_url': uploadUrl,
+        'method': method,
+        'headers': headers,
+      };
+}
+
+class AccountVehicleEdit {
+  const AccountVehicleEdit({
+    required this.parkingBasement,
+    required this.parkingNumber,
+  });
+
+  final String? parkingBasement;
+  final String? parkingNumber;
+
+  factory AccountVehicleEdit.fromJson(Map<String, dynamic> j) => AccountVehicleEdit(
+        parkingBasement: j['parking_basement'] == null ? null : j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] == null ? null : j['parking_number'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+      };
+}
+
+class AccountVehicleOut {
+  const AccountVehicleOut({
+    required this.id,
+    required this.parkingBasement,
+    required this.parkingNumber,
+    required this.photoUrl,
+    required this.rcStatus,
+  });
+
+  final String id;
+  final String parkingBasement;
+  final String parkingNumber;
+  final String? photoUrl;
+  final String rcStatus;
+
+  factory AccountVehicleOut.fromJson(Map<String, dynamic> j) => AccountVehicleOut(
+        id: j['id'] as String,
+        parkingBasement: j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] as String,
+        photoUrl: j['photo_url'] == null ? null : j['photo_url'] as String,
+        rcStatus: j['rc_status'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+        'photo_url': photoUrl,
+        'rc_status': rcStatus,
+      };
+}
+
 class AddonChangeIn {
   const AddonChangeIn({
     required this.date,
@@ -78,6 +358,12 @@ class AddonOut {
     required this.paymentStatus,
     required this.canChange,
     required this.createdAt,
+    required this.requestedDate,
+    required this.requestedFinishBy,
+    this.changeRequested,
+    required this.crewName,
+    required this.startTime,
+    required this.visitId,
   });
 
   final String id;
@@ -92,6 +378,12 @@ class AddonOut {
   final String? paymentStatus;
   final bool canChange;
   final String createdAt;
+  final DateTime? requestedDate;
+  final String? requestedFinishBy;
+  final bool? changeRequested;
+  final String? crewName;
+  final String? startTime;
+  final String? visitId;
 
   factory AddonOut.fromJson(Map<String, dynamic> j) => AddonOut(
         id: j['id'] as String,
@@ -106,6 +398,12 @@ class AddonOut {
         paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
         canChange: j['can_change'] as bool,
         createdAt: j['created_at'] as String,
+        requestedDate: j['requested_date'] == null ? null : DateTime.parse(j['requested_date'] as String),
+        requestedFinishBy: j['requested_finish_by'] == null ? null : j['requested_finish_by'] as String,
+        changeRequested: j['change_requested'] == null ? null : j['change_requested'] as bool,
+        crewName: j['crew_name'] == null ? null : j['crew_name'] as String,
+        startTime: j['start_time'] == null ? null : j['start_time'] as String,
+        visitId: j['visit_id'] == null ? null : j['visit_id'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -121,6 +419,12 @@ class AddonOut {
         'payment_status': paymentStatus,
         'can_change': canChange,
         'created_at': createdAt,
+        'requested_date': requestedDate == null ? null : _date(requestedDate!),
+        'requested_finish_by': requestedFinishBy,
+        'change_requested': changeRequested,
+        'crew_name': crewName,
+        'start_time': startTime,
+        'visit_id': visitId,
       };
 }
 
@@ -168,27 +472,63 @@ class AddonsOut {
       };
 }
 
+class AdminAddonCreate {
+  const AdminAddonCreate({
+    this.service,
+    required this.date,
+    required this.finishBy,
+    required this.vehicleId,
+  });
+
+  final String? service;
+  final DateTime date;
+  final String finishBy;
+  final String vehicleId;
+
+  factory AdminAddonCreate.fromJson(Map<String, dynamic> j) => AdminAddonCreate(
+        service: j['service'] == null ? null : j['service'] as String,
+        date: DateTime.parse(j['date'] as String),
+        finishBy: j['finish_by'] as String,
+        vehicleId: j['vehicle_id'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'service': service,
+        'date': _date(date),
+        'finish_by': finishBy,
+        'vehicle_id': vehicleId,
+      };
+}
+
 class AdminAddonIn {
   const AdminAddonIn({
     required this.status,
     required this.date,
     required this.finishBy,
+    this.resolveChange,
+    this.rejectChange,
   });
 
   final String? status;
   final DateTime? date;
   final String? finishBy;
+  final bool? resolveChange;
+  final bool? rejectChange;
 
   factory AdminAddonIn.fromJson(Map<String, dynamic> j) => AdminAddonIn(
         status: j['status'] == null ? null : j['status'] as String,
         date: j['date'] == null ? null : DateTime.parse(j['date'] as String),
         finishBy: j['finish_by'] == null ? null : j['finish_by'] as String,
+        resolveChange: j['resolve_change'] == null ? null : j['resolve_change'] as bool,
+        rejectChange: j['reject_change'] == null ? null : j['reject_change'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
         'status': status,
         'date': date == null ? null : _date(date!),
         'finish_by': finishBy,
+        'resolve_change': resolveChange,
+        'reject_change': rejectChange,
       };
 }
 
@@ -206,6 +546,12 @@ class AdminAddonOut {
     required this.paymentStatus,
     required this.canChange,
     required this.createdAt,
+    required this.requestedDate,
+    required this.requestedFinishBy,
+    this.changeRequested,
+    required this.crewName,
+    required this.startTime,
+    required this.visitId,
     required this.customerName,
     required this.flat,
     required this.society,
@@ -226,6 +572,12 @@ class AdminAddonOut {
   final String? paymentStatus;
   final bool canChange;
   final String createdAt;
+  final DateTime? requestedDate;
+  final String? requestedFinishBy;
+  final bool? changeRequested;
+  final String? crewName;
+  final String? startTime;
+  final String? visitId;
   final String customerName;
   final String flat;
   final String society;
@@ -246,6 +598,12 @@ class AdminAddonOut {
         paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
         canChange: j['can_change'] as bool,
         createdAt: j['created_at'] as String,
+        requestedDate: j['requested_date'] == null ? null : DateTime.parse(j['requested_date'] as String),
+        requestedFinishBy: j['requested_finish_by'] == null ? null : j['requested_finish_by'] as String,
+        changeRequested: j['change_requested'] == null ? null : j['change_requested'] as bool,
+        crewName: j['crew_name'] == null ? null : j['crew_name'] as String,
+        startTime: j['start_time'] == null ? null : j['start_time'] as String,
+        visitId: j['visit_id'] == null ? null : j['visit_id'] as String,
         customerName: j['customer_name'] as String,
         flat: j['flat'] as String,
         society: j['society'] as String,
@@ -267,6 +625,12 @@ class AdminAddonOut {
         'payment_status': paymentStatus,
         'can_change': canChange,
         'created_at': createdAt,
+        'requested_date': requestedDate == null ? null : _date(requestedDate!),
+        'requested_finish_by': requestedFinishBy,
+        'change_requested': changeRequested,
+        'crew_name': crewName,
+        'start_time': startTime,
+        'visit_id': visitId,
         'customer_name': customerName,
         'flat': flat,
         'society': society,
@@ -293,6 +657,7 @@ class AdminComplaintDetail {
     required this.flat,
     required this.overdue,
     required this.photoKeys,
+    this.photoUrls,
     required this.updates,
   });
 
@@ -311,6 +676,7 @@ class AdminComplaintDetail {
   final String flat;
   final bool overdue;
   final List<String> photoKeys;
+  final List<String>? photoUrls;
   final List<UpdateOut> updates;
 
   factory AdminComplaintDetail.fromJson(Map<String, dynamic> j) => AdminComplaintDetail(
@@ -329,6 +695,7 @@ class AdminComplaintDetail {
         flat: j['flat'] as String,
         overdue: j['overdue'] as bool,
         photoKeys: [for (final x in j['photo_keys'] as List) x as String],
+        photoUrls: j['photo_urls'] == null ? null : [for (final x in j['photo_urls'] as List) x as String],
         updates: [for (final x in j['updates'] as List) UpdateOut.fromJson(x as Map<String, dynamic>)],
       );
 
@@ -348,6 +715,7 @@ class AdminComplaintDetail {
         'flat': flat,
         'overdue': overdue,
         'photo_keys': [for (final x in photoKeys) x],
+        'photo_urls': photoUrls == null ? null : [for (final x in photoUrls!) x],
         'updates': [for (final x in updates) x.toJson()],
       };
 }
@@ -885,6 +1253,30 @@ class AppConfig {
 
   Map<String, dynamic> toJson() => {
         'min_app_version': minAppVersion,
+      };
+}
+
+class AuthSupportContact {
+  const AuthSupportContact({
+    required this.helpline,
+    required this.whatsapp,
+    required this.hours,
+  });
+
+  final String helpline;
+  final String whatsapp;
+  final String hours;
+
+  factory AuthSupportContact.fromJson(Map<String, dynamic> j) => AuthSupportContact(
+        helpline: j['helpline'] as String,
+        whatsapp: j['whatsapp'] as String,
+        hours: j['hours'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'helpline': helpline,
+        'whatsapp': whatsapp,
+        'hours': hours,
       };
 }
 
@@ -1429,6 +1821,7 @@ class ComplaintDetail {
     required this.updatedAt,
     required this.latestNote,
     required this.photoKeys,
+    this.photoUrls,
     required this.updates,
   });
 
@@ -1443,6 +1836,7 @@ class ComplaintDetail {
   final String updatedAt;
   final String? latestNote;
   final List<String> photoKeys;
+  final List<String>? photoUrls;
   final List<UpdateOut> updates;
 
   factory ComplaintDetail.fromJson(Map<String, dynamic> j) => ComplaintDetail(
@@ -1457,6 +1851,7 @@ class ComplaintDetail {
         updatedAt: j['updated_at'] as String,
         latestNote: j['latest_note'] == null ? null : j['latest_note'] as String,
         photoKeys: [for (final x in j['photo_keys'] as List) x as String],
+        photoUrls: j['photo_urls'] == null ? null : [for (final x in j['photo_urls'] as List) x as String],
         updates: [for (final x in j['updates'] as List) UpdateOut.fromJson(x as Map<String, dynamic>)],
       );
 
@@ -1472,6 +1867,7 @@ class ComplaintDetail {
         'updated_at': updatedAt,
         'latest_note': latestNote,
         'photo_keys': [for (final x in photoKeys) x],
+        'photo_urls': photoUrls == null ? null : [for (final x in photoUrls!) x],
         'updates': [for (final x in updates) x.toJson()],
       };
 }
@@ -1816,42 +2212,6 @@ class CrewExceptionResult {
       };
 }
 
-class CrewHome {
-  const CrewHome({
-    required this.date,
-    required this.society,
-    required this.total,
-    required this.done,
-    required this.left,
-    required this.jobs,
-  });
-
-  final DateTime date;
-  final String society;
-  final int total;
-  final int done;
-  final int left;
-  final List<JobCard> jobs;
-
-  factory CrewHome.fromJson(Map<String, dynamic> j) => CrewHome(
-        date: DateTime.parse(j['date'] as String),
-        society: j['society'] as String,
-        total: j['total'] as int,
-        done: j['done'] as int,
-        left: j['left'] as int,
-        jobs: [for (final x in j['jobs'] as List) JobCard.fromJson(x as Map<String, dynamic>)],
-      );
-
-  Map<String, dynamic> toJson() => {
-        'date': _date(date),
-        'society': society,
-        'total': total,
-        'done': done,
-        'left': left,
-        'jobs': [for (final x in jobs) x.toJson()],
-      };
-}
-
 class CrewHoursChange {
   const CrewHoursChange({
     required this.workingHours,
@@ -1933,6 +2293,258 @@ class CrewJobCard {
         'checklist_total': checklistTotal,
         'checklist_done': checklistDone,
         'assigned_to': assignedTo?.toJson(),
+      };
+}
+
+class CrewManagerAttendance {
+  const CrewManagerAttendance({
+    required this.date,
+    required this.society,
+    required this.crew,
+  });
+
+  final DateTime date;
+  final String society;
+  final List<CrewManagerAttendanceEntry> crew;
+
+  factory CrewManagerAttendance.fromJson(Map<String, dynamic> j) => CrewManagerAttendance(
+        date: DateTime.parse(j['date'] as String),
+        society: j['society'] as String,
+        crew: [for (final x in j['crew'] as List) CrewManagerAttendanceEntry.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'date': _date(date),
+        'society': society,
+        'crew': [for (final x in crew) x.toJson()],
+      };
+}
+
+class CrewManagerAttendanceEntry {
+  const CrewManagerAttendanceEntry({
+    required this.crewId,
+    required this.name,
+    required this.role,
+    required this.working,
+    this.start,
+    this.end,
+    required this.status,
+    this.lateStart,
+    this.openJobs,
+  });
+
+  final String crewId;
+  final String name;
+  final String role;
+  final bool working;
+  final String? start;
+  final String? end;
+  final String status;
+  final String? lateStart;
+  final int? openJobs;
+
+  factory CrewManagerAttendanceEntry.fromJson(Map<String, dynamic> j) => CrewManagerAttendanceEntry(
+        crewId: j['crew_id'] as String,
+        name: j['name'] as String,
+        role: j['role'] as String,
+        working: j['working'] as bool,
+        start: j['start'] == null ? null : j['start'] as String,
+        end: j['end'] == null ? null : j['end'] as String,
+        status: j['status'] as String,
+        lateStart: j['late_start'] == null ? null : j['late_start'] as String,
+        openJobs: j['open_jobs'] == null ? null : j['open_jobs'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'name': name,
+        'role': role,
+        'working': working,
+        'start': start,
+        'end': end,
+        'status': status,
+        'late_start': lateStart,
+        'open_jobs': openJobs,
+      };
+}
+
+class CrewManagerAttendanceResult {
+  const CrewManagerAttendanceResult({
+    required this.attendance,
+    this.releasedJobs,
+  });
+
+  final CrewManagerAttendance attendance;
+  final List<CrewManagerReleasedJob>? releasedJobs;
+
+  factory CrewManagerAttendanceResult.fromJson(Map<String, dynamic> j) => CrewManagerAttendanceResult(
+        attendance: CrewManagerAttendance.fromJson(j['attendance'] as Map<String, dynamic>),
+        releasedJobs: j['released_jobs'] == null ? null : [for (final x in j['released_jobs'] as List) CrewManagerReleasedJob.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'attendance': attendance.toJson(),
+        'released_jobs': releasedJobs == null ? null : [for (final x in releasedJobs!) x.toJson()],
+      };
+}
+
+class CrewManagerAttendanceSet {
+  const CrewManagerAttendanceSet({
+    required this.status,
+    required this.fromDate,
+    required this.toDate,
+    this.start,
+  });
+
+  final String status;
+  final DateTime fromDate;
+  final DateTime? toDate;
+  final String? start;
+
+  factory CrewManagerAttendanceSet.fromJson(Map<String, dynamic> j) => CrewManagerAttendanceSet(
+        status: j['status'] as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: j['to_date'] == null ? null : DateTime.parse(j['to_date'] as String),
+        start: j['start'] == null ? null : j['start'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'from_date': _date(fromDate),
+        'to_date': toDate == null ? null : _date(toDate!),
+        'start': start,
+      };
+}
+
+class CrewManagerHours {
+  const CrewManagerHours({
+    required this.crewId,
+    required this.name,
+    required this.role,
+    required this.workingHours,
+  });
+
+  final String crewId;
+  final String name;
+  final String role;
+  final List<DayHours> workingHours;
+
+  factory CrewManagerHours.fromJson(Map<String, dynamic> j) => CrewManagerHours(
+        crewId: j['crew_id'] as String,
+        name: j['name'] as String,
+        role: j['role'] as String,
+        workingHours: [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'name': name,
+        'role': role,
+        'working_hours': [for (final x in workingHours) x.toJson()],
+      };
+}
+
+class CrewManagerHoursResult {
+  const CrewManagerHoursResult({
+    required this.hours,
+    this.releasedJobs,
+  });
+
+  final CrewManagerHours hours;
+  final List<CrewManagerReleasedJob>? releasedJobs;
+
+  factory CrewManagerHoursResult.fromJson(Map<String, dynamic> j) => CrewManagerHoursResult(
+        hours: CrewManagerHours.fromJson(j['hours'] as Map<String, dynamic>),
+        releasedJobs: j['released_jobs'] == null ? null : [for (final x in j['released_jobs'] as List) CrewManagerReleasedJob.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'hours': hours.toJson(),
+        'released_jobs': releasedJobs == null ? null : [for (final x in releasedJobs!) x.toJson()],
+      };
+}
+
+class CrewManagerHoursSet {
+  const CrewManagerHoursSet({
+    required this.workingHours,
+  });
+
+  final List<DayHours> workingHours;
+
+  factory CrewManagerHoursSet.fromJson(Map<String, dynamic> j) => CrewManagerHoursSet(
+        workingHours: [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'working_hours': [for (final x in workingHours) x.toJson()],
+      };
+}
+
+class CrewManagerReassignOption {
+  const CrewManagerReassignOption({
+    required this.crewId,
+    required this.name,
+    required this.role,
+    required this.canAssign,
+    this.problemCode,
+    this.problem,
+  });
+
+  final String crewId;
+  final String name;
+  final String role;
+  final bool canAssign;
+  final String? problemCode;
+  final String? problem;
+
+  factory CrewManagerReassignOption.fromJson(Map<String, dynamic> j) => CrewManagerReassignOption(
+        crewId: j['crew_id'] as String,
+        name: j['name'] as String,
+        role: j['role'] as String,
+        canAssign: j['can_assign'] as bool,
+        problemCode: j['problem_code'] == null ? null : j['problem_code'] as String,
+        problem: j['problem'] == null ? null : j['problem'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'name': name,
+        'role': role,
+        'can_assign': canAssign,
+        'problem_code': problemCode,
+        'problem': problem,
+      };
+}
+
+class CrewManagerReleasedJob {
+  const CrewManagerReleasedJob({
+    required this.jobId,
+    required this.date,
+    required this.service,
+    required this.registration,
+    this.reassigned,
+  });
+
+  final String jobId;
+  final DateTime date;
+  final String service;
+  final String registration;
+  final bool? reassigned;
+
+  factory CrewManagerReleasedJob.fromJson(Map<String, dynamic> j) => CrewManagerReleasedJob(
+        jobId: j['job_id'] as String,
+        date: DateTime.parse(j['date'] as String),
+        service: j['service'] as String,
+        registration: j['registration'] as String,
+        reassigned: j['reassigned'] == null ? null : j['reassigned'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'date': _date(date),
+        'service': service,
+        'registration': registration,
+        'reassigned': reassigned,
       };
 }
 
@@ -2068,34 +2680,6 @@ class CrewProfile {
       };
 }
 
-class CrewRatings {
-  const CrewRatings({
-    required this.periodDays,
-    required this.count,
-    required this.average,
-    required this.stars,
-  });
-
-  final int periodDays;
-  final int count;
-  final double? average;
-  final Map<String, dynamic> stars;
-
-  factory CrewRatings.fromJson(Map<String, dynamic> j) => CrewRatings(
-        periodDays: j['period_days'] as int,
-        count: j['count'] as int,
-        average: j['average'] == null ? null : (j['average'] as num).toDouble(),
-        stars: j['stars'] as Map<String, dynamic>,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'period_days': periodDays,
-        'count': count,
-        'average': average,
-        'stars': stars,
-      };
-}
-
 class CrewRef {
   const CrewRef({
     required this.id,
@@ -2212,6 +2796,70 @@ class CrewSessionsEnded {
       };
 }
 
+class CustomerCreate {
+  const CustomerCreate({
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.mobile,
+    this.flat,
+    required this.vehicle,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String mobile;
+  final String? flat;
+  final VehicleCreate vehicle;
+
+  factory CustomerCreate.fromJson(Map<String, dynamic> j) => CustomerCreate(
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        email: j['email'] as String,
+        mobile: j['mobile'] as String,
+        flat: j['flat'] == null ? null : j['flat'] as String,
+        vehicle: VehicleCreate.fromJson(j['vehicle'] as Map<String, dynamic>),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': email,
+        'mobile': mobile,
+        'flat': flat,
+        'vehicle': vehicle.toJson(),
+      };
+}
+
+class CustomerEdit {
+  const CustomerEdit({
+    required this.firstName,
+    required this.lastName,
+    required this.mobile,
+    this.flat,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String mobile;
+  final String? flat;
+
+  factory CustomerEdit.fromJson(Map<String, dynamic> j) => CustomerEdit(
+        firstName: j['first_name'] as String,
+        lastName: j['last_name'] as String,
+        mobile: j['mobile'] as String,
+        flat: j['flat'] == null ? null : j['flat'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_name': firstName,
+        'last_name': lastName,
+        'mobile': mobile,
+        'flat': flat,
+      };
+}
+
 class CustomerHome {
   const CustomerHome({
     required this.greetingName,
@@ -2313,6 +2961,22 @@ class CustomerNextService {
 
   Map<String, dynamic> toJson() => {
         'job': job?.toJson(),
+      };
+}
+
+class CustomerSessionsEnded {
+  const CustomerSessionsEnded({
+    required this.ended,
+  });
+
+  final int ended;
+
+  factory CustomerSessionsEnded.fromJson(Map<String, dynamic> j) => CustomerSessionsEnded(
+        ended: j['ended'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'ended': ended,
       };
 }
 
@@ -2818,18 +3482,21 @@ class DirectoryCustomerSocietyOut {
 
 class DirectoryCustomerVehicleOut {
   const DirectoryCustomerVehicleOut({
+    required this.id,
     required this.make,
     required this.model,
     required this.variant,
     required this.category,
   });
 
+  final String id;
   final String make;
   final String model;
   final String variant;
   final String category;
 
   factory DirectoryCustomerVehicleOut.fromJson(Map<String, dynamic> j) => DirectoryCustomerVehicleOut(
+        id: j['id'] as String,
         make: j['make'] as String,
         model: j['model'] as String,
         variant: j['variant'] as String,
@@ -2837,6 +3504,7 @@ class DirectoryCustomerVehicleOut {
       );
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'make': make,
         'model': model,
         'variant': variant,
@@ -3412,6 +4080,22 @@ class DirectoryVehicleUpdate {
       };
 }
 
+class EmailCorrection {
+  const EmailCorrection({
+    required this.email,
+  });
+
+  final String email;
+
+  factory EmailCorrection.fromJson(Map<String, dynamic> j) => EmailCorrection(
+        email: j['email'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+      };
+}
+
 class FeedbackAdmin {
   const FeedbackAdmin({
     required this.id,
@@ -3684,42 +4368,6 @@ class InvoiceOut {
       };
 }
 
-class JobCard {
-  const JobCard({
-    required this.id,
-    required this.time,
-    required this.vehicle,
-    required this.parking,
-    required this.service,
-    required this.status,
-  });
-
-  final String id;
-  final String time;
-  final String vehicle;
-  final String parking;
-  final String service;
-  final String status;
-
-  factory JobCard.fromJson(Map<String, dynamic> j) => JobCard(
-        id: j['id'] as String,
-        time: j['time'] as String,
-        vehicle: j['vehicle'] as String,
-        parking: j['parking'] as String,
-        service: j['service'] as String,
-        status: j['status'] as String,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'time': time,
-        'vehicle': vehicle,
-        'parking': parking,
-        'service': service,
-        'status': status,
-      };
-}
-
 class JobDetail {
   const JobDetail({
     required this.job,
@@ -3943,16 +4591,20 @@ class MoveRequest {
 class NeedsScheduling {
   const NeedsScheduling({
     required this.jobs,
+    this.pendingAddons,
   });
 
   final List<AdminJob> jobs;
+  final List<Map<String, dynamic>>? pendingAddons;
 
   factory NeedsScheduling.fromJson(Map<String, dynamic> j) => NeedsScheduling(
         jobs: [for (final x in j['jobs'] as List) AdminJob.fromJson(x as Map<String, dynamic>)],
+        pendingAddons: j['pending_addons'] == null ? null : [for (final x in j['pending_addons'] as List) x as Map<String, dynamic>],
       );
 
   Map<String, dynamic> toJson() => {
         'jobs': [for (final x in jobs) x.toJson()],
+        'pending_addons': pendingAddons == null ? null : [for (final x in pendingAddons!) x],
       };
 }
 
@@ -4285,6 +4937,8 @@ class OnboardingVehicle {
     required this.cutoffTime,
     required this.asksInteriorDay,
     required this.interiorDay,
+    this.hasPhoto,
+    required this.photoUrl,
   });
 
   final String id;
@@ -4298,6 +4952,8 @@ class OnboardingVehicle {
   final String? cutoffTime;
   final bool asksInteriorDay;
   final String? interiorDay;
+  final bool? hasPhoto;
+  final String? photoUrl;
 
   factory OnboardingVehicle.fromJson(Map<String, dynamic> j) => OnboardingVehicle(
         id: j['id'] as String,
@@ -4311,6 +4967,8 @@ class OnboardingVehicle {
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         asksInteriorDay: j['asks_interior_day'] as bool,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        hasPhoto: j['has_photo'] == null ? null : j['has_photo'] as bool,
+        photoUrl: j['photo_url'] == null ? null : j['photo_url'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -4325,6 +4983,8 @@ class OnboardingVehicle {
         'cutoff_time': cutoffTime,
         'asks_interior_day': asksInteriorDay,
         'interior_day': interiorDay,
+        'has_photo': hasPhoto,
+        'photo_url': photoUrl,
       };
 }
 
@@ -5056,11 +5716,27 @@ class Requirements {
       };
 }
 
+class ResolveCutoff {
+  const ResolveCutoff({
+    required this.apply,
+  });
+
+  final bool apply;
+
+  factory ResolveCutoff.fromJson(Map<String, dynamic> j) => ResolveCutoff(
+        apply: j['apply'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'apply': apply,
+      };
+}
+
 class RunRequest {
   const RunRequest({
     required this.societyId,
     required this.startDate,
-    this.days,
+    required this.days,
   });
 
   final String? societyId;
@@ -5208,6 +5884,30 @@ class SchedulingCrewOut {
       };
 }
 
+class SessionDevice {
+  const SessionDevice({
+    required this.deviceName,
+    required this.platform,
+    required this.appVersion,
+  });
+
+  final String deviceName;
+  final String platform;
+  final String appVersion;
+
+  factory SessionDevice.fromJson(Map<String, dynamic> j) => SessionDevice(
+        deviceName: j['device_name'] as String,
+        platform: j['platform'] as String,
+        appVersion: j['app_version'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'device_name': deviceName,
+        'platform': platform,
+        'app_version': appVersion,
+      };
+}
+
 class SetPasswordRequest {
   const SetPasswordRequest({
     required this.passwordToken,
@@ -5352,6 +6052,30 @@ class StatusIn {
       };
 }
 
+class SubscriptionEdit {
+  const SubscriptionEdit({
+    required this.planId,
+    required this.cutoffTime,
+    required this.interiorDay,
+  });
+
+  final String? planId;
+  final String? cutoffTime;
+  final String? interiorDay;
+
+  factory SubscriptionEdit.fromJson(Map<String, dynamic> j) => SubscriptionEdit(
+        planId: j['plan_id'] == null ? null : j['plan_id'] as String,
+        cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'plan_id': planId,
+        'cutoff_time': cutoffTime,
+        'interior_day': interiorDay,
+      };
+}
+
 class SubscriptionStatusIn {
   const SubscriptionStatusIn({
     required this.status,
@@ -5476,6 +6200,26 @@ class SubscriptionView {
       };
 }
 
+class SuggestionApply {
+  const SuggestionApply({
+    required this.fingerprint,
+    required this.jobIds,
+  });
+
+  final String fingerprint;
+  final List<String> jobIds;
+
+  factory SuggestionApply.fromJson(Map<String, dynamic> j) => SuggestionApply(
+        fingerprint: j['fingerprint'] as String,
+        jobIds: [for (final x in j['job_ids'] as List) x as String],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'fingerprint': fingerprint,
+        'job_ids': [for (final x in jobIds) x],
+      };
+}
+
 class SupportContact {
   const SupportContact({
     required this.helpline,
@@ -5565,6 +6309,26 @@ class SupportOptionsOut {
         'feedback_categories': [for (final x in feedbackCategories) x.toJson()],
         'positive_tags': [for (final x in positiveTags) x.toJson()],
         'checkin_categories': [for (final x in checkinCategories) x.toJson()],
+      };
+}
+
+class SwapIn {
+  const SwapIn({
+    required this.firstJobId,
+    required this.secondJobId,
+  });
+
+  final String firstJobId;
+  final String secondJobId;
+
+  factory SwapIn.fromJson(Map<String, dynamic> j) => SwapIn(
+        firstJobId: j['first_job_id'] as String,
+        secondJobId: j['second_job_id'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'first_job_id': firstJobId,
+        'second_job_id': secondJobId,
       };
 }
 
@@ -5732,6 +6496,30 @@ class UpdateOut {
       };
 }
 
+class UploadIn {
+  const UploadIn({
+    required this.purpose,
+    required this.contentType,
+    required this.sizeBytes,
+  });
+
+  final String purpose;
+  final String contentType;
+  final int sizeBytes;
+
+  factory UploadIn.fromJson(Map<String, dynamic> j) => UploadIn(
+        purpose: j['purpose'] as String,
+        contentType: j['content_type'] as String,
+        sizeBytes: j['size_bytes'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'purpose': purpose,
+        'content_type': contentType,
+        'size_bytes': sizeBytes,
+      };
+}
+
 class UploadInfo {
   const UploadInfo({
     required this.id,
@@ -5895,6 +6683,8 @@ class VehicleCard {
     required this.monthlyPriceRupees,
     required this.cutoffTime,
     required this.interiorDay,
+    this.variant,
+    required this.photoUrl,
     required this.nextService,
   });
 
@@ -5907,6 +6697,8 @@ class VehicleCard {
   final int? monthlyPriceRupees;
   final String? cutoffTime;
   final String? interiorDay;
+  final String? variant;
+  final String? photoUrl;
   final NextService? nextService;
 
   factory VehicleCard.fromJson(Map<String, dynamic> j) => VehicleCard(
@@ -5919,6 +6711,8 @@ class VehicleCard {
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        variant: j['variant'] == null ? null : j['variant'] as String,
+        photoUrl: j['photo_url'] == null ? null : j['photo_url'] as String,
         nextService: j['next_service'] == null ? null : NextService.fromJson(j['next_service'] as Map<String, dynamic>),
       );
 
@@ -5932,7 +6726,65 @@ class VehicleCard {
         'monthly_price_rupees': monthlyPriceRupees,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
+        'variant': variant,
+        'photo_url': photoUrl,
         'next_service': nextService?.toJson(),
+      };
+}
+
+class VehicleCreate {
+  const VehicleCreate({
+    required this.societyId,
+    required this.catalogueId,
+    required this.registration,
+    required this.parkingBasement,
+    required this.parkingNumber,
+    required this.planId,
+    required this.cutoffTime,
+    required this.interiorDay,
+    required this.photoUploadId,
+    required this.rcUploadId,
+    this.firstPaymentStatus,
+  });
+
+  final String societyId;
+  final String catalogueId;
+  final String registration;
+  final String parkingBasement;
+  final String parkingNumber;
+  final String planId;
+  final String cutoffTime;
+  final String? interiorDay;
+  final String photoUploadId;
+  final String? rcUploadId;
+  final String? firstPaymentStatus;
+
+  factory VehicleCreate.fromJson(Map<String, dynamic> j) => VehicleCreate(
+        societyId: j['society_id'] as String,
+        catalogueId: j['catalogue_id'] as String,
+        registration: j['registration'] as String,
+        parkingBasement: j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] as String,
+        planId: j['plan_id'] as String,
+        cutoffTime: j['cutoff_time'] as String,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        photoUploadId: j['photo_upload_id'] as String,
+        rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
+        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'catalogue_id': catalogueId,
+        'registration': registration,
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+        'plan_id': planId,
+        'cutoff_time': cutoffTime,
+        'interior_day': interiorDay,
+        'photo_upload_id': photoUploadId,
+        'rc_upload_id': rcUploadId,
+        'first_payment_status': firstPaymentStatus,
       };
 }
 
@@ -5950,6 +6802,7 @@ class VehicleDetail {
     required this.parkingBasement,
     required this.parkingNumber,
     required this.parking,
+    this.rcStatus,
     required this.monthlyPriceRupees,
     required this.cutoffTime,
     required this.interiorDay,
@@ -5967,6 +6820,7 @@ class VehicleDetail {
   final String parkingBasement;
   final String parkingNumber;
   final String parking;
+  final String? rcStatus;
   final int? monthlyPriceRupees;
   final String? cutoffTime;
   final String? interiorDay;
@@ -5984,6 +6838,7 @@ class VehicleDetail {
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
         parking: j['parking'] as String,
+        rcStatus: j['rc_status'] == null ? null : j['rc_status'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
@@ -6002,9 +6857,50 @@ class VehicleDetail {
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
         'parking': parking,
+        'rc_status': rcStatus,
         'monthly_price_rupees': monthlyPriceRupees,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
+      };
+}
+
+class VehicleEdit {
+  const VehicleEdit({
+    required this.registration,
+    required this.catalogueId,
+    required this.parkingBasement,
+    required this.parkingNumber,
+    required this.photoUploadId,
+    required this.rcUploadId,
+    required this.rcVerified,
+  });
+
+  final String? registration;
+  final String? catalogueId;
+  final String? parkingBasement;
+  final String? parkingNumber;
+  final String? photoUploadId;
+  final String? rcUploadId;
+  final bool? rcVerified;
+
+  factory VehicleEdit.fromJson(Map<String, dynamic> j) => VehicleEdit(
+        registration: j['registration'] == null ? null : j['registration'] as String,
+        catalogueId: j['catalogue_id'] == null ? null : j['catalogue_id'] as String,
+        parkingBasement: j['parking_basement'] == null ? null : j['parking_basement'] as String,
+        parkingNumber: j['parking_number'] == null ? null : j['parking_number'] as String,
+        photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
+        rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
+        rcVerified: j['rc_verified'] == null ? null : j['rc_verified'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'registration': registration,
+        'catalogue_id': catalogueId,
+        'parking_basement': parkingBasement,
+        'parking_number': parkingNumber,
+        'photo_upload_id': photoUploadId,
+        'rc_upload_id': rcUploadId,
+        'rc_verified': rcVerified,
       };
 }
 
@@ -6300,6 +7196,16 @@ class PriveoApi {
     }
   }
 
+  /// Support Contact
+  Future<AuthSupportContact> supportContact() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/auth/support-contact', options: _noAuth);
+      return AuthSupportContact.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
   /// Start
   Future<StartResult> start(StartRequest body) async {
     try {
@@ -6378,6 +7284,65 @@ class PriveoApi {
     }
   }
 
+  /// Get Profile
+  Future<AccountProfileOut> getProfile() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/customer/profile');
+      return AccountProfileOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Patch Profile
+  Future<AccountProfileOut> patchProfile(AccountProfileEdit body) async {
+    try {
+      final r = await _dio.patch<Map<String, dynamic>>('/v1/customer/profile', data: body.toJson());
+      return AccountProfileOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Start Email Change
+  Future<AccountEmailCodeSent> startEmailChange(AccountEmailChange body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/customer/profile/email', data: body.toJson());
+      return AccountEmailCodeSent.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Verify Email Change
+  Future<AccountProfileOut> verifyEmailChange(AccountEmailCode body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/customer/profile/email/verify', data: body.toJson());
+      return AccountProfileOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Change Password
+  Future<void> changePassword(AccountPasswordChange body) async {
+    try {
+      await _dio.post<void>('/v1/customer/password', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Request Upload
+  Future<AccountUploadTicket> requestUploadV1CustomerUploadsPost(AccountUploadRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/customer/uploads', data: body.toJson());
+      return AccountUploadTicket.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
   /// Customer Home
   Future<CustomerHome> customerHome() async {
     try {
@@ -6407,11 +7372,64 @@ class PriveoApi {
     }
   }
 
-  /// Crew Home
-  Future<CrewHome> crewHome() async {
+  /// Create Customer
+  Future<void> createCustomer(CustomerCreate body) async {
     try {
-      final r = await _dio.get<Map<String, dynamic>>('/v1/crew/home');
-      return CrewHome.fromJson(r.data!);
+      await _dio.post<void>('/v1/admin/customers', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Admin Upload
+  Future<void> adminUpload(UploadIn body) async {
+    try {
+      await _dio.post<void>('/v1/admin/customer-uploads', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Customer Add Vehicle
+  Future<void> customerAddVehicle(VehicleCreate body) async {
+    try {
+      await _dio.post<void>('/v1/customer/vehicles', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Onboarding Summary
+  Future<void> onboardingSummary() async {
+    try {
+      await _dio.get<void>('/v1/customer/onboarding-summary');
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Session Device
+  Future<void> sessionDevice(SessionDevice body) async {
+    try {
+      await _dio.put<void>('/v1/customer/session-device', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Swap Jobs
+  Future<void> swapJobs(SwapIn body) async {
+    try {
+      await _dio.post<void>('/v1/admin/scheduling/jobs/swap', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Cutoff Requests
+  Future<void> cutoffRequests() async {
+    try {
+      await _dio.get<void>('/v1/admin/scheduling/cutoff-requests');
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }
@@ -6592,16 +7610,6 @@ class PriveoApi {
     }
   }
 
-  /// Crew Ratings
-  Future<CrewRatings> crewRatings() async {
-    try {
-      final r = await _dio.get<Map<String, dynamic>>('/v1/crew/ratings');
-      return CrewRatings.fromJson(r.data!);
-    } on DioException catch (e) {
-      throw ApiFailure.fromDio(e);
-    }
-  }
-
   /// Admin Ratings
   Future<RatingsReport> adminRatings() async {
     try {
@@ -6662,7 +7670,7 @@ class PriveoApi {
   }
 
   /// Request Upload
-  Future<UploadTicket> requestUpload(UploadRequest body) async {
+  Future<UploadTicket> requestUploadV1MediaUploadsPost(UploadRequest body) async {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/media/uploads', data: body.toJson());
       return UploadTicket.fromJson(r.data!);
@@ -6686,6 +7694,16 @@ class PriveoApi {
     try {
       final r = await _dio.get<Map<String, dynamic>>('/v1/customer/addons');
       return AddonsOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Admin Request Addon
+  Future<AdminAddonOut> adminRequestAddon(AdminAddonCreate body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/addons', data: body.toJson());
+      return AdminAddonOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

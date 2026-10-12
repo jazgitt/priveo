@@ -43,7 +43,8 @@ def admin_home(db: Session) -> AdminHome:
     for p in payments:
         customer = db.get(Customer, p.customer_id)
         vehicle = db.get(Vehicle, p.vehicle_id) if p.vehicle_id else None
-        society = db.get(Society, customer.society_id) if customer else None
+        society = db.get(Society, (vehicle.society_id if vehicle else None)
+                         or customer.society_id) if customer else None
         label = ", ".join(x for x in (
             customer_name(customer) if customer else "",
             f"Flat {customer.flat}" if customer and customer.flat else "") if x)

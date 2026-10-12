@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import { api, ApiError } from "../../api/client";
@@ -6,6 +6,8 @@ import {
   Button, Card, Dialog, SelectField, StatusChip, Table, TextField, useToast,
 } from "../../components";
 import { DayLanes, JobFlags, JobLabel } from "./Board";
+import { ScheduleActions } from "./ScheduleActions";
+import { ApiErrorNote } from "../../components/ApiErrorNote";
 import {
   daysInMonthFrom, errorText, fmtDate, hhmm, minuteOf, nextSunday, societiesOf, useBoard,
   useCrewList, useNeedsScheduling, weekday,
@@ -21,6 +23,15 @@ function periodDays(period: Period, start: string): number {
   if (period === "daily") return 1;
   if (period === "monthly") return daysInMonthFrom(start);
   return 7;
+}
+
+function periodStart(period: Period, start: string, weekStart: number): string {
+  if (period === "monthly") return `${start.slice(0, 7)}-01`;
+  if (period !== "weekly") return start;
+  const d = new Date(`${start}T00:00:00Z`);
+  const mondayDay = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - (mondayDay - weekStart + 7) % 7);
+  return d.toISOString().slice(0, 10);
 }
 
 function freezeText(s: ScheduleOut): string {
@@ -39,7 +50,11 @@ export function SchedulePage() {
 
   const [societyId, setSocietyId] = useState("");
   const [startDate, setStartDate] = useState(nextSunday());
-  const [period, setPeriod] = useState<Period>("weekly");
+  const [chosenPeriod, setPeriod] = useState<Period | null>(null);
+  const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{key: string; value: string | number}[]>("/v1/admin/directory/settings") });
+  const configured = String(preferences.data?.find(p => p.key === "schedule.period")?.value ?? "Weekly").toLowerCase();
+  const period: Period = chosenPeriod ?? (configured === "daily" ? "daily" : configured === "monthly" ? "monthly" : "weekly");
+  const savePeriod = useMutation({ mutationFn: (value: Period) => api("/v1/admin/directory/settings/schedule.period", { method: "PUT", body: {value: value[0].toUpperCase() + value.slice(1)} }) });
   const [pickedDay, setPickedDay] = useState("");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [results, setResults] = useState<RunResult[] | null>(null);
@@ -64,11 +79,12 @@ export function SchedulePage() {
       method: "POST",
       body: {
         society_id: societyId || null,
-        start_date: startDate,
-        days: periodDays(period, startDate),
+        start_date: periodStart(period, startDate, Number(preferences.data?.find(p => p.key === "schedule.week_start")?.value ?? 6)),
+        days: periodDays(period, periodStart(period, startDate, Number(preferences.data?.find(p => p.key === "schedule.week_start")?.value ?? 6))),
       },
     }),
     onSuccess: (r) => {
+      setStartDate(periodStart(period, startDate, Number(preferences.data?.find(p => p.key === "schedule.week_start")?.value ?? 6)));
       setProblem(null);
       setResults(r.schedules);
       const sum = (k: "placed" | "unscheduled" | "late") =>
@@ -163,7 +179,7 @@ export function SchedulePage() {
                        onChange={(e) => setSocietyId(e.target.value.trim())} />
           )}
           <SelectField label="Period" value={period}
-                       onChange={(e) => setPeriod(e.target.value as Period)}>
+                       onChange={(e) => { const value = e.target.value as Period; setPeriod(value); savePeriod.mutate(value); }}>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -179,6 +195,7 @@ export function SchedulePage() {
           A run keeps every change made by hand. On a frozen schedule it places only the jobs
           that have no crew member.
         </p>
+        <ApiErrorNote error={savePeriod.error ?? preferences.error} />
       </Card>
 
       {problem && (
@@ -305,6 +322,7 @@ export function SchedulePage() {
         </Card>
       </div>
 
+      <ScheduleActions board={board ?? null} refresh={refresh} />
       <JobDialog
         job={open}
         board={board ?? null}

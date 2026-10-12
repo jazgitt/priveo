@@ -184,7 +184,14 @@ def vehicle_photo_urls(db: Session, store: ObjectStore,
     """The newest confirmed photo of each vehicle that has one, as a signed
     read URL. A vehicle with no photo is left out."""
     out: dict[uuid.UUID, str] = {}
+    from app.customers.models import Vehicle
     for vehicle_id in set(vehicle_ids):
+        vehicle = db.get(Vehicle, vehicle_id)
+        explicit = db.get(MediaUpload, vehicle.photo_upload_id) \
+            if vehicle and vehicle.photo_upload_id else None
+        if explicit is not None and explicit.status == STATUS_CONFIRMED:
+            out[vehicle_id] = download_url(store, explicit)
+            continue
         row = db.scalar(
             select(MediaUpload)
             .where(MediaUpload.object_key.like(f"{VEHICLE_PHOTO_PREFIX}/{vehicle_id}/%"),

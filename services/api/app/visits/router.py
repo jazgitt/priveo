@@ -9,6 +9,8 @@ from app.identity.service import User
 from app.platform.clock import today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
+from app.visits import manager as manager_ops
+from app.visits import manager_schemas as ms
 from app.visits import schemas as s
 from app.visits import service
 
@@ -126,3 +128,43 @@ def manager_reassign(job_id: str, body: s.Reassign,
     j = service.managed_job(db, user.id, job_id)
     service.manager_reassign(db, j, manager, body.crew_id, user.id)
     return service.job_detail(db, j)
+
+
+# ---- Manager attendance, hours and reassign checks (CRW-MGR-03 to CRW-MGR-05) -----
+
+@router.get("/manager/attendance", response_model=ms.CrewManagerAttendance)
+def manager_attendance(day: Annotated[date | None, Query(alias="date")] = None,
+                       user: User = Depends(require_role("crew")),
+                       db: Session = Depends(get_db)):
+    manager = service.require_manager(db, user.id)
+    return manager_ops.attendance(db, manager, day or today_ist())
+
+
+@router.put("/manager/attendance/{crew_id}", response_model=ms.CrewManagerAttendanceResult)
+def manager_set_attendance(crew_id: str, body: ms.CrewManagerAttendanceSet,
+                           user: User = Depends(require_role("crew")),
+                           db: Session = Depends(get_db)):
+    manager = service.require_manager(db, user.id)
+    return manager_ops.set_attendance(db, manager, crew_id, body, user.id)
+
+
+@router.get("/manager/hours", response_model=list[ms.CrewManagerHours])
+def manager_hours(user: User = Depends(require_role("crew")), db: Session = Depends(get_db)):
+    return manager_ops.hours_list(db, service.require_manager(db, user.id))
+
+
+@router.put("/manager/hours/{crew_id}", response_model=ms.CrewManagerHoursResult)
+def manager_set_hours(crew_id: str, body: ms.CrewManagerHoursSet,
+                      user: User = Depends(require_role("crew")),
+                      db: Session = Depends(get_db)):
+    manager = service.require_manager(db, user.id)
+    return manager_ops.set_hours(db, manager, crew_id, body, user.id)
+
+
+@router.get("/manager/jobs/{job_id}/reassign-options",
+            response_model=list[ms.CrewManagerReassignOption])
+def manager_reassign_options(job_id: str, user: User = Depends(require_role("crew")),
+                             db: Session = Depends(get_db)):
+    manager = service.require_manager(db, user.id)
+    job = service.managed_job(db, user.id, job_id)
+    return manager_ops.reassign_options(db, manager, job)

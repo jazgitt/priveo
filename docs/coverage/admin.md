@@ -1,5 +1,7 @@
 # Admin requirements: coverage audit
 
+**Historical audit:** the verdicts and totals below predate the React portal and later backend integration. Customer administration, add-on management and scheduling actions now exist; the operations portal remains a subsequent milestone. See [the current handoff](../codex-handoff-plan.md) for verification; these counts are not current completion metrics.
+
 Source: `docs/reqs/admin-functional-requirements.md` (v0.8), all 172 `ADM-` IDs.
 Audited against the code on `integration/complete-build` (commit e3f91b7) by reading `services/api/app`, `services/api/tests` and `apps/mobile/lib/features/admin_quick`. `docs/feature-status.json` and `docs/overnight-build-report.md` were not used as evidence.
 

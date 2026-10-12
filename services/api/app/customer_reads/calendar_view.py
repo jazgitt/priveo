@@ -4,6 +4,7 @@ yet projected from the subscription (CAL-01, CAL-02, CAL-05 to CAL-10, HOME-04).
 A planned visit always wins over a projected day. A projected day follows the
 scheduler's own rules (`app.changes.projection`), the customer's pauses and
 skips, and the cutoff changes made for single dates."""
+
 import calendar
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -12,7 +13,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.changes.cycle import paused_days
+from app.changes.cycle import extension_days, paused_days
 from app.changes.models import ScheduleChange
 from app.changes.projection import day_services, renewals_between
 from app.changes.rules import is_open, today_of
@@ -58,8 +59,7 @@ def _hhmm(minute: int | None) -> str | None:
 
 
 class CalendarView:
-    def __init__(self, db: Session, visits: VisitReadRepository,
-                 now_fn: Callable[[], datetime]):
+    def __init__(self, db: Session, visits: VisitReadRepository, now_fn: Callable[[], datetime]):
         self._db = db
         self._visits = visits
         self._now = now_fn
@@ -70,16 +70,19 @@ class CalendarView:
             grouped.setdefault(job.visit_id, []).append(job)
         return grouped
 
-    def _ctx(self, vehicle: Vehicle, sub: Subscription | None, first: date,
-             last: date) -> _Ctx:
+    def _ctx(self, vehicle: Vehicle, sub: Subscription | None, first: date, last: date) -> _Ctx:
         ctx = _Ctx(vehicle, sub, paused_days(self._db, vehicle.id))
         rows = self._db.scalars(
-            select(ScheduleChange).where(
+            select(ScheduleChange)
+            .where(
                 ScheduleChange.vehicle_id == vehicle.id,
                 ScheduleChange.kind.in_(("skip", "cutoff")),
                 ScheduleChange.status.in_(("Active", "Applied", "Requested")),
-                ScheduleChange.start_date >= first, ScheduleChange.start_date <= last)
-            .order_by(ScheduleChange.created_at)).all()
+                ScheduleChange.start_date >= first,
+                ScheduleChange.start_date <= last,
+            )
+            .order_by(ScheduleChange.created_at)
+        ).all()
         for c in rows:
             if c.kind == "skip":
                 ctx.skips[c.start_date] = str(c.id)
@@ -88,8 +91,9 @@ class CalendarView:
                 target[c.start_date] = c.cutoff_time
         return ctx
 
-    def _make_up(self, ctx: _Ctx, visit: Visit, jobs: list[Job],
-                 today: date) -> tuple[date | None, date | None]:
+    def _make_up(
+        self, ctx: _Ctx, visit: Visit, jobs: list[Job], today: date
+    ) -> tuple[date | None, date | None]:
         """(covered on, rescheduled on) for a Missed visit (CAL-09).
 
         DERIVED: a missed Cleaning-External is covered by the next regular
@@ -98,8 +102,10 @@ class CalendarView:
         (Cleaning-Internal) or for the same add-on request (Deep Spa)."""
         missed = [j for j in jobs if j.status == "Missed"]
         later = self._visits.visits_in_range(
-            [visit.vehicle_id], visit.date + timedelta(days=1),
-            visit.date + timedelta(days=MAKE_UP_DAYS))
+            [visit.vehicle_id],
+            visit.date + timedelta(days=1),
+            visit.date + timedelta(days=MAKE_UP_DAYS),
+        )
         later_jobs = self._jobs_by_visit(later)
         other = [j for j in missed if j.service != "Cleaning-External"]
         if other:
@@ -112,8 +118,9 @@ class CalendarView:
                         if j.service != m.service:
                             continue
                         if m.service == "Deep Spa":
-                            same = bool(j.addon_request_id
-                                        and j.addon_request_id == m.addon_request_id)
+                            same = bool(
+                                j.addon_request_id and j.addon_request_id == m.addon_request_id
+                            )
                         else:
                             same = lv.date.strftime("%A") != interior
                         if same:
@@ -124,8 +131,12 @@ class CalendarView:
                 return lv.date, None
         for n in range(1, MAKE_UP_DAYS + 1):
             d = visit.date + timedelta(days=n)
-            if (d > today and day_services(ctx.sub, d) and d not in ctx.paused
-                    and d not in ctx.skips):
+            if (
+                d > today
+                and day_services(ctx.sub, d)
+                and d not in ctx.paused
+                and d not in ctx.skips
+            ):
                 return d, None
         return None, None
 
@@ -138,50 +149,92 @@ class CalendarView:
                 return _hhmm(j.finish_by_minute)
         return show_time(ctx.sub.cutoff_time) if ctx.sub else None
 
-    def _day(self, ctx: _Ctx, day: date, visit: Visit | None, jobs: list[Job],
-             services: list[str], now: datetime) -> CalendarVisit:
+    def _day(
+        self,
+        ctx: _Ctx,
+        day: date,
+        visit: Visit | None,
+        jobs: list[Job],
+        services: list[str],
+        now: datetime,
+    ) -> CalendarVisit:
         today = today_of(now)
         if visit is None:
-            status = ("Paused" if day in ctx.paused
-                      else "Skipped" if day in ctx.skips else "Projected")
+            status = (
+                "Paused" if day in ctx.paused else "Skipped" if day in ctx.skips else "Projected"
+            )
             visit_id, frozen = None, False
         else:
             status, visit_id, frozen = visit.status, visit.id, visit.frozen
             # A pause skips the planned jobs: say Paused, not Skipped.
-            if status == "Skipped" and day in ctx.paused:
+            if (
+                status == "Skipped"
+                and day in ctx.paused
+                and any(j.service != "Deep Spa" for j in jobs)
+            ):
                 status = "Paused"
         active = ctx.sub is not None and ctx.sub.status == "Active"
-        requested = day in ctx.requested and status in ("Scheduled", "Projected")
+        spa_only = bool(jobs) and all(j.service == "Deep Spa" for j in jobs)
+        requested = not spa_only and day in ctx.requested and status in ("Scheduled", "Projected")
         covered = rescheduled = None
         if visit is not None and status == "Missed":
             covered, rescheduled = self._make_up(ctx, visit, jobs, today)
-        state = ("Change requested" if requested else
-                 "Covered" if covered else "Rescheduled" if rescheduled else status)
+        state = (
+            "Change requested"
+            if requested
+            else "Covered"
+            if covered
+            else "Rescheduled"
+            if rescheduled
+            else status
+        )
         shown = []
         for j in jobs:
             # The crew member and time show once the schedule is frozen (CAL-10).
             placed = frozen and j.crew_name is not None and j.start_minute is not None
-            shown.append(CalendarJob(
-                service=j.service, status=j.status,
-                crew_name=j.crew_name if placed else None,
-                start_time=_hhmm(j.start_minute) if placed else None,
-                end_time=_hhmm(j.start_minute + j.duration_minutes) if placed else None))
+            shown.append(
+                CalendarJob(
+                    service=j.service,
+                    status=j.status,
+                    crew_name=j.crew_name if placed else None,
+                    start_time=_hhmm(j.start_minute) if placed else None,
+                    end_time=_hhmm(j.start_minute + j.duration_minutes) if placed else None,
+                )
+            )
         first_placed = next((j for j in shown if j.crew_name), None)
         return CalendarVisit(
-            visit_id=visit_id, vehicle_id=str(ctx.vehicle.id), date=day, status=status,
-            services=services, source="visit" if visit else "projected", state=state,
-            cutoff_time=self._cutoff(ctx, day, jobs), change_requested=requested,
+            visit_id=visit_id,
+            vehicle_id=str(ctx.vehicle.id),
+            date=day,
+            status=status,
+            services=services,
+            source="visit" if visit else "projected",
+            state=state,
+            cutoff_time=self._cutoff(ctx, day, jobs),
+            change_requested=requested,
             requested_cutoff_time=show_time(ctx.requested.get(day)) if requested else None,
             skip_id=ctx.skips.get(day) if status == "Skipped" else None,
-            can_change=active and status in CHANGEABLE and day > today and is_open(
-                day, now, lookup.setting(self._db, "schedule.customer_change_hour")),
-            frozen=frozen, covered_on=covered, rescheduled_on=rescheduled, jobs=shown,
+            can_change=active
+            and not spa_only
+            and status in CHANGEABLE
+            and day > today
+            and is_open(day, now, lookup.setting(self._db, "schedule.customer_change_hour")),
+            frozen=frozen,
+            covered_on=covered,
+            rescheduled_on=rescheduled,
+            jobs=shown,
             crew_name=first_placed.crew_name if first_placed else None,
             start_time=first_placed.start_time if first_placed else None,
-            end_time=first_placed.end_time if first_placed else None)
+            end_time=first_placed.end_time if first_placed else None,
+        )
 
-    def month(self, year: int, number: int, ids: Sequence[str],
-              owned: dict[str, tuple[Vehicle, Subscription | None]]) -> CalendarMonth:
+    def month(
+        self,
+        year: int,
+        number: int,
+        ids: Sequence[str],
+        owned: dict[str, tuple[Vehicle, Subscription | None]],
+    ) -> CalendarMonth:
         first = date(year, number, 1)
         last = date(year, number, calendar.monthrange(year, number)[1])
         now = self._now()
@@ -195,9 +248,11 @@ class CalendarView:
             ctx = self._ctx(vehicle, sub, first, last)
             planned: set[date] = set()
             for v in (x for x in visits if x.vehicle_id == vid):
-                planned.add(v.date)
-                out.append(self._day(ctx, v.date, v, jobs[v.id],
-                                     [j.service for j in jobs[v.id]], now))
+                if not jobs[v.id] or not all(j.service == "Deep Spa" for j in jobs[v.id]):
+                    planned.add(v.date)
+                out.append(
+                    self._day(ctx, v.date, v, jobs[v.id], [j.service for j in jobs[v.id]], now)
+                )
             if sub is None or sub.status != "Active":
                 continue
             # Dates the scheduler has not planned: from the subscription.
@@ -208,16 +263,22 @@ class CalendarView:
                     out.append(self._day(ctx, day, None, [], services, now))
                 day += timedelta(days=1)
             renewals.extend(
-                CalendarRenewal(vehicle_id=vid, date=d) for d in renewals_between(
-                    sub.first_service_date, len(ctx.paused), first, last,
-                    lookup.setting(self._db, "billing.cycle_days")))
+                CalendarRenewal(vehicle_id=vid, date=d)
+                for d in renewals_between(
+                    sub.first_service_date,
+                    len(ctx.paused) + extension_days(self._db, vehicle.id),
+                    first,
+                    last,
+                    lookup.setting(self._db, "billing.cycle_days"),
+                )
+            )
         order = {vid: i for i, vid in enumerate(ids)}
         out.sort(key=lambda c: (c.date, order[c.vehicle_id], c.visit_id or ""))
         return CalendarMonth(month=f"{year:04d}-{number:02d}", visits=out, renewals=renewals)
 
-    def next_services(self, today: date, ids: Sequence[str],
-                      owned: dict[str, tuple[Vehicle, Subscription | None]]
-                      ) -> list[NextServiceItem]:
+    def next_services(
+        self, today: date, ids: Sequence[str], owned: dict[str, tuple[Vehicle, Subscription | None]]
+    ) -> list[NextServiceItem]:
         """The next visit that is not over, for each vehicle. When the
         scheduler has not planned it yet, the next service day the
         subscription implies (HOME-04)."""
@@ -234,11 +295,17 @@ class CalendarView:
             vjobs = jobs[v.id]
             card = self._day(ctx, v.date, v, vjobs, [j.service for j in vjobs], now)
             result[v.vehicle_id] = NextServiceItem(
-                vehicle_id=v.vehicle_id, visit_id=v.id, date=v.date,
-                service=vjobs[0].service if vjobs else "", status=v.status,
-                services=card.services, cutoff_time=card.cutoff_time,
-                crew_name=card.crew_name, start_time=card.start_time,
-                end_time=card.end_time)
+                vehicle_id=v.vehicle_id,
+                visit_id=v.id,
+                date=v.date,
+                service=vjobs[0].service if vjobs else "",
+                status=v.status,
+                services=card.services,
+                cutoff_time=card.cutoff_time,
+                crew_name=card.crew_name,
+                start_time=card.start_time,
+                end_time=card.end_time,
+            )
         for vid in ids:
             vehicle, sub = owned[vid]
             if sub is None or sub.status != "Active":
@@ -250,9 +317,15 @@ class CalendarView:
                 services = day_services(sub, day)
                 if services and day not in ctx.paused and day not in ctx.skips:
                     result[vid] = NextServiceItem(
-                        vehicle_id=vid, visit_id=None, date=day, service=services[0],
-                        status="Scheduled", services=services, source="projected",
-                        cutoff_time=self._cutoff(ctx, day, []))
+                        vehicle_id=vid,
+                        visit_id=None,
+                        date=day,
+                        service=services[0],
+                        status="Scheduled",
+                        services=services,
+                        source="projected",
+                        cutoff_time=self._cutoff(ctx, day, []),
+                    )
                     break
                 day += timedelta(days=1)
         return [result[i] for i in ids if i in result]

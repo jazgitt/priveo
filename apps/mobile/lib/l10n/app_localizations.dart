@@ -2883,6 +2883,420 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Feedback'**
   String get support_feedback_tab;
+
+  /// No description provided for @auth_welcome_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Priveo'**
+  String get auth_welcome_title;
+
+  /// No description provided for @auth_get_started.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get auth_get_started;
+
+  /// No description provided for @auth_already_member.
+  ///
+  /// In en, this message translates to:
+  /// **'Already a member? Log in'**
+  String get auth_already_member;
+
+  /// No description provided for @auth_email_invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get auth_email_invalid;
+
+  /// No description provided for @auth_terms_prefix.
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing you accept the '**
+  String get auth_terms_prefix;
+
+  /// No description provided for @auth_terms_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms'**
+  String get auth_terms_link;
+
+  /// No description provided for @auth_terms_and.
+  ///
+  /// In en, this message translates to:
+  /// **' and the '**
+  String get auth_terms_and;
+
+  /// No description provided for @auth_privacy_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get auth_privacy_link;
+
+  /// No description provided for @auth_terms_suffix.
+  ///
+  /// In en, this message translates to:
+  /// **'.'**
+  String get auth_terms_suffix;
+
+  /// No description provided for @auth_call_support.
+  ///
+  /// In en, this message translates to:
+  /// **'Call support'**
+  String get auth_call_support;
+
+  /// No description provided for @auth_whatsapp_support.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp support'**
+  String get auth_whatsapp_support;
+
+  /// No description provided for @crew_mgr_attendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get crew_mgr_attendance;
+
+  /// No description provided for @crew_mgr_working_hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours'**
+  String get crew_mgr_working_hours;
+
+  /// No description provided for @crew_mgr_present.
+  ///
+  /// In en, this message translates to:
+  /// **'Present'**
+  String get crew_mgr_present;
+
+  /// No description provided for @crew_mgr_sick.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick'**
+  String get crew_mgr_sick;
+
+  /// No description provided for @crew_mgr_leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get crew_mgr_leave;
+
+  /// No description provided for @crew_mgr_late_start.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start'**
+  String get crew_mgr_late_start;
+
+  /// No description provided for @crew_mgr_day_off.
+  ///
+  /// In en, this message translates to:
+  /// **'Day off'**
+  String get crew_mgr_day_off;
+
+  /// No description provided for @crew_mgr_working.
+  ///
+  /// In en, this message translates to:
+  /// **'Working'**
+  String get crew_mgr_working;
+
+  /// No description provided for @crew_mgr_start_time.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get crew_mgr_start_time;
+
+  /// No description provided for @crew_mgr_end_time.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get crew_mgr_end_time;
+
+  /// No description provided for @crew_mgr_save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get crew_mgr_save;
+
+  /// No description provided for @crew_mgr_hours_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours saved.'**
+  String get crew_mgr_hours_saved;
+
+  /// No description provided for @crew_mgr_attendance_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance saved.'**
+  String get crew_mgr_attendance_saved;
+
+  /// No description provided for @crew_mgr_late_start_from.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at'**
+  String get crew_mgr_late_start_from;
+
+  /// No description provided for @crew_mgr_choose_late_start.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the start time'**
+  String get crew_mgr_choose_late_start;
+
+  /// No description provided for @crew_mgr_no_crew.
+  ///
+  /// In en, this message translates to:
+  /// **'No crew members.'**
+  String get crew_mgr_no_crew;
+
+  /// No description provided for @crew_mgr_cannot_reassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot take this job'**
+  String get crew_mgr_cannot_reassign;
+
+  /// No description provided for @crew_mgr_open_jobs_count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 open job} other{{count} open jobs}}'**
+  String crew_mgr_open_jobs_count(int count);
+
+  /// No description provided for @crew_mgr_late_start_at.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start, from {time}'**
+  String crew_mgr_late_start_at(String time);
+
+  /// No description provided for @crew_mgr_released_moved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job moved to someone else} other{{count} jobs moved to someone else}}'**
+  String crew_mgr_released_moved(int count);
+
+  /// No description provided for @crew_mgr_released_waiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job needs scheduling} other{{count} jobs need scheduling}}'**
+  String crew_mgr_released_waiting(int count);
+
+  /// No description provided for @addVehicleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle'**
+  String get addVehicleTitle;
+
+  /// No description provided for @addVehicleSociety.
+  ///
+  /// In en, this message translates to:
+  /// **'Society'**
+  String get addVehicleSociety;
+
+  /// No description provided for @addVehicleCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle details'**
+  String get addVehicleCar;
+
+  /// No description provided for @addVehicleParking.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking'**
+  String get addVehicleParking;
+
+  /// No description provided for @addVehiclePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get addVehiclePlan;
+
+  /// No description provided for @addVehiclePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Service preferences'**
+  String get addVehiclePreferences;
+
+  /// No description provided for @addVehicleReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and payment'**
+  String get addVehicleReview;
+
+  /// No description provided for @addVehicleSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search societies'**
+  String get addVehicleSearch;
+
+  /// No description provided for @addVehicleNoSocieties.
+  ///
+  /// In en, this message translates to:
+  /// **'No serviced societies available at the moment.'**
+  String get addVehicleNoSocieties;
+
+  /// No description provided for @addVehicleSocietyFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vehicle\'s society cannot be changed after it is added.'**
+  String get addVehicleSocietyFixed;
+
+  /// No description provided for @addVehicleMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Make'**
+  String get addVehicleMake;
+
+  /// No description provided for @addVehicleModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get addVehicleModel;
+
+  /// No description provided for @addVehicleVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Variant'**
+  String get addVehicleVariant;
+
+  /// No description provided for @addVehicleStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get addVehicleStandard;
+
+  /// No description provided for @addVehicleAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-detected'**
+  String get addVehicleAuto;
+
+  /// No description provided for @addVehicleRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration number'**
+  String get addVehicleRegistration;
+
+  /// No description provided for @addVehiclePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle photo (required)'**
+  String get addVehiclePhoto;
+
+  /// No description provided for @addVehicleReplacePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace vehicle photo'**
+  String get addVehicleReplacePhoto;
+
+  /// No description provided for @addVehicleRc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload RC document (optional)'**
+  String get addVehicleRc;
+
+  /// No description provided for @addVehicleRcUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'RC uploaded · Replace'**
+  String get addVehicleRcUploaded;
+
+  /// No description provided for @addVehicleRcLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a JPG, PNG or PDF document up to 5 MB.'**
+  String get addVehicleRcLimit;
+
+  /// No description provided for @addVehicleBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Basement'**
+  String get addVehicleBasement;
+
+  /// No description provided for @addVehicleParkingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking number'**
+  String get addVehicleParkingNumber;
+
+  /// No description provided for @addVehicleCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel anytime'**
+  String get addVehicleCancel;
+
+  /// No description provided for @addVehicleCutoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Service cutoff time'**
+  String get addVehicleCutoff;
+
+  /// No description provided for @addVehicleSlotNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose when your clean should be finished. Priveo assigns the exact slot.'**
+  String get addVehicleSlotNote;
+
+  /// No description provided for @addVehicleInterior.
+  ///
+  /// In en, this message translates to:
+  /// **'Interior care day'**
+  String get addVehicleInterior;
+
+  /// No description provided for @addVehicleTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total payable today includes GST.'**
+  String get addVehicleTotal;
+
+  /// No description provided for @addVehicleStartNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo will confirm the start date.'**
+  String get addVehicleStartNote;
+
+  /// No description provided for @addVehicleBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get addVehicleBack;
+
+  /// No description provided for @addVehicleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & pay'**
+  String get addVehicleConfirm;
+
+  /// No description provided for @addVehicleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the required details before continuing.'**
+  String get addVehicleRequired;
+
+  /// No description provided for @addonChangeRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Change requested, awaiting Priveo'**
+  String get addonChangeRequest;
+
+  /// No description provided for @addonChangeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date or time'**
+  String get addonChangeAction;
+
+  /// No description provided for @addonNoOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'No add-ons are available at the moment.'**
+  String get addonNoOffers;
+
+  /// No description provided for @addonSupportClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes are closed. Call support for help.'**
+  String get addonSupportClosed;
+
+  /// No description provided for @addonViewProof.
+  ///
+  /// In en, this message translates to:
+  /// **'View service details'**
+  String get addonViewProof;
 }
 
 class _AppLocalizationsDelegate

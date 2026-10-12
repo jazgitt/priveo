@@ -332,4 +332,10 @@ Future<ProviderContainer> pumpApp(
 Future<void> passSplash(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 3));
   await tester.pumpAndSettle();
+  // The sign-in starts on the welcome screen (AUTH-01).
+  final start = find.text('Get started');
+  if (start.evaluate().isNotEmpty) {
+    await tester.tap(start);
+    await tester.pumpAndSettle();
+  }
 }

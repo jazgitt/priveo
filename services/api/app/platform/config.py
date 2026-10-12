@@ -24,9 +24,13 @@ class Settings(BaseSettings):
     mock_crew_password: str = ""
     # "dev" or "prod". The dev-only switches below do nothing in "prod".
     environment: str = "dev"
-    # Dev only, until email is connected: no email is sent, and this fixed
-    # 6-digit value is the code for every customer (AUTH-03). Never committed.
+    # Dev only: optional fixed 6-digit code for customer verification.
+    # Delivery uses Resend when configured, otherwise the logging sender.
     mock_email_code: str = ""
+    # Resend (email). With a key set, codes and the welcome email really go
+    # out. Without one the logging fake is used. Never committed.
+    resend_api_key: str = ""
+    email_from: str = "Priveo <no-reply@priveo.in>"
 
     @property
     def fixed_email_code(self) -> str | None:

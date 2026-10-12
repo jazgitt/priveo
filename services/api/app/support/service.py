@@ -308,6 +308,11 @@ class SupportService:
 
     def _admin_summary(self, c: Complaint, note: str | None, names) -> dict:
         name, society, flat = names.get(c.customer_id, ("", "", ""))
+        if c.visit_id:
+            visit = self.db.get(Visit, c.visit_id)
+            vehicle = self.db.get(Vehicle, visit.vehicle_id) if visit else None
+            if vehicle is not None and vehicle.society_id:
+                society = self.db.get(Society, vehicle.society_id).name
         overdue = c.status == "Raised" and self._now() - c.created_at > REPLY_WITHIN
         return dict(self._summary(c, note), customer_name=name, society=society, flat=flat,
                     overdue=overdue)

@@ -16,7 +16,7 @@ export interface AuditEntry {
 }
 
 const ENTITIES = ["society", "plan", "vehicle", "slot", "service", "checklist", "reason",
-  "setting", "addon"];
+  "setting", "addon", "customer", "subscription", "cutoff_request", "schedule_change"];
 const LIMITS = [50, 100, 250, 500];
 
 function show(v: unknown): string {

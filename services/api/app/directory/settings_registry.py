@@ -48,6 +48,9 @@ DEFINITIONS: tuple[SettingDef, ...] = (
                "Placeholder address", max_length=300),
     SettingDef("invoice.seller_gstin", "gstin", "Seller GSTIN", "invoice", "00PLACEHOLDER0Z0"),
     # ADM-SCH-18, ADM-SCH-25, SCHED-01, ONB-16
+    SettingDef("schedule.period", "text", "Scheduling period", "schedule", "Weekly"),
+    SettingDef("schedule.week_start", "int", "Week start (Monday 0, Sunday 6)", "schedule", 6,
+               minimum=0, maximum=6),
     SettingDef("schedule.unfreeze_code", "code", "Secret code that unfreezes a schedule",
                "schedule", "unfreeze", max_length=40),
     SettingDef("schedule.freeze_hour", "int", "Freeze hour the day before (24-hour)",
@@ -122,6 +125,8 @@ def parse(definition: SettingDef, raw: Any) -> str:
     if not isinstance(raw, str):
         raise ValueError("Enter text.")
     text = raw.strip()
+    if definition.key == "schedule.period" and text not in ("Daily", "Weekly", "Monthly"):
+        raise ValueError("Choose Daily, Weekly or Monthly.")
     if not text:
         if definition.required:
             raise ValueError("This cannot be empty.")

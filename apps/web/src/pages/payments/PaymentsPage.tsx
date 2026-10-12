@@ -1,6 +1,8 @@
 import { useMemo, useState, type CSSProperties } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
-import { ApiError } from "../../api/client";
+import { api, ApiError } from "../../api/client";
 import { ApiErrorNote } from "../../components/ApiErrorNote";
 import { rupees, showDate } from "../../components/format";
 import {
@@ -22,6 +24,7 @@ const TONE: Record<string, ChipTone> = {
 const row: CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" };
 
 export function PaymentsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draft, setDraft] = useState<PaymentFilters>(NO_FILTERS);
   const [filters, setFilters] = useState<PaymentFilters>(NO_FILTERS);
   const [society, setSociety] = useState("");
@@ -36,6 +39,10 @@ export function PaymentsPage() {
     [list.data]);
   // The API has no society filter yet (BE-16), so it is applied here.
   const rows = (list.data ?? []).filter((p) => !society || p.society === society);
+  const linkedId = searchParams.get("payment");
+  const linked = useQuery({ queryKey: ["linked-payment", linkedId], enabled: !!linkedId,
+    queryFn: () => api<AdminPayment>(`/v1/admin/payments/${linkedId}`) });
+  const shown = open ?? linked.data;
 
   const set = (k: keyof PaymentFilters) => (e: { target: { value: string } }) =>
     setDraft((d) => ({ ...d, [k]: e.target.value }));
@@ -56,6 +63,7 @@ export function PaymentsPage() {
   return (
     <>
       <h1 className="page-title">Payments</h1>
+      <ApiErrorNote error={linked.error} />
 
       {(alerts.data?.length ?? 0) > 0 && (
         <Card title="Payments marked as paid">
@@ -111,7 +119,7 @@ export function PaymentsPage() {
                              empty="No payments match these filters." />}
       </Card>
 
-      {open && <PaymentDialog payment={open} onChange={setOpen} onClose={() => setOpen(null)} />}
+      {shown && <PaymentDialog payment={shown} onChange={setOpen} onClose={() => { setOpen(null); setSearchParams({}); }} />}
       {recording && <RecordDialog onClose={() => setRecording(false)} />}
     </>
   );

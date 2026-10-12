@@ -118,10 +118,10 @@ def test_the_admin_lists_and_updates_requests_without_the_9pm_rule(money):
     a = request(m, date="2026-10-12").json()
     m.clock.now = at(11, 22)
     r = m.client.patch(f"/v1/admin/addons/{a['id']}",
-                       json={"date": "2026-10-13", "status": "Scheduled"}, headers=m.admin)
+                       json={"date": "2026-10-13", "status": "Requested"}, headers=m.admin)
     assert (r.json()["date"], r.json()["status"], r.json()["vehicle"]) == (
-        "2026-10-13", "Scheduled", "Hyundai Creta HR 26 DK 8337")
-    assert [x["id"] for x in m.client.get("/v1/admin/addons?status=Scheduled",
+        "2026-10-13", "Requested", "Hyundai Creta HR 26 DK 8337")
+    assert [x["id"] for x in m.client.get("/v1/admin/addons?status=Requested",
                                          headers=m.admin).json()] == [a["id"]]
     r = m.client.patch(f"/v1/admin/addons/{a['id']}", json={"status": "Nope"},
                        headers=m.admin)

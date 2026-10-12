@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_failure.dart';
 import 'crew_models.dart';
+import 'manager_models.dart';
 
 /// `yyyy-mm-dd`, as the API reads dates.
 String apiDate(DateTime d) =>
@@ -32,6 +33,20 @@ abstract class CrewRepository {
       {required String reasonKey, String note = '', String? uploadId});
   Future<CrewJobDetail> managerSkip(String jobId);
   Future<CrewJobDetail> managerReassign(String jobId, String crewId);
+
+  // Manager attendance, working hours and reassign checks (CRW-MGR-03 to 05).
+  Future<AttendanceDay> managerAttendance(DateTime date);
+
+  /// [status] is one of [Attendance.all]. [start] is `HH:MM`, for a Late
+  /// start only.
+  Future<AttendanceResult> managerSetAttendance(String crewId,
+      {required String status,
+      required DateTime from,
+      DateTime? to,
+      String start = ''});
+  Future<List<CrewHours>> managerHours();
+  Future<HoursResult> managerSetHours(String crewId, List<HoursDay> days);
+  Future<List<ReassignOption>> managerReassignOptions(String jobId);
 }
 
 /// The three steps of sending a file: ask for a signed URL, send the bytes
@@ -175,6 +190,52 @@ class ApiCrewRepository implements CrewRepository, UploadApi {
   Future<CrewJobDetail> managerReassign(String jobId, String crewId) =>
       _detail(() => _dio.post('/v1/crew/manager/jobs/$jobId/reassign',
           data: {'crew_id': crewId}));
+
+  @override
+  Future<AttendanceDay> managerAttendance(DateTime date) async =>
+      AttendanceDay.fromJson(await _json(() => _dio.get(
+          '/v1/crew/manager/attendance',
+          queryParameters: {'date': apiDate(date)})));
+
+  @override
+  Future<AttendanceResult> managerSetAttendance(String crewId,
+          {required String status,
+          required DateTime from,
+          DateTime? to,
+          String start = ''}) async =>
+      AttendanceResult.fromJson(await _json(() => _dio.put(
+          '/v1/crew/manager/attendance/$crewId',
+          data: {
+            'status': status,
+            'from_date': apiDate(from),
+            if (to != null) 'to_date': apiDate(to),
+            if (start.isNotEmpty) 'start': start,
+          })));
+
+  @override
+  Future<List<CrewHours>> managerHours() => _call(() async {
+        final r = await _dio.get('/v1/crew/manager/hours');
+        return (r.data as List)
+            .map((e) => CrewHours.fromJson((e as Map).cast<String, dynamic>()))
+            .toList();
+      });
+
+  @override
+  Future<HoursResult> managerSetHours(String crewId, List<HoursDay> days) async =>
+      HoursResult.fromJson(await _json(() => _dio.put(
+          '/v1/crew/manager/hours/$crewId',
+          data: {'working_hours': [for (final d in days) d.toJson()]})));
+
+  @override
+  Future<List<ReassignOption>> managerReassignOptions(String jobId) =>
+      _call(() async {
+        final r =
+            await _dio.get('/v1/crew/manager/jobs/$jobId/reassign-options');
+        return (r.data as List)
+            .map((e) =>
+                ReassignOption.fromJson((e as Map).cast<String, dynamic>()))
+            .toList();
+      });
 
   // ---- Uploads ---------------------------------------------------------------
 

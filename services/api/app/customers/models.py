@@ -20,6 +20,7 @@ class Customer(Base):
     last_name: Mapped[str] = mapped_column(String(80), default="")
     # Lower case. An email belongs to one customer only (ADM-CUS-03).
     email: Mapped[str] = mapped_column(String(254), unique=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     # A contact number. It is not checked for duplicates (ADM-CUS-03).
     mobile: Mapped[str] = mapped_column(String(10))
     society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
@@ -38,6 +39,13 @@ class Vehicle(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
+    # Immutable once added; legacy records fall back to the customer's society.
+    society_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("societies.id"), index=True)
+    photo_upload_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("media_uploads.id", name="fk_vehicle_photo", use_alter=True))
+    rc_upload_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("media_uploads.id", name="fk_vehicle_rc", use_alter=True))
+    rc_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     # Upper case, no spaces. Empty only for migrated vehicles whose number
     # was missing or incomplete; the admin fills it in.
     registration: Mapped[str | None] = mapped_column(String(12), unique=True)
@@ -64,6 +72,8 @@ class Subscription(Base):
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), unique=True)
     # Empty for migrated subscriptions until the plans are set up.
     plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id"))
+    pending_plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id"))
+    pending_from: Mapped[date | None] = mapped_column(Date)
     # Whole rupees, GST included. Kept on the subscription, so a customer
     # keeps the price they joined at.
     monthly_price_rupees: Mapped[int] = mapped_column(Integer)

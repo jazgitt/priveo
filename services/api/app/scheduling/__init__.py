@@ -1,6 +1,7 @@
 """Scheduling (Phase 3): capacity, the OR-Tools scheduler, Draft and Frozen
 schedules, and the read models other modules use for the next service and the
 crew's day. Wire it in with `register(app)`."""
+
 from fastapi import FastAPI
 
 from app.scheduling.models import (  # noqa: F401

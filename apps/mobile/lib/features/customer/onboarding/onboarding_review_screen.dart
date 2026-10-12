@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -15,10 +16,19 @@ import '../account/account_data.dart' show vehiclePhotoDoneProvider;
 import '../account/account_strings.dart';
 import '../account/photo_widgets.dart' show VehiclePhotoField;
 import '../home/customer_home_data.dart';
+import '../../changes_money/routes.dart' show payPath;
 
 final onboardingProvider = FutureProvider.autoDispose<Onboarding>(
   (ref) => ref.watch(apiProvider).onboarding(),
 );
+
+final onboardingSummaryProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final r = await ref
+          .watch(dioProvider)
+          .get<Map<String, dynamic>>('/v1/customer/onboarding-summary');
+      return (r.data!['vehicles'] as List).cast<Map<String, dynamic>>();
+    });
 
 const _basements = ['B1', 'B2', 'B3', 'B4']; // ONB-13
 const _weekdays = [
@@ -200,6 +210,17 @@ class _ReviewState extends ConsumerState<_Review> {
           );
       // Home reads the details again and opens.
       ref.invalidate(customerHomeProvider);
+      final summary = ref.read(onboardingSummaryProvider).value ?? [];
+      final due = [
+        for (final v in summary)
+          for (final p in v['payments'] as List)
+            if (p['status'] == 'Due' || p['status'] == 'Over due') p,
+      ];
+      if (due.isNotEmpty && mounted) {
+        final router = GoRouter.of(context);
+        router.go('/customer');
+        router.push(payPath(due.first['id'] as String));
+      }
     } on ApiFailure catch (e) {
       if (mounted) setState(() => _failure = e.message ?? l.networkError);
     } finally {
@@ -414,6 +435,7 @@ class _ReviewState extends ConsumerState<_Review> {
   }
 
   List<Widget> _reviewStep(AppLocalizations l) {
+    final summary = ref.watch(onboardingSummaryProvider).value ?? [];
     Widget row(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -462,6 +484,33 @@ class _ReviewState extends ConsumerState<_Review> {
         row(l.society, widget.details.society),
         if (widget.details.flat.isNotEmpty) row(l.flat, widget.details.flat),
       ]),
+      for (final v in summary)
+        SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${v['society']} · ${v['make']} ${v['model']} ${v['variant']}',
+              ),
+              if (v['plan'] is Map) ...[
+                if (v['plan']['list_price_rupees'] != null)
+                  Text(
+                    '₹${v['plan']['list_price_rupees']}',
+                    style: const TextStyle(
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                Text('${v['plan']['badge']} · ${l.addVehicleCancel}'),
+                for (final inclusion in v['plan']['inclusions'] as List)
+                  Text('• $inclusion'),
+              ],
+              for (final p in v['payments'] as List)
+                Text('₹${p['amount_rupees']} · ${p['status']}'),
+              Text(l.addVehicleTotal),
+              Text(l.addVehicleStartNote),
+            ],
+          ),
+        ),
       for (final (i, d) in _drafts.indexed)
         section(d.vehicle.model, i + 2, [
           row(
@@ -581,7 +630,17 @@ class _ReviewState extends ConsumerState<_Review> {
               ],
               Expanded(
                 child: PrimaryButton(
-                  label: _onReview ? l.confirmDetails : l.continueButton,
+                  label: _onReview
+                      ? ((ref.watch(onboardingSummaryProvider).value ?? []).any(
+                              (v) => (v['payments'] as List).any(
+                                (p) =>
+                                    p['status'] == 'Due' ||
+                                    p['status'] == 'Over due',
+                              ),
+                            )
+                            ? l.addVehicleConfirm
+                            : l.confirmDetails)
+                      : l.continueButton,
                   busy: _busy,
                   onPressed: _onReview ? _confirm : _continue,
                 ),

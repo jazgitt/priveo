@@ -67,6 +67,8 @@ interface Opts {
 function server(o: Opts = {}) {
   fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
     const url = String(path);
+    if (url.startsWith("/v1/admin/directory/settings")) return json(200, []);
+    if (url.startsWith("/v1/admin/scheduling/cutoff-requests")) return json(200, []);
     if (url.startsWith("/v1/admin/crew")) return json(200, crew);
     if (url.startsWith("/v1/admin/scheduling/board")) {
       return o.boardReply ? o.boardReply() : json(200, board(o.status ?? "Draft", o.jobs ?? [job()]));

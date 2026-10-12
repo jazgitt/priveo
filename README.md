@@ -2,7 +2,9 @@
 
 A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa that is bought separately: as an add-on by a subscriber, or as a standalone service by a customer without a subscription. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. A Flutter app on iOS and Android serves customers and crew, with a small set of admin quick actions. Admins do their full work on a React web portal. The role on each login decides what appears.
 
-This repository currently holds the product requirements and the prototype material they were built from. There is no application code yet.
+The repository includes a FastAPI backend, a Flutter customer/crew app and a React admin portal. Development is on `integration/complete-build`; `main` does not yet contain all integrated work. See [the current handoff and remaining implementation plan](docs/codex-handoff-plan.md) for progress, verification and remaining gaps.
+
+Steps 1–3 are implemented locally: recovered email/manager work, customer administration and additional vehicles, and Deep Spa/scheduling integration. Migration head: `0022`. Operations and admin quick actions are the next milestone. These changes have not been committed or deployed.
 
 ## Requirements
 

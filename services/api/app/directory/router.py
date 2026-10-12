@@ -380,7 +380,7 @@ def customer_vehicles(user: CustomerUser, db: Db):
                       .where(VehicleCatalogueEntry.active.is_(True))
                       .order_by(VehicleCatalogueEntry.make, VehicleCatalogueEntry.model,
                                 VehicleCatalogueEntry.variant))
-    return [s.DirectoryCustomerVehicleOut(make=r.make, model=r.model, variant=r.variant,
+    return [s.DirectoryCustomerVehicleOut(id=r.id, make=r.make, model=r.model, variant=r.variant,
                                           category=r.category) for r in rows]
 
 

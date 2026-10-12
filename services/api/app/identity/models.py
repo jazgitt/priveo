@@ -42,6 +42,9 @@ class AuthSession(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), index=True)
     channel: Mapped[str] = mapped_column(String(8))  # mobile | web
+    device_name: Mapped[str] = mapped_column(String(120), default="")
+    platform: Mapped[str] = mapped_column(String(20), default="")
+    app_version: Mapped[str] = mapped_column(String(40), default="")
     # SHA-256 of the current refresh token. The token itself is never stored.
     refresh_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

@@ -232,6 +232,9 @@ void main() {
       await tester.tap(find.byTooltip('Sign out'));
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingReviewScreen), findsNothing);
+      expect(find.text('Get started'), findsOneWidget);
+      await tester.tap(find.text('Get started'));
+      await tester.pumpAndSettle();
       expect(find.text('Continue'), findsOneWidget);
     });
   });

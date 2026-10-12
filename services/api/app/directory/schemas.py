@@ -118,6 +118,7 @@ class DirectoryVehicleOut(BaseModel):
 
 
 class DirectoryCustomerVehicleOut(BaseModel):
+    id: uuid.UUID
     make: str
     model: str
     variant: str

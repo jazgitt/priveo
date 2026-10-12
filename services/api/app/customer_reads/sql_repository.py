@@ -138,5 +138,6 @@ class SqlVisitReadRepository:
                 checklist=self._checklist(r.service, ticks.get(r.id, {})),
                 start_minute=r.start_minute, duration_minutes=r.duration_minutes,
                 finish_by_minute=r.finish_by_minute,
-                addon_request_id=str(r.addon_request_id) if r.addon_request_id else None))
+                addon_request_id=str(r.addon_booking_id or r.addon_request_id)
+                    if r.addon_booking_id or r.addon_request_id else None))
         return out

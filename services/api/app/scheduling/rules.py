@@ -1,5 +1,6 @@
 """Pure rules for the schedule: the freeze and customer deadlines, visit status
 and working windows. No database here."""
+
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
 
@@ -10,8 +11,8 @@ from app.platform.clock import IST
 # ADM-SCH-18: the secret code that unfreezes a schedule is the word "unfreeze".
 UNFREEZE_CODE = "unfreeze"
 
-FREEZE_HOUR = 20     # ADM-SCH-25: 8 PM the day before the first day.
-CUSTOMER_HOUR = 21   # SCHED-01: customers change by 9 PM the previous day.
+FREEZE_HOUR = 20  # ADM-SCH-25: 8 PM the day before the first day.
+CUSTOMER_HOUR = 21  # SCHED-01: customers change by 9 PM the previous day.
 
 
 def freeze_deadline(first_day: date, hour: int = FREEZE_HOUR) -> datetime:
@@ -50,8 +51,9 @@ def hhmm(minute: int | None) -> str | None:
     return f"{minute // 60:02d}:{minute % 60:02d}"
 
 
-def window_for(role: str, start: int, end: int, exception_kind: str | None,
-               from_minute: int | None) -> tuple[int, int] | None:
+def window_for(
+    role: str, start: int, end: int, exception_kind: str | None, from_minute: int | None
+) -> tuple[int, int] | None:
     """A crew member's working window on a day, or None when they do not work
     or do not count (ADM-CAP-01, ADM-CAP-02)."""
     if role == "Trainee":
@@ -63,8 +65,9 @@ def window_for(role: str, start: int, end: int, exception_kind: str | None,
     return (start, end) if end > start else None
 
 
-def hours_window(working_hours: list | None, weekday: int, start: int,
-                 end: int) -> tuple[int, int] | None:
+def hours_window(
+    working_hours: list | None, weekday: int, start: int, end: int
+) -> tuple[int, int] | None:
     """The base window on a weekday (0 is Monday) from the per-weekday hours
     (ADM-CRW-04). With no per-weekday hours the single window applies every
     day. None on a day off."""

@@ -1,5 +1,6 @@
 """What a signed-in customer sees of their own record: the home screen and
 the review of their details at first sign-in (ONB-25, ONB-26)."""
+
 import re
 import uuid
 from datetime import time
@@ -9,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
+from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.home.schemas import CustomerHome, QuickAction, VehicleCard
 from app.identity.models import Login
@@ -99,8 +101,9 @@ class CustomerService:
     def _customer(self, login_id: uuid.UUID) -> Customer:
         customer = self._db.scalar(select(Customer).where(Customer.login_id == login_id))
         if customer is None:
-            raise ApiError("no_customer_record",
-                           "Your details are not set up yet. Contact Priveo.", 404)
+            raise ApiError(
+                "no_customer_record", "Your details are not set up yet. Contact Priveo.", 404
+            )
         return customer
 
     def _vehicles(self, customer: Customer) -> list[tuple[Vehicle, Subscription | None]]:
@@ -108,7 +111,8 @@ class CustomerService:
             select(Vehicle, Subscription)
             .outerjoin(Subscription, Subscription.vehicle_id == Vehicle.id)
             .where(Vehicle.customer_id == customer.id, Vehicle.active.is_(True))
-            .order_by(Vehicle.created_at, Vehicle.source_ref, Vehicle.id)).all()
+            .order_by(Vehicle.created_at, Vehicle.source_ref, Vehicle.id)
+        ).all()
         # Vehicles with a subscription come first.
         return sorted(((v, s) for v, s in rows), key=lambda pair: pair[1] is None)
 
@@ -127,27 +131,28 @@ class CustomerService:
 
     def home(self, login_id: uuid.UUID) -> CustomerHome:
         customer = self._customer(login_id)
-        society = self._db.get(Society, customer.society_id).name
         cards = []
         owned = self._vehicles(customer)
         photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
         for vehicle, sub in owned:
             parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
-            cards.append(VehicleCard(
-                id=str(vehicle.id),
-                registration=show_registration(vehicle.registration),
-                model=vehicle.model,
-                variant=vehicle.variant,
-                photo_url=photos.get(vehicle.id),
-                society=society,
-                parking=parking,
-                subscription_status=sub.status if sub else None,
-                monthly_price_rupees=sub.monthly_price_rupees if sub else None,
-                cutoff_time=show_time(sub.cutoff_time) if sub else None,
-                interior_day=sub.interior_day if sub else None,
-                # Filled in once visits are scheduled.
-                next_service=None,
-            ))
+            cards.append(
+                VehicleCard(
+                    id=str(vehicle.id),
+                    registration=show_registration(vehicle.registration),
+                    model=vehicle.model,
+                    variant=vehicle.variant,
+                    photo_url=photos.get(vehicle.id),
+                    society=self._db.get(Society, vehicle.society_id or customer.society_id).name,
+                    parking=parking,
+                    subscription_status=sub.status if sub else None,
+                    monthly_price_rupees=sub.monthly_price_rupees if sub else None,
+                    cutoff_time=show_time(sub.cutoff_time) if sub else None,
+                    interior_day=sub.interior_day if sub else None,
+                    # Filled in once visits are scheduled.
+                    next_service=None,
+                )
+            )
         return CustomerHome(
             greeting_name=customer.first_name,
             onboarding_confirmed=customer.onboarding_confirmed_at is not None,
@@ -162,21 +167,23 @@ class CustomerService:
         photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
         for vehicle, sub in owned:
             plan = self._plan(sub)
-            vehicles.append(OnboardingVehicle(
-                id=str(vehicle.id),
-                registration=show_registration(vehicle.registration),
-                model=vehicle.model,
-                parking_basement=vehicle.parking_basement,
-                parking_number=vehicle.parking_number,
-                has_subscription=sub is not None,
-                plan_name=plan.name if plan else None,
-                monthly_price_rupees=sub.monthly_price_rupees if sub else None,
-                cutoff_time=show_time(sub.cutoff_time) if sub else None,
-                asks_interior_day=self._asks_interior_day(sub),
-                interior_day=sub.interior_day if sub else None,
-                has_photo=vehicle.id in photos,
-                photo_url=photos.get(vehicle.id),
-            ))
+            vehicles.append(
+                OnboardingVehicle(
+                    id=str(vehicle.id),
+                    registration=show_registration(vehicle.registration),
+                    model=vehicle.model,
+                    parking_basement=vehicle.parking_basement,
+                    parking_number=vehicle.parking_number,
+                    has_subscription=sub is not None,
+                    plan_name=plan.name if plan else None,
+                    monthly_price_rupees=sub.monthly_price_rupees if sub else None,
+                    cutoff_time=show_time(sub.cutoff_time) if sub else None,
+                    asks_interior_day=self._asks_interior_day(sub),
+                    interior_day=sub.interior_day if sub else None,
+                    has_photo=vehicle.id in photos,
+                    photo_url=photos.get(vehicle.id),
+                )
+            )
         return Onboarding(
             confirmed=customer.onboarding_confirmed_at is not None,
             first_name=customer.first_name,
@@ -209,8 +216,12 @@ class CustomerService:
         owned = self._vehicles(customer)
         given = {a.id: a for a in answers.vehicles}
         if set(given) != {str(v.id) for v, _ in owned} or len(given) != len(answers.vehicles):
-            raise ApiError("validation_failed", "Please check the details.", 422,
-                           {"vehicles": "Review every one of your vehicles."})
+            raise ApiError(
+                "validation_failed",
+                "Please check the details.",
+                422,
+                {"vehicles": "Review every one of your vehicles."},
+            )
 
         changes = []
         for index, (vehicle, sub) in enumerate(owned):
@@ -218,10 +229,11 @@ class CustomerService:
             at = f"vehicles.{index}"
             basement = answer.parking_basement.strip().upper()
             number = answer.parking_number.strip()
-            if not media.has_confirmed(
-                    self._db, f"{media.VEHICLE_PHOTO_PREFIX}/{vehicle.id}"):
+            if vehicle.id not in media.vehicle_photo_urls(self._db, self._store, [vehicle.id]):
                 errors[f"{at}.photo"] = "Add a photo of your car."  # ONB-22
-            if basement not in BASEMENTS:
+            if basement not in lookup.society_basements(
+                self._db, vehicle.society_id or customer.society_id
+            ):
                 errors[f"{at}.parking_basement"] = "Select the basement."
             if not re.fullmatch(r"\d{1,5}", number):
                 errors[f"{at}.parking_number"] = "Enter the parking number, in digits."

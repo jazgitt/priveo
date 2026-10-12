@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.changes.extension import extend_for_skipped_job
 from app.customers.models import Vehicle
 from app.directory import lookup
 from app.directory.models import Society
@@ -20,6 +21,7 @@ from app.platform.errors import ApiError
 from app.scheduling import rules
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.service import set_job_status
+from app.visits import manager as manager_checks
 from app.visits import schemas as s
 from app.visits.models import (
     CrewPhoto,
@@ -340,23 +342,30 @@ def manager_skip(db: Session, job: Job, by: uuid.UUID) -> Job:
     plan extension belong to other modules."""
     _open_job(job)
     db.add(JobOutcome(job_id=job.id, kind="skipped", reason_key=None, by_login_id=by))
+    # ADM-OPS-03: a skipped Cleaning-External job adds one day to the plan.
+    # The row is saved with the status change below.
+    extend_for_skipped_job(db, job, by)
     return set_job_status(db, job.id, "Skipped")
 
 
 def manager_reassign(db: Session, job: Job, manager: SchedulingCrew, crew_id: str,
                      by: uuid.UUID) -> Job:
-    """CRW-MGR-03: to another Member or Manager of the same society. A
-    Trainee follows their Member without any change here. Attendance is not
-    checked yet."""
+    """CRW-MGR-03: to another Member or Manager of the same society who is
+    working that day, within their hours and with no other job at that time.
+    A Trainee follows their Member without any change here."""
     _open_job(job)
     try:
         target = db.get(SchedulingCrew, uuid.UUID(crew_id))
     except ValueError:
         target = None
-    if (target is None or not target.active or target.society_id != manager.society_id
-            or target.role not in ("Member", "Manager")):
-        raise ApiError("validation_failed", "Choose a Member or Manager of this society.", 422,
-                       {"crew_id": "Not available for this job."})
+    manager_checks.check_assignable(db, manager, target)
+    if job.status != "Scheduled":
+        raise ApiError("job_in_progress", "This job has already started.", 409)
+    visit = db.get(Visit, job.visit_id)
+    problem = manager_checks.reassign_problem(db, job, visit, target)
+    if problem is not None:
+        raise ApiError(problem[0], problem[1], 409)
+    manager_checks.apply_start(db, job, visit, target)
     db.add(JobReassignment(job_id=job.id, from_crew_id=job.crew_id, to_crew_id=target.id,
                            by_login_id=by))
     job.crew_id = target.id

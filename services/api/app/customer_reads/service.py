@@ -141,8 +141,8 @@ class CustomerReads:
         if visit is None or visit.vehicle_id not in owned:
             raise ApiError("visit_not_found", "This visit was not found.", 404)
         vehicle = owned[visit.vehicle_id]
-        society = self._db.get(Society, customer.society_id).name
         jobs = self._jobs_by_visit([visit])[visit.id]
+        society = self._db.get(Society, vehicle.society_id or customer.society_id).name
         given = self._ratings(customer, [visit.id]).get(visit.id)
         return VisitDetail(
             id=visit.id, vehicle_id=visit.vehicle_id,
@@ -228,23 +228,26 @@ class CustomerReads:
 
     def vehicles(self, login_id: uuid.UUID) -> list[VehicleSummary]:
         customer = self._customer(login_id)
-        society = self._db.get(Society, customer.society_id).name
         owned = self._owned(customer)
         photos = vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
-        return [self._summary(v, s, society, photos.get(v.id)) for v, s in owned]
+        return [self._summary(v, s,
+                self._db.get(Society, v.society_id or customer.society_id).name,
+                photos.get(v.id)) for v, s in owned]
 
     def vehicle(self, login_id: uuid.UUID, vehicle_id: str) -> VehicleDetail:
         customer = self._customer(login_id)
         society = self._db.get(Society, customer.society_id).name
         for v, s in self._owned(customer):
             if str(v.id) == vehicle_id:
+                society = self._db.get(Society, v.society_id or customer.society_id).name
                 photo = vehicle_photo_urls(self._db, self._store, [v.id]).get(v.id)
                 return VehicleDetail(
                     **self._summary(v, s, society, photo).model_dump(),
                     make=v.make, variant=v.variant, category=v.category,
                     parking_basement=v.parking_basement, parking_number=v.parking_number,
                     parking="-".join(p for p in (v.parking_basement, v.parking_number) if p),
-                    rc_status=("Uploaded" if has_confirmed(self._db, f"rc/{v.id}")
+                    rc_status=("Verified" if v.rc_verified else "Uploaded"
+                               if v.rc_upload_id or has_confirmed(self._db, f"rc/{v.id}")
                                else "Not uploaded"),
                     monthly_price_rupees=s.monthly_price_rupees if s else None,
                     cutoff_time=show_time(s.cutoff_time) if s else None,
