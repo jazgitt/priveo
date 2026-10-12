@@ -129,6 +129,7 @@ class SqlVisitReadRepository:
             first = (name or "").split(" ")[0] if r.crew_id else ""
             out.append(Job(
                 id=str(r.id), visit_id=str(r.visit_id), service=r.service,
+                source_job_id=str(r.source_job_id) if r.source_job_id else None,
                 status=_JOB_STATUS.get(r.status, r.status),
                 proof=[ProofItem(kind=u.kind, url=download_url(self.store, u), stage=u.stage,
                                  taken_at=u.confirmed_at) for u in proof[r.id]],

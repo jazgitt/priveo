@@ -171,6 +171,24 @@ def test_missed_visits_show_covered_and_rescheduled_dates(api, asha, clock, repo
     assert days["2026-10-02"]["rescheduled_on"] == "2026-10-07"
 
 
+def test_spa_does_not_cover_a_missed_exterior_job(api, asha, clock, repo):
+    vid = asha["vehicles"][0]
+    repo.visit_rows.extend(
+        [
+            Visit("missed-ext", vid, date(2026, 10, 5), "Missed"),
+            Visit("spa-only", vid, date(2026, 10, 6), "Completed"),
+        ]
+    )
+    repo.job_rows.extend(
+        [
+            Job("ext", "missed-ext", "Cleaning-External", "Missed"),
+            Job("spa", "spa-only", "Deep Spa", "Done"),
+        ]
+    )
+    day = next(v for v in month(api, asha, "2026-10")["visits"] if v["visit_id"] == "missed-ext")
+    assert day["covered_on"] is None
+
+
 def test_assignment_shows_only_for_a_frozen_schedule(api, asha, clock, repo):
     vid = asha["vehicles"][0]
     repo.visit_rows.extend(

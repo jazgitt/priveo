@@ -47,6 +47,7 @@ class Job:
     # The cutoff time of the job, in minutes after midnight.
     finish_by_minute: int | None = None
     addon_request_id: str | None = None
+    source_job_id: str | None = None
 
 
 @dataclass(frozen=True)

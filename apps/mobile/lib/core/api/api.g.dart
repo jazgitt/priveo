@@ -5716,6 +5716,30 @@ class Requirements {
       };
 }
 
+class Resolution {
+  const Resolution({
+    required this.action,
+    this.reason,
+    this.note,
+  });
+
+  final String action;
+  final String? reason;
+  final String? note;
+
+  factory Resolution.fromJson(Map<String, dynamic> j) => Resolution(
+        action: j['action'] as String,
+        reason: j['reason'] == null ? null : j['reason'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'action': action,
+        'reason': reason,
+        'note': note,
+      };
+}
+
 class ResolveCutoff {
   const ResolveCutoff({
     required this.apply,
@@ -5941,6 +5965,26 @@ class SkipIn {
 
   Map<String, dynamic> toJson() => {
         'date': _date(date),
+      };
+}
+
+class SkipVisit {
+  const SkipVisit({
+    this.reason,
+    this.note,
+  });
+
+  final String? reason;
+  final String? note;
+
+  factory SkipVisit.fromJson(Map<String, dynamic> j) => SkipVisit(
+        reason: j['reason'] == null ? null : j['reason'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'reason': reason,
+        'note': note,
       };
 }
 
@@ -7430,6 +7474,15 @@ class PriveoApi {
   Future<void> cutoffRequests() async {
     try {
       await _dio.get<void>('/v1/admin/scheduling/cutoff-requests');
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Reasons
+  Future<void> reasons() async {
+    try {
+      await _dio.get<void>('/v1/admin/operations/reasons');
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

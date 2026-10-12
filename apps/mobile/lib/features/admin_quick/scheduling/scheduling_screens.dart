@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../l10n/app_localizations.dart';
+import '../routes_paths.dart';
+import '../actions/actions_data.dart' show adminDate;
 
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
@@ -143,6 +147,12 @@ class _AdminDayScheduleScreenState
                 icon: const Icon(Icons.chevron_right),
               ),
             ],
+          ),
+          OutlinedButton(
+            onPressed: () => context.push(
+              '${AdminQuickPaths.operations}?date=${adminDate(_date)}',
+            ),
+            child: Text(AppLocalizations.of(context).adminOperationsForDay),
           ),
           day.when(
             loading: () => const Padding(

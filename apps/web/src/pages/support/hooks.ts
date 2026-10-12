@@ -40,7 +40,7 @@ export function useMergedAlerts() {
     ...(support.data?.items ?? []).map((a): MergedAlert => ({
       key: `support:${a.id}`, source: "support", id: a.id, kind: a.kind, title: a.title,
       body: a.body, created_at: a.created_at, read: a.read,
-      link: a.ref_type === "complaint" && a.ref_id ? `/complaints/${a.ref_id}` : null,
+      link: a.ref_type === "complaint" && a.ref_id ? `/complaints/${a.ref_id}` : a.ref_type === "job" ? "/operations" : a.ref_type === "schedule" ? "/schedule" : null,
     })),
     ...(money.data ?? []).map((a): MergedAlert => ({
       key: `payment:${a.id}`, source: "payment", id: a.id, kind: a.kind, title: a.kind,

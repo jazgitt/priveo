@@ -107,6 +107,9 @@ class CalendarView:
             visit.date + timedelta(days=MAKE_UP_DAYS),
         )
         later_jobs = self._jobs_by_visit(later)
+        for lv in later:
+            if any(j.source_job_id in {m.id for m in missed} for j in later_jobs[lv.id]):
+                return None, lv.date
         other = [j for j in missed if j.service != "Cleaning-External"]
         if other:
             interior = ctx.sub.interior_day if ctx.sub else None
@@ -127,17 +130,24 @@ class CalendarView:
                             return None, lv.date
             return None, None
         for lv in later:
-            if lv.status not in ("Skipped", "Missed"):
-                return lv.date, None
-        for n in range(1, MAKE_UP_DAYS + 1):
-            d = visit.date + timedelta(days=n)
-            if (
-                d > today
-                and day_services(ctx.sub, d)
-                and d not in ctx.paused
-                and d not in ctx.skips
+            if lv.date == visit.date + timedelta(days=1) and any(
+                j.service == "Cleaning-External" and j.status not in ("Skipped", "Missed")
+                for j in later_jobs[lv.id]
             ):
-                return d, None
+                return lv.date, None
+        d = visit.date + timedelta(days=1)
+        actual_exterior = any(
+            lv.date == d and any(j.service == "Cleaning-External" for j in later_jobs[lv.id])
+            for lv in later
+        )
+        if (
+            not actual_exterior
+            and d > today
+            and day_services(ctx.sub, d)
+            and d not in ctx.paused
+            and d not in ctx.skips
+        ):
+            return d, None
         return None, None
 
     @staticmethod

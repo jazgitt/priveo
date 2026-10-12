@@ -4,7 +4,7 @@ A subscription car-care service for housing societies. A customer pays per vehic
 
 The repository includes a FastAPI backend, a Flutter customer/crew app and a React admin portal. Development is on `integration/complete-build`; `main` does not yet contain all integrated work. See [the current handoff and remaining implementation plan](docs/codex-handoff-plan.md) for progress, verification and remaining gaps.
 
-Steps 1–3 are implemented locally: recovered email/manager work, customer administration and additional vehicles, and Deep Spa/scheduling integration. Migration head: `0022`. Operations and admin quick actions are the next milestone. These changes have not been committed or deployed.
+Steps 1–3 are committed and pushed as `a296d3a`: recovered email/manager work, customer administration and additional vehicles, and Deep Spa/scheduling integration. Step 4 adds validated operations outcomes and mobile admin quick actions on the integration branch. Migration head: `0023`. Customer presentation and external services (Step 5) are next. These branch changes have not been deployed.
 
 ## Requirements
 

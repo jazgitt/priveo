@@ -57,6 +57,19 @@ class JobReassignment(Base):
     at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
+class OperationsDecision(Base):
+    """Resolution of one job, preserving its original failure and proof."""
+
+    __tablename__ = "operations_decisions"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), unique=True)
+    action: Mapped[str] = mapped_column(String(16))
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    by_login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"))
+    at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
 class CrewPhoto(Base):
     """A crew member's profile photo: a confirmed upload (CRW-PRF-02)."""
 

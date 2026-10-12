@@ -3193,7 +3193,7 @@ abstract class AppLocalizations {
   /// No description provided for @addVehicleRcUploaded.
   ///
   /// In en, this message translates to:
-  /// **'RC uploaded · Replace'**
+  /// **'RC uploaded Â· Replace'**
   String get addVehicleRcUploaded;
 
   /// No description provided for @addVehicleRcLimit.
@@ -3297,6 +3297,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View service details'**
   String get addonViewProof;
+
+  /// No description provided for @adminCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers'**
+  String get adminCustomers;
+
+  /// No description provided for @adminCustomerSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name, mobile, registration or society'**
+  String get adminCustomerSearch;
+
+  /// No description provided for @adminNoCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'No customers found.'**
+  String get adminNoCustomers;
+
+  /// No description provided for @adminCustomerDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer details'**
+  String get adminCustomerDetails;
+
+  /// No description provided for @adminEmailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified'**
+  String get adminEmailVerified;
+
+  /// No description provided for @adminYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get adminYes;
+
+  /// No description provided for @adminNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get adminNo;
+
+  /// No description provided for @adminFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'From date'**
+  String get adminFromDate;
+
+  /// No description provided for @adminToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'To date'**
+  String get adminToDate;
+
+  /// No description provided for @adminSkipDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip date'**
+  String get adminSkipDate;
+
+  /// No description provided for @adminPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get adminPause;
+
+  /// No description provided for @adminRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewal'**
+  String get adminRenewal;
+
+  /// No description provided for @adminUnskip.
+  ///
+  /// In en, this message translates to:
+  /// **'Un-skip'**
+  String get adminUnskip;
+
+  /// No description provided for @adminEndPause.
+  ///
+  /// In en, this message translates to:
+  /// **'End pause'**
+  String get adminEndPause;
+
+  /// No description provided for @adminOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations'**
+  String get adminOperations;
+
+  /// No description provided for @adminQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get adminQueue;
+
+  /// No description provided for @adminMissedJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed jobs'**
+  String get adminMissedJobs;
+
+  /// No description provided for @adminScheduledWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled work'**
+  String get adminScheduledWork;
+
+  /// No description provided for @adminOutcomeHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution history'**
+  String get adminOutcomeHistory;
+
+  /// No description provided for @adminSocietyFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Society filter'**
+  String get adminSocietyFilter;
+
+  /// No description provided for @adminAllSocieties.
+  ///
+  /// In en, this message translates to:
+  /// **'All societies'**
+  String get adminAllSocieties;
+
+  /// No description provided for @adminFailureReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure reason'**
+  String get adminFailureReason;
+
+  /// No description provided for @adminAllReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'All reasons'**
+  String get adminAllReasons;
+
+  /// No description provided for @adminClearDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear dates'**
+  String get adminClearDates;
+
+  /// No description provided for @adminNoJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs match these filters.'**
+  String get adminNoJobs;
+
+  /// No description provided for @adminMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get adminMissed;
+
+  /// No description provided for @adminUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get adminUnassigned;
+
+  /// No description provided for @adminCoveredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Covered by the next dayâ€™s regular Exterior service on'**
+  String get adminCoveredOn;
+
+  /// No description provided for @adminRescheduledOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescheduled on'**
+  String get adminRescheduledOn;
+
+  /// No description provided for @adminAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned'**
+  String get adminAssigned;
+
+  /// No description provided for @adminNeedsAssignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminNeedsAssignment;
+
+  /// No description provided for @adminOperationsReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations reason'**
+  String get adminOperationsReason;
+
+  /// No description provided for @adminOptionalReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason selected'**
+  String get adminOptionalReason;
+
+  /// No description provided for @adminOutcomeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome note'**
+  String get adminOutcomeNote;
+
+  /// No description provided for @adminExteriorExtension.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping adds one day to the plan and moves unpaid renewal dates.'**
+  String get adminExteriorExtension;
+
+  /// No description provided for @adminSpaSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping does not extend the plan. Handle any refund or rebooking separately.'**
+  String get adminSpaSkip;
+
+  /// No description provided for @adminInteriorSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping loses this Interior service and does not extend the plan.'**
+  String get adminInteriorSkip;
+
+  /// No description provided for @adminSkipJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip job by operations'**
+  String get adminSkipJob;
+
+  /// No description provided for @adminRetryNextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule for next day'**
+  String get adminRetryNextDay;
+
+  /// No description provided for @adminSkipVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip remaining jobs on this visit'**
+  String get adminSkipVisit;
+
+  /// No description provided for @adminCrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew'**
+  String get adminCrew;
+
+  /// No description provided for @adminNoCrew.
+  ///
+  /// In en, this message translates to:
+  /// **'No crew found.'**
+  String get adminNoCrew;
+
+  /// No description provided for @adminAddException.
+  ///
+  /// In en, this message translates to:
+  /// **'Add crew exception'**
+  String get adminAddException;
+
+  /// No description provided for @adminExceptionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Exception type'**
+  String get adminExceptionType;
+
+  /// No description provided for @adminSick.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick'**
+  String get adminSick;
+
+  /// No description provided for @adminLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get adminLeave;
+
+  /// No description provided for @adminLateStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start'**
+  String get adminLateStart;
+
+  /// No description provided for @adminStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get adminStartTime;
+
+  /// No description provided for @adminSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get adminSave;
+
+  /// No description provided for @adminAddonRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Add-on requests'**
+  String get adminAddonRequests;
+
+  /// No description provided for @adminStatusFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Status filter'**
+  String get adminStatusFilter;
+
+  /// No description provided for @adminAllStatuses.
+  ///
+  /// In en, this message translates to:
+  /// **'All statuses'**
+  String get adminAllStatuses;
+
+  /// No description provided for @adminNoAddons.
+  ///
+  /// In en, this message translates to:
+  /// **'No add-on requests.'**
+  String get adminNoAddons;
+
+  /// No description provided for @adminStandaloneRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Standalone request'**
+  String get adminStandaloneRequest;
+
+  /// No description provided for @adminChangeRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Change requested'**
+  String get adminChangeRequested;
+
+  /// No description provided for @adminCheckins.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly check-in results'**
+  String get adminCheckins;
+
+  /// No description provided for @adminNoCheckins.
+  ///
+  /// In en, this message translates to:
+  /// **'No check-in results.'**
+  String get adminNoCheckins;
+
+  /// No description provided for @adminOperationsForDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations for this day'**
+  String get adminOperationsForDay;
 }
 
 class _AppLocalizationsDelegate

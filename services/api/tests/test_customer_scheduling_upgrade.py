@@ -90,6 +90,10 @@ def test_existing_societies_and_addon_proof_survive_upgrade(tmp_path):
     metadata.clear()
     metadata.reflect(bind=engine)
     with engine.connect() as conn:
+        for table_name, model_table in Base.metadata.tables.items():
+            assert set(metadata.tables[table_name].columns.keys()) == set(
+                model_table.columns.keys()
+            )
         vehicles, jobs, visits = (metadata.tables[t] for t in ("vehicles", "jobs", "visits"))
         assert (
             conn.scalar(sa.select(vehicles.c.society_id).where(vehicles.c.id == vehicle)) == society

@@ -1,5 +1,7 @@
 """Plan extension for a visit skipped by operations (ADM-OPS-03)."""
+
 import uuid
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,7 +25,27 @@ def extend_for_skipped_job(db: Session, job: Job, by_login_id: uuid.UUID) -> boo
     # A vehicle with no subscription has no plan to extend.
     if sub is None:
         return False
-    db.add(PlanExtension(vehicle_id=visit.vehicle_id, job_id=job.id, on_date=visit.date,
-                         by_login_id=by_login_id))
+    db.add(
+        PlanExtension(
+            vehicle_id=visit.vehicle_id, job_id=job.id, on_date=visit.date, by_login_id=by_login_id
+        )
+    )
     db.flush()
+    from app.billing.models import Payment
+
+    for payment in db.scalars(
+        select(Payment).where(
+            Payment.subscription_id == sub.id,
+            Payment.kind == "Plan",
+            Payment.status != "Received",
+            Payment.voided_at.is_(None),
+            Payment.cycle_start >= visit.date,
+        )
+    ):
+        payment.cycle_start += timedelta(days=1)
+        if payment.cycle_end:
+            payment.cycle_end += timedelta(days=1)
+        payment.due_date += timedelta(days=1)
+        if payment.overdue_since:
+            payment.overdue_since += timedelta(days=1)
     return True

@@ -115,6 +115,9 @@ class Job(Base):
     addon_booking_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("addon_bookings.id"), index=True
     )
+    source_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("jobs.id"), unique=True
+    )
     # Set when the admin placed or removed it by hand. A re-run keeps it (ADM-SCH-14).
     manual: Mapped[bool] = mapped_column(Boolean, default=False)
     # Placed, but it finishes after the customer's cutoff time (ADM-SCH-07).

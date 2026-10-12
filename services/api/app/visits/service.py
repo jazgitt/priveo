@@ -1,13 +1,13 @@
 """The crew's work on jobs. Visits, jobs and their statuses belong to the
 scheduling module: this reads its tables and changes a status only through
 `app.scheduling.service.set_job_status`."""
+
 import uuid
 from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.changes.extension import extend_for_skipped_job
 from app.customers.models import Vehicle
 from app.directory import lookup
 from app.directory.models import Society
@@ -38,6 +38,7 @@ JOB_CLOSED = ("Completed", "Skipped", "Could not complete")
 
 
 # ---- Who can see what ---------------------------------------------------------
+
 
 def crew_of(db: Session, login_id: uuid.UUID) -> SchedulingCrew | None:
     return db.scalar(select(SchedulingCrew).where(SchedulingCrew.login_id == login_id))
@@ -70,8 +71,11 @@ def _job_row(db: Session, job_id: str) -> tuple[Job, Visit, Schedule]:
     row = None
     if key is not None:
         row = db.execute(
-            select(Job, Visit, Schedule).join(Visit, Visit.id == Job.visit_id)
-            .join(Schedule, Schedule.id == Visit.schedule_id).where(Job.id == key)).first()
+            select(Job, Visit, Schedule)
+            .join(Visit, Visit.id == Job.visit_id)
+            .join(Schedule, Schedule.id == Visit.schedule_id)
+            .where(Job.id == key)
+        ).first()
     # A draft schedule is not shown to the crew (CRW-SCH-11).
     if row is None or row[2].status != "Frozen":
         raise ApiError("not_found", "This job was not found.", 404)
@@ -96,26 +100,51 @@ def managed_job(db: Session, login_id: uuid.UUID, job_id: str) -> Job:
 
 # ---- Cards ---------------------------------------------------------------------
 
+
 def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
     if not jobs:
         return []
-    visits = {v.id: v for v in db.scalars(
-        select(Visit).where(Visit.id.in_({j.visit_id for j in jobs})))}
-    vehicles = {v.id: v for v in db.scalars(
-        select(Vehicle).where(Vehicle.id.in_({v.vehicle_id for v in visits.values()})))}
-    schedules = {sc.id: sc for sc in db.scalars(
-        select(Schedule).where(Schedule.id.in_({v.schedule_id for v in visits.values()})))}
-    societies = {so.id: so.name for so in db.scalars(
-        select(Society).where(Society.id.in_({sc.society_id for sc in schedules.values()})))}
+    visits = {
+        v.id: v for v in db.scalars(select(Visit).where(Visit.id.in_({j.visit_id for j in jobs})))
+    }
+    vehicles = {
+        v.id: v
+        for v in db.scalars(
+            select(Vehicle).where(Vehicle.id.in_({v.vehicle_id for v in visits.values()}))
+        )
+    }
+    schedules = {
+        sc.id: sc
+        for sc in db.scalars(
+            select(Schedule).where(Schedule.id.in_({v.schedule_id for v in visits.values()}))
+        )
+    }
+    societies = {
+        so.id: so.name
+        for so in db.scalars(
+            select(Society).where(Society.id.in_({sc.society_id for sc in schedules.values()}))
+        )
+    }
     checked: dict[uuid.UUID, int] = {}
-    for (job_id,) in db.execute(select(JobChecklistProgress.job_id)
-                                .where(JobChecklistProgress.job_id.in_({j.id for j in jobs}))):
+    for (job_id,) in db.execute(
+        select(JobChecklistProgress.job_id).where(
+            JobChecklistProgress.job_id.in_({j.id for j in jobs})
+        )
+    ):
         checked[job_id] = checked.get(job_id, 0) + 1
     crew_ids = {j.crew_id for j in jobs if j.crew_id}
-    names = {c.id: n for c, n in db.execute(
-        select(SchedulingCrew, Login.display_name)
-        .join(Login, Login.id == SchedulingCrew.login_id)
-        .where(SchedulingCrew.id.in_(crew_ids)))} if crew_ids else {}
+    names = (
+        {
+            c.id: n
+            for c, n in db.execute(
+                select(SchedulingCrew, Login.display_name)
+                .join(Login, Login.id == SchedulingCrew.login_id)
+                .where(SchedulingCrew.id.in_(crew_ids))
+            )
+        }
+        if crew_ids
+        else {}
+    )
 
     photos = vehicle_photo_urls(db, get_object_store(), vehicles.keys())
 
@@ -124,29 +153,46 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
         visit = visits[job.visit_id]
         vehicle = vehicles[visit.vehicle_id]
         parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
-        cards.append(s.CrewJobCard(
-            id=str(job.id), visit_id=str(visit.id), visit_status=visit.status,
-            date=visit.date, service=job.service, status=job.status,
-            vehicle=s.VehicleInfo(id=str(vehicle.id), registration=vehicle.registration or "",
-                                  make=vehicle.make, model=vehicle.model,
-                                  category=vehicle.category,
-                                  photo_url=photos.get(vehicle.id)),
-            society=societies.get(schedules[visit.schedule_id].society_id, ""),
-            parking=parking, start_time=rules.hhmm(job.start_minute),
-            finish_by=rules.hhmm(job.finish_by_minute),
-            checklist_total=len(lookup.checklist_for(db, job.service)),
-            checklist_done=checked.get(job.id, 0),
-            assigned_to=(s.CrewRef(id=str(job.crew_id), name=names.get(job.crew_id, ""))
-                         if job.crew_id else None)))
+        cards.append(
+            s.CrewJobCard(
+                id=str(job.id),
+                visit_id=str(visit.id),
+                visit_status=visit.status,
+                date=visit.date,
+                service=job.service,
+                status=job.status,
+                vehicle=s.VehicleInfo(
+                    id=str(vehicle.id),
+                    registration=vehicle.registration or "",
+                    make=vehicle.make,
+                    model=vehicle.model,
+                    category=vehicle.category,
+                    photo_url=photos.get(vehicle.id),
+                ),
+                society=societies.get(schedules[visit.schedule_id].society_id, ""),
+                parking=parking,
+                start_time=rules.hhmm(job.start_minute),
+                finish_by=rules.hhmm(job.finish_by_minute),
+                checklist_total=len(lookup.checklist_for(db, job.service)),
+                checklist_done=checked.get(job.id, 0),
+                assigned_to=(
+                    s.CrewRef(id=str(job.crew_id), name=names.get(job.crew_id, ""))
+                    if job.crew_id
+                    else None
+                ),
+            )
+        )
     return cards
 
 
 def _jobs_where(db: Session, *where) -> list[Job]:
-    q = (select(Job).join(Visit, Visit.id == Job.visit_id)
-         .join(Schedule, Schedule.id == Visit.schedule_id)
-         .where(Schedule.status == "Frozen", *where)
-         .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Job.service,
-                   Job.id))
+    q = (
+        select(Job)
+        .join(Visit, Visit.id == Job.visit_id)
+        .join(Schedule, Schedule.id == Visit.schedule_id)
+        .where(Schedule.status == "Frozen", *where)
+        .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Job.service, Job.id)
+    )
     return list(db.scalars(q))
 
 
@@ -164,15 +210,21 @@ def list_jobs(db: Session, login_id: uuid.UUID, day: date | None) -> s.VisitList
     if me is not None:
         society = db.scalar(select(Society.name).where(Society.id == me.society_id)) or ""
     done = sum(1 for c in cards if c.status in JOB_CLOSED)
-    return s.VisitList(date=day, society=society, total=len(cards), done=done,
-                       left=len(cards) - done, jobs=cards)
+    return s.VisitList(
+        date=day, society=society, total=len(cards), done=done, left=len(cards) - done, jobs=cards
+    )
 
 
 # ---- One job -------------------------------------------------------------------
 
+
 def _progress(db: Session, job: Job) -> dict[str, JobChecklistProgress]:
-    return {p.item_key: p for p in db.scalars(
-        select(JobChecklistProgress).where(JobChecklistProgress.job_id == job.id))}
+    return {
+        p.item_key: p
+        for p in db.scalars(
+            select(JobChecklistProgress).where(JobChecklistProgress.job_id == job.id)
+        )
+    }
 
 
 def _missing(db: Session, job: Job, progress: dict, counts: dict[str, int]) -> list[str]:
@@ -181,49 +233,73 @@ def _missing(db: Session, job: Job, progress: dict, counts: dict[str, int]) -> l
     if left:
         missing.append(f"{left} checklist item{'s' if left != 1 else ''} not checked")
     need_photos, need_videos = lookup.proof_minimums(db, job.service)
-    for kind, need, have in (("photo", need_photos, counts["photos"]),
-                             ("video", need_videos, counts["videos"])):
+    for kind, need, have in (
+        ("photo", need_photos, counts["photos"]),
+        ("video", need_videos, counts["videos"]),
+    ):
         if have < need:
             n = need - have
             missing.append(f"{n} more {kind}{'s' if n != 1 else ''} to upload")
     if counts["pending"]:
-        missing.append(f"{counts['pending']} upload{'s' if counts['pending'] != 1 else ''} "
-                       "not confirmed yet")
+        missing.append(
+            f"{counts['pending']} upload{'s' if counts['pending'] != 1 else ''} not confirmed yet"
+        )
     return missing
 
 
 def job_detail(db: Session, job: Job) -> s.JobDetail:
     progress = _progress(db, job)
     counts = proof_counts(db, job.id)
-    uploads = list(db.scalars(
-        select(MediaUpload).where(MediaUpload.job_id == job.id, MediaUpload.purpose == "proof")
-        .order_by(MediaUpload.created_at)))
+    uploads = list(
+        db.scalars(
+            select(MediaUpload)
+            .where(MediaUpload.job_id == job.id, MediaUpload.purpose == "proof")
+            .order_by(MediaUpload.created_at)
+        )
+    )
     outcome = db.scalar(select(JobOutcome).where(JobOutcome.job_id == job.id))
     timing = db.get(JobTiming, job.id)
     missing = _missing(db, job, progress, counts)
     photos, videos = lookup.proof_minimums(db, job.service)
     items = [(i.key, i.label) for i in lookup.checklist_for(db, job.service)]
     # An item the admin switched off after it was ticked stays on the job.
-    items += [(key, lookup.checklist_label(db, job.service, key) or key)
-              for key in progress if key not in {k for k, _ in items}]
+    items += [
+        (key, lookup.checklist_label(db, job.service, key) or key)
+        for key in progress
+        if key not in {k for k, _ in items}
+    ]
     return s.JobDetail(
         job=_cards(db, [job])[0],
-        checklist=[s.ChecklistItem(id=key, label=label,
-                                   checked_at=progress[key].checked_at if key in progress
-                                   else None)
-                   for key, label in items],
+        checklist=[
+            s.ChecklistItem(
+                id=key,
+                label=label,
+                checked_at=progress[key].checked_at if key in progress else None,
+            )
+            for key, label in items
+        ],
         requirements=s.Requirements(
-            photos_required=photos, videos_required=videos,
-            photos_confirmed=counts["photos"], videos_confirmed=counts["videos"],
-            pending_uploads=counts["pending"]),
-        uploads=[s.UploadInfo(id=str(u.id), kind=u.kind, stage=u.stage, status=u.status)
-                 for u in uploads],
+            photos_required=photos,
+            videos_required=videos,
+            photos_confirmed=counts["photos"],
+            videos_confirmed=counts["videos"],
+            pending_uploads=counts["pending"],
+        ),
+        uploads=[
+            s.UploadInfo(id=str(u.id), kind=u.kind, stage=u.stage, status=u.status) for u in uploads
+        ],
         missing=missing,
         can_complete=job.status not in JOB_CLOSED and not missing,
-        outcome=(s.Outcome(kind=outcome.kind, reason_key=outcome.reason_key,
-                           note=outcome.note, at=outcome.at) if outcome else None),
+        outcome=(
+            s.Outcome(
+                kind=outcome.kind, reason_key=outcome.reason_key, note=outcome.note, at=outcome.at
+            )
+            if outcome
+            else None
+        ),
         started_at=timing.started_at if timing else None,
-        finished_at=timing.finished_at if timing else None)
+        finished_at=timing.finished_at if timing else None,
+    )
 
 
 def _open_job(job: Job) -> None:
@@ -251,13 +327,15 @@ def start_job(db: Session, job: Job) -> Job:
     return set_job_status(db, job.id, "In progress")
 
 
-def set_checked(db: Session, job: Job, item_key: str, checked: bool,
-                login_id: uuid.UUID) -> None:
+def set_checked(db: Session, job: Job, item_key: str, checked: bool, login_id: uuid.UUID) -> None:
     _open_job(job)
     if item_key not in {i.key for i in lookup.checklist_for(db, job.service)}:
         raise ApiError("not_found", "This checklist item was not found.", 404)
-    row = db.scalar(select(JobChecklistProgress).where(
-        JobChecklistProgress.job_id == job.id, JobChecklistProgress.item_key == item_key))
+    row = db.scalar(
+        select(JobChecklistProgress).where(
+            JobChecklistProgress.job_id == job.id, JobChecklistProgress.item_key == item_key
+        )
+    )
     # Ticking again keeps the first time. A Member and their Trainee see the
     # same ticks (CRW-SCH-12).
     if checked and row is None:
@@ -278,51 +356,79 @@ def complete_job(db: Session, job: Job) -> Job:
     _open_job(job)
     missing = _missing(db, job, _progress(db, job), proof_counts(db, job.id))
     if missing:
-        raise ApiError("job_not_ready", "This job cannot be completed yet.", 409,
-                       {f"missing_{i + 1}": m for i, m in enumerate(missing)})
+        raise ApiError(
+            "job_not_ready",
+            "This job cannot be completed yet.",
+            409,
+            {f"missing_{i + 1}": m for i, m in enumerate(missing)},
+        )
     _stamp(db, job, finished=True)
     return set_job_status(db, job.id, "Completed")
 
 
 def _check_reason(db: Session, body: s.CouldNotComplete, job: Job) -> uuid.UUID | None:
     if body.reason_key not in lookup.reason_keys(db):
-        raise ApiError("validation_failed", "Please choose a reason.", 422,
-                       {"reason_key": "Choose a reason from the list."})
+        raise ApiError(
+            "validation_failed",
+            "Please choose a reason.",
+            422,
+            {"reason_key": "Choose a reason from the list."},
+        )
     if body.upload_id is None:
         return None
     try:
         upload = db.get(MediaUpload, uuid.UUID(body.upload_id))
     except ValueError:
         upload = None
-    if (upload is None or upload.job_id != job.id or upload.purpose != "reason"
-            or upload.status != STATUS_CONFIRMED):
-        raise ApiError("validation_failed", "The photo is not ready.", 422,
-                       {"upload_id": "Upload the photo first."})
+    if (
+        upload is None
+        or upload.job_id != job.id
+        or upload.purpose != "reason"
+        or upload.status != STATUS_CONFIRMED
+    ):
+        raise ApiError(
+            "validation_failed",
+            "The photo is not ready.",
+            422,
+            {"upload_id": "Upload the photo first."},
+        )
     return upload.id
 
 
-def could_not_complete(db: Session, job: Job, body: s.CouldNotComplete,
-                       by: uuid.UUID) -> Job:
+def could_not_complete(db: Session, job: Job, body: s.CouldNotComplete, by: uuid.UUID) -> Job:
     """CRW-CNC-01 to CRW-CNC-04. The other jobs of the visit are not affected."""
     _open_job(job)
     upload_id = _check_reason(db, body, job)
-    db.add(JobOutcome(job_id=job.id, kind="could_not_complete", reason_key=body.reason_key,
-                      note=body.note.strip(), upload_id=upload_id, by_login_id=by))
+    db.add(
+        JobOutcome(
+            job_id=job.id,
+            kind="could_not_complete",
+            reason_key=body.reason_key,
+            note=body.note.strip(),
+            upload_id=upload_id,
+            by_login_id=by,
+        )
+    )
     _stamp(db, job, finished=True)
     return set_job_status(db, job.id, "Could not complete")
 
 
 # ---- Manager --------------------------------------------------------------------
 
+
 def manager_schedule(db: Session, manager: SchedulingCrew, day: date) -> s.ManagerSchedule:
     """CRW-MGR-01: the whole society's schedule, read-only, by crew member."""
-    cards = _cards(db, _jobs_where(db, Schedule.society_id == manager.society_id,
-                                   Visit.date == day))
-    team = list(db.execute(
-        select(SchedulingCrew, Login.display_name)
-        .join(Login, Login.id == SchedulingCrew.login_id)
-        .where(SchedulingCrew.society_id == manager.society_id, SchedulingCrew.active)
-        .order_by(Login.display_name)).all())
+    cards = _cards(
+        db, _jobs_where(db, Schedule.society_id == manager.society_id, Visit.date == day)
+    )
+    team = list(
+        db.execute(
+            select(SchedulingCrew, Login.display_name)
+            .join(Login, Login.id == SchedulingCrew.login_id)
+            .where(SchedulingCrew.society_id == manager.society_id, SchedulingCrew.active)
+            .order_by(Login.display_name)
+        ).all()
+    )
     by_owner: dict[str, list[s.CrewJobCard]] = {}
     unassigned = []
     for card in cards:
@@ -330,9 +436,10 @@ def manager_schedule(db: Session, manager: SchedulingCrew, day: date) -> s.Manag
             unassigned.append(card)
         else:
             by_owner.setdefault(card.assigned_to.id, []).append(card)
-    crew = [s.TeamMember(id=str(c.id), name=name, role=c.role,
-                         jobs=by_owner.pop(str(c.id), []))
-            for c, name in team]
+    crew = [
+        s.TeamMember(id=str(c.id), name=name, role=c.role, jobs=by_owner.pop(str(c.id), []))
+        for c, name in team
+    ]
     society = db.scalar(select(Society.name).where(Society.id == manager.society_id)) or ""
     return s.ManagerSchedule(date=day, society=society, crew=crew, unassigned=unassigned)
 
@@ -340,16 +447,16 @@ def manager_schedule(db: Session, manager: SchedulingCrew, day: date) -> s.Manag
 def manager_skip(db: Session, job: Job, by: uuid.UUID) -> Job:
     """CRW-MGR-02: skipped by operations. The customer notification and the
     plan extension belong to other modules."""
-    _open_job(job)
-    db.add(JobOutcome(job_id=job.id, kind="skipped", reason_key=None, by_login_id=by))
-    # ADM-OPS-03: a skipped Cleaning-External job adds one day to the plan.
-    # The row is saved with the status change below.
-    extend_for_skipped_job(db, job, by)
-    return set_job_status(db, job.id, "Skipped")
+    from app.visits.operations import Resolution, skip_job
+
+    if job.status != "Could not complete":
+        _open_job(job)
+    return skip_job(db, job, Resolution(action="Skip"), by)
 
 
-def manager_reassign(db: Session, job: Job, manager: SchedulingCrew, crew_id: str,
-                     by: uuid.UUID) -> Job:
+def manager_reassign(
+    db: Session, job: Job, manager: SchedulingCrew, crew_id: str, by: uuid.UUID
+) -> Job:
     """CRW-MGR-03: to another Member or Manager of the same society who is
     working that day, within their hours and with no other job at that time.
     A Trainee follows their Member without any change here."""
@@ -366,8 +473,11 @@ def manager_reassign(db: Session, job: Job, manager: SchedulingCrew, crew_id: st
     if problem is not None:
         raise ApiError(problem[0], problem[1], 409)
     manager_checks.apply_start(db, job, visit, target)
-    db.add(JobReassignment(job_id=job.id, from_crew_id=job.crew_id, to_crew_id=target.id,
-                           by_login_id=by))
+    db.add(
+        JobReassignment(
+            job_id=job.id, from_crew_id=job.crew_id, to_crew_id=target.id, by_login_id=by
+        )
+    )
     job.crew_id = target.id
     job.manual = True
     db.commit()
@@ -379,9 +489,13 @@ def crew_options(db: Session, manager: SchedulingCrew) -> list[s.CrewRef]:
     rows = db.execute(
         select(SchedulingCrew.id, Login.display_name)
         .join(Login, Login.id == SchedulingCrew.login_id)
-        .where(SchedulingCrew.society_id == manager.society_id, SchedulingCrew.active,
-               SchedulingCrew.role.in_(("Member", "Manager")))
-        .order_by(Login.display_name)).all()
+        .where(
+            SchedulingCrew.society_id == manager.society_id,
+            SchedulingCrew.active,
+            SchedulingCrew.role.in_(("Member", "Manager")),
+        )
+        .order_by(Login.display_name)
+    ).all()
     return [s.CrewRef(id=str(i), name=n) for i, n in rows]
 
 
@@ -389,13 +503,15 @@ def crew_options(db: Session, manager: SchedulingCrew) -> list[s.CrewRef]:
 # The profile itself (name, society, role, hours) is GET /v1/crew/profile of the
 # crew module. This adds the photo (CRW-PRF-02).
 
+
 def photo_state(db: Session, login_id: uuid.UUID) -> s.PhotoState:
     row = db.get(CrewPhoto, login_id)
     if row is None:
         return s.PhotoState(upload_id=None, url=None)
     # A signed read URL for the profile screen (CRW-PRF-01).
-    return s.PhotoState(upload_id=str(row.upload_id),
-                        url=profile_photo_url(db, get_object_store(), row.upload_id))
+    return s.PhotoState(
+        upload_id=str(row.upload_id), url=profile_photo_url(db, get_object_store(), row.upload_id)
+    )
 
 
 def set_profile_photo(db: Session, login_id: uuid.UUID, upload_id: str) -> s.PhotoState:
@@ -403,10 +519,18 @@ def set_profile_photo(db: Session, login_id: uuid.UUID, upload_id: str) -> s.Pho
         upload = db.get(MediaUpload, uuid.UUID(upload_id))
     except ValueError:
         upload = None
-    if (upload is None or upload.owner_login_id != login_id or upload.purpose != "profile"
-            or upload.status != STATUS_CONFIRMED):
-        raise ApiError("validation_failed", "The photo is not ready.", 422,
-                       {"upload_id": "Upload the photo first."})
+    if (
+        upload is None
+        or upload.owner_login_id != login_id
+        or upload.purpose != "profile"
+        or upload.status != STATUS_CONFIRMED
+    ):
+        raise ApiError(
+            "validation_failed",
+            "The photo is not ready.",
+            422,
+            {"upload_id": "Upload the photo first."},
+        )
     row = db.get(CrewPhoto, login_id)
     if row is None:
         db.add(CrewPhoto(login_id=login_id, upload_id=upload.id))
@@ -414,4 +538,3 @@ def set_profile_photo(db: Session, login_id: uuid.UUID, upload_id: str) -> s.Pho
         row.upload_id = upload.id
     db.commit()
     return photo_state(db, login_id)
-

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../routes_paths.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/widgets.dart';
@@ -85,9 +87,14 @@ class AlertsScreen extends ConsumerWidget {
                       ].join('\n'),
                     ),
                     isThreeLine: a.body.isNotEmpty,
-                    onTap: a.read
-                        ? null
-                        : () => _run(context, ref, () => repo.markRead(a.id)),
+                    onTap: () async {
+                      if (!a.read) {
+                        await _run(context, ref, () => repo.markRead(a.id));
+                      }
+                      if (context.mounted && a.refType == 'job') {
+                        context.push(AdminQuickPaths.operations);
+                      }
+                    },
                   ),
                 ),
             ],

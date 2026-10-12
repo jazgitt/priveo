@@ -1726,7 +1726,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addVehicleRc => 'Upload RC document (optional)';
 
   @override
-  String get addVehicleRcUploaded => 'RC uploaded · Replace';
+  String get addVehicleRcUploaded => 'RC uploaded Â· Replace';
 
   @override
   String get addVehicleRcLimit =>
@@ -1781,4 +1781,183 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addonViewProof => 'View service details';
+
+  @override
+  String get adminCustomers => 'Customers';
+
+  @override
+  String get adminCustomerSearch =>
+      'Search name, mobile, registration or society';
+
+  @override
+  String get adminNoCustomers => 'No customers found.';
+
+  @override
+  String get adminCustomerDetails => 'Customer details';
+
+  @override
+  String get adminEmailVerified => 'Email verified';
+
+  @override
+  String get adminYes => 'Yes';
+
+  @override
+  String get adminNo => 'No';
+
+  @override
+  String get adminFromDate => 'From date';
+
+  @override
+  String get adminToDate => 'To date';
+
+  @override
+  String get adminSkipDate => 'Skip date';
+
+  @override
+  String get adminPause => 'Pause';
+
+  @override
+  String get adminRenewal => 'Renewal';
+
+  @override
+  String get adminUnskip => 'Un-skip';
+
+  @override
+  String get adminEndPause => 'End pause';
+
+  @override
+  String get adminOperations => 'Operations';
+
+  @override
+  String get adminQueue => 'Queue';
+
+  @override
+  String get adminMissedJobs => 'Missed jobs';
+
+  @override
+  String get adminScheduledWork => 'Scheduled work';
+
+  @override
+  String get adminOutcomeHistory => 'Resolution history';
+
+  @override
+  String get adminSocietyFilter => 'Society filter';
+
+  @override
+  String get adminAllSocieties => 'All societies';
+
+  @override
+  String get adminFailureReason => 'Failure reason';
+
+  @override
+  String get adminAllReasons => 'All reasons';
+
+  @override
+  String get adminClearDates => 'Clear dates';
+
+  @override
+  String get adminNoJobs => 'No jobs match these filters.';
+
+  @override
+  String get adminMissed => 'Missed';
+
+  @override
+  String get adminUnassigned => 'Unassigned';
+
+  @override
+  String get adminCoveredOn =>
+      'Covered by the next dayâ€™s regular Exterior service on';
+
+  @override
+  String get adminRescheduledOn => 'Rescheduled on';
+
+  @override
+  String get adminAssigned => 'Assigned';
+
+  @override
+  String get adminNeedsAssignment => 'Needs scheduling';
+
+  @override
+  String get adminOperationsReason => 'Operations reason';
+
+  @override
+  String get adminOptionalReason => 'No reason selected';
+
+  @override
+  String get adminOutcomeNote => 'Outcome note';
+
+  @override
+  String get adminExteriorExtension =>
+      'Skipping adds one day to the plan and moves unpaid renewal dates.';
+
+  @override
+  String get adminSpaSkip =>
+      'Skipping does not extend the plan. Handle any refund or rebooking separately.';
+
+  @override
+  String get adminInteriorSkip =>
+      'Skipping loses this Interior service and does not extend the plan.';
+
+  @override
+  String get adminSkipJob => 'Skip job by operations';
+
+  @override
+  String get adminRetryNextDay => 'Reschedule for next day';
+
+  @override
+  String get adminSkipVisit => 'Skip remaining jobs on this visit';
+
+  @override
+  String get adminCrew => 'Crew';
+
+  @override
+  String get adminNoCrew => 'No crew found.';
+
+  @override
+  String get adminAddException => 'Add crew exception';
+
+  @override
+  String get adminExceptionType => 'Exception type';
+
+  @override
+  String get adminSick => 'Sick';
+
+  @override
+  String get adminLeave => 'Leave';
+
+  @override
+  String get adminLateStart => 'Late start';
+
+  @override
+  String get adminStartTime => 'Start time';
+
+  @override
+  String get adminSave => 'Save';
+
+  @override
+  String get adminAddonRequests => 'Add-on requests';
+
+  @override
+  String get adminStatusFilter => 'Status filter';
+
+  @override
+  String get adminAllStatuses => 'All statuses';
+
+  @override
+  String get adminNoAddons => 'No add-on requests.';
+
+  @override
+  String get adminStandaloneRequest => 'Standalone request';
+
+  @override
+  String get adminChangeRequested => 'Change requested';
+
+  @override
+  String get adminCheckins => 'Monthly check-in results';
+
+  @override
+  String get adminNoCheckins => 'No check-in results.';
+
+  @override
+  String get adminOperationsForDay => 'Operations for this day';
 }

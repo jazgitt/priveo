@@ -45,6 +45,7 @@ class Demand:
     # created as Skipped, as it would be had it been planned first (SKIP-, PAUSE-).
     skipped: bool = False
     addon_booking_id: uuid.UUID | None = None
+    source_job_id: uuid.UUID | None = None
 
     @property
     def duration(self) -> int:
@@ -75,6 +76,10 @@ def record(
     db.add(
         SchedulingEvent(schedule_id=schedule_id, admin_login_id=admin_id, kind=kind, detail=detail)
     )
+    if admin_id:
+        from app.directory.service import audit
+
+        audit(db, admin_id, "schedule", schedule_id, kind, {"detail": detail})
 
 
 # ---- demand and capacity ---------------------------------------------------
@@ -168,6 +173,14 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
             func.coalesce(Vehicle.society_id, Customer.society_id) == society_id,
             AddonBooking.proposed_date.in_(days),
             AddonBooking.status.in_(("Requested", "Scheduled")),
+            ~select(Job.id)
+            .join(Visit, Visit.id == Job.visit_id)
+            .where(
+                Job.addon_booking_id == AddonBooking.id,
+                Job.source_job_id.is_not(None),
+                Visit.date == AddonBooking.proposed_date,
+            )
+            .exists(),
             Vehicle.active.is_(True),
         )
     ).all()
@@ -179,6 +192,29 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
                 b.service,
                 minutes_of(b.finish_by),
                 addon_booking_id=b.id,
+            )
+        )
+    for job, visit in db.execute(
+        select(Job, Visit)
+        .join(Visit, Visit.id == Job.visit_id)
+        .join(Schedule, Schedule.id == Visit.schedule_id)
+        .where(
+            Schedule.society_id == society_id,
+            Visit.date.in_(days),
+            Job.source_job_id.is_not(None),
+            Job.status.in_(("Scheduled", "In progress")),
+        )
+    ):
+        out.append(
+            Demand(
+                visit.date,
+                visit.vehicle_id,
+                job.service,
+                job.finish_by_minute,
+                job.addon_request_id,
+                False,
+                job.addon_booking_id,
+                job.source_job_id,
             )
         )
     return out
@@ -361,7 +397,11 @@ def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
     ):
         b = db.get(AddonBooking, job.addon_booking_id)
         if b is not None and b.status != "Cancelled" and visit.date == b.proposed_date:
-            b.status = {"Completed": "Completed", "Could not complete": "Missed"}.get(
+            b.status = {
+                "Completed": "Completed",
+                "Could not complete": "Missed",
+                "Skipped": "Missed",
+            }.get(
                 job.status,
                 "Scheduled" if job.crew_id is not None and job.status != "Skipped" else "Requested",
             )
@@ -390,7 +430,14 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
         for v in db.execute(select(Visit).where(Visit.schedule_id == schedule.id)).scalars()
     }
     existing = {
-        (v.vehicle_id, v.date, j.service, j.addon_request_id, j.addon_booking_id): j
+        (
+            v.vehicle_id,
+            v.date,
+            j.service,
+            j.addon_request_id,
+            j.addon_booking_id,
+            j.source_job_id,
+        ): j
         for j, v in _jobs_of(db, schedule.id)
     }
     wanted = set()
@@ -401,10 +448,13 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             item.service,
             item.addon_request_id,
             item.addon_booking_id,
+            item.source_job_id,
         )
         wanted.add(key)
         addon_key = (
-            str(item.addon_booking_id)
+            f"redo:{item.source_job_id}"
+            if item.source_job_id
+            else str(item.addon_booking_id)
             if item.addon_booking_id
             else (f"legacy:{item.addon_request_id}" if item.addon_request_id else "")
         )
@@ -430,6 +480,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     finish_by_minute=item.finish_by,
                     addon_request_id=item.addon_request_id,
                     addon_booking_id=item.addon_booking_id,
+                    source_job_id=item.source_job_id,
                     status="Skipped" if item.skipped else "Scheduled",
                 )
             )

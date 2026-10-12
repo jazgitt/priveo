@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../../api/client";
-import { Card, SelectField, Table } from "../../components";
+import { Card, SelectField, Table, TextField } from "../../components";
 import "../reference/reference.css";
 
 export interface AuditEntry {
@@ -16,7 +16,7 @@ export interface AuditEntry {
 }
 
 const ENTITIES = ["society", "plan", "vehicle", "slot", "service", "checklist", "reason",
-  "setting", "addon", "customer", "subscription", "cutoff_request", "schedule_change"];
+  "setting", "addon", "customer", "subscription", "cutoff_request", "schedule_change", "operations", "schedule", "payment", "crew"];
 const LIMITS = [50, 100, 250, 500];
 
 function show(v: unknown): string {
@@ -50,11 +50,13 @@ export function Diff({ detail }: { detail: Record<string, unknown> }) {
 export function AuditPage() {
   const [entity, setEntity] = useState("");
   const [limit, setLimit] = useState(100);
+  const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [actor, setActor] = useState("");
   const q = new URLSearchParams();
   if (entity) q.set("entity", entity);
   q.set("limit", String(limit));
+  if (from) q.set("date_from", from); if (to) q.set("date_to", to); if (actor) q.set("actor_id", actor);
   const list = useQuery({
-    queryKey: ["admin-audit", entity, limit],
+    queryKey: ["admin-audit", entity, limit, from, to, actor],
     queryFn: () => api<AuditEntry[]>(`/v1/admin/directory/audit?${q.toString()}`),
   });
 
@@ -63,6 +65,9 @@ export function AuditPage() {
       <h1 className="page-title">Audit</h1>
       <Card>
         <div className="ref-toolbar">
+          <TextField label="From date" type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          <TextField label="To date" type="date" value={to} onChange={e => setTo(e.target.value)} />
+          <TextField label="Actor ID" value={actor} onChange={e => setActor(e.target.value)} />
           <SelectField label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
             <option value="">All</option>
             {ENTITIES.map((x) => <option key={x}>{x}</option>)}

@@ -85,6 +85,11 @@ class AdminHomeScreen extends ConsumerWidget {
                 ),
               const SizedBox(height: 12),
               for (final e in [
+                (l.adminOperations, AdminQuickPaths.operations),
+                (l.adminCustomers, AdminQuickPaths.customers),
+                (l.adminCrew, AdminQuickPaths.crew),
+                (l.adminAddonRequests, AdminQuickPaths.addons),
+                (l.adminCheckins, AdminQuickPaths.checkins),
                 (q('adminq_home_complaints'), AdminQuickPaths.complaints),
                 (q('adminq_home_feedback'), AdminQuickPaths.feedback),
                 (

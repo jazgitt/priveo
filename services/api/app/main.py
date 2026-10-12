@@ -23,6 +23,7 @@ from app.platform.errors import install_error_handlers
 from app.platform.middleware import RequestIdMiddleware
 from app.scheduling import administration as scheduling_admin
 from app.system import router as system
+from app.visits import operations
 
 
 def create_app() -> FastAPI:
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(administration.admin)
     app.include_router(administration.customer)
     app.include_router(scheduling_admin.router)
+    app.include_router(operations.router)
     app.include_router(home.crew)
     app.include_router(home.admin)
     crew.register(app)

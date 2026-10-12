@@ -1,6 +1,30 @@
 # Claude handoff and remaining implementation plan
 
-Initially inspected 12 October 2026; updated after implementing Steps 1–3 below. This is a repository-based assessment, not confirmation of the current GitHub PR, CI or deployed environment state.
+## Resume checkpoint
+
+Step 4 is implemented and validated on `integration/complete-build` after `a296d3a`. The next implementation milestone is Step 5. No merge to main or deployment has been performed. Pushing this branch does not apply the backend changes or migration `0023` to the hosted API.
+
+- Steps 1–3 are complete and pushed as commit `a296d3a` on `integration/complete-build`; local and remote matched after the push. No merge to main or deployment was performed.
+- Step 4 is implemented: operations outcomes/history, explicit next-day retry links, idempotent billing extensions and mobile admin customer/crew/add-on/check-in actions. See its implementation record below.
+- Next implementation task is **Step 5: customer presentation and external services**. Re-audit invoice PDF/save/share, video playback, media and notification destinations; inspect existing email/FCM/S3/UPI/timer configuration before connecting adapters. Keep real credentials out of the repository.
+- Step 6 follows Step 5: complete device/database journeys, release checks and deployment.
+- Standalone Deep Spa payment/fulfilment remains an owner decision (`ADD-15` / `ADM-ADD-12`); preserve the request-only behavior until specified. Do not assume external service credentials or release accounts are missing without inspecting the existing setup.
+- Final checks including Step 4: 409 SQLite API tests; 129 affected-module PostgreSQL tests; 68 portal tests; 191 mobile tests, 11 platform/live skips; lint, analysis, web build and generated outputs passed. Migration head is `0023`.
+
+The implementation records below describe the state before the commit; this checkpoint supersedes their statements that the work was uncommitted.
+
+Initially inspected 12 October 2026; updated after implementing Steps 1–4 below. This is a repository-based assessment, not confirmation of the current GitHub PR, CI or deployed environment state.
+
+## Step 4: operations and admin quick actions
+
+- Added the Operations portal and admin APIs: missed-job queue, scheduled work, resolution history, society/date/failure-reason filters, reason/note/evidence, skip-job/skip-remaining-visit actions and next-day-only Interior/Spa retries. Completed jobs cannot be repeated; expired next-day retry dates are rejected. Resolved jobs leave the missed queue and stay in history.
+- Original missed jobs, timings, failure notes and proof remain intact. Each retry has a unique `source_job_id` and its own visit; reruns preserve it without creating a duplicate Spa job. Frozen schedules retain existing placements; retries use spare capacity or stay in Needs scheduling. If no period covers the retry date, a one-day draft is created for review/freeze.
+- Customer calendar messages use explicit retry links. Exterior coverage refers to the next day's regular Exterior service; Spa does not cover an Exterior failure. Missed continues to alert admins without a customer Missed push. Operations skips follow the customer's notification preference and remove crew cards.
+- Reused the manager's idempotent plan extension for Exterior skips. Unreceived future plan payments move with the extension; Received payments remain unchanged. Interior/Spa skips never extend the plan. Spa refund/rebooking remains a manual admin process.
+- Mobile quick actions now include operations outcomes, customer search/view with vehicle skip/un-skip/pause/end-pause, crew list/exception creation, read-only add-on requests and monthly check-in results. Existing payment, complaint, feedback, capacity and read-only day/needs-scheduling screens remain; the day screen links to its Operations work.
+- Extended the shared audit for operations, scheduling, payment status, subscription status and crew actions; added actor/date filters to the portal audit. Migration `0023` adds decisions/retry links and backfills existing manager skip history. Downgrade refuses to discard recorded operations decisions.
+
+Validated: API Ruff; **409 tests passed on SQLite**; **129 affected-module tests passed on disposable PostgreSQL**, including operations, crew scheduling, customer messages, billing, audit and migration/model parity. The earlier full PostgreSQL run passed 406 tests and exposed two overlong crew audit actions; both failures were corrected and passed in the final rerun. Flutter analysis is clean; **191 mobile tests passed, 11 skipped**. Web lint, **68 portal tests** and the production build passed. There is one migration head (`0023`); OpenAPI matches the live schema, Dart/localization generation is stable, and `git diff --check` passes. Linux goldens, live services, real devices and deployed migrations are later verification milestones. No coverage threshold is claimed.
 
 ## Steps 2 and 3 implemented: 12 October 2026
 
@@ -116,4 +140,4 @@ Refresh operational docs and feature status. Review and merge the integrated wor
 - Starting internal-cleaning and Deep Spa checklists, plan/catalogue content and final business contact/invoice/UPI details.
 - Access/configuration for Resend, Firebase, AWS/S3 and Play; Apple accounts for the later iOS release. Inspect existing setup before assuming any account is missing.
 
-These inputs can be collected while implementation and regression work proceeds. Steps 1–3 are implemented locally; operations and admin quick actions (Step 4) are next.
+These inputs can be collected while implementation and regression work proceeds. Steps 1–3 are pushed and Step 4 is implemented locally; customer presentation and external services (Step 5) are next.

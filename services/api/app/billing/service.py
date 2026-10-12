@@ -131,6 +131,10 @@ class BillingService:
         self._db.add(
             PaymentEvent(payment_id=p.id, from_status=old, to_status=new, by_login_id=by, note=note)
         )
+        if by:
+            from app.directory.service import audit
+
+            audit(self._db, by, "payment", p.id, "status", {"from": old, "to": new, "note": note})
 
     def _alert(
         self,
@@ -580,6 +584,16 @@ class BillingService:
                 "invalid_transition", f"A subscription cannot go from {old} to {status}.", 409
             )
         sub.status = status
+        from app.directory.service import audit
+
+        audit(
+            self._db,
+            admin_id,
+            "subscription",
+            sub.id,
+            "status",
+            {"from": old, "to": status, "reason": reason},
+        )
         if first_service_date is not None:
             sub.first_service_date = first_service_date
             # The onboarding payment may precede the actual start of service.
