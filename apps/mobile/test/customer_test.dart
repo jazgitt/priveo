@@ -85,7 +85,8 @@ void main() {
       expect(find.text('No subscription'), findsOneWidget);
       expect(find.text('No plan'), findsOneWidget);
       expect(find.text('Next service'.toUpperCase()), findsNothing);
-      expect(find.text('Skip or Pause'), findsOneWidget);
+      expect(find.text('Skip or Pause'), findsNothing);
+      expect(find.text('Deep Spa'), findsWidgets);
     });
 
     testWidgets('the selection is kept when Home is opened again',

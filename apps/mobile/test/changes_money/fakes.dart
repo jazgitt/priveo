@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:priveo/core/providers.dart';
+import 'package:priveo/core/api/api.g.dart' as wire;
+import 'package:priveo/core/network/read_refresh.dart';
+import 'package:priveo/features/support/widgets.dart' show LinkOpener, linkOpenerProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -297,6 +302,9 @@ Future<void> openAt(
   String path, {
   FakeMoneyRepository? money,
   FakeAdminPaymentsRepository? admin,
+  Dio? dio,
+  wire.PriveoApi? api,
+  LinkOpener? linkOpener,
 }) async {
   tester.view.physicalSize = const Size(900, 2400);
   tester.view.devicePixelRatio = 2;
@@ -311,7 +319,12 @@ Future<void> openAt(
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(ProviderScope(
+    retry: (_, _) => null,
     overrides: [
+      if (dio != null) dioProvider.overrideWithValue(dio),
+      if (api != null) apiProvider.overrideWithValue(api),
+      if (linkOpener != null) linkOpenerProvider.overrideWithValue(linkOpener),
+      readRefreshProvider.overrideWith((_) => const Stream<int>.empty()),
       moneyRepositoryProvider.overrideWithValue(money ?? FakeMoneyRepository()),
       adminPaymentsRepositoryProvider
           .overrideWithValue(admin ?? FakeAdminPaymentsRepository()),

@@ -8,13 +8,16 @@ import 'upload_queue.dart';
 
 /// The queue on the phone's own database, so it survives the app closing.
 class SqliteUploadQueueStore implements UploadQueueStore {
-  SqliteUploadQueueStore({required this.ownerId, Database? database}) : _db = database;
+  SqliteUploadQueueStore({required this.ownerId, Database? database, this.factory})
+      : _db = database;
 
   final String ownerId;
   Database? _db;
+  final DatabaseFactory? factory;
 
-  Future<Database> _open() async => _db ??= await openDatabase(
-        p.join(await getDatabasesPath(), 'priveo_uploads.db'),
+  Future<Database> _open() async => _db ??= await (factory ?? databaseFactory).openDatabase(
+        p.join(await (factory ?? databaseFactory).getDatabasesPath(), 'priveo_uploads.db'),
+        options: OpenDatabaseOptions(
         version: 2,
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) {
@@ -41,7 +44,7 @@ class SqliteUploadQueueStore implements UploadQueueStore {
             attempts INTEGER NOT NULL DEFAULT 0,
             last_error TEXT
           )'''),
-      );
+      ));
 
   @override
   Future<List<QueuedUpload>> all() async {

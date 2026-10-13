@@ -2,6 +2,7 @@
 // history, vehicles (VEH-), account, notifications (NOTIF-) and the next
 // service card on Home (HOME-04). The data comes from a fake repository.
 import 'package:flutter/material.dart';
+import 'package:priveo/core/network/read_refresh.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -313,7 +314,9 @@ Future<ProviderContainer> pumpScreen(
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final container = ProviderContainer(
+    retry: (_, _) => null,
     overrides: [
+      readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       proofReadsProvider.overrideWithValue(proof ?? FakeProofReads()),
       supportRepositoryProvider.overrideWithValue(FakeSupportRepository()),
       apiProvider.overrideWithValue(FakePriveoApi()),
@@ -379,8 +382,8 @@ void main() {
       );
       await tester.tap(find.bySemanticsLabel('02-Nov-26'));
       await tester.pumpAndSettle();
-      expect(find.text('View service details'), findsOneWidget);
-      await tester.tap(find.text('View service details'));
+      expect(find.text('Cleaning-External + Cleaning-Internal'), findsOneWidget);
+      await tester.tap(find.text('Cleaning-External + Cleaning-Internal'));
       await tester.pumpAndSettle();
       expect(find.text('Service details'), findsOneWidget);
       expect(find.text('Cleaning-Internal'), findsOneWidget);
@@ -624,6 +627,7 @@ void main() {
       final reads = FakeReads();
       final container = ProviderContainer(
         overrides: [
+          readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
           apiProvider.overrideWithValue(FakePriveoApi()),
           customerReadsProvider.overrideWithValue(reads),
           sessionStoreProvider.overrideWithValue(

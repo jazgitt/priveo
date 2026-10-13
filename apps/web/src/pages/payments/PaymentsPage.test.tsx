@@ -20,7 +20,7 @@ const pay = (over: Record<string, unknown> = {}) => ({
   society: "Lake View", vehicle: "Swift KA01", initiated_at: null, ...over,
 });
 
-let payments: unknown[] = [];
+let payments: ReturnType<typeof pay>[] = [];
 
 function route(path: string, init?: RequestInit) {
   const method = init?.method ?? "GET";

@@ -54,6 +54,10 @@ Future<QueuedUpload> _add(UploadQueue q, {String job = 'j1'}) => q.enqueue(
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
+class UnavailableStore extends MemoryUploadQueueStore {
+  @override Future<List<QueuedUpload>> all() async => throw StateError('Storage unavailable');
+}
+
 void main() {
   late _Api api;
   late MemoryUploadQueueStore store;
@@ -64,6 +68,27 @@ void main() {
   setUp(() {
     api = _Api();
     store = MemoryUploadQueueStore();
+  });
+
+  test('unavailable local storage does not prevent opening an empty queue',()async{
+    final q=UploadQueue(api:api,store:UnavailableStore(),retryAfter:Duration.zero);addTearDown(q.dispose);
+    await q.start();expect(q.items,isEmpty);expect(api.calls,isEmpty);
+  });
+  test('a file read failure is parked and can be retried after repair',()async{
+    final q=make();addTearDown(q.dispose);api.failSend=StateError('Cannot read file');
+    final item=await _add(q);await _settle();expect(q.items.single.step,UploadStep.failed);expect(q.items.single.lastError,contains('Cannot read file'));
+    api.failSend=null;await q.retry(item.id);await _settle();expect(q.items,isEmpty);await q.retry(999);expect(await store.all(),isEmpty);
+  });
+  test('retry timer resumes an offline upload without another user action',()async{
+    final q=UploadQueue(api:api,store:store,retryAfter:const Duration(milliseconds:20));addTearDown(q.dispose);
+    api.failRequest=const ApiFailure();await _add(q);await _settle();expect(q.items,hasLength(1));
+    api.failRequest=null;await Future<void>.delayed(const Duration(milliseconds:50));expect(q.items,isEmpty);expect(api.calls.last,'confirm u1');
+  });
+  test('account change during file stashing discards the copy and queues nothing',()async{
+    var active=true;final discarded=<String>[];
+    final q=UploadQueue(api:api,store:store,ownerId:'owner-a',isCurrent:()=>active,retryAfter:Duration.zero,stash:(path)async{active=false;return '/kept/photo.jpg';},discard:(path)async{discarded.add(path);});addTearDown(q.dispose);
+    await expectLater(_add(q),throwsA(isA<ApiFailure>().having((e)=>e.code,'code','signed_out')));
+    expect(discarded,['/kept/photo.jpg']);expect(await store.all(),isEmpty);expect(api.calls,isEmpty);
   });
 
   test('account queues ignore other owners and unknown legacy records', () async {

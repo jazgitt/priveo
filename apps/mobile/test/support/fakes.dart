@@ -9,6 +9,7 @@ import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
+import 'package:priveo/core/network/read_refresh.dart';
 import 'package:priveo/features/admin_quick/data/admin_quick_models.dart';
 import 'package:priveo/features/admin_quick/data/admin_quick_repository.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
@@ -310,6 +311,7 @@ Future<ProviderContainer> pumpApp(
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   final container = ProviderContainer(overrides: [
+    readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
     appConfigProvider.overrideWithValue(AppConfig.dev),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),

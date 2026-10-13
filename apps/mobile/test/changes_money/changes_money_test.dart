@@ -215,7 +215,7 @@ void main() {
       final repo = FakeMoneyRepository();
       await openAt(tester, payPath('p1'), money: repo);
       expect(find.text('Amount to pay: ₹1,299'), findsOneWidget);
-      expect(find.text('The UPI QR code will be shown here.'), findsOneWidget);
+      expect(find.byType(QrImageView), findsOneWidget);
       await tester.tap(find.text("I've paid"));
       await tester.pumpAndSettle();
       expect(repo.calls, ['paid p1']);
@@ -271,7 +271,7 @@ void main() {
     testWidgets('standalone confirmation opens the Spa UPI payment', (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, standalonePath('v1'), money: repo);
-      await tester.tap(find.textContaining('Date:').first);
+      await tester.tap(find.textContaining('Preferred date:').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();

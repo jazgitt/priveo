@@ -125,18 +125,18 @@ void main() {
     test('photos are under 10 MB and videos under 25 MB', () {
       const mb = 1024 * 1024;
       expect(
-          checkCapture(video: false, contentType: 'image/jpeg', bytes: 10 * mb),
+          checkCapture(video: false, contentType: 'image/jpeg', bytes: 10 * mb - 1),
           isNull);
       expect(
           checkCapture(
-              video: false, contentType: 'image/jpeg', bytes: 10 * mb + 1),
+              video: false, contentType: 'image/jpeg', bytes: 10 * mb),
           CaptureProblem.tooLarge);
       expect(
-          checkCapture(video: true, contentType: 'video/mp4', bytes: 25 * mb),
+          checkCapture(video: true, contentType: 'video/mp4', bytes: 25 * mb - 1),
           isNull);
       expect(
           checkCapture(
-              video: true, contentType: 'video/mp4', bytes: 25 * mb + 1),
+              video: true, contentType: 'video/mp4', bytes: 25 * mb),
           CaptureProblem.tooLarge);
       expect(checkCapture(video: false, contentType: null, bytes: 5),
           CaptureProblem.format);

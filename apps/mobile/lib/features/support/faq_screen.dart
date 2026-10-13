@@ -23,7 +23,7 @@ List<FaqItem> parseFaqMarkdown(String markdown) {
   String? question;
   final answer = <String>[];
   void flush() {
-    if (question != null) items.add(FaqItem(question: question!, answer: answer.join('\n').trim()));
+    if (question != null) items.add(FaqItem(question: question, answer: answer.join('\n').trim()));
     answer.clear();
   }
   for (final line in markdown.split('\n')) {

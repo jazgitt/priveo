@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -31,14 +30,14 @@ class _DraftApi implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-Future<FakePriveoApi> pumpReview(WidgetTester tester, _DraftApi api,
+Future<FakePriveoApi> _pumpReview(WidgetTester tester, _DraftApi api,
     {int step = 0, bool photo = true, bool due = true}) async {
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final original = (onboardingJson['vehicles'] as List).first as Map;
   final data = Onboarding.fromJson({...onboardingJson, 'step': step, 'last_name': 'Mehta',
-    'vehicles': [{...original, 'make': 'Hyundai', 'model': 'Creta', 'variant': 'SX', 'parking_basements': ['B2', 'P1']}]});
+    'vehicles': [<String, dynamic>{...original.cast<String, dynamic>(), 'make': 'Hyundai', 'model': 'Creta', 'variant': 'SX', 'parking_basements': ['B2', 'P1']}]});
   final dio = Dio()..httpClientAdapter = api;
   final server = FakePriveoApi(onboardingConfirmed: false);
   final router = GoRouter(initialLocation: '/customer', routes: [
@@ -74,7 +73,7 @@ Future<void> next(WidgetTester tester) async {
 
 void main() {
   testWidgets('confirmation opens the unpaid vehicle payment after saving the review', (tester) async {
-    final server = await pumpReview(tester, _DraftApi(), step: 6);
+    final server = await _pumpReview(tester, _DraftApi(), step: 6);
     await tester.tap(find.text('Confirm & pay'));
     await tester.pumpAndSettle();
     expect(server.confirmed?.vehicles.single.id, 'v1');
@@ -82,7 +81,7 @@ void main() {
   });
 
   testWidgets('an already received payment confirms directly to Home', (tester) async {
-    final server = await pumpReview(tester, _DraftApi(), step: 6, due: false);
+    final server = await _pumpReview(tester, _DraftApi(), step: 6, due: false);
     await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
     expect(server.confirmed, isNotNull);
@@ -92,7 +91,7 @@ void main() {
 
   testWidgets('Back retains edits saved on Continue', (tester) async {
     final api = _DraftApi();
-    await pumpReview(tester, api);
+    await _pumpReview(tester, api);
     await tester.enterText(find.byType(TextField).first, 'Saved');
     await next(tester);
     await tester.tap(find.text('Back'));
@@ -102,7 +101,7 @@ void main() {
   });
   testWidgets('seven review steps save on Continue and put plan before preferences', (tester) async {
     final api = _DraftApi();
-    await pumpReview(tester, api);
+    await _pumpReview(tester, api);
     expect(find.text('Step 1 of 7'), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, 'Updated');
     await next(tester);
@@ -126,21 +125,21 @@ void main() {
   });
 
   testWidgets('restored position opens the saved step and keeps read-only fields', (tester) async {
-    await pumpReview(tester, _DraftApi(), step: 4);
+    await _pumpReview(tester, _DraftApi(), step: 4);
     expect(find.text('Step 5 of 7'), findsOneWidget);
     expect(find.text('• Daily clean'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
   });
 
   testWidgets('a failed draft save stays on the current step', (tester) async {
-    await pumpReview(tester, _DraftApi()..fail = true);
+    await _pumpReview(tester, _DraftApi()..fail = true);
     await next(tester);
     expect(find.text('Step 1 of 7'), findsOneWidget);
     expect(find.text('Could not save'), findsOneWidget);
   });
 
   testWidgets('vehicle step cannot continue without its photo', (tester) async {
-    await pumpReview(tester, _DraftApi(), step: 2, photo: false);
+    await _pumpReview(tester, _DraftApi(), step: 2, photo: false);
     await next(tester);
     expect(find.text('Step 3 of 7'), findsOneWidget);
     expect(find.text('Add a photo of your car to continue.'), findsOneWidget);

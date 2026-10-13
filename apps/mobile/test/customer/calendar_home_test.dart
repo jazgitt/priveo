@@ -1,6 +1,7 @@
 // The projected calendar day card (CAL-05 to CAL-10, SCHED-02) and the Home
 // schedule items (HOME-01, HOME-04, HOME-08, HOME-09). Data comes from fakes.
 import 'package:flutter/material.dart';
+import 'package:priveo/core/network/read_refresh.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -126,6 +127,7 @@ Future<void> pumpWith(
   addTearDown(tester.view.reset);
   final container = ProviderContainer(
     overrides: [
+      readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       apiProvider.overrideWithValue(FakePriveoApi()),
       customerReadsProvider.overrideWithValue(reads),
       calendarActionsProvider.overrideWithValue(actions ?? _Actions()),
@@ -429,7 +431,7 @@ void main() {
       expect(find.text('Deep Spa'), findsOneWidget);
     });
 
-    testWidgets('the Add-ons card is hidden without a subscription', (
+    testWidgets('standalone Spa is offered without a subscription', (
       tester,
     ) async {
       await pumpWith(
@@ -439,7 +441,7 @@ void main() {
         now: now,
         selectVehicle: 'v3',
       );
-      expect(find.text('Deep Spa'), findsNothing);
+      expect(find.text('Deep Spa'), findsOneWidget);
     });
   });
 }

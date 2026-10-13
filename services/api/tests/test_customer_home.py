@@ -155,7 +155,7 @@ def test_home_shows_the_customers_own_vehicles(client, asha):
         "id": creta["id"], "registration": "HR 26 DK 8337", "model": "Hyundai Creta",
         "society": "DLF Meadows", "parking": "B1-223", "subscription_status": "Active",
         "monthly_price_rupees": 1299, "cutoff_time": "06:30", "interior_day": "Friday",
-        "next_service": None, "variant": "", "photo_url": creta["photo_url"],
+        "next_service": None, "make": "", "variant": "", "photo_url": creta["photo_url"],
     }
     assert creta["photo_url"].startswith("/v1/media/local/")
     assert (swift["registration"], swift["parking"], swift["cutoff_time"]) == ("", "", None)

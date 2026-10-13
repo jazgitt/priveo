@@ -10,7 +10,7 @@ import 'package:priveo/features/customer/home/customer_home_data.dart';
 import '../support/fakes.dart';
 
 void main() {
-  testWidgets('open Home observes externally changed onboarding state on a refresh pulse', (tester) async {
+  test('open Home observes externally changed onboarding state on a refresh pulse', () async {
     final ticks = StreamController<int>();
     final server = FakePriveoApi(onboardingConfirmed: false);
     final container = ProviderContainer(overrides: [
@@ -21,7 +21,7 @@ void main() {
     expect((await container.read(customerHomeProvider.future)).onboardingConfirmed, isFalse);
     server.onboardingConfirmed = true; // A write made by another client.
     ticks.add(1);
-    await tester.pump();
+    await Future<void>.delayed(Duration.zero);
     expect((await container.read(customerHomeProvider.future)).onboardingConfirmed, isTrue);
     sub.close();
     container.dispose();

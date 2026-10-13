@@ -14,6 +14,7 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../changes_money/routes.dart' as money;
+import '../../changes_money/money_widgets.dart' show showMessage;
 import '../../changes_money/strings.dart';
 import '../../common/push/push_registration.dart';
 import '../../common/signout_button.dart';

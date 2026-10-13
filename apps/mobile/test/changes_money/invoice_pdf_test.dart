@@ -42,7 +42,7 @@ class FakePdfRepository extends InvoicePdfRepository {
 }
 
 Future<void> app(WidgetTester tester, Widget screen, FakePdfRepository pdf) async {
-  await tester.pumpWidget(ProviderScope(overrides: [
+  await tester.pumpWidget(ProviderScope(retry: (_, _) => null, overrides: [
     moneyRepositoryProvider.overrideWithValue(FakeMoneyRepository()),
     invoicePdfRepositoryProvider.overrideWithValue(pdf),
     invoicePdfViewerProvider.overrideWithValue((bytes, retry) => const Text('PDF preview')),

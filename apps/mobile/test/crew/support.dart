@@ -450,6 +450,7 @@ Future<UploadQueue> pumpCrew(
       retryAfter: Duration.zero);
   addTearDown(queue.dispose);
   await tester.pumpWidget(ProviderScope(
+    retry: (_, _) => null,
     overrides: [
       crewRepositoryProvider.overrideWithValue(backend),
       uploadApiProvider.overrideWithValue(backend),
