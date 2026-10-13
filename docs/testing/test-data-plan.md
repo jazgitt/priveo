@@ -20,6 +20,12 @@ passwords are maintained in the GitHub Actions `TEST_DATA_PASSWORD` secret;
 Admin keeps its existing password. Normal hosted cron/billing jobs may change
 the seeded payment and scheduling states over time.
 
+Changing the GitHub secret alone does not change stored passwords. To apply a
+new fixture password, run `seed-test-data` with `sync_passwords=true`. This
+explicit mode updates only verified synthetic Customer/Crew accounts, clears
+failed-login blocks, and ends their existing sessions. It preserves all
+scenario records, Admin credentials and the intentionally locked R04 fixture.
+
 The original local SQLite seeder below retains its isolation and reset guards.
 
 ## Review of the requested scenarios

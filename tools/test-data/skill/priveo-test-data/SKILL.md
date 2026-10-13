@@ -26,6 +26,11 @@ section in `docs/testing/test-data-plan.md`. The separate reviewed
 settings and Admin credentials. Do not use the SQLite reset tool for hosted
 databases. Check the workflow's hosted API verification result and retrieve
 its password-free account artifact. Shared refresh/deletion is not supported.
+If the user explicitly requests applying a changed fixture password, run that
+workflow with `sync_passwords=true`. This rotates only verified synthetic
+Customer/Crew credentials, clears login blocks and ends their old sessions.
+Admin credentials and scenario data remain intact; the intentionally locked
+R04 crew fixture stays locked. A changed secret alone does not update accounts.
 
 The tool requires an explicit file and a fixture marker, and never consumes `DATABASE_URL`. Only local SQLite and `ENVIRONMENT=dev` are supported. Do not point it at production or try to bypass the marker. PostgreSQL/shared dev seeding needs a separate reviewed implementation.
 

@@ -1,12 +1,13 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer
-from app.identity.models import Login
+from app.identity.models import AuthSession, Login
 from app.identity.service import _password_matches
+from app.platform.db import utcnow
 from scripts import seed_shared_test_data as shared
 
 
@@ -40,6 +41,28 @@ def test_additive_seed_all_scenarios_preserves_admin_and_repeat_edits(client, en
         login = db.get(Login, shared.identity("C01", "customer-login"))
         assert login.display_name == "Manual edit"
         assert _password_matches(login.password_hash, "FixturePassword123!")
+        login.failed_attempts = 5
+        login.blocked_until = utcnow() + timedelta(minutes=30)
+        db.add(AuthSession(login_id=login.id, channel="mobile", refresh_hash="fixture-session"))
+        db.add(AuthSession(login_id=admin_id, channel="web", refresh_hash="admin-session"))
+        db.commit()
+    synced = shared.seed_additive(engine, date(2026, 10, 14), "DifferentPassword123!",
+                                  sync_passwords=True)
+    assert synced["added"] == []
+    with Session(engine) as db:
+        assert db.scalar(select(func.count()).select_from(Customer)) == before + 39
+        assert db.get(Login, admin_id).password_hash == admin_hash
+        login = db.get(Login, shared.identity("C01", "customer-login"))
+        assert login.display_name == "Manual edit"
+        assert _password_matches(login.password_hash, "DifferentPassword123!")
+        assert login.failed_attempts == 0 and login.blocked_until is None
+        crew = db.get(Login, shared.identity("R01", "crew-login-1"))
+        assert _password_matches(crew.password_hash, "DifferentPassword123!")
+        assert db.get(Login, shared.identity("R04", "crew-login-5")).locked
+        assert db.scalar(select(AuthSession).where(
+            AuthSession.refresh_hash == "fixture-session")).ended_at is not None
+        assert db.scalar(select(AuthSession).where(
+            AuthSession.refresh_hash == "admin-session")).ended_at is None
 
 
 def test_additive_seed_rolls_back_on_late_failure(client, engine, monkeypatch):

@@ -2,6 +2,11 @@ name: seed-test-data
 
 on:
   workflow_dispatch:
+    inputs:
+      sync_passwords:
+        description: Synchronize existing synthetic Customer/Crew passwords with TEST_DATA_PASSWORD
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,9 +32,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
           ENVIRONMENT: dev
+          SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
         run: |
           python scripts/seed_shared_test_data.py --output ../../.local/test-data/hosted-manifest.json
-          python scripts/seed_shared_test_data.py --apply --output ../../.local/test-data/hosted-manifest.json
+          args=()
+          if [ "$SYNC_PASSWORDS" = "true" ]; then
+            args+=(--sync-passwords)
+          fi
+          python scripts/seed_shared_test_data.py --apply "${args[@]}" --output ../../.local/test-data/hosted-manifest.json
       - name: Export test accounts
         run: python tools/test-data/export_accounts.py --manifest .local/test-data/hosted-manifest.json --output .local/test-data/hosted-accounts.md
       - name: Verify hosted scenario API journeys
@@ -37,7 +47,13 @@ jobs:
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
           TEST_DATA_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
           API_DEV_URL: ${{ vars.API_DEV_URL }}
-        run: python tools/test-data/api_smoke.py --base-url "$API_DEV_URL" --manifest .local/test-data/hosted-manifest.json
+          SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
+        run: |
+          args=()
+          if [ "$SYNC_PASSWORDS" = "true" ]; then
+            args+=(--scenarios C01,C02,C07,C09,C13,R01)
+          fi
+          python tools/test-data/api_smoke.py --base-url "$API_DEV_URL" --manifest .local/test-data/hosted-manifest.json "${args[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

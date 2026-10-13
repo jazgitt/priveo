@@ -7,19 +7,42 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from app.directory.models import Plan, Society
-from app.identity.models import Login
+from app.identity.models import AuthSession, Login
 from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.config import get_settings
-from app.platform.db import get_engine
+from app.platform.db import get_engine, utcnow
 from scripts.test_data import _seed_scenario, catalogue, identity
 
 
-def seed_additive(engine, day, password):
+def sync_accounts(db, config, snapshot, password_hash):
+    """Explicitly rotate only accounts with verified synthetic identities."""
+    scenario = config["id"]
+    accounts = [(identity(scenario, "customer-login"), snapshot["customer_login"], "customer")]
+    accounts += [(identity(scenario, f"crew-login-{index}"), login, "crew")
+                 for index, login in enumerate(snapshot["crew_logins"])]
+    now = utcnow()
+    for index, (key, login_id, role) in enumerate(accounts):
+        login = db.get(Login, key)
+        if login is None or login.login_id != login_id or login.role != role:
+            raise ValueError(f"Synthetic account identity mismatch: {scenario}.")
+        login.password_hash = password_hash
+        login.password_changed_at = now
+        login.failed_attempts = 0
+        login.blocked_until = None
+        # Retain R04's deliberately locked sixth crew account for manual testing.
+        if not (config.get("crew_accounts") and role == "crew" and index == 6):
+            login.locked = False
+        db.execute(update(AuthSession).where(
+            AuthSession.login_id == key, AuthSession.ended_at.is_(None)
+        ).values(ended_at=now, ended_reason="password_reset"))
+
+
+def seed_additive(engine, day, password, *, sync_passwords=False):
     if not password:
         raise ValueError("TEST_DATA_PASSWORD is required.")
     snapshots = []
@@ -59,7 +82,10 @@ def seed_additive(engine, day, password):
             if saved:
                 if login is None or login.login_id != f"test.{scenario.lower()}@priveo.test":
                     raise ValueError(f"Stored scenario {scenario} has missing/conflicting data.")
-                snapshots.append(json.loads(saved))
+                snapshot = json.loads(saved)
+                if sync_passwords:
+                    sync_accounts(db, config, snapshot, password_hash)
+                snapshots.append(snapshot)
                 continue  # Preserve manual changes and existing scenario passwords.
             if login or db.get(Society, identity(scenario, "society")):
                 raise ValueError(f"Untracked scenario collision: {scenario}.")
@@ -80,6 +106,8 @@ def seed_additive(engine, day, password):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--sync-passwords", action="store_true",
+                        help="Update existing synthetic passwords from TEST_DATA_PASSWORD.")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     settings = get_settings()
@@ -95,10 +123,13 @@ def main():
         print("Preview: add missing synthetic scenarios; preserve existing data:")
         print(", ".join(item["id"] for item in catalogue()))
         return
-    result = seed_additive(engine, today_ist(), os.environ.get("TEST_DATA_PASSWORD", ""))
+    result = seed_additive(engine, today_ist(), os.environ.get("TEST_DATA_PASSWORD", ""),
+                           sync_passwords=args.sync_passwords)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(f"Added {len(result['added'])} scenarios; manifest contains {len(result['scenarios'])}.")
+    if args.sync_passwords:
+        print("Synthetic Customer/Crew passwords synchronized; Admin credentials preserved.")
 
 
 if __name__ == "__main__":
