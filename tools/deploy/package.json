@@ -1,0 +1,12 @@
+{
+  "name": "priveo-deployment-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Locked Vercel CLI dependencies for API deployments",
+  "dependencies": {
+    "vercel": "58.11.0"
+  },
+  "overrides": {
+    "tar": "7.5.22"
+  }
+}

@@ -14,6 +14,7 @@ on:
       - "services/api/**"
       - "apps/web/**"
       - "docs/brand/tokens.json"
+      - "tools/deploy/**"
       - ".github/workflows/api-deploy.yml"
   workflow_dispatch:
 
@@ -43,6 +44,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # Keep the CLI and its patched tar dependency reproducible.
+      - name: Install deployment tools
+        run: npm ci --prefix tools/deploy
 
       # The database is changed before the new code goes live. The seed makes
       # the admin login, and in dev the demo customer and crew logins.
@@ -79,7 +84,7 @@ jobs:
       - name: Deploy to production (the `dev` API)
         working-directory: services/api
         run: |
-          npx --yes vercel@58 deploy --prod --yes --token "$VERCEL_TOKEN" \
+          ../../tools/deploy/node_modules/.bin/vercel deploy --prod --yes --token "$VERCEL_TOKEN" \
             --build-env BUILD_NUMBER=${{ github.run_number }} \
             --env BUILD_NUMBER=${{ github.run_number }}
 
