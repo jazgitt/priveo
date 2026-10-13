@@ -20,6 +20,7 @@ class ProofItem:
     url: str
     stage: str | None = None  # Before, During or After
     taken_at: datetime | None = None
+    id: str | None = None
 
 
 @dataclass(frozen=True)

@@ -308,14 +308,20 @@ class SupportService:
 
     def _admin_summary(self, c: Complaint, note: str | None, names) -> dict:
         name, society, flat = names.get(c.customer_id, ("", "", ""))
+        vehicle_label = ""
         if c.visit_id:
-            visit = self.db.get(Visit, c.visit_id)
+            try:
+                visit = self.db.get(Visit, uuid.UUID(c.visit_id))
+            except ValueError:
+                visit = None
             vehicle = self.db.get(Vehicle, visit.vehicle_id) if visit else None
+            if vehicle is not None:
+                vehicle_label = f"{vehicle.registration or ''} · {vehicle.make} {vehicle.model} {vehicle.variant}".strip()
             if vehicle is not None and vehicle.society_id:
                 society = self.db.get(Society, vehicle.society_id).name
         overdue = c.status == "Raised" and self._now() - c.created_at > REPLY_WITHIN
         return dict(self._summary(c, note), customer_name=name, society=society, flat=flat,
-                    overdue=overdue)
+                    overdue=overdue, vehicle=vehicle_label)
 
     def list_for_admin(self, status: str | None,
                        category: str | None) -> list[AdminComplaintSummary]:
@@ -385,14 +391,18 @@ class SupportService:
         rows = list(self.db.scalars(
             select(Complaint).where(Complaint.status == "Raised",
                                     Complaint.created_at <= cutoff,
-                                    Complaint.overdue_alerted_at.is_(None))))
+                                    Complaint.overdue_alerted_at.is_(None))
+            .with_for_update(skip_locked=True)))
+        raised = []
         for c in rows:
             c.overdue_alerted_at = self._now()
-            self.db.commit()
-            alerts.raise_alert(
+            raised.append(alerts.raise_alert(
                 self.db, "complaint_overdue", f"Complaint {display_id(c.number)} is waiting",
                 "Still Raised after 4 hours.", ref_type="complaint", ref_id=str(c.id),
-                push=self.push, email=self.email)
+                commit=False))
+        self.db.commit()
+        for alert in raised:
+            alerts.dispatch_alert(self.db, alert, push=self.push, email=self.email)
         return len(rows)
 
     # Feedback and ratings --------------------------------------------
@@ -416,6 +426,12 @@ class SupportService:
 
     def rate_visit(self, customer: Customer, visit_id: str, rating: int, tags: list[str],
                    comment: str, permission: bool) -> RatingOut:
+        self._check_visit(customer, visit_id)
+        visit = self.db.get(Visit, uuid.UUID(visit_id))
+        if visit.status != "Completed":
+            raise ApiError("visit_not_completed", "Rate a completed visit.", 409)
+        # Canonical IDs prevent multiple ratings via alternate UUID spellings.
+        visit_id = str(visit.id)
         tags = list(dict.fromkeys(t.strip() for t in tags if t.strip()))
         # SVC-11: positive tags at 5 stars. SVC-14: issue tags below.
         allowed = {o.name for o in self._active(

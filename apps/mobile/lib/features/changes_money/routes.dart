@@ -12,7 +12,7 @@ String billingPath(String vehicleId) => '/customer/vehicles/$vehicleId/billing';
 String addonsPath(String vehicleId) => '/customer/vehicles/$vehicleId/addons';
 String payPath(String paymentId) => '/customer/pay/$paymentId';
 
-/// Deep Spa without a subscription (ADD-15, open). The vehicle is optional.
+/// Standalone Deep Spa; an omitted vehicle opens the owned-vehicle selector.
 String standalonePath([String? vehicleId]) =>
     vehicleId == null ? '/customer/deep-spa' : '/customer/deep-spa?vehicle=$vehicleId';
 

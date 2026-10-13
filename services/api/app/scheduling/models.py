@@ -11,6 +11,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    event,
+    select,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -78,6 +80,21 @@ class Schedule(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
+class AutomaticPlanningRun(Base):
+    """One automatic attempt per society/period; retries retain their draft."""
+    __tablename__ = "automatic_planning_runs"
+    __table_args__ = (UniqueConstraint("society_id", "start_date", name="auto_planning_once"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    schedule_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("schedules.id"))
+    status: Mapped[str] = mapped_column(String(16), default="Pending")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    error: Mapped[str] = mapped_column(String(160), default="")
+
+
 class Visit(Base):
     """One vehicle on one date. Completed only when all its jobs are done or
     skipped (CLAUDE.md domain facts)."""
@@ -124,6 +141,27 @@ class Job(Base):
     late: Mapped[bool] = mapped_column(Boolean, default=False)
     # Why it is Unscheduled (ADM-SCH-08).
     note: Mapped[str] = mapped_column(Text, default="")
+    # Immutable issued definition. Legacy backfill is explicitly identified.
+    checklist_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+@event.listens_for(Job, "before_insert")
+def snapshot_job_checklist(_mapper, connection, job):
+    """Capture every creation path, including scheduling and operations retries."""
+    if job.checklist_snapshot is not None:
+        return
+    from app.directory import defaults
+    from app.directory.models import ChecklistItem
+
+    rows = connection.execute(select(
+        ChecklistItem.key, ChecklistItem.label, ChecklistItem.active
+    ).where(ChecklistItem.service == job.service).order_by(
+        ChecklistItem.sort_order, ChecklistItem.key
+    )).all()
+    items = ([{"key": r.key, "label": r.label} for r in rows if r.active]
+             if rows else [{"key": k, "label": label}
+                           for k, label in defaults.CHECKLISTS.get(job.service, ())])
+    job.checklist_snapshot = {"legacy": False, "items": items}
 
 
 class SchedulingEvent(Base):

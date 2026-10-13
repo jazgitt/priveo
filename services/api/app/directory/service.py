@@ -597,6 +597,8 @@ def save_settings(db: Session, admin_id, values: dict[str, Any]) -> list[dict]:
     parsed: dict[str, str] = {}
     errors: dict[str, str] = {}
     for key, raw in values.items():
+        if key.startswith("invoice."):
+            raise ApiError("read_only", "Invoice seller values are seeded from environment configuration.", 409)
         definition = settings_registry.BY_KEY.get(key)
         if definition is None:
             errors[key] = "This setting does not exist."
@@ -607,6 +609,10 @@ def save_settings(db: Session, admin_id, values: dict[str, Any]) -> list[dict]:
             errors[key] = str(exc)
     if errors:
         raise ApiError("validation_failed", "Please check the details.", 422, errors)
+    enabled = parsed.get("schedule.auto_enabled", str(lookup.setting(db, "schedule.auto_enabled")))
+    at = parsed.get("schedule.auto_time", lookup.setting(db, "schedule.auto_time"))
+    if enabled == "1" and not at:
+        raise invalid("schedule.auto_time", "Choose an IST time before enabling automatic planning.")
     out = []
     for key, text in parsed.items():
         row = db.get(SystemSetting, key)

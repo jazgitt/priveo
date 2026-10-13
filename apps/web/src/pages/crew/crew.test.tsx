@@ -110,6 +110,7 @@ describe("crew detail", () => {
       if (p === "/v1/admin/crew?society_id=s1") return json(200, [raj, asha]);
       if (p === "/v1/admin/crew/c1/sessions") {
         return json(200, [{ id: "x1", channel: "mobile",
+                            device_name: "Crew Pixel", platform: "android", app_version: "1.2.3",
                             signed_in_at: "2026-10-10T05:00:00Z", last_active_at: "2026-10-11T06:30:00Z" }]);
       }
       return err(404, "not_found", "no");
@@ -172,6 +173,8 @@ describe("crew detail", () => {
     });
     renderAt("/crew/c1");
     await userEvent.click(await screen.findByRole("button", { name: "Reset password" }));
+    expect(await screen.findByText("Crew Pixel")).toBeInTheDocument();
+    expect(screen.getByText(/App 1.2.3/)).toBeInTheDocument();
     const confirm = await screen.findByRole("dialog");
     await userEvent.click(within(confirm).getByRole("button", { name: "Reset password" }));
     expect(await screen.findByTestId("issued-password")).toHaveTextContent("Raj1111$");

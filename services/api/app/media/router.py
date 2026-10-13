@@ -88,7 +88,7 @@ async def put_local(upload_id: str, expires: int, sig: str, request: Request,
     if upload is None or upload.status != STATUS_REQUESTED:
         raise ApiError("not_found", "This upload was not found.", 404)
     data = await request.body()
-    if len(data) == 0 or len(data) > service.MAX_BYTES[upload.kind]:
+    if not service.valid_size(upload.kind, len(data)):
         raise ApiError("upload_too_large", "The file is too large.", 422)
     store.put(upload.object_key, data)
     return Response(status_code=204)

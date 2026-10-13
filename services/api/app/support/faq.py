@@ -23,7 +23,7 @@ _FAQ = [
      "and prices include GST. Your invoice appears in billing history once it is ready."),
     ("What happens if I pay late?",
      "A payment that is over due for 7 days makes your subscription Inactive. "
-     "Pay the amount due to start again."),
+     "Contact Priveo to reactivate it; Priveo sets a new first service date. Payment alone does not restart service."),
     ("How do I skip a visit?",
      "Open Skip or pause from Home and pick the date. A skip must be made by 9 PM "
      "the evening before. A skipped visit is not charged."),

@@ -11,6 +11,32 @@ from tests.scheduling.conftest import SUNDAY
 from tests.test_api import auth, login
 
 
+def test_standalone_without_subscription_is_scheduled_unpaid_and_tracks_completion(world, api, admin, customer):
+    from app.changes.rules import get_now
+    from tests.changes.money_fixtures import at
+    api.app.dependency_overrides[get_now] = lambda: lambda: at(17, 10)
+    from app.customers.models import Vehicle, Subscription
+    from app.billing.models import Payment
+    world.add_crew(start=360, end=840)
+    car = Vehicle(customer_id=world.customer.id, society_id=world.society.id,
+                  registration='HR01SP1234', model='Spa car', parking_basement='B2', parking_number='1')
+    world.db.add(car)
+    world.db.commit()
+    response = api.post('/v1/customer/addons/standalone', headers=customer, json={
+        'vehicle_id': str(car.id), 'date': SUNDAY.isoformat(), 'finish_by': '12:00'})
+    assert response.status_code == 201, response.text
+    booking = response.json()
+    run(api, admin, world)
+    job = world.db.scalar(select(Job).where(Job.addon_booking_id == uuid.UUID(booking['id'])))
+    assert job.duration_minutes == 120 and job.finish_by_minute == 720 and job.crew_id
+    assert world.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id)) is None
+    payment = world.db.get(Payment, uuid.UUID(booking['payment_id']))
+    assert payment.status == 'Due'
+    service.set_job_status(world.db, job.id, 'Completed')
+    result = api.get('/v1/customer/addons', headers=customer).json()['requests'][0]
+    assert result['status'] == 'Completed' and result['visit_id'] == str(job.visit_id)
+
+
 @pytest.fixture
 def customer(api):
     return auth(login(api, "customer")["access_token"])

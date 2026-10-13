@@ -6,6 +6,15 @@ import 'package:priveo/features/crew/data/crew_repository.dart';
 import 'support.dart';
 
 void main() {
+  for (final video in [false, true]) {
+    test('capture enforces strict ${video ? 'video' : 'photo'} size boundary', () {
+      final limit = video ? maxVideoBytes : maxPhotoBytes;
+      final mime = video ? 'video/mp4' : 'image/heic';
+      expect(checkCapture(video: video, contentType: mime, bytes: limit - 1), isNull);
+      expect(checkCapture(video: video, contentType: mime, bytes: limit), isNotNull);
+      expect(checkCapture(video: video, contentType: mime, bytes: limit + 1), isNotNull);
+    });
+  }
   test('a visit list maps the cards and the counts', () {
     final v = CrewVisitList.fromJson({
       'date': '2026-11-07',

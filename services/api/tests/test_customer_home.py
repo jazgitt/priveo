@@ -94,11 +94,61 @@ def test_helpers():
         assert read_cutoff(bad) is None
 
 
+def test_review_draft_restores_position_and_edits_without_confirmation_or_payment(client, asha, db):
+    from app.billing.models import Payment
+
+    before = len(db.scalars(select(Payment)).all())
+    r = client.patch("/v1/customer/onboarding/draft", headers=asha, json={
+        "step": 1, "first_name": "Asha", "last_name": "Rao", "mobile": "9876543210"})
+    assert r.status_code == 204, r.text
+    read = client.get("/v1/customer/onboarding", headers=asha).json()
+    assert (read["step"], read["last_name"], read["mobile"], read["confirmed"]) == (
+        1, "Rao", "9876543210", False)
+    vid = read["vehicles"][0]["id"]
+    body = {"step": 4, "vehicles": [{"id": vid, "parking_basement": "B3", "parking_number": "99"}]}
+    for _ in range(2):
+        assert client.patch("/v1/customer/onboarding/draft", headers=asha, json=body).status_code == 204
+    restored = client.get("/v1/customer/onboarding", headers=asha).json()
+    assert restored["step"] == 4 and restored["vehicles"][0]["parking_number"] == "99"
+    assert not client.get("/v1/customer/home", headers=asha).json()["onboarding_confirmed"]
+    db.expire_all()
+    assert len(db.scalars(select(Payment)).all()) == before
+
+
+@pytest.mark.parametrize("body", [{"step": 1, "email": "other@example.com"},
+                                 {"step": 4, "vehicles": [{"id": "foreign", "parking_number": "9"}]},
+                                 {"step": 99}, {"step": -1},
+                                 {"step": 4, "vehicles": [{"id": "foreign", "plan_id": "x"}]}])
+def test_review_draft_rejects_read_only_foreign_and_invalid_position(client, asha, body):
+    before = client.get("/v1/customer/onboarding", headers=asha).json()
+    assert client.patch("/v1/customer/onboarding/draft", headers=asha, json=body).status_code == 422
+    assert client.get("/v1/customer/onboarding", headers=asha).json() == before
+
+
+def test_home_vehicle_fields_and_rate_action_match_requirements(client, asha, db):
+    person = db.scalar(select(Customer).where(Customer.email == EMAIL))
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.customer_id == person.id))
+    vehicle.make, vehicle.model, vehicle.variant = "Hyundai", "Creta", "SX"
+    db.commit()
+    home = client.get("/v1/customer/home", headers=asha).json()
+    car = next(v for v in home["vehicles"] if v["id"] == str(vehicle.id))
+    assert (car["make"], car["model"], car["variant"]) == ("Hyundai", "Creta", "SX")
+    assert "rate_today" in {a["key"] for a in home["quick_actions"]}
+    assert "feedback" not in {a["key"] for a in home["quick_actions"]}
+
+
+def test_confirmed_review_cannot_be_changed_by_draft_endpoint(client, asha):
+    assert confirm(client, asha, answers(client, asha)).status_code == 204
+    result = client.patch("/v1/customer/onboarding/draft", headers=asha,
+                          json={"step": 0, "first_name": "Changed"})
+    assert result.status_code == 409 and result.json()["code"] == "already_confirmed"
+
+
 def test_home_shows_the_customers_own_vehicles(client, asha):
     home = client.get("/v1/customer/home", headers=asha).json()
     assert home["greeting_name"] == "Asha" and home["onboarding_confirmed"] is False
     assert [a["key"] for a in home["quick_actions"]] == [
-        "skip_pause", "history", "feedback", "report_issue"]
+        "skip_pause", "history", "rate_today", "report_issue"]
 
     creta, swift, punch = home["vehicles"]
     assert creta == {

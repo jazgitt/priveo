@@ -11,14 +11,16 @@ import { VehicleWizard } from "./VehicleWizard";
 export function CustomersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
-  const list = useQuery({ queryKey: ["customers", search], queryFn: () => api<{ id: string; name: string; email: string; mobile: string }[]>(`/v1/admin/customers?q=${encodeURIComponent(search)}`) });
+  const list = useQuery({ queryKey: ["customers", search, page], queryFn: () => api<{ id: string; name: string; email: string; mobile: string }[]>(`/v1/admin/customers?q=${encodeURIComponent(search)}&limit=50&offset=${page * 50}`) });
   return <><h1 className="page-title">Customers</h1><Card title="Find a customer">
-    <TextField label="Search by name, mobile, registration or society" value={search} onChange={e => setSearch(e.target.value)} />
+    <TextField label="Search by name, mobile, registration or society" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
     <Button onClick={() => setCreating(true)}>Create customer</Button><ApiErrorNote error={list.error} />
     {list.isPending && <p>Loading customersâ€¦</p>}
     {list.data?.length === 0 && <p>No customers found.</p>}
     <table><thead><tr><th>Name</th><th>Email</th><th>Mobile</th></tr></thead><tbody>{list.data?.map(c => <tr key={c.id}><td><Link to={`/customers/${c.id}`}>{c.name}</Link></td><td>{c.email}</td><td>{c.mobile}</td></tr>)}</tbody></table>
+    <nav aria-label="Customer pages"><Button disabled={page === 0 || list.isFetching} onClick={() => setPage(page - 1)}>Previous</Button> Page {page + 1} <Button disabled={list.isFetching || (list.data?.length ?? 0) < 50} onClick={() => setPage(page + 1)}>Next</Button></nav>
   </Card>{creating && <VehicleWizard onClose={() => setCreating(false)} onSaved={id => { setCreating(false); navigate(`/customers/${id}`); }} />}</>;
 }
 
@@ -66,7 +68,7 @@ function VehicleControls({ v, customerId }: { v: Vehicle; customerId: string }) 
         <SelectField label="Plan at next renewal" value={planId} onChange={e => setPlanId(e.target.value)}><option value="">Keep current plan</option>{plans.data?.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.name} Â· â‚¹{p.monthly_price_rupees}</option>)}</SelectField>
         <SelectField label="Service cutoff" value={cutoff} onChange={e => setCutoff(e.target.value)}>{times.map(t => <option key={t}>{t}</option>)}</SelectField>
         <SelectField label="Interior care day" value={interior} onChange={e => setInterior(e.target.value)}><option value="">None</option>{weekdays.map(d => <option key={d}>{d}</option>)}</SelectField>
-        <Button busy={action.isPending} onClick={() => action.mutate({ path: `/v1/admin/subscriptions/${v.subscription!.id}`, method: "PATCH", body: { cutoff_time: cutoff, ...(interior ? { interior_day: interior } : {}), ...(planId ? { plan_id: planId } : {}) } })}>Save settings</Button>
+        <Button busy={action.isPending} onClick={() => action.mutate({ path: `/v1/admin/subscriptions/${v.subscription!.id}`, method: "PATCH", body: { cutoff_time: cutoff, ...(interior && (!planId || plans.data?.find(p => p.id === planId)?.includes_interior) ? { interior_day: interior } : {}), ...(planId ? { plan_id: planId } : {}) } })}>Save settings</Button>
       </details>
       <details><summary>Skip and pause on behalf of customer</summary><TextField label="Service date / pause start" type="date" value={date} onChange={e => setDate(e.target.value)} /><TextField label="Pause end" type="date" value={end} onChange={e => setEnd(e.target.value)} />
         <Button disabled={!date} onClick={() => action.mutate({ path: `/v1/admin/vehicles/${v.id}/skips`, body: { date } })}>Skip date</Button>
@@ -88,6 +90,7 @@ export function CustomerDetailPage() {
   const c = details.data;
   if (!c) return <><h1>Customer</h1><ApiErrorNote error={details.error} /><p>{details.isPending ? "Loadingâ€¦" : "Customer unavailable."}</p></>;
   return <><Link to="/customers">â† Customers</Link><h1 className="page-title">{c.first_name} {c.last_name}</h1><ApiErrorNote error={action.error} />
+    {(c.imported_history?.length ?? 0) > 0 && <Card title="Imported service history">{c.imported_history!.map(h => <article key={h.id}><strong>{h.service}</strong> · {h.vehicle} · {h.date ? showDate(h.date) : "Date unknown"}<p>Completion not recorded · Payment {h.payment_status || "unknown"}</p><p>{h.notes}</p></article>)}</Card>}
     <Card title="Customer details"><p>{c.email} Â· {c.mobile}</p><p>Email {c.email_verified ? "verified" : "not verified"} Â· Password {c.password_set ? "set" : "not set"} Â· Review {c.onboarding_confirmed ? "confirmed" : "pending"}</p>
       <form onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); action.mutate({ path: `/v1/admin/customers/${id}`, method: "PATCH", body: Object.fromEntries(f) }); }}>
         <TextField label="First name" name="first_name" defaultValue={c.first_name} /><TextField label="Last name" name="last_name" defaultValue={c.last_name} /><TextField label="Mobile" name="mobile" defaultValue={c.mobile} /><TextField label="Flat" name="flat" defaultValue={c.flat} /><Button type="submit" busy={action.isPending}>Save customer</Button>

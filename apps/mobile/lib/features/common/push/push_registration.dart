@@ -42,12 +42,12 @@ final pushRegistrationProvider = FutureProvider<void>((ref) async {
   final session = ref.watch(authControllerProvider).value;
   if (session == null) return;
   final provider = ref.watch(pushTokenProvider);
-  if (session.role == Role.customer) {
+  if (session.role == Role.customer || session.role == Role.crew) {
     try {
       await ref
           .read(dioProvider)
           .put<void>(
-            '/v1/customer/session-device',
+            '/v1/${session.role.name}/session-device',
             data: {
               'device_name': '${provider.platform} phone',
               'platform': provider.platform,

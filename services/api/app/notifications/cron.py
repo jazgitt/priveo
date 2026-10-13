@@ -14,12 +14,13 @@ freeze cutoff time (ADM-SCH-25):
       {"path": "/v1/internal/cron/payments-overdue",    "schedule": "40 18 * * *"},
       {"path": "/v1/internal/cron/renewal-reminders",   "schedule": "30 4 * * *"},
       {"path": "/v1/internal/cron/checkin-notify",      "schedule": "0 5 * * *"},
-      {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "0 * * * *"}
+      {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "*/5 * * * *"}
     ]
 
-`complaints-overdue` runs hourly (ADM-CMP-08 wants it within the hour after
-the 4 hours). Vercel's free plan allows only one run a day for every cron; on
-that plan change it to a daily time such as "0 5 * * *".
+`complaints-overdue` runs every five minutes, so a Raised complaint crossing
+the four-hour threshold is detected on the next run. Use a host plan that
+supports this cadence; a daily-only cron is insufficient. Pending alert email
+delivery is retried by the same protected job.
 
 `CRON_SECRET` is environment configuration, never committed. Without it every
 call is refused."""
@@ -88,10 +89,10 @@ def _renewal_reminders(db: Session, now: datetime, settings: MoneySettings) -> d
 
 def _support(db: Session, now: datetime):
     from app.notifications.bridge import SupportNotifier
-    from app.support.notify import LoggingEmailNotifier
+    from app.support.notify import QueuedEmailNotifier
     from app.support.service import SupportService
 
-    return SupportService(db, SupportNotifier(db), LoggingEmailNotifier(),
+    return SupportService(db, SupportNotifier(db), QueuedEmailNotifier(db),
                           now=lambda: now, today=lambda: today_of(now))
 
 
@@ -100,10 +101,18 @@ def _checkin_notify(db: Session, now: datetime, settings: MoneySettings) -> dict
 
 
 def _complaints_overdue(db: Session, now: datetime, settings: MoneySettings) -> dict:
-    return {"alerted": _support(db, now).alert_overdue_complaints()}
+    from app.support.email_delivery import deliver_pending
+    alerted = _support(db, now).alert_overdue_complaints()
+    return {"alerted": alerted, "emails_sent": deliver_pending(db, now=now)}
+
+
+def _automatic_planning(db: Session, now: datetime, settings: MoneySettings) -> dict:
+    from app.scheduling.automatic import run_due
+    return run_due(db, now)
 
 
 JOBS = {
+    "automatic-planning": _automatic_planning,
     "freeze-due": _freeze_due,
     "payments-generate": _payments_generate,
     "payments-overdue": _payments_overdue,

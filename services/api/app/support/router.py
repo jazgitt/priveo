@@ -1,17 +1,26 @@
+import re
 import uuid
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.customer_reads.deps import get_customer_reads
+from app.customer_reads.schemas import VisitDetail
+from app.customer_reads.service import CustomerReads
+from app.customers.models import Customer
 from app.directory import lookup
+from app.identity.models import Login
 from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
+from app.platform.errors import ApiError
 from app.support import alerts
 from app.support.faq import SupportFaqOut, load_faq
+from app.support.models import Complaint
 from app.support.notify import (
     EmailNotifier,
-    LoggingEmailNotifier,
+    QueuedEmailNotifier,
     PushNotifier,
 )
 from app.support.schemas import (
@@ -54,8 +63,8 @@ def get_push_notifier(db: Session = Depends(get_db)) -> PushNotifier:
     return SupportNotifier(db)
 
 
-def get_email_notifier() -> EmailNotifier:
-    return LoggingEmailNotifier()
+def get_email_notifier(db: Session = Depends(get_db)) -> EmailNotifier:
+    return QueuedEmailNotifier(db)
 
 
 def get_support_service(db: Session = Depends(get_db),
@@ -166,6 +175,18 @@ def admin_complaint(complaint_id: uuid.UUID, user: User = Depends(require_role("
     return service.detail_for_admin(complaint_id)
 
 
+@admin.get("/complaints/{complaint_id}/visit", response_model=VisitDetail)
+def admin_complaint_visit(complaint_id: uuid.UUID,
+                          _: User = Depends(require_role("admin")),
+                          db: Session = Depends(get_db),
+                          reads: CustomerReads = Depends(get_customer_reads)):
+    complaint = db.get(Complaint, complaint_id)
+    if complaint is None or not complaint.visit_id:
+        raise ApiError("not_found", "No linked visit was found.", 404)
+    customer = db.get(Customer, complaint.customer_id)
+    return reads.visit_detail(customer.login_id, complaint.visit_id)
+
+
 @admin.post("/complaints/{complaint_id}/status", response_model=AdminComplaintDetail)
 def admin_set_status(complaint_id: uuid.UUID, body: StatusChange,
                      user: User = Depends(require_role("admin")),
@@ -234,6 +255,35 @@ def admin_alerts(unread_only: bool = False, user: User = Depends(require_role("a
     """The alert list with the unread count for the bell (ADM-ACC-09)."""
     return AlertList(unread_count=alerts.unread_count(db),
                      items=[_alert_out(a) for a in alerts.list_alerts(db, unread_only)])
+
+
+class AlertEmailPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+    email: str = Field(max_length=254)
+
+
+@admin.get("/alerts/email-preferences", response_model=AlertEmailPreferences)
+def alert_email_preferences(user: User = Depends(require_role("admin")),
+                            db: Session = Depends(get_db)):
+    login = db.get(Login, user.id)
+    return AlertEmailPreferences(enabled=login.alert_email_enabled, email=login.alert_email)
+
+
+@admin.put("/alerts/email-preferences", response_model=AlertEmailPreferences)
+def save_alert_email_preferences(body: AlertEmailPreferences,
+                                 user: User = Depends(require_role("admin")),
+                                 db: Session = Depends(get_db)):
+    from app.customers.administration import audit
+    email = body.email.strip().lower()
+    if (email or body.enabled) and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ApiError("validation_failed", "Enter an email address for alerts.", 422,
+                       {"email": "invalid"})
+    login = db.get(Login, user.id)
+    login.alert_email, login.alert_email_enabled = email, body.enabled
+    audit(db, user.id, "login", user.id, "alert_email", {"enabled": body.enabled, "email": email})
+    db.commit()
+    return AlertEmailPreferences(enabled=body.enabled, email=email)
 
 
 @admin.post("/alerts/read-all", status_code=204)

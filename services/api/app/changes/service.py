@@ -164,6 +164,13 @@ class ChangesService:
     def _save(self, change: ScheduleChange) -> ScheduleChange:
         self._db.add(change)
         self._db.flush()
+        if change.kind == "pause":
+            from app.changes.payment_dates import shift_unpaid_renewals
+
+            sub = self._db.scalar(select(Subscription).where(
+                Subscription.vehicle_id == change.vehicle_id))
+            shift_unpaid_renewals(self._db, sub, change.start_date,
+                                 (change.end_date - change.start_date).days + 1)
         if change.actor == "admin":
             from app.customers.administration import audit
 
@@ -242,7 +249,7 @@ class ChangesService:
             )
         )
         emit.visits_removed(self._db, vehicle.id, day, day, "skip")  # notify hook
-        emit.customer_skipped(self._db, vehicle, day)  # notify hook
+        emit.customer_skipped(self._db, vehicle, day, actor=actor.role)  # notify hook
         return self._out(change)
 
     def unskip(self, actor: Actor, vehicle: Vehicle, change_id: str) -> None:
@@ -342,6 +349,7 @@ class ChangesService:
         pause = self._change(vehicle, change_id, "pause")
         if pause.status != "Active" or pause.end_date < today:
             raise ApiError("pause_over", "That pause is over already.", 409)
+        previous_end = pause.end_date
         if pause.start_date > today:
             require_open(pause.start_date, now, bound=actor.bound, hour=self._hour)
             self._gateway.resume_range(vehicle.id, pause.start_date, pause.end_date)
@@ -354,6 +362,11 @@ class ChangesService:
                 raise ApiError("pause_ending", "That pause ends tomorrow already.", 409)
             self._gateway.resume_range(vehicle.id, resume, pause.end_date)
             pause.end_date = resume - timedelta(days=1)
+        from app.changes.payment_dates import shift_unpaid_renewals
+
+        removed = ((previous_end - pause.start_date).days + 1
+                   if pause.status == "Cancelled" else (previous_end - pause.end_date).days)
+        shift_unpaid_renewals(self._db, sub, pause.start_date, -removed)
         pause.ended_at = utcnow()
         if actor.role == "admin":
             from app.customers.administration import audit

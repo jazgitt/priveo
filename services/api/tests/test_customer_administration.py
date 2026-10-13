@@ -14,6 +14,20 @@ from app.platform.clock import today_ist
 from tests.test_api import auth, login
 
 
+def test_admin_creates_standalone_customer_without_plan_or_payment(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    car = vehicle_body(directory, upload(client, admin))
+    car.update(plan_id=None, cutoff_time=None, interior_day=None)
+    response = client.post('/v1/admin/customers', headers=admin, json={
+        'first_name': 'Spa', 'last_name': 'Customer', 'email': 'spa@example.com',
+        'mobile': '9876543211', 'vehicle': car})
+    assert response.status_code == 201, response.text
+    vehicle = response.json()['vehicles'][0]
+    assert vehicle['subscription'] is None and vehicle['payments'] == []
+    assert db.scalar(select(Subscription).where(Subscription.vehicle_id == uuid.UUID(vehicle['id']))) is None
+    assert db.scalar(select(Payment).where(Payment.vehicle_id == uuid.UUID(vehicle['id']))) is None
+
+
 @pytest.fixture
 def directory(db, client, tmp_path):
     society = Society(name="Second society")
@@ -143,6 +157,7 @@ def test_email_correction_invalidates_sessions_and_pending_codes(client, directo
 
 
 def test_plan_change_waits_for_renewal_and_society_is_immutable(client, directory, db):
+    from app.notifications.models import Notification
     admin = auth(login(client, "admin")["access_token"])
     c, _ = create(client, directory, admin)
     sub = db.scalar(
@@ -157,6 +172,10 @@ def test_plan_change_waits_for_renewal_and_society_is_immutable(client, director
         f"/v1/admin/subscriptions/{sub.id}", headers=admin, json={"plan_id": str(next_plan.id)}
     )
     assert r.status_code == 200, r.text
+    assert client.patch(f"/v1/admin/subscriptions/{sub.id}", headers=admin,
+                        json={"cutoff_time": "08:30"}).status_code == 200
+    customer_login_id = db.get(Customer, uuid.UUID(c["id"])).login_id
+    assert db.scalar(select(Notification).where(Notification.login_id == customer_login_id)) is None
     db.refresh(sub)
     assert sub.monthly_price_rupees == 999 and sub.pending_plan_id == next_plan.id
     assert sub.pending_from >= today_ist() + timedelta(days=1)

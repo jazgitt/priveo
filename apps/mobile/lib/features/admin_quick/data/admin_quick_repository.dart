@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -141,5 +142,5 @@ class ApiAdminQuickRepository implements AdminQuickRepository {
 }
 
 final adminQuickRepositoryProvider = Provider<AdminQuickRepository>(
-  (ref) => ApiAdminQuickRepository(ref.watch(dioProvider)),
+  (ref) => ApiAdminQuickRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );

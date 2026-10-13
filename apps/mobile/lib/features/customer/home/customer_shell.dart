@@ -18,12 +18,13 @@ import '../../changes_money/strings.dart';
 import '../../common/push/push_registration.dart';
 import '../../common/signout_button.dart';
 import '../../support/feedback_sheet.dart';
-import '../../support/feedback_tab.dart';
 import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
 import '../account/photo_widgets.dart' show VehiclePhotoThumb;
 import '../calendar/calendar_screen.dart';
+import '../data/proof_reads_repository.dart' show todayCleansProvider;
+import '../visit/visit_details_screen.dart' show openVisitDetails;
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
 import 'todays_clean_strip.dart';
@@ -56,8 +57,7 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
     }
     return Scaffold(
       extendBody: true,
-      body: FeedbackSideTab(
-        child: SafeArea(
+      body: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -72,7 +72,6 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
               ),
             ],
           ),
-        ),
       ),
       bottomNavigationBar: _TabBar(
         index: _index,
@@ -296,13 +295,17 @@ class CustomerHomeScreen extends ConsumerWidget {
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.4,
                   children: [
-                    for (final a in h.quickActions) _QuickAction(a),
+                    for (final a in h.quickActions)
+                      if (a.key != 'skip_pause' || vehicle?.subscriptionStatus != null) _QuickAction(a),
+                    if (vehicle?.subscriptionStatus != null)
                     _QuickAction(
                       const QuickAction(
                         key: 'subscription',
                         label: MoneyStrings.subTitle,
                       ),
                     ),
+                    if (vehicle != null && vehicle.subscriptionStatus == null)
+                      const _QuickAction(QuickAction(key: 'standalone', label: 'Deep Spa')),
                     // Add-ons are for a vehicle with an Active subscription (HOME-09).
                     if (vehicle?.subscriptionStatus == 'Active')
                       _QuickAction(
@@ -519,7 +522,7 @@ class _VehicleCard extends StatelessWidget {
               VehiclePhotoThumb(vehicle.id), // HOME-02
               Expanded(
                 child: Text(
-                  vehicle.model,
+                  [vehicle.make, vehicle.model, vehicle.variant].whereType<String>().where((s) => s.isNotEmpty).join(' '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.titleLarge,
@@ -552,7 +555,7 @@ class _QuickAction extends ConsumerWidget {
 
   /// Where a quick action leads. The money screens belong to one vehicle: the
   /// one selected on Home.
-  void _open(BuildContext context, WidgetRef ref) {
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
     final home = ref.read(customerHomeProvider).value;
     String? vehicleId;
     if (home != null && home.vehicles.isNotEmpty) {
@@ -568,6 +571,19 @@ class _QuickAction extends ConsumerWidget {
         context.push('/customer/history');
       case 'feedback':
         showFeedbackSheet(context);
+      case 'rate_today':
+        try {
+          final cleans = await ref.read(todayCleansProvider.future);
+          if (!context.mounted) return;
+          final clean = cleans.where((c) => c.vehicleId == vehicleId).firstOrNull;
+          if (clean != null) {
+            openVisitDetails(context, clean.visitId);
+          } else {
+            showMessage(context, 'No completed clean to rate today.');
+          }
+        } catch (_) {
+          if (context.mounted) showMessage(context, 'Could not load today’s completed service. Try again.');
+        }
       case 'report_issue':
         context.push(SupportRoutes.report);
       case 'skip_pause' when vehicleId != null:
@@ -576,15 +592,19 @@ class _QuickAction extends ConsumerWidget {
         context.push(money.subscriptionPath(vehicleId));
       case 'addons' when vehicleId != null:
         context.push(money.addonsPath(vehicleId));
+      case 'standalone' when vehicleId != null:
+        context.push(money.standalonePath(vehicleId));
     }
   }
 
   static IconData _iconFor(String key) => switch (key) {
     'subscription' => Symbols.workspace_premium_rounded,
     'addons' => Symbols.auto_awesome_rounded,
+    'standalone' => Symbols.auto_awesome_rounded,
     'skip_pause' => Symbols.pause_circle_rounded,
     'history' => Symbols.history_rounded,
     'feedback' => Symbols.star_rounded,
+    'rate_today' => Symbols.star_rounded,
     'report_issue' => Symbols.report_rounded,
     _ => Symbols.arrow_forward_rounded,
   };

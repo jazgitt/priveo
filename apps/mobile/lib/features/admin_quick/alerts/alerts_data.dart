@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -87,7 +88,7 @@ class ApiAlertsRepository implements AlertsRepository {
 }
 
 final alertsRepositoryProvider = Provider<AlertsRepository>(
-  (ref) => ApiAlertsRepository(ref.watch(dioProvider)),
+  (ref) => ApiAlertsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 final alertsProvider = FutureProvider.autoDispose<AlertList>(

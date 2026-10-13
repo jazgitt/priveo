@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customer_reads.repository import ChecklistEntry, Job, ProofItem, Visit
-from app.directory import lookup
 from app.identity.models import Login
 from app.media.service import confirmed_proof, download_url
 from app.media.store import ObjectStore, get_object_store
@@ -94,13 +93,11 @@ class SqlVisitReadRepository:
         row = self.db.get(VisitRow, ids[0]) if ids else None
         return self._visits([row])[0] if row else None
 
-    def _checklist(self, service: str, ticked: dict[str, datetime]) -> list[ChecklistEntry]:
-        """The active items, plus any ticked item the admin has since switched
-        off, so a finished visit stays readable (ADM-CHK-05)."""
-        items = [(i.key, i.label) for i in lookup.checklist_for(self.db, service)]
-        shown = {k for k, _ in items}
-        items += [(k, lookup.checklist_label(self.db, service, k) or k)
-                  for k in ticked if k not in shown]
+    def _checklist(self, job: JobRow, ticked: dict[str, datetime]) -> list[ChecklistEntry]:
+        """The issued definition with original tick times (ADM-CHK-05)."""
+        from app.visits.checklists import items_for_job
+
+        items = [(i.key, i.label) for i in items_for_job(self.db, job)]
         return [ChecklistEntry(key=k, label=label, checked_at=ticked.get(k))
                 for k, label in items]
 
@@ -131,12 +128,12 @@ class SqlVisitReadRepository:
                 id=str(r.id), visit_id=str(r.visit_id), service=r.service,
                 source_job_id=str(r.source_job_id) if r.source_job_id else None,
                 status=_JOB_STATUS.get(r.status, r.status),
-                proof=[ProofItem(kind=u.kind, url=download_url(self.store, u), stage=u.stage,
+                proof=[ProofItem(id=str(u.id), kind=u.kind, url=download_url(self.store, u), stage=u.stage,
                                  taken_at=u.confirmed_at) for u in proof[r.id]],
                 crew_name=first or None,
                 started_at=timing.started_at if timing else None,
                 finished_at=timing.finished_at if timing else None,
-                checklist=self._checklist(r.service, ticks.get(r.id, {})),
+                checklist=self._checklist(r, ticks.get(r.id, {})),
                 start_minute=r.start_minute, duration_minutes=r.duration_minutes,
                 finish_by_minute=r.finish_by_minute,
                 addon_request_id=str(r.addon_booking_id or r.addon_request_id)

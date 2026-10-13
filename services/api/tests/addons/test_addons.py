@@ -92,7 +92,7 @@ def test_change_and_cancel_follow_the_9pm_rule_and_a_cancelled_add_on_is_not_cha
     assert m.client.get(f"{vehicle(m)}/payments", headers=m.customer).json() == []
 
 
-def test_standalone_deep_spa_is_a_request_with_contact_and_no_payment(money):
+def test_standalone_deep_spa_uses_the_same_spa_payment(money):
     m = money
     none = m.add_vehicle(subscribed=False)
     r = m.client.post("/v1/customer/addons/standalone",
@@ -100,9 +100,10 @@ def test_standalone_deep_spa_is_a_request_with_contact_and_no_payment(money):
                             "notes": "Call after 6 PM"}, headers=m.customer)
     assert r.status_code == 201, r.text
     a = r.json()
-    assert (a["standalone"], a["status"], a["payment_id"], a["price_rupees"]) == (
-        True, "Requested", None, None)
-    assert m.db.scalars(select(Payment)).all() == []
+    assert a["standalone"] and a["status"] == "Requested"
+    pay = m.db.scalar(select(Payment))
+    assert str(pay.id) == a["payment_id"] and pay.kind == "Add-on"
+    assert pay.amount_rupees == a["price_rupees"] and a["payment_status"] == "Due"
     listed = m.client.get("/v1/admin/addons?standalone=true", headers=m.admin).json()
     assert (listed[0]["contact_mobile"], listed[0]["notes"], listed[0]["customer_name"]) == (
         "9000004321", "Call after 6 PM", "Meera Rao")

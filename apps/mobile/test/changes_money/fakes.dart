@@ -143,10 +143,11 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<PaymentDetailDto> paymentDetail(String id) async => PaymentDetailDto(
-        payment: payment(id),
-        instructions: const PayInstructionsDto(
-            amountRupees: 1299,
+        payment: payment(id, amount: id == 'p-addon' ? 1500 : 1299),
+        instructions: PayInstructionsDto(
+            amountRupees: id == 'p-addon' ? 1500 : 1299,
             upiId: 'priveo-placeholder@upi',
+            upiUri: 'upi://pay?pa=priveo-placeholder@upi&am=${id == 'p-addon' ? 1500 : 1299}&cu=INR',
             payeeName: 'Priveo (placeholder)'),
       );
 
@@ -161,6 +162,8 @@ class FakeMoneyRepository implements MoneyRepository {
     _check();
     calls.add('paid $id');
     return PaymentDetailDto(
+        vehicle: 'HR01ZZ1234 · Hyundai Creta SX',
+        serviceDetails: const {'cutoff_time': '07:00', 'interior_day': 'Friday'},
         payment: payment(id, status: 'Initiated'),
         instructions: const PayInstructionsDto(
             amountRupees: 1299, upiId: 'x@upi', payeeName: 'Priveo'));
@@ -211,9 +214,9 @@ class FakeMoneyRepository implements MoneyRepository {
         date: date,
         finishBy: finishBy,
         status: 'Requested',
-        priceRupees: null,
-        paymentId: null,
-        paymentStatus: null,
+        priceRupees: 1500,
+        paymentId: 'p-addon',
+        paymentStatus: 'Due',
         canChange: true);
   }
 

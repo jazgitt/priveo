@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
@@ -28,17 +28,17 @@ export function PaymentsPage() {
   const [draft, setDraft] = useState<PaymentFilters>(NO_FILTERS);
   const [filters, setFilters] = useState<PaymentFilters>(NO_FILTERS);
   const [society, setSociety] = useState("");
+  const [page, setPage] = useState(0);
   const [open, setOpen] = useState<AdminPayment | null>(null);
   const [recording, setRecording] = useState(false);
-  const list = usePayments(filters);
+  const list = usePayments(filters, page, society);
   const alerts = useAlerts();
   const readAlert = useReadAlert();
 
-  const societies = useMemo(
-    () => [...new Set((list.data ?? []).map((p) => p.society).filter(Boolean))].sort(),
-    [list.data]);
-  // The API has no society filter yet (BE-16), so it is applied here.
-  const rows = (list.data ?? []).filter((p) => !society || p.society === society);
+  const directory = useQuery({ queryKey: ["payment-societies"],
+    queryFn: () => api<{ name: string }[]>("/v1/admin/directory/societies") });
+  const societies = (directory.data ?? []).map(s => s.name).sort();
+  const rows = list.data ?? [];
   const linkedId = searchParams.get("payment");
   const linked = useQuery({ queryKey: ["linked-payment", linkedId], enabled: !!linkedId,
     queryFn: () => api<AdminPayment>(`/v1/admin/payments/${linkedId}`) });
@@ -79,13 +79,14 @@ export function PaymentsPage() {
             const f = { ...NO_FILTERS, status: "Initiated" };
             setDraft(f);
             setFilters(f);
+            setPage(0);
           }}>Show Initiated payments</Button>
         </Card>
       )}
 
       <Card title="Filter" actions={
         <Button onClick={() => setRecording(true)}>Record a payment</Button>}>
-        <form style={row} onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
+        <form style={row} onSubmit={(e) => { e.preventDefault(); setFilters(draft); setPage(0); }}>
           <SelectField label="Status" value={draft.status} onChange={set("status")}>
             <option value="">All</option>
             {STATUSES.map((s) => <option key={s}>{s}</option>)}
@@ -99,7 +100,7 @@ export function PaymentsPage() {
           <TextField label="Vehicle ID" value={draft.vehicle_id} onChange={set("vehicle_id")} />
           <TextField label="Due after" type="date" value={draft.due_after} onChange={set("due_after")} />
           <TextField label="Due before" type="date" value={draft.due_before} onChange={set("due_before")} />
-          <SelectField label="Society" value={society} onChange={(e) => setSociety(e.target.value)}>
+          <SelectField label="Society" value={society} onChange={(e) => { setSociety(e.target.value); setPage(0); }}>
             <option value="">All</option>
             {societies.map((s) => <option key={s}>{s}</option>)}
           </SelectField>
@@ -108,6 +109,7 @@ export function PaymentsPage() {
             setDraft(NO_FILTERS);
             setFilters(NO_FILTERS);
             setSociety("");
+            setPage(0);
           }}>Clear</Button>
         </form>
       </Card>
@@ -117,6 +119,7 @@ export function PaymentsPage() {
         {list.isError && <ApiErrorNote error={list.error} />}
         {list.data && <Table columns={columns} rows={rows} rowKey={(p) => p.id}
                              empty="No payments match these filters." />}
+        <nav aria-label="Payment pages"><Button disabled={page === 0 || list.isFetching} onClick={() => setPage(page - 1)}>Previous</Button> Page {page + 1} <Button disabled={list.isFetching || (list.data?.length ?? 0) < 50} onClick={() => setPage(page + 1)}>Next</Button></nav>
       </Card>
 
       {shown && <PaymentDialog payment={shown} onChange={setOpen} onClose={() => { setOpen(null); setSearchParams({}); }} />}
@@ -210,6 +213,7 @@ function PaymentDialog({ payment, onChange, onClose }: {
           <p>Issued {showDate(inv.issued_on)}. {inv.customer_name}, {inv.vehicle}.</p>
           <p>{inv.description}: {rupees(inv.amount_rupees)}{inv.gst_included ? " including GST" : ""}.</p>
           <p className="muted">{inv.seller_name}, {inv.seller_address}. GSTIN {inv.seller_gstin}.</p>
+          <a href={`/v1/admin/payments/${encodeURIComponent(payment.id)}/invoice.pdf`} target="_blank" rel="noreferrer">Open invoice PDF</a>
         </section>
       )}
     </Dialog>

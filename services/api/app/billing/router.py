@@ -101,11 +101,29 @@ def my_invoice(
     return svc.invoice_for(customer_of(db, user.id), payment_id)
 
 
+def pdf_response(filename: str, content: bytes) -> Response:
+    return Response(content, media_type="application/pdf", headers={
+        "Content-Disposition": f'inline; filename="{filename}"',
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+    })
+
+
+@customer.get("/payments/{payment_id}/invoice.pdf", response_class=Response,
+              responses={200: {"content": {"application/pdf": {"schema": {
+                  "type": "string", "format": "binary"}}}}})
+def my_invoice_pdf(payment_id: str, user: User = Depends(require_role("customer")),
+                   db: Session = Depends(get_db),
+                   svc: BillingService = Depends(get_billing_service)):
+    filename, content = svc.invoice_pdf(payment_id, customer_of(db, user.id))
+    return pdf_response(filename, content)
+
+
 # --- the admin ----------------------------------------------------------------
 
 
 @admin.get("/payments", response_model=list[AdminPaymentOut])
 def list_payments(
+    society: str | None = None,
     status: str | None = None,
     kind: str | None = None,
     customer_id: str | None = None,
@@ -113,10 +131,12 @@ def list_payments(
     due_before: dt.date | None = None,
     due_after: dt.date | None = None,
     limit: int = 100,
+    offset: int = 0,
     user: User = Depends(require_role("admin")),
     svc: BillingService = Depends(get_billing_service),
 ):
     return svc.list_payments(
+        society=society,
         status=status,
         kind=kind,
         customer_id=customer_id,
@@ -124,6 +144,7 @@ def list_payments(
         due_before=due_before,
         due_after=due_after,
         limit=min(max(limit, 1), 500),
+        offset=max(offset, 0),
     )
 
 
@@ -189,6 +210,15 @@ def alerts(
     svc: BillingService = Depends(get_billing_service),
 ):
     return svc.alerts(unread_only)
+
+
+@admin.get("/payments/{payment_id}/invoice.pdf", response_class=Response,
+           responses={200: {"content": {"application/pdf": {"schema": {
+               "type": "string", "format": "binary"}}}}})
+def admin_invoice_pdf(payment_id: str, user: User = Depends(require_role("admin")),
+                      svc: BillingService = Depends(get_billing_service)):
+    filename, content = svc.invoice_pdf(payment_id)
+    return pdf_response(filename, content)
 
 
 @admin.post("/payment-alerts/{alert_id}/read", status_code=204)

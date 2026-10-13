@@ -3,6 +3,8 @@ import { useState } from "react";
 
 import { api, ApiError } from "../../api/client";
 import { Button, Card, StatusChip, TextField, useToast } from "../../components";
+import { AlertEmailSettings } from "./AlertEmailSettings";
+import { AutomaticPlanningSettings } from "./AutomaticPlanningSettings";
 
 const PATH = "/v1/admin/directory/settings";
 
@@ -43,13 +45,15 @@ function when(iso: string): string {
 function SettingRow({ setting }: { setting: Setting }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [value, setValue] = useState(String(setting.value ?? ""));
+  const [draft, setValue] = useState<string>();
+  const value = draft ?? String(setting.value ?? "");
   const save = useMutation({
     mutationFn: () => api<Setting>(`${PATH}/${setting.key}`, {
       method: "PUT",
       body: { value: setting.kind === "int" ? Number(value) : value },
     }),
     onSuccess: () => {
+      setValue(undefined);
       toast.show(`${setting.label} saved.`, "ok");
       void qc.invalidateQueries({ queryKey: ["admin-settings"] });
     },
@@ -58,6 +62,10 @@ function SettingRow({ setting }: { setting: Setting }) {
     ? (save.error.fields.value ?? save.error.message)
     : save.error ? "Could not save. Please try again." : undefined;
   const changed = value !== String(setting.value ?? "");
+
+  if (setting.group === "invoice") {
+    return <div className="set-row"><p><strong>{setting.label}</strong>: {String(setting.value ?? "")}</p><p className="muted">Seeded from environment configuration.</p></div>;
+  }
 
   return (
     <div className="set-row">
@@ -86,6 +94,8 @@ export function SettingsPage() {
   return (
     <>
       <h1 className="page-title">Settings</h1>
+      <AlertEmailSettings />
+      <AutomaticPlanningSettings />
       {list.isLoading && <p className="muted">Loading...</p>}
       {list.isError && <p role="alert" className="form-error">Could not load the settings.</p>}
       <div className="set-stack">
@@ -95,8 +105,8 @@ export function SettingsPage() {
           return (
             <Card key={group} title={title}>
               {rows.map((s) => (
-                // The value is part of the key so a saved value resets the draft.
-                <SettingRow key={`${s.key}-${String(s.value)}`} setting={s} />
+                // Keep drafts while another client changes the server value.
+                <SettingRow key={s.key} setting={s} />
               ))}
             </Card>
           );

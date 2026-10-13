@@ -19,7 +19,7 @@ DEFAULT_SLOT_WINDOWS = {
 }
 
 # ADM-CHK-07. Cleaning-External is the prototype's list. The other two are
-# placeholders (Open) until the owner supplies them. (key, label).
+# owner-authorized five-step samples, editable in the portal. (key, label).
 CHECKLISTS: dict[str, tuple[tuple[str, str], ...]] = {
     "Cleaning-External": (
         ("body", "Exterior body cleaned"), ("glass", "Glass cleaned"),
@@ -27,11 +27,12 @@ CHECKLISTS: dict[str, tuple[tuple[str, str], ...]] = {
         ("inspection", "Final inspection completed")),
     "Cleaning-Internal": (
         ("seats", "Seats and mats vacuumed"), ("dashboard", "Dashboard and panels wiped"),
-        ("glass", "Interior glass cleaned"), ("inspection", "Final inspection completed")),
+        ("glass", "Interior glass cleaned"), ("touchpoints", "Door handles and touchpoints cleaned"),
+        ("inspection", "Final inspection completed")),
     "Deep Spa": (
         ("body", "Exterior body cleaned"), ("vacuum", "Interior vacuumed"),
-        ("dashboard", "Dashboard and panels wiped"), ("glass", "Glass cleaned"),
-        ("wheels", "Wheels cleaned"), ("inspection", "Final inspection completed")),
+        ("dashboard", "Dashboard and panels wiped"), ("glass", "Glass and wheels cleaned"),
+        ("inspection", "Final inspection completed")),
 }
 
 # ADM-CNC-01. (key, label).

@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,6 +66,9 @@ class _AdminCustomersState extends ConsumerState<AdminCustomersScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminCustomers)),
@@ -122,6 +126,9 @@ class _AdminCustomerState extends ConsumerState<AdminCustomerScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminCustomerDetails)),
@@ -195,6 +202,9 @@ class _VehicleActionsState extends ConsumerState<_VehicleActions> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final v = widget.vehicle;
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue && !busy) setState(() => changes = load());
+    });
     final sub = v['subscription'] as Map?;
     return SectionCard(
       child: Column(
@@ -337,6 +347,9 @@ class _AdminOperationsState extends ConsumerState<AdminOperationsScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminOperations)),
@@ -601,6 +614,9 @@ class _AdminCrewState extends ConsumerState<AdminCrewScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminCrew)),
@@ -770,6 +786,9 @@ class _AdminAddonsState extends ConsumerState<AdminAddonsScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminAddonRequests)),
@@ -853,6 +872,9 @@ class _AdminCheckinsState extends ConsumerState<AdminCheckinsScreen> {
   });
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue) refresh();
+    });
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.adminCheckins)),

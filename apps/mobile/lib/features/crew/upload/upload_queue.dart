@@ -35,6 +35,7 @@ class QueuedUpload {
     this.step = UploadStep.queued,
     this.attempts = 0,
     this.lastError,
+    this.ownerId,
   });
 
   final int id;
@@ -53,6 +54,7 @@ class QueuedUpload {
   final UploadStep step;
   final int attempts;
   final String? lastError;
+  final String? ownerId;
 
   QueuedUpload copyWith({
     String? uploadId,
@@ -75,6 +77,7 @@ class QueuedUpload {
         step: step ?? this.step,
         attempts: attempts ?? this.attempts,
         lastError: lastError,
+        ownerId: ownerId,
       );
 
   Map<String, Object?> toRow() => {
@@ -92,6 +95,7 @@ class QueuedUpload {
         'step': step.name,
         'attempts': attempts,
         'last_error': lastError,
+        'owner_login_id': ownerId,
       };
 
   factory QueuedUpload.fromRow(Map<String, Object?> r) {
@@ -119,6 +123,7 @@ class QueuedUpload {
           orElse: () => UploadStep.queued),
       attempts: (r['attempts'] as int?) ?? 0,
       lastError: r['last_error'] as String?,
+      ownerId: r['owner_login_id'] as String?,
     );
   }
 }
@@ -151,6 +156,7 @@ class MemoryUploadQueueStore implements UploadQueueStore {
       path: draft.path,
       contentType: draft.contentType,
       sizeBytes: draft.sizeBytes,
+      ownerId: draft.ownerId,
     );
     _rows[saved.id] = saved;
     return saved;
@@ -173,10 +179,13 @@ class UploadQueue {
     this.online,
     this.retryAfter = const Duration(seconds: 30),
     this.maxAttempts = 6,
+    this.ownerId,
+    bool Function()? isCurrent,
     Future<String> Function(String path)? stash,
     Future<void> Function(String path)? discard,
   })  : _stash = stash ?? ((p) async => p),
-        _discard = discard ?? ((_) async {});
+        _discard = discard ?? ((_) async {}),
+        _isCurrent = isCurrent ?? (() => true);
 
   final UploadApi api;
   final UploadQueueStore store;
@@ -188,6 +197,16 @@ class UploadQueue {
   /// timer off (tests).
   final Duration retryAfter;
   final int maxAttempts;
+  final String? ownerId;
+  final bool Function() _isCurrent;
+  bool get _active => !_disposed && _isCurrent();
+
+  void _requireActive() {
+    if (!_active) {
+      throw const ApiFailure(code: 'signed_out',
+          message: 'Sign in to continue the upload.', statusCode: 401);
+    }
+  }
   final Future<String> Function(String path) _stash;
   final Future<void> Function(String path) _discard;
 
@@ -213,11 +232,12 @@ class UploadQueue {
   /// opens and again whenever the connection comes back.
   Future<void> start() async {
     try {
-      _items = await store.all();
+      _items = (await store.all()).where((i) => i.ownerId == ownerId).toList();
     } catch (_) {
       _items = const [];
     }
     _publish();
+    if (!_active) return;
     _onlineSub ??= online?.listen((isOnline) {
       if (isOnline) drain();
     }, onError: (_) {});
@@ -233,7 +253,12 @@ class UploadQueue {
     required String contentType,
     required int sizeBytes,
   }) async {
+    _requireActive();
     final kept = await _stash(path);
+    if (!_active) {
+      await _discard(kept);
+      _requireActive();
+    }
     final saved = await store.add(QueuedUpload(
       id: 0,
       jobId: jobId,
@@ -242,6 +267,7 @@ class UploadQueue {
       path: kept,
       contentType: contentType,
       sizeBytes: sizeBytes,
+      ownerId: ownerId,
     ));
     _items = [..._items, saved];
     _publish();
@@ -261,6 +287,7 @@ class UploadQueue {
     required String contentType,
     required int sizeBytes,
   }) async {
+    _requireActive();
     final ticket = await api.requestUpload(
         purpose: purpose,
         jobId: jobId,
@@ -268,13 +295,16 @@ class UploadQueue {
         stage: stage,
         contentType: contentType,
         sizeBytes: sizeBytes);
+    _requireActive();
     await api.sendFile(ticket, path);
+    _requireActive();
     await api.confirm(ticket.id);
     return ticket.id;
   }
 
   /// Puts a failed item back in line.
   Future<void> retry(int id) async {
+    _requireActive();
     final i = _items.indexWhere((e) => e.id == id);
     if (i < 0) return;
     await _save(_items[i].copyWith(step: UploadStep.queued, attempts: 0));
@@ -284,7 +314,7 @@ class UploadQueue {
   /// Sends every waiting item, in order. Stops at the first sign that the
   /// connection is gone, and tries again when it comes back.
   Future<void> drain() async {
-    if (_disposed) return;
+    if (!_active) return;
     if (_draining) {
       _rerun = true;
       return;
@@ -294,7 +324,7 @@ class UploadQueue {
       do {
         _rerun = false;
         for (final item in List<QueuedUpload>.of(_items)) {
-          if (_disposed) return;
+          if (!_active) return;
           if (item.step == UploadStep.failed) continue;
           final keepGoing = await _process(item);
           if (!keepGoing) break;
@@ -310,6 +340,7 @@ class UploadQueue {
   Future<bool> _process(QueuedUpload start) async {
     var item = start;
     try {
+      _requireActive();
       if (item.step == UploadStep.queued) {
         final ticket = await api.requestUpload(
           purpose: 'proof',
@@ -322,11 +353,13 @@ class UploadQueue {
         item = item.copyWith(
             step: UploadStep.requested, uploadId: ticket.id, ticket: ticket);
         await _save(item);
+        if (!_active) return false;
       }
       if (item.step == UploadStep.requested) {
         await api.sendFile(item.ticket!, item.path);
         item = item.copyWith(step: UploadStep.sent);
         await _save(item);
+        if (!_active) return false;
       }
       if (item.step == UploadStep.sent) {
         await api.confirm(item.uploadId!);
@@ -338,6 +371,7 @@ class UploadQueue {
       }
       return true;
     } on ApiFailure catch (e) {
+      if (!_active) return false;
       // No connection, or signed out: wait. Nothing is counted against the file.
       if (e.isNetwork || e.statusCode == 401) return false;
       // The signed link ran out. Ask for a new one.
@@ -362,6 +396,7 @@ class UploadQueue {
       ));
       return true;
     } catch (e) {
+      if (!_active) return false;
       // The file itself could not be read, for example. Park it.
       await _save(item.copyWith(
           attempts: item.attempts + 1,
@@ -384,7 +419,7 @@ class UploadQueue {
   void _scheduleRetry() {
     _timer?.cancel();
     _timer = null;
-    if (_disposed || retryAfter == Duration.zero) return;
+    if (!_active || retryAfter == Duration.zero) return;
     final waiting = _items.any((i) => i.step != UploadStep.failed);
     if (waiting) _timer = Timer(retryAfter, drain);
   }

@@ -389,7 +389,8 @@ class AuthService:
             self._event(self._db.get(Login, session.login_id), "logout")
             self._db.commit()
 
-    def end_customer_sessions(self, customer_login_id: uuid.UUID, reason: str) -> int:
+    def end_customer_sessions(self, customer_login_id: uuid.UUID, reason: str, *,
+                              actor_id: uuid.UUID, customer_id: uuid.UUID) -> int:
         """Signs a customer out on every phone (AUTH-17, ADM-CUS-21). Returns
         how many sessions were ended."""
         result = self._db.execute(
@@ -398,14 +399,22 @@ class AuthService:
                    AuthSession.ended_at.is_(None))
             .values(ended_at=utcnow(), ended_reason=reason))
         self._event(self._db.get(Login, customer_login_id), "sessions_ended")
+        from app.directory.models import DirectoryAudit
+        self._db.add(DirectoryAudit(admin_login_id=actor_id, entity="customer",
+                                    entity_id=str(customer_id), action="sessions_logout",
+                                    detail={"reason": reason, "ended": result.rowcount or 0}))
         self._db.commit()
         return result.rowcount or 0
 
     def logout_all(self, user: User) -> None:
         """Ends every session of this login, the one in use included (ADM-ACC-14)."""
-        self._db.execute(
+        result = self._db.execute(
             update(AuthSession)
             .where(AuthSession.login_id == user.id, AuthSession.ended_at.is_(None))
             .values(ended_at=utcnow(), ended_reason="logout_all"))
         self._event(self._db.get(Login, user.id), "logout_all")
+        from app.directory.models import DirectoryAudit
+        self._db.add(DirectoryAudit(admin_login_id=user.id, entity="login",
+                                    entity_id=str(user.id), action="logout_all",
+                                    detail={"reason": "logout_all", "ended": result.rowcount or 0}))
         self._db.commit()

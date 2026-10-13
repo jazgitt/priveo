@@ -25,6 +25,7 @@ let payments: unknown[] = [];
 function route(path: string, init?: RequestInit) {
   const method = init?.method ?? "GET";
   if (path.startsWith("/v1/admin/payment-alerts")) return json(200, []);
+  if (path.startsWith("/v1/admin/directory/societies")) return json(200, [{ name: "Lake View" }]);
   if (path.startsWith("/v1/admin/payments") && method === "GET") return json(200, payments);
   return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
 }
@@ -52,6 +53,23 @@ afterEach(() => {
 });
 
 describe("payments page", () => {
+  it("pages payments and resets the page on filter application", async () => {
+    fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path.startsWith("/v1/admin/payments?")) {
+        const offset = new URL(path, "https://test").searchParams.get("offset");
+        return json(200, offset === "50" ? [pay({ id: "last", customer_name: "Second page" })]
+          : Array.from({ length: 50 }, (_, i) => pay({ id: `p${i}`, customer_name: `First ${i}` })));
+      }
+      return route(path, init);
+    });
+    renderPage();
+    await screen.findByText("First 0, B-12");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Second page, B-12")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(screen.getByText("First 0, B-12")).toBeInTheDocument());
+    expect(calls("offset=50").length).toBeGreaterThan(0);
+  });
   it("lists payments and sends the filters", async () => {
     renderPage();
     expect(await screen.findByText("Asha Rao, B-12")).toBeInTheDocument();
@@ -125,6 +143,9 @@ describe("payments page", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
     await userEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
     expect(await screen.findByText("Invoice PRV10264321")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open invoice PDF" })).toHaveAttribute(
+      "href", `/v1/admin/payments/${payments[0].id}/invoice.pdf`);
+    expect(screen.getByRole("link", { name: "Open invoice PDF" })).toHaveAttribute("target", "_blank");
   });
 
   it("records a payment and shows field errors", async () => {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
+import '../../../core/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -24,6 +26,12 @@ void openHistory(BuildContext context) {
 
 /// A page of history is this many visits (the API's default).
 const _pageSize = 30;
+
+final importedHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(readRefreshProvider);
+  final response = await ref.watch(dioProvider).get<List<dynamic>>('/v1/customer/history/imported');
+  return (response.data ?? []).cast<Map<String, dynamic>>();
+});
 
 String _monthKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
@@ -95,6 +103,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue && !_loading) _load();
+    });
     if (!_started) {
       _started = true;
       _vehicleId = _selectedVehicle();
@@ -112,6 +123,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       title: CustStrings.historyTitle,
       body: Column(
         children: [
+          ref.watch(importedHistoryProvider).when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => TextButton(onPressed: () => ref.invalidate(importedHistoryProvider),
+                child: const Text('Retry imported service history')),
+            data: (records) => records.isEmpty ? const SizedBox.shrink() : ConstrainedBox(constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView(shrinkWrap: true, children: [
+                const ListTile(title: Text('Imported service history · all dates')),
+                for (final record in records)
+                  if (_vehicleId == null || record['vehicle_id'] == _vehicleId || record['vehicle_id'] == null)
+                    ListTile(title: Text('${record['service']} · ${record['date'] == null ? 'Date unknown' : formatDate(DateTime.parse(record['date'] as String))}'),
+                      subtitle: Text('Imported record · ${record['vehicle']}\nCompletion not recorded · Payment ${record['payment_status'] ?? 'unknown'}\n${record['notes'] ?? ''}')),
+              ])),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Row(

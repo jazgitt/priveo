@@ -1,10 +1,11 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api.g.dart';
 import '../../../core/providers.dart';
 
 final customerHomeProvider = FutureProvider.autoDispose<CustomerHome>(
-    (ref) => ref.watch(apiProvider).customerHome());
+    (ref) => (ref.watch(readRefreshProvider), ref.watch(apiProvider)).$2.customerHome());
 
 /// Which of the customer's vehicles is selected, by its ID. It is chosen on
 /// Home and carries over to the other customer screens (HOME-07).

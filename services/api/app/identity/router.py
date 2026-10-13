@@ -59,15 +59,21 @@ class SetPasswordRequest(BaseModel):
 
 
 @router.get("/support-contact", response_model=AuthSupportContact)
-def support_contact():
+def support_contact(db: Session = Depends(get_db)):
     """The helpline and WhatsApp numbers for the "not registered" screen, which
     a visitor sees before signing in (AUTH-15)."""
-    from app.support.config import get_support_settings
-
-    s = get_support_settings()
+    from app.directory import lookup
     return AuthSupportContact(
-        helpline=s.support_helpline, whatsapp=s.support_whatsapp, hours=s.support_hours
+        helpline=lookup.setting(db, "support.helpline"),
+        whatsapp=lookup.setting(db, "support.whatsapp"), hours=lookup.setting(db, "support.hours")
     )
+
+
+@router.get("/legal-links")
+def legal_links():
+    from app.platform.config import get_settings
+    settings = get_settings()
+    return {"terms": settings.terms_url, "privacy": settings.privacy_url}
 
 
 @router.post("/start", response_model=StartResult)
@@ -132,9 +138,6 @@ def end_customer_sessions(
     login_id = db.scalar(select(Customer.login_id).where(Customer.id == customer_id))
     if login_id is None:
         raise ApiError("not_found", "Customer not found.", 404)
-    from app.customers.administration import audit
-
-    ended = auth.end_customer_sessions(login_id, "admin_logout")
-    audit(db, user.id, "customer", customer_id, "sessions_logout", {"ended": ended})
-    db.commit()
+    ended = auth.end_customer_sessions(login_id, "admin_logout", actor_id=user.id,
+                                       customer_id=customer_id)
     return CustomerSessionsEnded(ended=ended)

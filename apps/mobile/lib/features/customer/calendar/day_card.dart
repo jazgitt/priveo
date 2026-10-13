@@ -116,8 +116,17 @@ class _DayVisitTileState extends ConsumerState<DayVisitTile> {
     if (v.rescheduledOn != null) {
       return CalStrings.missedRescheduled(formatDate(v.rescheduledOn!));
     }
+    if (v.status == 'Completed') {
+      final finished = v.finishedAt;
+      final time = finished == null
+          ? CustStrings.viewDetails
+          : formatClock(
+              '${finished.hour.toString().padLeft(2, '0')}:'
+              '${finished.minute.toString().padLeft(2, '0')}',
+            );
+      return '$time · ${v.checklistDone} of ${v.checklistTotal} checks done';
+    }
     return switch (v.status) {
-      'Completed' => CustStrings.viewDetails,
       'Skipped' => CustStrings.youSkipped,
       'Missed' => CustStrings.missedNote,
       'Paused' => CalStrings.pausedNote,

@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # out. Without one the logging fake is used. Never committed.
     resend_api_key: str = ""
     email_from: str = "Priveo <no-reply@priveo.in>"
+    terms_url: str = "https://example.com/priveo/terms"
+    privacy_url: str = "https://example.com/priveo/privacy"
 
     @property
     def fixed_email_code(self) -> str | None:

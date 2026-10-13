@@ -1,9 +1,7 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/network/api_failure.dart';
-import '../../core/providers.dart';
 import '../../core/ui/widgets.dart';
 import 'support_strings.dart';
 import 'widgets.dart';
@@ -19,16 +17,25 @@ class FaqItem {
       FaqItem(question: j['question'] as String, answer: j['answer'] as String);
 }
 
-/// The questions in order, from `GET /v1/customer/faq`. Tests override it.
-final faqItemsProvider = FutureProvider.autoDispose<List<FaqItem>>((ref) async {
-  try {
-    final r = await ref.watch(dioProvider).get<dynamic>('/v1/customer/faq');
-    final items = (r.data as Map<String, dynamic>)['items'] as List<dynamic>;
-    return [for (final i in items) FaqItem.fromJson(i as Map<String, dynamic>)];
-  } on DioException catch (e) {
-    throw ApiFailure.fromDio(e);
+/// Questions bundled with this app release; tests may override the provider.
+List<FaqItem> parseFaqMarkdown(String markdown) {
+  final items = <FaqItem>[];
+  String? question;
+  final answer = <String>[];
+  void flush() {
+    if (question != null) items.add(FaqItem(question: question!, answer: answer.join('\n').trim()));
+    answer.clear();
   }
-});
+  for (final line in markdown.split('\n')) {
+    if (line.startsWith('## ')) {
+      flush(); question = line.substring(3).trim();
+    } else if (question != null) { answer.add(line); }
+  }
+  flush(); return items;
+}
+
+final faqItemsProvider = FutureProvider.autoDispose<List<FaqItem>>((ref) async =>
+    parseFaqMarkdown(await rootBundle.loadString('assets/content/faq.md')));
 
 /// A list of questions that expand to show the answer (SUP-05).
 class FaqScreen extends ConsumerWidget {

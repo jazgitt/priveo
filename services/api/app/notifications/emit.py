@@ -332,15 +332,17 @@ def cutoff_requested(db: Session, change, vehicle) -> None:
                 f"finish by {change.cutoff_time:%H:%M}.", "cutoff_request", str(change.id))
 
 @_safe
-def customer_skipped(db: Session, vehicle, day: date) -> None:
+def customer_skipped(db: Session, vehicle, day: date, *, actor: str = "customer") -> None:
     """NOTIF-04: the customer gets "Service skipped" when they skip a visit
-    themselves too."""
+    themselves too. ADM-CUS-14 keeps plan/preferences edits silent; explicit
+    customer/admin skips and operations outcomes retain the skip notification."""
     login_id = _customer_login(db, vehicle.id)
     if login_id is None:
         return
     _service(db).notify(
         login_id, "service_skipped", "Service skipped",
-        f"The visit for {_vehicle_text(vehicle)} on {_show(day)} is skipped.")
+        f"The visit for {_vehicle_text(vehicle)} on {_show(day)} is skipped"
+        f"{' by Priveo' if actor == 'admin' else ''}.")
 
 
 @_safe

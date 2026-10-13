@@ -262,8 +262,12 @@ def test_a_switched_off_checklist_item_and_reason_follow_the_admin(
     db.commit()
 
     after = crew_client.get(f"/v1/crew/jobs/{job.id}", headers=headers).json()
-    assert "glass" not in {i["id"] for i in after["checklist"]}
-    assert len(after["checklist"]) == len(before["checklist"]) - 1
+    # Issued work retains its checklist; new work picks up catalogue changes.
+    assert after["checklist"] == before["checklist"]
+    _, (future,) = new_visit(assigned=ravi, day=DAY.replace(day=8))
+    next_detail = crew_client.get(f"/v1/crew/jobs/{future.id}", headers=headers).json()
+    assert "glass" not in {i["id"] for i in next_detail["checklist"]}
+    assert len(next_detail["checklist"]) == len(before["checklist"]) - 1
     reasons = {r["key"] for r in crew_client.get("/v1/crew/reasons", headers=headers).json()}
     assert "bad_weather" not in reasons and "other" in reasons
     gone = crew_client.post(f"/v1/crew/jobs/{job.id}/could-not-complete", headers=headers,

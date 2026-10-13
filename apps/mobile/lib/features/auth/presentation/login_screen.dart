@@ -41,9 +41,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   _Step _step = _Step.welcome;
   bool _notRegistered = false;
   late final _termsTap = TapGestureRecognizer()
-    ..onTap = () => ref.read(linkOpenerProvider)(termsUri);
+    ..onTap = () => openLegalLink(ref, 'terms');
   late final _privacyTap = TapGestureRecognizer()
-    ..onTap = () => ref.read(linkOpenerProvider)(privacyUri);
+    ..onTap = () => openLegalLink(ref, 'privacy');
   bool _obscure = true;
   bool _busy = false;
   String? _error;

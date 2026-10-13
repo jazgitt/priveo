@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/ui/media_image.dart';
 import '../../../core/ui/theme.dart';
@@ -14,6 +13,7 @@ import '../cust_ui.dart';
 import '../data/customer_reads_repository.dart';
 import '../data/proof_reads_repository.dart';
 import 'visit_strings.dart';
+import 'proof_video_screen.dart';
 
 /// Opens the details of a visit over the current screen (SVC-09).
 void openVisitDetails(BuildContext context, String visitId) {
@@ -75,7 +75,7 @@ class VisitDetailsScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               SectionLabel(CustStrings.jobsHeading),
               const SizedBox(height: 8),
-              for (final j in v.jobs) _JobCard(job: j),
+              for (final j in v.jobs) _JobCard(job: j, visitId: v.id),
               if (v.proof.isEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -107,9 +107,10 @@ class VisitDetailsScreen extends ConsumerWidget {
 
 /// One job: the crew card, the checklist and the job's proof (SVC-02, SVC-03).
 class _JobCard extends StatelessWidget {
-  const _JobCard({required this.job});
+  const _JobCard({required this.job, required this.visitId});
 
   final JobDto job;
+  final String visitId;
 
   @override
   Widget build(BuildContext context) {
@@ -274,18 +275,15 @@ class _JobCard extends StatelessWidget {
             const SizedBox(height: 14),
             SectionLabel(CustStrings.videosHeading),
             const SizedBox(height: 4),
-            for (final p in videos)
+            for (final (index, p) in videos.indexed)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Symbols.play_circle_rounded),
                 title: Text(VisitStrings.videoTitle(p.stage, p.takenAt)),
                 subtitle: const Text(CustStrings.playVideo),
-                // No video package is in the app yet: the phone's own viewer
-                // plays it, and it can seek.
-                onTap: () => launchUrl(
-                  Uri.parse(p.url),
-                  mode: LaunchMode.externalApplication,
-                ),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => ProofVideoScreen(reference: ProofVideoReference(
+                    visitId: visitId, jobId: job.id, proof: p, videoIndex: index)))),
               ),
           ],
         ],

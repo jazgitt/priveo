@@ -24,11 +24,19 @@ from app.crew.service import (
     NewCrew,
 )
 from app.identity.service import User
+from app.identity.models import AuthSession
+from pydantic import BaseModel, Field
 from app.platform.db import get_db
 from app.platform.deps import require_role
 
 admin = APIRouter(prefix="/v1/admin/crew", tags=["admin"])
 crew = APIRouter(prefix="/v1/crew", tags=["crew"])
+
+
+class CrewDeviceIn(BaseModel):
+    device_name: str = Field(max_length=80)
+    platform: str = Field(max_length=20)
+    app_version: str = Field(max_length=30)
 
 
 def get_crew_service(db: Session = Depends(get_db)) -> CrewService:
@@ -245,3 +253,12 @@ def profile(
 ):
     """The crew member's own profile (CRW-PRF-01). No customer data."""
     return crews.profile(user.id)
+
+
+@crew.put("/session-device", status_code=204)
+def session_device(body: CrewDeviceIn, user: User = Depends(require_role("crew")),
+                   db: Session = Depends(get_db)):
+    session = db.get(AuthSession, user.session_id)
+    session.device_name, session.platform, session.app_version = (
+        body.device_name, body.platform, body.app_version)
+    db.commit()

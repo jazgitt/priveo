@@ -18,7 +18,7 @@ class BillingHistoryScreen extends ConsumerWidget {
 
   final String vehicleId;
 
-  // SUB-12: the invoice opens as a page with copy and email actions.
+  // SUB-12: the invoice opens as a page with an authenticated PDF preview.
   void _showInvoice(BuildContext context, PaymentDto p) =>
       Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => InvoiceScreen(paymentId: p.id)),

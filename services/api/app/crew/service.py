@@ -147,6 +147,9 @@ class CrewSessionOut(BaseModel):
     channel: str
     signed_in_at: datetime
     last_active_at: datetime
+    device_name: str = ""
+    platform: str = ""
+    app_version: str = ""
 
 
 class CrewSessionsEnded(BaseModel):
@@ -771,6 +774,8 @@ class CrewService:
                 channel=s.channel,
                 signed_in_at=s.created_at,
                 last_active_at=s.last_used_at,
+                device_name=s.device_name or "", platform=s.platform or "",
+                app_version=s.app_version or "",
             )
             for s in rows
         ]

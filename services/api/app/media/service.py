@@ -21,6 +21,12 @@ MB = 1024 * 1024
 # CRW-SVC-06, rule 17 of the customer file: photos under 10 MB, videos under 25 MB.
 # ONB-12: an RC document keeps its own 5 MB limit and its own kind.
 MAX_BYTES = {"photo": 10 * MB, "video": 25 * MB, "document": 5 * MB}
+
+
+def valid_size(kind: str, size: int) -> bool:
+    """Photos/videos are strictly under the limit; RC documents allow 5 MB."""
+    limit = MAX_BYTES[kind]
+    return size > 0 and (size <= limit if kind == "document" else size < limit)
 CONTENT_TYPES = {
     "photo": ("image/jpeg", "image/png", "image/heic", "image/heif", "image/webp"),
     "video": ("video/mp4", "video/quicktime", "video/3gpp", "video/x-m4v"),
@@ -47,7 +53,7 @@ def request_upload(db: Session, store: ObjectStore, *, owner_id: uuid.UUID,
         fields["kind"] = "Use photo or video."
     elif content_type.lower() not in CONTENT_TYPES[kind]:
         fields["content_type"] = "This file format is not accepted."
-    elif size_bytes <= 0 or size_bytes > MAX_BYTES[kind]:
+    elif not valid_size(kind, size_bytes):
         limit = MAX_BYTES[kind] // MB
         fields["size_bytes"] = f"A {kind} must be under {limit} MB."
     if purpose == "proof" and stage not in STAGES:
@@ -83,7 +89,7 @@ def request_customer_upload(db: Session, store: ObjectStore, *, owner_id: uuid.U
         fields["purpose"] = "Use vehicle, complaint or rc."
     elif content_type.lower() not in CONTENT_TYPES[kind]:
         fields["content_type"] = "This file format is not accepted."
-    elif size_bytes <= 0 or size_bytes > MAX_BYTES[kind]:
+    elif not valid_size(kind, size_bytes):
         fields["size_bytes"] = f"The file must be under {MAX_BYTES[kind] // MB} MB."
     if fields or kind is None:
         raise ApiError("validation_failed", "Please check the file.", 422, fields)
@@ -124,7 +130,7 @@ def confirm_upload(db: Session, store: ObjectStore, upload: MediaUpload) -> Medi
     size = store.size_of(upload.object_key)
     if size is None:
         raise ApiError("upload_missing", "The file has not arrived yet.", 409)
-    if size <= 0 or size > MAX_BYTES[upload.kind]:
+    if not valid_size(upload.kind, size):
         raise ApiError("upload_too_large", "The file is too large.", 422)
     upload.status = STATUS_CONFIRMED
     upload.size_bytes = size

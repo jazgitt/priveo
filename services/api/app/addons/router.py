@@ -131,7 +131,11 @@ def admin_request_addon(
     from app.customers.administration import audit
 
     c, vehicle, sub = any_vehicle(db, body.vehicle_id)
-    result = svc.request(c, vehicle, sub, body.service, body.date, body.finish_by, None, admin=True)
+    if sub is None:
+        result = svc.standalone(c, c.login_id, StandaloneIn(vehicle_id=str(vehicle.id),
+            service=body.service, date=body.date, finish_by=body.finish_by), None, admin=True)
+    else:
+        result = svc.request(c, vehicle, sub, body.service, body.date, body.finish_by, None, admin=True)
     audit(db, user.id, "addon", result.id, "create", body.model_dump(mode="json"))
     db.commit()
     return svc._admin_out(db.get(AddonBooking, parse_id(result.id, "request")))

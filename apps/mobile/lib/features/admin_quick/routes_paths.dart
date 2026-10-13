@@ -8,6 +8,7 @@ class AdminQuickPaths {
   static const crew = '/admin/crew';
   static const addons = '/admin/addons';
   static const checkins = '/admin/checkins';
+  static const checklists = '/admin/checklists';
   static const complaints = '/admin/complaints';
   static const complaintPattern = '/admin/complaints/:id';
   static String complaint(String id) => '/admin/complaints/$id';

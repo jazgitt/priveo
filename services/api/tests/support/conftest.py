@@ -1,7 +1,10 @@
 """Support tests start the app with the support module registered. The
 platform will do this in `create_app`; until then the test does it."""
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.identity.seed import seed_logins
@@ -10,6 +13,24 @@ from app.platform.db import get_db
 from app.support import register
 from app.support.router import get_email_notifier, get_push_notifier
 from tests.test_api import auth, login
+
+
+@pytest.fixture
+def rating_visit(client, db):
+    from app.customers.models import Customer, Vehicle
+    from app.scheduling.models import Schedule, Visit
+
+    customer = db.scalar(select(Customer).where(Customer.email == "customer@priveo.test"))
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.customer_id == customer.id))
+    schedule = Schedule(society_id=customer.society_id, start_date=date(2026, 10, 1),
+                        end_date=date(2026, 10, 7), status="Frozen")
+    db.add(schedule)
+    db.flush()
+    visit = Visit(schedule_id=schedule.id, vehicle_id=vehicle.id,
+                  date=date(2026, 10, 1), status="Completed")
+    db.add(visit)
+    db.commit()
+    return visit
 
 
 class RecordingPush:

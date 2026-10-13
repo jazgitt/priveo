@@ -4,13 +4,14 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { AppRoutes } from "./App";
+import { sharedReadOptions } from "./api/queryDefaults";
 import { AuthProvider } from "./auth/AuthContext";
 import { ToastProvider } from "./components";
 import "./theme/tokens.g.css";
 import "./styles.css";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchOnWindowFocus: false } },
+  defaultOptions: { queries: sharedReadOptions },
 });
 
 createRoot(document.getElementById("root")!).render(

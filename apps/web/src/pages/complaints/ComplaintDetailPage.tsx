@@ -20,6 +20,11 @@ export function ComplaintDetailPage() {
   const path = `/v1/admin/complaints/${id}`;
 
   const detail = useQuery({ queryKey: [...KEYS.complaints, id], queryFn: () => api<ComplaintDetail>(path) });
+  const visit = useQuery({ queryKey: ["complaint-visit", id, detail.data?.visit_id],
+    enabled: !!detail.data?.visit_id,
+    queryFn: () => api<{ status: string; date: string; jobs: { id: string; service: string;
+      crew_name: string; checklist: { key: string; label: string; checked_at: string | null }[];
+      proof: { id: string; kind: string; url: string }[] }[] }>(`${path}/visit`) });
 
   const save = useMutation({
     mutationFn: (v: { kind: "status" | "note"; status?: string; note: string }) =>
@@ -62,6 +67,17 @@ export function ComplaintDetailPage() {
           {c.photo_keys.length > 0 && (
             <p className="muted">{c.photo_keys.length} photo(s) attached.</p>
           )}
+          <p>{c.vehicle || "No vehicle linked"}</p>
+          {(c.photo_urls ?? []).map((url, i) => <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt={`Complaint photo ${i + 1}`} style={{ maxWidth: 240, maxHeight: 180 }} /></a>)}
+          {c.visit_id && <section aria-label="Linked visit">
+            <h3>Linked visit</h3>{visit.isPending && <p>Loading visit…</p>}
+            {visit.isError && <><p role="alert">Could not load visit proof.</p><Button onClick={() => void visit.refetch()}>Retry visit</Button></>}
+            {visit.data && <><p>{formatDate(visit.data.date)} · {visit.data.status}</p>
+              {visit.data.jobs.map(j => <div key={j.id}><h4>{j.service} · {j.crew_name}</h4>
+                <ul>{j.checklist.map(item => <li key={item.key}>{item.label} · {item.checked_at ? formatDate(item.checked_at) : "Not checked"}</li>)}</ul>
+                {j.proof.map(p => p.kind === "video" ? <video key={p.id} src={p.url} controls preload="metadata" style={{ maxWidth: 320 }} /> : <a key={p.id} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt="Linked visit proof" style={{ maxWidth: 240 }} /></a>)}
+              </div>)}</>}
+          </section>}
         </Card>
 
         <Card title="Thread">

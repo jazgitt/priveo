@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -42,6 +43,7 @@ class CalendarJobDto {
 
 class CalendarVisit {
   const CalendarVisit({
+    this.finishedAt, this.checklistDone = 0, this.checklistTotal = 0,
     this.visitId,
     required this.vehicleId,
     required this.date,
@@ -65,6 +67,8 @@ class CalendarVisit {
 
   /// Empty for a projected day: the scheduler has not planned it yet.
   final String? visitId;
+  final DateTime? finishedAt;
+  final int checklistDone, checklistTotal;
   final String vehicleId;
   final DateTime date;
 
@@ -95,6 +99,9 @@ class CalendarVisit {
   String get shownState => state ?? status;
 
   factory CalendarVisit.fromJson(Map<String, dynamic> j) => CalendarVisit(
+    finishedAt: _time(j['finished_at']),
+    checklistDone: j['checklist_done'] as int? ?? 0,
+    checklistTotal: j['checklist_total'] as int? ?? 0,
     visitId: j['visit_id'] as String?,
     vehicleId: j['vehicle_id'] as String,
     date: _day(j['date']),
@@ -204,11 +211,13 @@ class ProofDto {
     required this.url,
     this.stage,
     this.takenAt,
+    this.id,
   });
 
   /// `photo` or `video`.
   final String kind;
   final String url;
+  final String? id;
 
   /// `Before`, `During` or `After` (SVC-04, SVC-05).
   final String? stage;
@@ -218,6 +227,7 @@ class ProofDto {
   bool get isAfter => stage == 'After';
 
   factory ProofDto.fromJson(Map<String, dynamic> j) => ProofDto(
+    id: j['id'] as String?,
     kind: j['kind'] as String,
     url: j['url'] as String,
     stage: j['stage'] as String?,
@@ -413,6 +423,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     this.parkingBasement = '',
     this.parkingNumber = '',
     this.rcStatus = 'Not uploaded',
+    this.parkingBasements = const ['B1', 'B2', 'B3', 'B4'],
   });
 
   final String parkingBasement;
@@ -420,6 +431,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
 
   /// Uploaded or Not uploaded (VEH-03).
   final String rcStatus;
+  final List<String> parkingBasements;
   final String make;
   final String variant;
   final String category;
@@ -445,6 +457,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     parkingBasement: (j['parking_basement'] as String?) ?? '',
     parkingNumber: (j['parking_number'] as String?) ?? '',
     rcStatus: (j['rc_status'] as String?) ?? 'Not uploaded',
+    parkingBasements: (j['parking_basements'] as List?)?.cast<String>() ?? const ['B1', 'B2', 'B3', 'B4'],
   );
 }
 
@@ -623,7 +636,7 @@ class DioCustomerReadsRepository implements CustomerReadsRepository {
 }
 
 final customerReadsProvider = Provider<CustomerReadsRepository>(
-  (ref) => DioCustomerReadsRepository(ref.watch(dioProvider)),
+  (ref) => DioCustomerReadsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 // Providers for the screens. The Home screen keeps its own in

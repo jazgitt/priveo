@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_failure.dart';
@@ -37,7 +38,7 @@ class AdminActionsRepository {
 }
 
 final adminActionsRepositoryProvider = Provider(
-  (ref) => AdminActionsRepository(ref.watch(dioProvider)),
+  (ref) => AdminActionsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 String adminDate(DateTime date) =>

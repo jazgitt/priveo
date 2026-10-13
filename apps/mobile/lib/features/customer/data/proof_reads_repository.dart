@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -128,7 +129,7 @@ class DioProofReadsRepository implements ProofReadsRepository {
 }
 
 final proofReadsProvider = Provider<ProofReadsRepository>(
-  (ref) => DioProofReadsRepository(ref.watch(dioProvider)),
+  (ref) => DioProofReadsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 /// The history key: vehicle (null for all) and month (`yyyy-mm`).

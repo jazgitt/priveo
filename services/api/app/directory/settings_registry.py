@@ -30,6 +30,8 @@ class SettingDef:
 
 
 DEFINITIONS: tuple[SettingDef, ...] = (
+    SettingDef("schedule.auto_enabled", "int", "Automatic planning enabled (0/1)", "automation", 0, minimum=0, maximum=1),
+    SettingDef("schedule.auto_time", "time", "Automatic planning time (IST)", "automation", "", required=False),
     # ADM-SET-03
     SettingDef("support.helpline", "phone", "Helpline number", "support", "+910000000000"),
     SettingDef("support.whatsapp", "phone", "WhatsApp number", "support", "+910000000000"),

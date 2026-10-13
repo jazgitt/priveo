@@ -13,17 +13,19 @@ export interface NewPayment {
   status: string;
 }
 
-export function paymentsPath(f: PaymentFilters): string {
+export function paymentsPath(f: PaymentFilters, page = 0, society = ""): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(f)) if (v) q.set(k, v);
-  q.set("limit", "500");
+  q.set("limit", "50");
+  q.set("offset", String(page * 50));
+  if (society) q.set("society", society);
   return `/v1/admin/payments?${q.toString()}`;
 }
 
-export function usePayments(f: PaymentFilters) {
+export function usePayments(f: PaymentFilters, page = 0, society = "") {
   return useQuery({
-    queryKey: ["admin-payments", f],
-    queryFn: () => api<AdminPayment[]>(paymentsPath(f)),
+    queryKey: ["admin-payments", f, page, society],
+    queryFn: () => api<AdminPayment[]>(paymentsPath(f, page, society)),
   });
 }
 

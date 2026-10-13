@@ -2,6 +2,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -31,6 +32,27 @@ from app.scheduling.schemas import (
 customer = APIRouter(prefix="/v1/customer", tags=["scheduling"])
 crew = APIRouter(prefix="/v1/crew", tags=["scheduling"])
 admin = APIRouter(prefix="/v1/admin/scheduling", tags=["scheduling"])
+
+
+class AutomaticPlanningSettings(BaseModel):
+    enabled: bool = False
+    time_ist: str = ""
+
+
+@admin.get("/automatic-planning", response_model=AutomaticPlanningSettings)
+def automatic_settings(_: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    from app.directory import lookup
+    return AutomaticPlanningSettings(enabled=bool(lookup.setting(db, "schedule.auto_enabled")),
+                                      time_ist=lookup.setting(db, "schedule.auto_time"))
+
+
+@admin.put("/automatic-planning", response_model=AutomaticPlanningSettings)
+def save_automatic_settings(body: AutomaticPlanningSettings,
+                            user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    from app.directory.service import save_settings
+    save_settings(db, user.id, {"schedule.auto_enabled": int(body.enabled),
+                               "schedule.auto_time": body.time_ist})
+    return automatic_settings(user, db)
 
 
 @customer.get("/next-job", response_model=CustomerNextService)

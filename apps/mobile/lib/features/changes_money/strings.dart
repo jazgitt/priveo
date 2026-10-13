@@ -101,11 +101,11 @@ class MoneyStrings {
       minutes % 60 == 0 ? '${minutes ~/ 60} hours' : '$minutes minutes';
   static const standaloneTitle = 'Deep Spa without a subscription';
   static const standaloneBody =
-      'Tell us when you would like it. Priveo will call you to agree the date, price and payment.';
+      'Choose a date and finish-by time, then pay by UPI. Priveo schedules your service independently of payment.';
   static const contactMobile = 'Mobile number to call';
   static const notes = 'Notes (optional)';
   static const sendRequest = 'Send request';
-  static const standaloneDone = 'Request sent. Priveo will call you.';
+  static const standaloneDone = 'Booking created. View payment, service status and proof in Deep Spa.';
   static const standaloneLink = 'Deep Spa without a subscription';
 
   // Admin quick actions (ADM-ACC-07)

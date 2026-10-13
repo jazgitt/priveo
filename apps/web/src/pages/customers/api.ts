@@ -18,6 +18,8 @@ export interface Vehicle {
   payments: { id: string; status: string; amount_rupees: number; due_date: string }[];
 }
 export interface Customer { id: string; first_name: string; last_name: string; email: string; mobile: string;
+  imported_history?: { id: string; date: string | null; service: string; vehicle: string;
+    payment_status: string | null; notes: string }[];
   flat: string; email_verified: boolean; password_set: boolean; onboarding_confirmed: boolean;
   vehicles: Vehicle[]; welcome_sent?: boolean; existing?: boolean }
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

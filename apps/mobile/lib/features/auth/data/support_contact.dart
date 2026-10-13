@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../support/widgets.dart' show linkOpenerProvider;
 
 /// The numbers shown to someone whose email is not registered (AUTH-15). The
 /// endpoint needs no sign-in.
@@ -33,8 +34,24 @@ final authSupportContactProvider =
 
 /// Where the Terms and the Privacy Policy are published. Placeholders until
 /// Priveo gives the real addresses.
-final termsUri = Uri.parse('https://priveo.in/terms');
-final privacyUri = Uri.parse('https://priveo.in/privacy');
+final termsUri = Uri.parse('https://example.com/priveo/terms');
+final privacyUri = Uri.parse('https://example.com/priveo/privacy');
+
+final authLegalLinksProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final response = await ref.watch(dioProvider).get<Map<String, dynamic>>('/v1/auth/legal-links');
+  return response.data!;
+});
+
+Future<bool> openLegalLink(WidgetRef ref, String kind) async {
+  try {
+    final links = await ref.read(authLegalLinksProvider.future);
+    final uri = Uri.parse(links[kind] as String);
+    if (!{'http', 'https'}.contains(uri.scheme)) return false;
+    return await ref.read(linkOpenerProvider)(uri);
+  } catch (_) {
+    return false;
+  }
+}
 
 /// A format check only: something before and after one `@`, and a dot.
 bool isPlausibleEmail(String value) =>

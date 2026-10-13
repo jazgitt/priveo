@@ -4,7 +4,7 @@ import re
 import uuid
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -43,8 +43,8 @@ class VehicleCreate(Input):
     registration: str
     parking_basement: str
     parking_number: str
-    plan_id: uuid.UUID
-    cutoff_time: str
+    plan_id: uuid.UUID | None = None
+    cutoff_time: str | None = None
     interior_day: str | None = None
     photo_upload_id: uuid.UUID
     rc_upload_id: uuid.UUID | None = None
@@ -174,19 +174,18 @@ def asset(db, raw, owner, purpose, vehicle_id=None):
 def add_vehicle(db, c, body, owner, by=None):
     society = db.get(Society, body.society_id)
     entry = db.get(VehicleCatalogueEntry, body.catalogue_id)
-    plan = db.get(Plan, body.plan_id)
+    plan = db.get(Plan, body.plan_id) if body.plan_id else None
     if (
         society is None
         or not society.active
         or entry is None
         or not entry.active
-        or plan is None
-        or not plan.active
+        or (body.plan_id is not None and (plan is None or not plan.active))
     ):
         raise ApiError("validation_failed", "Choose an active society, vehicle and plan.", 422)
     cutoff = read_cutoff(body.cutoff_time)
     basement, number = body.parking_basement.upper(), body.parking_number.strip()
-    if cutoff is None or (plan.includes_interior and body.interior_day not in WEEKDAYS):
+    if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in WEEKDAYS)):
         raise ApiError("validation_failed", "Choose a cutoff and interior care day.", 422)
     if basement not in lookup.society_basements(db, society.id) or not re.fullmatch(
         r"\d{1,5}", number
@@ -212,6 +211,11 @@ def add_vehicle(db, c, body, owner, by=None):
     )
     db.add(v)
     db.flush()
+    if plan is None:
+        if by:
+            audit(db, by, "vehicle", v.id, "create", {"customer_id": str(c.id),
+                                                       "registration": reg, "subscription": False})
+        return v, None, None
     sub = Subscription(
         vehicle_id=v.id,
         plan_id=plan.id,
@@ -233,7 +237,7 @@ def add_vehicle(db, c, body, owner, by=None):
         status=body.first_payment_status,
         due_date=today_ist(),
         cycle_start=today_ist(),
-        cycle_end=today_ist() + timedelta(days=30),
+        cycle_end=today_ist() + timedelta(days=lookup.setting(db, "billing.cycle_days")),
         received_at=utcnow() if body.first_payment_status == "Received" else None,
         confirmed_by=by if body.first_payment_status == "Received" else None,
         overdue_since=today_ist() if body.first_payment_status == "Over due" else None,
@@ -311,6 +315,7 @@ def vehicle_out(db, v, store):
 
 
 def detail(db, c, store):
+    from app.customers.history import imported_history
     login = db.get(Login, c.login_id)
     return {
         "id": str(c.id),
@@ -322,6 +327,7 @@ def detail(db, c, store):
         "email_verified": c.email_verified_at is not None,
         "password_set": login.password_hash is not None,
         "onboarding_confirmed": c.onboarding_confirmed_at is not None,
+        "imported_history": imported_history(db, c.id),
         "vehicles": [
             vehicle_out(db, v, store)
             for v in db.scalars(
@@ -337,6 +343,8 @@ def detail(db, c, store):
 def list_customers(
     q: str = "",
     society_id: uuid.UUID | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
@@ -366,7 +374,8 @@ def list_customers(
             "email": c.email,
             "mobile": c.mobile,
         }
-        for c in db.scalars(query.distinct().order_by(Customer.first_name).limit(200))
+        for c in db.scalars(query.distinct().order_by(
+            Customer.first_name, Customer.last_name, Customer.id).limit(limit).offset(offset))
     ]
 
 
@@ -441,7 +450,7 @@ def admin_add_vehicle(
 ):
     v, _, payment = add_vehicle(db, get_customer(db, customer_id), body, user.id, user.id)
     db.commit()
-    return {**vehicle_out(db, v, store), "payment_id": str(payment.id)}
+    return {**vehicle_out(db, v, store), "payment_id": str(payment.id) if payment else None}
 
 
 @customer.post("/vehicles", status_code=201)
@@ -456,6 +465,8 @@ def customer_add_vehicle(
     c = db.scalar(select(Customer).where(Customer.login_id == user.id))
     if c is None:
         raise ApiError("not_found", "Customer not found.", 404)
+    if body.plan_id is None:
+        raise ApiError("validation_failed", "Choose a plan; standalone vehicles are created by admin.", 422)
     v, _, payment = add_vehicle(db, c, body, user.id)
     db.commit()
     return {**vehicle_out(db, v, store), "payment_id": str(payment.id)}
@@ -649,6 +660,8 @@ def edit_subscription(
     from app.scheduling.service import reconcile_vehicle
 
     reconcile_vehicle(db, sub.vehicle_id)
+    # ADM-CUS-14/15: admin plan and default preferences edits are silent.
+    # Explicit skip/operations actions keep their separate notification rules.
     return {"updated": True, "pending_from": sub.pending_from}
 
 

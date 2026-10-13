@@ -203,6 +203,18 @@ def test_options_start_with_the_owner_lists_and_admin_edits_them(client, custome
 
 # Feedback and ratings -------------------------------------------------
 
+
+def test_renaming_an_option_keeps_earlier_feedback_under_its_original_name(client, customer, admin):
+    original = client.get('/v1/customer/support/options', headers=customer).json()['feedback_categories'][0]
+    assert client.post('/v1/customer/feedback', headers=customer,
+        json={'category': original['name'], 'rating': 4}).status_code == 201
+    assert client.patch(f"/v1/admin/support/options/{original['id']}", headers=admin,
+                        json={'name': 'Renamed category'}).status_code == 200
+    earlier = client.get('/v1/admin/feedback', headers=admin).json()
+    assert earlier[0]['category'] == original['name']
+    current = client.get('/v1/customer/support/options', headers=customer).json()['feedback_categories']
+    assert any(entry['name'] == 'Renamed category' for entry in current)
+
 def test_feedback_needs_a_rating_or_a_comment(client, customer, admin):
     r = client.post("/v1/customer/feedback", headers=customer, json={"category": "Glass"})
     assert r.status_code == 422  # FDBK-07
@@ -223,8 +235,8 @@ def test_feedback_needs_a_rating_or_a_comment(client, customer, admin):
     assert len(client.get("/v1/admin/feedback?category=Glass", headers=admin).json()) == 1
 
 
-def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew):
-    put = "/v1/customer/visits/visit-9/rating"
+def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew, rating_visit):
+    put = f"/v1/customer/visits/{rating_visit.id}/rating"
     ok = client.put(put, headers=customer, json={"rating": 5, "tags": ["Spotless"]})
     assert ok.status_code == 200 and ok.json()["tags"] == ["Spotless"]
     # Issue tags are not allowed at 5 stars, and positive tags are not allowed below.
@@ -241,10 +253,21 @@ def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew):
     report = client.get("/v1/admin/ratings", headers=admin).json()
     assert report["count"] == 1 and report["average"] == 3.0
     assert report["tag_counts"] == {"Glass": 1, "Timing": 1}
-    assert report["items"][0]["visit_id"] == "visit-9"
+    assert report["items"][0]["visit_id"] == str(rating_visit.id)
 
     # The crew app shows no ratings (CRW-RAT-01): there is no crew route.
     assert client.get("/v1/crew/ratings", headers=crew).status_code == 404
+
+
+def test_admin_complaint_lists_vehicle_and_opens_owned_linked_visit(client, customer, admin, rating_visit):
+    result = raise_complaint(client, customer, visit_id=str(rating_visit.id))
+    assert result.status_code == 201, result.text
+    cid = result.json()["id"]
+    listed = client.get("/v1/admin/complaints", headers=admin).json()
+    assert listed[0]["vehicle"] and " · " in listed[0]["vehicle"]
+    visit = client.get(f"/v1/admin/complaints/{cid}/visit", headers=admin)
+    assert visit.status_code == 200 and visit.json()["id"] == str(rating_visit.id)
+    assert client.get(f"/v1/admin/complaints/{cid}/visit", headers=customer).status_code == 403
 
 
 # Check-in -------------------------------------------------------------

@@ -15,8 +15,8 @@ from app.platform.db import Base, UtcDateTime, utcnow
 
 class JobChecklistProgress(Base):
     """One checked item of a job's checklist, with the time (CRW-SVC-03).
-    An item with no row is not checked. The items themselves are the service's
-    checklist in `app.directory.lookup.checklist_for`."""
+    An item with no row is not checked. The issued definition lives on the
+    job's checklist_snapshot, independent of mutable directory labels."""
 
     __tablename__ = "job_checklist_progress"
     __table_args__ = (UniqueConstraint("job_id", "item_key"),)

@@ -20,6 +20,14 @@ from app.identity.models import Login
 BASE = "/v1/admin/directory"
 
 
+def test_samples_have_five_steps_and_invoice_seller_settings_are_read_only(client, admin, seeded):
+    lists = client.get(f'{BASE}/checklists', headers=admin).json()
+    for entry in lists:
+        assert len([item for item in entry['items'] if item['active']]) == 5
+    response = client.put(f'{BASE}/settings/invoice.seller_name', headers=admin, json={'value': 'New seller'})
+    assert response.status_code == 409 and response.json()['code'] == 'read_only'
+
+
 @pytest.fixture
 def seeded(engine, client):
     with Session(engine) as db:
@@ -442,7 +450,6 @@ def test_settings_list_and_typed_values(client, admin, db):
     ("support.whatsapp", "12345"),
     ("payment.upi_id", "no-at-sign"),
     ("payment.upi_qr_url", "ftp://x"),
-    ("invoice.seller_gstin", "123"),
     ("billing.inactive_after_days", "seven"),
     ("billing.inactive_after_days", -1),
     ("schedule.freeze_hour", 24),
@@ -461,7 +468,6 @@ def test_setting_accepts_valid_values(client, admin, db):
     ok = [("payment.upi_id", "priveo@okbank", "priveo@okbank"),
           ("payment.upi_qr_url", "", ""),
           ("payment.upi_qr_url", "https://x.test/qr.png", "https://x.test/qr.png"),
-          ("invoice.seller_gstin", "27abcde1234f1z5", "27ABCDE1234F1Z5"),
           ("billing.inactive_after_days", "10", 10),
           ("schedule.default_cutoff_time", "08:30", "08:30"),
           ("schedule.unfreeze_code", "open sesame", "open sesame")]

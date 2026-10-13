@@ -4,7 +4,6 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
-import '../../support/feedback_sheet.dart';
 import '../data/proof_reads_repository.dart';
 import '../visit/visit_details_screen.dart';
 import '../visit/visit_strings.dart';
@@ -61,8 +60,7 @@ class TodaysCleanStrip extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      await showVisitRatingSheet(context, clean.visitId);
-                      ref.invalidate(todayCleansProvider);
+                      openVisitDetails(context, clean.visitId);
                     },
                     child: const Text(VisitStrings.rateToday),
                   ),

@@ -326,6 +326,7 @@ export function SessionsPanel({ crew }: { crew: Crew }) {
         ? <p className="muted">No signed-in devices.</p>
         : <ul>{sessions.data.map((s) => (
             <li key={s.id}>
+              <strong>{s.device_name || "Unknown device"}</strong> {s.platform || "Unknown platform"} · App {s.app_version || "Unknown version"}<br />
               {s.channel === "web" ? "Web" : "Mobile app"}, signed in {when(s.signed_in_at)},
               last active {when(s.last_active_at)}{" "}
               <Button variant="ghost" busy={act.endSession.isPending}

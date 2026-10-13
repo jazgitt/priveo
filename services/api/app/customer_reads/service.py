@@ -33,6 +33,7 @@ from app.customer_reads.schemas import (
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
 from app.directory.models import Society
+from app.directory import lookup
 from app.media.service import has_confirmed, vehicle_photo_urls
 from app.media.store import ObjectStore, get_object_store
 from app.platform import clock
@@ -153,7 +154,7 @@ class CustomerReads:
                     if given else None),
             jobs=[JobOut(
                 id=j.id, service=j.service, status=j.status,
-                proof=[ProofOut(kind=p.kind, url=p.url, stage=p.stage, taken_at=p.taken_at)
+                proof=[ProofOut(id=p.id, kind=p.kind, url=p.url, stage=p.stage, taken_at=p.taken_at)
                        for p in j.proof],
                 crew_name=j.crew_name, crew_society=society if j.crew_name else "",
                 started_at=j.started_at, finished_at=j.finished_at,
@@ -246,6 +247,7 @@ class CustomerReads:
                     make=v.make, variant=v.variant, category=v.category,
                     parking_basement=v.parking_basement, parking_number=v.parking_number,
                     parking="-".join(p for p in (v.parking_basement, v.parking_number) if p),
+                    parking_basements=lookup.society_basements(self._db, v.society_id or customer.society_id),
                     rc_status=("Verified" if v.rc_verified else "Uploaded"
                                if v.rc_upload_id or has_confirmed(self._db, f"rc/{v.id}")
                                else "Not uploaded"),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/providers.dart';
 import '../support/widgets.dart' show linkOpenerProvider;
+import '../customer/home/customer_home_data.dart';
 
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
@@ -31,9 +32,10 @@ Future<DateTime?> _pickFutureDate(BuildContext context, DateTime? current) {
 /// Deep Spa as an add-on for a vehicle with an Active subscription (ADD-01 to
 /// ADD-05, ADD-10): one preferred date and a finish-by time, then the UPI screen.
 class AddonScreen extends ConsumerStatefulWidget {
-  const AddonScreen({super.key, required this.vehicleId});
+  const AddonScreen({super.key, required this.vehicleId, this.standalone = false});
 
   final String vehicleId;
+  final bool standalone;
 
   @override
   ConsumerState<AddonScreen> createState() => _AddonScreenState();
@@ -53,9 +55,11 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
     }
     setState(() => _busy = true);
     try {
-      final r = await ref
-          .read(moneyRepositoryProvider)
-          .requestAddon(widget.vehicleId, date, _finishBy);
+      final repo = ref.read(moneyRepositoryProvider);
+      final r = widget.standalone
+          ? await repo.requestStandalone(vehicleId: widget.vehicleId, date: date,
+              finishBy: _finishBy, mobile: '', notes: '')
+          : await repo.requestAddon(widget.vehicleId, date, _finishBy);
       ref.invalidate(addonsProvider);
       if (!mounted) return;
       if (r.paymentId != null) {
@@ -158,7 +162,7 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
   Widget build(BuildContext context) {
     final addons = ref.watch(addonsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text(MoneyStrings.addonTitle)),
+      appBar: AppBar(title: Text(widget.standalone ? MoneyStrings.standaloneTitle : MoneyStrings.addonTitle)),
       body: addons.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
@@ -276,8 +280,8 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
                   onSupport: _support,
                 ),
               const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => context.push(standalonePath(widget.vehicleId)),
+              if (!widget.standalone) TextButton(
+                onPressed: () => context.push(standalonePath()),
                 child: const Text(MoneyStrings.standaloneLink),
               ),
             ],
@@ -367,140 +371,29 @@ class _RequestTile extends StatelessWidget {
   );
 }
 
-/// Deep Spa for a customer without a subscription (ADD-14).
-///
-/// DERIVED / OPEN (ADD-15): how this is requested, paid for and followed is
-/// not decided. This is the simplest request that works: a date, a finish-by
-/// time and a number to call. Priveo agrees the rest by phone. Nothing is
-/// charged in the app.
-class StandaloneDeepSpaScreen extends ConsumerStatefulWidget {
+/// Standalone Spa shares the booking/payment/history UI without a plan.
+class StandaloneDeepSpaScreen extends ConsumerWidget {
   const StandaloneDeepSpaScreen({super.key, this.vehicleId});
-
   final String? vehicleId;
-
   @override
-  ConsumerState<StandaloneDeepSpaScreen> createState() => _StandaloneState();
-}
-
-class _StandaloneState extends ConsumerState<StandaloneDeepSpaScreen> {
-  DateTime? _date;
-  String _finishBy = '12:00';
-  final _mobile = TextEditingController();
-  final _notes = TextEditingController();
-  bool _busy = false;
-  bool _sent = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _mobile.dispose();
-    _notes.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    if (_date == null) {
-      setState(() => _error = MoneyStrings.addonPickDate);
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(moneyRepositoryProvider)
-          .requestStandalone(
-            vehicleId: widget.vehicleId,
-            date: _date!,
-            finishBy: _finishBy,
-            mobile: _mobile.text.trim(),
-            notes: _notes.text.trim(),
-          );
-      ref.invalidate(addonsProvider);
-      if (mounted) setState(() => _sent = true);
-    } catch (e) {
-      if (mounted) showFailure(context, e);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_sent) {
-      return Scaffold(
-        appBar: AppBar(title: const Text(MoneyStrings.standaloneTitle)),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              MoneyStrings.standaloneDone,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (vehicleId != null) return AddonScreen(vehicleId: vehicleId!, standalone: true);
+    final home = ref.watch(customerHomeProvider);
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.standaloneTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(MoneyStrings.standaloneBody),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: () async {
-              final d = await _pickFutureDate(context, _date);
-              if (d != null) {
-                setState(() {
-                  _date = d;
-                  _error = null;
-                });
-              }
-            },
-            child: Text(
-              '${MoneyStrings.addonDate}: '
-              '${_date == null ? '--' : formatDate(_date!)}',
-            ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _finishBy,
-            decoration: const InputDecoration(
-              labelText: MoneyStrings.addonFinishBy,
-            ),
-            items: [
-              for (final t in halfHourSteps())
-                DropdownMenuItem(value: t, child: Text(formatClock(t))),
-            ],
-            onChanged: (v) => setState(() => _finishBy = v ?? _finishBy),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _mobile,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: MoneyStrings.contactMobile,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _notes,
-            decoration: const InputDecoration(labelText: MoneyStrings.notes),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          const SizedBox(height: 16),
-          PrimaryButton(
-            label: MoneyStrings.sendRequest,
-            busy: _busy,
-            onPressed: _send,
-          ),
-        ],
+      body: home.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => ErrorView(onRetry: () => ref.invalidate(customerHomeProvider)),
+        data: (h) => ListView(children: [
+          const ListTile(title: Text('Choose your vehicle'),
+            subtitle: Text('Priveo adds standalone vehicles without a subscription.')),
+          for (final v in h.vehicles)
+            if (v.subscriptionStatus == null)
+              ListTile(title: Text(v.registration), subtitle: Text(v.model),
+                onTap: () => context.push(standalonePath(v.id))),
+          if (!h.vehicles.any((v) => v.subscriptionStatus == null))
+            const ListTile(title: Text('Contact Priveo to add a standalone vehicle.')),
+        ]),
       ),
     );
   }

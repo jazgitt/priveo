@@ -9,6 +9,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   customerId?: string; onClose: () => void; onSaved: (id: string) => void;
 }) {
   const [step, setStep] = useState(0);
+  const [withSubscription, setWithSubscription] = useState(true);
   const [vehicle, setVehicle] = useState(newVehicle);
   const [person, setPerson] = useState({ first_name: "", last_name: "", email: "", mobile: "", flat: "" });
   const [busy, setBusy] = useState(false);
@@ -36,11 +37,14 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
       if (purpose === "vehicle") setPhotoUrl(r.url);
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
+  const payload = () => withSubscription ? vehicle : {
+    ...vehicle, plan_id: null, cutoff_time: null, interior_day: null,
+  };
   const save = async () => {
     setBusy(true); setError(null);
     try {
       const r = await api<{ id: string; existing?: boolean; welcome_sent?: boolean }>(customerId ? `/v1/admin/customers/${customerId}/vehicles` : "/v1/admin/customers", {
-        method: "POST", body: customerId ? vehicle : { ...person, vehicle },
+        method: "POST", body: customerId ? payload() : { ...person, vehicle: payload() },
       });
       onSaved(customerId ?? r.id);
     } catch (e) { setError(e); } finally { setBusy(false); }
@@ -48,7 +52,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   const valid = stage === "Customer" ? person.first_name && person.last_name && /^\S+@\S+\.\S+$/.test(person.email) && /^\d{10}$/.test(person.mobile)
     : stage === "Society" ? vehicle.society_id : stage === "Vehicle" ? vehicle.catalogue_id && vehicle.registration && vehicle.photo_upload_id
     : stage === "Parking" ? vehicle.parking_basement && /^\d{1,5}$/.test(vehicle.parking_number)
-    : stage === "Plan" ? vehicle.plan_id : stage === "Preferences" ? vehicle.cutoff_time && (!plan?.includes_interior || vehicle.interior_day) : true;
+    : stage === "Plan" ? !withSubscription || vehicle.plan_id : stage === "Preferences" ? !withSubscription || vehicle.cutoff_time && (!plan?.includes_interior || vehicle.interior_day) : true;
   return <Dialog open title={customerId ? "Add vehicle" : "Create customer"} onClose={onClose} footer={<>
     <Button variant="secondary" onClick={onClose}>Cancel</Button>
     {step > 0 && <Button variant="secondary" disabled={busy} onClick={() => setStep(s => s - 1)}>Back</Button>}
@@ -71,8 +75,9 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
       {vehicle.rc_upload_id && <p>RC uploaded</p>}
     </>}
     {stage === "Parking" && <><SelectField label="Basement" value={vehicle.parking_basement} onChange={e => set("parking_basement", e.target.value)}><option value="">Choose</option>{society?.parking_basements.map(b => <option key={b}>{b}</option>)}</SelectField><TextField label="Parking number" value={vehicle.parking_number} onChange={e => set("parking_number", e.target.value)} /><p>{vehicle.parking_basement} · {vehicle.parking_number}</p></>}
-    {stage === "Plan" && <><SelectField label="Plan" value={vehicle.plan_id} onChange={e => { set("plan_id", e.target.value); set("interior_day", null); }}><option value="">Choose</option>{plans.data?.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.name} · ₹{p.monthly_price_rupees}/month</option>)}</SelectField>{plan && <><p>{plan.badge} · Cancel anytime · GST included</p>{plan.list_price_rupees && <del>₹{plan.list_price_rupees}</del>}<ul>{plan.inclusions.map(i => <li key={i}>{i}</li>)}</ul></>}</>}
-    {stage === "Preferences" && <><SelectField label="Service cutoff time" value={vehicle.cutoff_time} onChange={e => set("cutoff_time", e.target.value)}>{times.map(t => <option key={t}>{t}</option>)}</SelectField><p>Priveo assigns the exact service slot.</p>{plan?.includes_interior && <SelectField label="Interior care day" value={vehicle.interior_day ?? ""} onChange={e => set("interior_day", e.target.value)}><option value="">Choose</option>{weekdays.map(d => <option key={d}>{d}</option>)}</SelectField>}</>}
-    {stage === "Review" && <><p>{person.first_name} {person.last_name} · {person.email}</p><p>{society?.name} · {entry?.make} {entry?.model} {entry?.variant} · {vehicle.registration}</p><p>Parking: {vehicle.parking_basement} · {vehicle.parking_number}</p><p>Cutoff: {vehicle.cutoff_time} {vehicle.interior_day && `· Interior: ${vehicle.interior_day}`}</p><p>{plan?.name} · Total ₹{plan?.monthly_price_rupees}, including GST</p><p>Priveo will confirm the start date. The subscription starts Activating.</p><SelectField label="First payment status" value={vehicle.first_payment_status} onChange={e => set("first_payment_status", e.target.value)}>{["Due", "Over due", "Initiated", "Received"].map(s => <option key={s}>{s}</option>)}</SelectField></>}
+    {stage === "Plan" && <><label><input type="checkbox" checked={withSubscription} onChange={e => setWithSubscription(e.target.checked)} />Create a subscription</label>{!withSubscription && <p>No plan payment is created. This vehicle can book standalone Deep Spa.</p>}{withSubscription && <><SelectField label="Plan" value={vehicle.plan_id} onChange={e => { set("plan_id", e.target.value); set("interior_day", null); }}><option value="">Choose</option>{plans.data?.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.name} · ₹{p.monthly_price_rupees}/month</option>)}</SelectField>{plan && <><p>{plan.badge} · Cancel anytime · GST included</p>{plan.list_price_rupees && <del>₹{plan.list_price_rupees}</del>}<ul>{plan.inclusions.map(i => <li key={i}>{i}</li>)}</ul></>}</>}</>}
+    {stage === "Preferences" && !withSubscription && <p>Standalone Spa uses a date and finish-by time chosen at booking.</p>}
+    {stage === "Preferences" && withSubscription && <><SelectField label="Service cutoff time" value={vehicle.cutoff_time} onChange={e => set("cutoff_time", e.target.value)}>{times.map(t => <option key={t}>{t}</option>)}</SelectField><p>Priveo assigns the exact service slot.</p>{plan?.includes_interior && <SelectField label="Interior care day" value={vehicle.interior_day ?? ""} onChange={e => set("interior_day", e.target.value)}><option value="">Choose</option>{weekdays.map(d => <option key={d}>{d}</option>)}</SelectField>}</>}
+    {stage === "Review" && <><p>{person.first_name} {person.last_name} · {person.email}</p><p>{society?.name} · {entry?.make} {entry?.model} {entry?.variant} · {vehicle.registration}</p><p>Parking: {vehicle.parking_basement} · {vehicle.parking_number}</p>{withSubscription && <><p>Cutoff: {vehicle.cutoff_time} {vehicle.interior_day && `· Interior: ${vehicle.interior_day}`}</p><p>{plan?.name} · Total ₹{plan?.monthly_price_rupees}, including GST</p><p>Priveo will confirm the start date. The subscription starts Activating.</p><SelectField label="First payment status" value={vehicle.first_payment_status} onChange={e => set("first_payment_status", e.target.value)}>{["Due", "Over due", "Initiated", "Received"].map(s => <option key={s}>{s}</option>)}</SelectField></>}{!withSubscription && <p>No subscription or plan payment. Standalone Deep Spa is available after sign-in.</p>}</>}
   </Dialog>;
 }

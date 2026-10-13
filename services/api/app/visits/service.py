@@ -23,6 +23,7 @@ from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.service import set_job_status
 from app.visits import manager as manager_checks
 from app.visits import schemas as s
+from app.visits.checklists import items_for_job
 from app.visits.models import (
     CrewPhoto,
     JobChecklistProgress,
@@ -173,7 +174,7 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
                 parking=parking,
                 start_time=rules.hhmm(job.start_minute),
                 finish_by=rules.hhmm(job.finish_by_minute),
-                checklist_total=len(lookup.checklist_for(db, job.service)),
+                checklist_total=len(items_for_job(db, job)),
                 checklist_done=checked.get(job.id, 0),
                 assigned_to=(
                     s.CrewRef(id=str(job.crew_id), name=names.get(job.crew_id, ""))
@@ -229,7 +230,7 @@ def _progress(db: Session, job: Job) -> dict[str, JobChecklistProgress]:
 
 def _missing(db: Session, job: Job, progress: dict, counts: dict[str, int]) -> list[str]:
     missing = []
-    left = sum(1 for item in lookup.checklist_for(db, job.service) if item.key not in progress)
+    left = sum(1 for item in items_for_job(db, job) if item.key not in progress)
     if left:
         missing.append(f"{left} checklist item{'s' if left != 1 else ''} not checked")
     need_photos, need_videos = lookup.proof_minimums(db, job.service)
@@ -261,13 +262,7 @@ def job_detail(db: Session, job: Job) -> s.JobDetail:
     timing = db.get(JobTiming, job.id)
     missing = _missing(db, job, progress, counts)
     photos, videos = lookup.proof_minimums(db, job.service)
-    items = [(i.key, i.label) for i in lookup.checklist_for(db, job.service)]
-    # An item the admin switched off after it was ticked stays on the job.
-    items += [
-        (key, lookup.checklist_label(db, job.service, key) or key)
-        for key in progress
-        if key not in {k for k, _ in items}
-    ]
+    items = [(i.key, i.label) for i in items_for_job(db, job)]
     return s.JobDetail(
         job=_cards(db, [job])[0],
         checklist=[
@@ -329,7 +324,7 @@ def start_job(db: Session, job: Job) -> Job:
 
 def set_checked(db: Session, job: Job, item_key: str, checked: bool, login_id: uuid.UUID) -> None:
     _open_job(job)
-    if item_key not in {i.key for i in lookup.checklist_for(db, job.service)}:
+    if item_key not in {i.key for i in items_for_job(db, job)}:
         raise ApiError("not_found", "This checklist item was not found.", 404)
     row = db.scalar(
         select(JobChecklistProgress).where(

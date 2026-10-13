@@ -133,12 +133,14 @@ class PayInstructionsDto {
     required this.upiId,
     required this.payeeName,
     this.qrUrl,
+    this.upiUri = '',
   });
 
   final int amountRupees;
   final String upiId;
   final String payeeName;
   final String? qrUrl;
+  final String upiUri;
 
   factory PayInstructionsDto.fromJson(Map<String, dynamic> j) =>
       PayInstructionsDto(
@@ -146,16 +148,22 @@ class PayInstructionsDto {
         upiId: j['upi_id'] as String,
         payeeName: j['payee_name'] as String,
         qrUrl: j['qr_url'] as String?,
+        upiUri: j['upi_uri'] as String? ?? '',
       );
 }
 
 class PaymentDetailDto {
-  const PaymentDetailDto({required this.payment, required this.instructions});
+  const PaymentDetailDto({required this.payment, required this.instructions,
+    this.vehicle = '', this.serviceDetails = const {}});
 
   final PaymentDto payment;
   final PayInstructionsDto instructions;
+  final String vehicle;
+  final Map<String, dynamic> serviceDetails;
 
   factory PaymentDetailDto.fromJson(Map<String, dynamic> j) => PaymentDetailDto(
+    vehicle: j['vehicle'] as String? ?? '',
+    serviceDetails: (j['service_details'] as Map?)?.cast<String, dynamic>() ?? const {},
     payment: PaymentDto.fromJson(j['payment'] as Map<String, dynamic>),
     instructions: PayInstructionsDto.fromJson(
       j['instructions'] as Map<String, dynamic>,
@@ -233,6 +241,7 @@ class InvoiceDto {
     required this.customerName,
     required this.sellerName,
     required this.sellerGstin,
+    this.taxDetails,
   });
 
   final String number;
@@ -242,6 +251,7 @@ class InvoiceDto {
   final String customerName;
   final String sellerName;
   final String sellerGstin;
+  final Map<String, dynamic>? taxDetails;
 
   factory InvoiceDto.fromJson(Map<String, dynamic> j) => InvoiceDto(
     number: j['number'] as String,
@@ -251,6 +261,7 @@ class InvoiceDto {
     customerName: j['customer_name'] as String,
     sellerName: j['seller_name'] as String,
     sellerGstin: j['seller_gstin'] as String,
+    taxDetails: (j['tax_details'] as Map?)?.cast<String, dynamic>(),
   );
 }
 

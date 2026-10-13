@@ -34,6 +34,17 @@ def test_health_and_config(client):
     assert "min_app_version" in client.get("/v1/public/config").json()
 
 
+def test_public_legal_links_and_support_use_configured_values(client, db, monkeypatch):
+    from types import SimpleNamespace
+    from tests.directory_helpers import set_setting
+    monkeypatch.setattr('app.platform.config.get_settings', lambda: SimpleNamespace(
+        terms_url='https://legal.example.com/terms', privacy_url='https://legal.example.com/privacy'))
+    assert client.get('/v1/auth/legal-links').json() == {
+        'terms': 'https://legal.example.com/terms', 'privacy': 'https://legal.example.com/privacy'}
+    set_setting(db.get_bind(), 'support.helpline', '+919876543210')
+    assert client.get('/v1/auth/support-contact').json()['helpline'] == '+919876543210'
+
+
 @pytest.mark.parametrize("role", ["customer", "crew", "admin"])
 def test_login_and_home(client, role):
     data = login(client, role)

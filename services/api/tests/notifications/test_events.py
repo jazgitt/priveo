@@ -198,6 +198,13 @@ def test_a_customer_skip_tells_the_customer(db, world, customer_login, push):
     assert events(db, customer_login.id) == ["service_skipped"]
 
 
+def test_admin_skip_keeps_the_explicit_skip_notification(db, world, customer_login, push):
+    emit.customer_skipped(db, world.vehicles[0], DAY, actor="admin")
+    assert events(db, customer_login.id) == ["service_skipped"]
+    notification = db.scalar(select(Notification).where(Notification.login_id == customer_login.id))
+    assert "by Priveo" in notification.body
+
+
 def test_a_manager_reassign_tells_both_and_the_trainee(
         crew_client, db, make_crew, new_visit, signin, push):
     boss = make_crew("9000000001", "Manju", role="Manager")
@@ -353,7 +360,7 @@ def cron(crew_client):
 
 
 JOBS = ("freeze-due", "payments-generate", "payments-overdue", "renewal-reminders",
-        "checkin-notify", "complaints-overdue")
+        "checkin-notify", "complaints-overdue", "automatic-planning")
 
 
 def test_cron_needs_the_secret(cron):

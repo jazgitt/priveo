@@ -78,6 +78,7 @@ export function ComplaintsPage() {
                   <StatusChip tone={statusTone(c.status)}>{c.status}</StatusChip>
                   {c.overdue && <span className="sp-overdue"> Overdue</span>}
                 </>) },
+              { key: "vehicle", header: "Vehicle", render: (c) => c.vehicle || "Not linked" },
               { key: "raised", header: "Raised", render: (c) => formatDate(c.created_at) },
             ]}
           />

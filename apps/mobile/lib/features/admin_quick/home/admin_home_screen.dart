@@ -120,6 +120,8 @@ class AdminHomeScreen extends ConsumerWidget {
                 child: const Text('Payment alerts'),
               ),
               const SizedBox(height: 12),
+              OutlinedButton(onPressed: () => context.push(AdminQuickPaths.checklists),
+                child: const Text('Cleaning checklists')),
               const _SignOutAllButton(),
             ],
           ),

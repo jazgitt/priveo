@@ -38,7 +38,18 @@ def extension_days(db: Session, vehicle_id: uuid.UUID) -> int:
 def shift_days(db: Session, vehicle_id: uuid.UUID) -> int:
     """Everything that moves the renewal date forward: paused days and days
     added by operations."""
-    return len(paused_days(db, vehicle_id)) + extension_days(db, vehicle_id)
+    from app.customers.models import Subscription
+
+    first = db.scalar(select(Subscription.first_service_date).where(
+        Subscription.vehicle_id == vehicle_id))
+    if first is None:
+        return len(paused_days(db, vehicle_id)) + extension_days(db, vehicle_id)
+    # A reactivation starts a new billing epoch; retain prior history without
+    # applying its pauses/extensions again to the new first cycle.
+    paused = sum(day >= first for day in paused_days(db, vehicle_id))
+    extensions = db.scalar(select(func.count()).select_from(PlanExtension).where(
+        PlanExtension.vehicle_id == vehicle_id, PlanExtension.on_date >= first)) or 0
+    return paused + extensions
 
 
 def cycle_window(first_service_date: date, paused: int, today: date,

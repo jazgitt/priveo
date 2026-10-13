@@ -985,5 +985,14 @@
   "adminChangeRequested": "Change requested",
   "adminCheckins": "Monthly check-in results",
   "adminNoCheckins": "No check-in results.",
-  "adminOperationsForDay": "Operations for this day"
+  "adminOperationsForDay": "Operations for this day",
+  "invoiceOpenPdf": "Open invoice PDF",
+  "invoicePdfTitle": "Invoice PDF",
+  "invoicePdfUnavailable": "The invoice PDF could not be opened. Please try again.",
+  "proofVideoTitle": "Proof video",
+  "proofVideoUnavailable": "The video could not be played. Check your connection and try again.",
+  "proofVideoMissing": "This video is no longer available for this visit.",
+  "proofVideoPlay": "Play",
+  "proofVideoPause": "Pause",
+  "proofVideoReplay": "Replay"
 }

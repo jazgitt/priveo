@@ -3645,6 +3645,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Operations for this day'**
   String get adminOperationsForDay;
+
+  /// No description provided for @invoiceOpenPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open invoice PDF'**
+  String get invoiceOpenPdf;
+
+  /// No description provided for @invoicePdfTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice PDF'**
+  String get invoicePdfTitle;
+
+  /// No description provided for @invoicePdfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The invoice PDF could not be opened. Please try again.'**
+  String get invoicePdfUnavailable;
+
+  /// No description provided for @proofVideoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof video'**
+  String get proofVideoTitle;
+
+  /// No description provided for @proofVideoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The video could not be played. Check your connection and try again.'**
+  String get proofVideoUnavailable;
+
+  /// No description provided for @proofVideoMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This video is no longer available for this visit.'**
+  String get proofVideoMissing;
+
+  /// No description provided for @proofVideoPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get proofVideoPlay;
+
+  /// No description provided for @proofVideoPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get proofVideoPause;
+
+  /// No description provided for @proofVideoReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get proofVideoReplay;
 }
 
 class _AppLocalizationsDelegate

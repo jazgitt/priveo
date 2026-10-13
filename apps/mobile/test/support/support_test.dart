@@ -6,6 +6,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart';
 import 'package:priveo/features/admin_quick/alerts/alerts_data.dart';
 import 'package:priveo/features/support/data/support_models.dart';
 import 'package:priveo/features/support/feedback_sheet.dart';
@@ -281,6 +283,10 @@ void main() {
       final repo = FakeSupportRepository()..pending = [due];
       await pumpSupport(tester, initial: SupportRoutes.checkin, repo: repo);
       expect(find.text('Value for money'), findsOneWidget);
+      final container = ProviderScope.containerOf(tester.element(find.text('Value for money')));
+      final listener = container.listen(homeCheckInsProvider, (_, _) {});
+      addTearDown(listener.close);
+      expect(await container.read(homeCheckInsProvider.future), hasLength(1));
       expect(find.text('Schedule fit'), findsOneWidget);
       expect(enabled(tester, 'Submit'), isFalse);
 
@@ -294,6 +300,7 @@ void main() {
         'comment': 'All fine',
       });
       expect(find.text('Thank you. Your check-in is saved.'), findsOneWidget);
+      expect(await container.read(homeCheckInsProvider.future), isEmpty);
     });
 
     testWidgets('tapping the same star again leaves the category unrated',

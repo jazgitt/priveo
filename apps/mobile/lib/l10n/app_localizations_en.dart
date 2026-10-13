@@ -1960,4 +1960,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminOperationsForDay => 'Operations for this day';
+
+  @override
+  String get invoiceOpenPdf => 'Open invoice PDF';
+
+  @override
+  String get invoicePdfTitle => 'Invoice PDF';
+
+  @override
+  String get invoicePdfUnavailable =>
+      'The invoice PDF could not be opened. Please try again.';
+
+  @override
+  String get proofVideoTitle => 'Proof video';
+
+  @override
+  String get proofVideoUnavailable =>
+      'The video could not be played. Check your connection and try again.';
+
+  @override
+  String get proofVideoMissing =>
+      'This video is no longer available for this visit.';
+
+  @override
+  String get proofVideoPlay => 'Play';
+
+  @override
+  String get proofVideoPause => 'Pause';
+
+  @override
+  String get proofVideoReplay => 'Replay';
 }

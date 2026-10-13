@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -157,7 +158,7 @@ class ApiSupportRepository implements SupportRepository {
 }
 
 final supportRepositoryProvider = Provider<SupportRepository>(
-    (ref) => ApiSupportRepository(ref.watch(dioProvider)));
+    (ref) => ApiSupportRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2));
 
 final supportContactProvider = FutureProvider.autoDispose<SupportContact>(
     (ref) => ref.watch(supportRepositoryProvider).contact());

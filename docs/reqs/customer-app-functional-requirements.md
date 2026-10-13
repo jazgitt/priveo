@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.10: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.11: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -47,6 +47,8 @@ Rules followed:
 15. Deferred to V2 and out of scope
 
 ---
+
+Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording; see [the decision record](owner-decisions-2026-10-13.md).
 
 ## 1. Onboarding and authentication
 
@@ -343,7 +345,7 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ADD-12 | If the crew could not do the job, it is Missed. The admin schedules it again for the next day only, or marks it skipped by operations: a skipped Deep Spa does not extend the plan, and any refund or rebooking is handled by the admin outside the app (ADM-CNC-03, ADM-OPS-03). The customer sees "Missed. Rescheduled on dd-Mon-yy" as in CAL-09. | Derived |
 | ADD-13 | No new notification event is added in MVP. "Service completed" applies when the add-on job is done (NOTIF-02). | Derived |
 | ADD-14 | Deep Spa is not only an add-on. A customer who has no subscription can take Deep Spa as a standalone service. | Owner |
-| ADD-15 | How a customer without a subscription asks for, pays for and follows a standalone Deep Spa is not decided yet. | Open |
+| ADD-15 | Admin creates the customer and vehicle without a subscription. The customer books, pays for and follows standalone Deep Spa using the same rules as subscriber add-on Spa (owner decision 13 Oct 2026). | Owner |
 
 ---
 
@@ -479,7 +481,7 @@ These are behaviors a developer must implement, taken from the screens and owner
 28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement.
 29. A customer signs in with their email. The customer exists only because the admin created them. At the first sign-in they get a 6-digit code by email, set a password, and review the details the admin entered. After that they sign in with email and password, and stay signed in on the phone. Forgot password and an email change use an emailed code. There is no mobile OTP.
 30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo."
-31. Deep Spa (2 hours) is sold in two ways. A customer with a subscription buys it as an add-on for a vehicle with an Active subscription. A customer without a subscription can take it as a standalone service; how they do that is not decided yet (ADD-15). For an add-on, the customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
+31. Deep Spa (2 hours) is sold in two ways. A customer with a subscription buys it as an add-on for a vehicle with an Active subscription. A customer without a subscription can take it as a standalone service; they use the same booking/payment/service rules after admin-created onboarding (ADD-15). For an add-on, the customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
 
 ---
 
@@ -537,7 +539,7 @@ Owner decision: where the wireframes and the interactive prototype differ, the p
 
 All earlier questions in this file are answered and removed. One is open:
 
-1. How a customer without a subscription asks for, pays for and follows a standalone Deep Spa (ADD-15). The owner will decide later.
+Resolved 13 Oct 2026: standalone Deep Spa follows ADD-15 and the [owner decisions](owner-decisions-2026-10-13.md).
 
 Other open questions that touch the customer app are tracked in `admin-functional-requirements.md` and `crew-functional-requirements.md`.
 

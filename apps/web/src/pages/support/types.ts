@@ -10,6 +10,7 @@ export interface Update {
 }
 
 export interface ComplaintSummary {
+  vehicle?: string;
   id: string;
   number: number;
   display_id: string;
@@ -27,6 +28,7 @@ export interface ComplaintSummary {
 }
 
 export interface ComplaintDetail extends ComplaintSummary {
+  photo_urls?: string[];
   photo_keys: string[];
   updates: Update[];
 }

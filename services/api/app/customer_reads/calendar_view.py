@@ -213,6 +213,10 @@ class CalendarView:
             )
         first_placed = next((j for j in shown if j.crew_name), None)
         return CalendarVisit(
+            finished_at=max((j.finished_at for j in jobs if j.finished_at), default=None)
+                if status == "Completed" else None,
+            checklist_total=sum(len(j.checklist) for j in jobs),
+            checklist_done=sum(i.checked_at is not None for j in jobs for i in j.checklist),
             visit_id=visit_id,
             vehicle_id=str(ctx.vehicle.id),
             date=day,

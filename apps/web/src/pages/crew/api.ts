@@ -33,7 +33,8 @@ export interface CrewExceptionResult {
   crew: Crew; exceptions: CrewException[]; released_jobs: ReleasedJob[];
 }
 export interface CrewPassword { crew: Crew; login_id: string; password: string }
-export interface CrewSession { id: string; channel: string; signed_in_at: string; last_active_at: string }
+export interface CrewSession { id: string; channel: string; signed_in_at: string; last_active_at: string;
+  device_name?: string; platform?: string; app_version?: string }
 export interface Society { id: string; name: string; active: boolean }
 
 export interface NewCrewBody {

@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -251,7 +252,7 @@ class DioAccountRepository implements AccountRepository {
 }
 
 final accountRepositoryProvider = Provider<AccountRepository>(
-  (ref) => DioAccountRepository(ref.watch(dioProvider)),
+  (ref) => DioAccountRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 final profileProvider = FutureProvider.autoDispose<ProfileDto>(

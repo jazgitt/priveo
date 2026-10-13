@@ -60,6 +60,11 @@ def seed_defaults(db: Session) -> dict[str, int]:
             db.add(SystemSetting(key=definition.key,
                                  value=settings_registry.default_for(definition.key)))
             added["settings"] += 1
+        elif definition.group == "invoice":
+            row = db.get(SystemSetting, definition.key)
+            configured = settings_registry.default_for(definition.key)
+            if "placeholder" in row.value.lower() and "placeholder" not in configured.lower():
+                row.value = configured  # Explicit seed replaces mock supplier configuration only.
 
     if db.scalar(select(Plan).where(Plan.name == defaults.PLAN["name"])) is None:
         db.add(Plan(**defaults.PLAN))

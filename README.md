@@ -4,17 +4,21 @@ A subscription car-care service for housing societies. A customer pays per vehic
 
 The repository includes a FastAPI backend, a Flutter customer/crew app and a React admin portal. Development is on `integration/complete-build`; `main` does not yet contain all integrated work. See [the current handoff and remaining implementation plan](docs/codex-handoff-plan.md) for progress, verification and remaining gaps.
 
-Steps 1–3 are committed and pushed as `a296d3a`: recovered email/manager work, customer administration and additional vehicles, and Deep Spa/scheduling integration. Step 4 adds validated operations outcomes and mobile admin quick actions on the integration branch. Migration head: `0023`. Customer presentation and external services (Step 5) are next. These branch changes have not been deployed.
+Steps 1–4 are committed and pushed on the integration branch, most recently as `d5aaad3`. Step 5.1 invoice PDF viewing and 5.3 in-app proof video playback are coded locally with regression tests written; test execution and coverage measurement are deferred at the owner's request. Migration `0024` is written but not applied. Step 5.2 and 5.4–5.8 remain pending, including automatic planning host execution (job now coded/default-disabled). These changes have not been deployed. See [the handoff](docs/codex-handoff-plan.md) for status and validation limits.
 
 ## Requirements
+
+Packages P01-P07, P08/P11 sources and owner-approved P12/GST/checklist/optional-planning changes are coded locally with regressions written/unrun. Automatic planning is disabled by default and requires an admin-selected IST time. Environment mocks preserve existing local values; real integration is deferred. The [audit](docs/coverage/requirements-audit.md) has 392 Implemented source rows, 34 Partial and 0 Open. Migrations 0024-0028 are unapplied. Immediate real-time refresh, PDF save/share/inline proof, P10 push, S3 and date/security/release work remain pending.
+
+The [full source audit](docs/coverage/requirements-audit.md) replaces the old coverage summaries: 426 requirement rows, 67 business rules and 67 entity bullets, with separate implementation, test-source and functional-script findings. Remaining work includes correctness and UI gaps beyond the Step 5 integrations. No tests were run for this audit.
 
 All three documents are drafts for the MVP (Phase 1). Each requirement has an ID, so items can be added, removed or reprioritised without renumbering the rest.
 
 | Document | Version | Covers |
 |---|---|---|
-| [`docs/reqs/customer-app-functional-requirements.md`](docs/reqs/customer-app-functional-requirements.md) | v0.5 | Onboarding, plan choice, UPI payment, home, calendar, proof of service, skip and pause, account, subscription, vehicles, complaints, feedback, monthly check-in, notifications |
-| [`docs/reqs/admin-functional-requirements.md`](docs/reqs/admin-functional-requirements.md) | v0.4 | Customers and subscriptions, crew, services and slots, capacity, payments and invoices, scheduler with draft and freeze, complaints, feedback, reference data, checklists |
-| [`docs/reqs/crew-functional-requirements.md`](docs/reqs/crew-functional-requirements.md) | v0.1 | Login, job cards, performing a job with checklist and proof, could-not-complete, Manager features |
+| [`docs/reqs/customer-app-functional-requirements.md`](docs/reqs/customer-app-functional-requirements.md) | v0.11 | Onboarding, plan choice, UPI payment, home, calendar, proof of service, skip and pause, account, subscription, vehicles, complaints, feedback, monthly check-in, notifications |
+| [`docs/reqs/admin-functional-requirements.md`](docs/reqs/admin-functional-requirements.md) | v0.9 | Customers and subscriptions, crew, services and slots, capacity, payments and invoices, scheduler with draft and freeze, complaints, feedback, reference data, checklists |
+| [`docs/reqs/crew-functional-requirements.md`](docs/reqs/crew-functional-requirements.md) | v0.5 | Login, job cards, performing a job with checklist and proof, could-not-complete, Manager features |
 
 Start with the customer document, then admin, then crew. Each file ends with its open questions and its V2 list.
 

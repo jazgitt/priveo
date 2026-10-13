@@ -203,43 +203,39 @@ class AddonService:
         return self._out(b)
 
     def standalone(
-        self, customer: Customer, login_id: uuid.UUID, body: StandaloneIn, key: str | None
+        self, customer: Customer, login_id: uuid.UUID, body: StandaloneIn, key: str | None,
+        *, admin: bool = False
     ) -> AddonOut:
-        """DERIVED / OPEN (ADD-15): a request with contact details, no payment
-        and no price. Priveo calls the customer to agree the rest."""
+        """P12: identical Spa payment/scheduling lifecycle, without a plan."""
         again = self._by_key(customer, key)
         if again is not None:
             return self._out(again)
-        self._price(body.service)
+        price = self._price(body.service)
         finish = _time(body.finish_by)
-        vehicle_id = None
-        if body.vehicle_id:
-            _, vehicle, sub = owned_vehicle(self._db, login_id, body.vehicle_id)
-            if sub is not None and sub.status == "Active":
-                raise ApiError(
-                    "has_subscription",
-                    "This vehicle has a subscription. Book Deep Spa as an add-on.",
-                    409,
-                )
-            vehicle_id = vehicle.id
-        if body.date <= today_of(self._now()):
-            raise ApiError(
-                "validation_failed", "Choose tomorrow or a later date.", 422, {"date": "too_soon"}
-            )
+        _, vehicle, sub = owned_vehicle(self._db, login_id, body.vehicle_id)
+        if sub is not None:
+            raise ApiError("has_subscription", "Book Spa through the active-subscription add-on flow.", 409)
+        require_open(body.date, self._now(), bound=not admin, hour=self._hour)
+        payment = self._billing.open_addon_payment(
+            customer, vehicle, f"{body.service} on {body.date:%d-%b-%y}", price)
         mobile = (body.contact_mobile or customer.mobile).strip()
         b = AddonBooking(
             customer_id=customer.id,
-            vehicle_id=vehicle_id,
+            vehicle_id=vehicle.id,
             service=body.service,
             standalone=True,
             proposed_date=body.date,
             finish_by=finish,
             contact_mobile=mobile,
             notes=body.notes.strip(),
+            price_rupees=price,
+            payment_id=payment.id,
             idempotency_key=key or None,
         )
         self._db.add(b)
         self._db.commit()
+        from app.scheduling.service import reconcile_vehicle
+        reconcile_vehicle(self._db, vehicle.id)
         return self._out(b)
 
     def _by_key(self, customer: Customer, key: str | None) -> AddonBooking | None:

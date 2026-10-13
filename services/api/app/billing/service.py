@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from urllib.parse import quote
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings
@@ -34,10 +34,11 @@ from app.changes.access import parse_id
 from app.changes.cycle import cycle_window, paused_days, shift_days
 from app.changes.rules import Clock, show_date, today_of
 from app.customers.models import Customer, Subscription, Vehicle
-from app.customers.service import show_registration
+from app.customers.service import show_registration, show_time
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.notifications import emit  # notify hook
+from app.platform.config import get_settings
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 
@@ -241,7 +242,18 @@ class BillingService:
 
     def detail(self, customer: Customer, payment_id: str) -> PaymentDetail:
         p = self._own_payment(customer, payment_id)
-        return PaymentDetail(payment=self._outs([p])[0], instructions=self.instructions(p))
+        return self._detail(p)
+
+    def _detail(self, p: Payment) -> PaymentDetail:
+        vehicle = self._db.get(Vehicle, p.vehicle_id) if p.vehicle_id else None
+        sub = self._db.get(Subscription, p.subscription_id) if p.subscription_id else None
+        return PaymentDetail(payment=self._outs([p])[0], instructions=self.instructions(p),
+                             vehicle=(f"{show_registration(vehicle.registration)} · "
+                                      f"{vehicle.make} {vehicle.model} {vehicle.variant}".strip()
+                                      if vehicle else ""),
+                             service_details={"service": p.description,
+                                              "cutoff_time": show_time(sub.cutoff_time) if sub else None,
+                                              "interior_day": sub.interior_day if sub else None})
 
     def mark_paid(self, customer: Customer, payment_id: str) -> PaymentDetail:
         """ "I've paid" (PAY-06): the status becomes Initiated and goes to the admin."""
@@ -259,7 +271,7 @@ class BillingService:
                 p,
             )
             self._db.commit()
-        return PaymentDetail(payment=self._outs([p])[0], instructions=self.instructions(p))
+        return self._detail(p)
 
     def ensure_next_payment(
         self, customer: Customer, vehicle: Vehicle, sub: Subscription | None
@@ -272,9 +284,7 @@ class BillingService:
         today = today_of(self._now())
         unpaid = self._unpaid_plan_payment(sub)
         if unpaid is not None:
-            return PaymentDetail(
-                payment=self._outs([unpaid])[0], instructions=self.instructions(unpaid)
-            )
+            return self._detail(unpaid)
         _, renewal = cycle_window(
             sub.first_service_date, shift_days(self._db, vehicle.id), today, self._cycle_days
         )
@@ -283,7 +293,7 @@ class BillingService:
             raise ApiError("too_early", f"You can pay from {show_date(opens)}.", 409)
         p = self._cycle_payment(sub, vehicle, renewal)
         self._db.commit()
-        return PaymentDetail(payment=self._outs([p])[0], instructions=self.instructions(p))
+        return self._detail(p)
 
     def _cycle_payment(self, sub: Subscription, vehicle: Vehicle, renewal: date) -> Payment:
         found = self._db.scalar(
@@ -347,7 +357,7 @@ class BillingService:
         return self._invoice_out(inv)
 
     def _invoice_out(self, inv: Invoice) -> InvoiceOut:
-        db = self._db
+        seller = inv.seller_details or self._seller_details()
         return InvoiceOut(
             number=inv.number,
             issued_on=inv.issued_at.astimezone(self._tz()).date(),
@@ -356,9 +366,44 @@ class BillingService:
             customer_name=inv.customer_name,
             vehicle=inv.vehicle_label,
             gst_included=True,
-            seller_name=lookup.setting(db, "invoice.seller_name"),
-            seller_address=lookup.setting(db, "invoice.seller_address"),
-            seller_gstin=lookup.setting(db, "invoice.seller_gstin"),
+            seller_name=seller["seller_name"],
+            seller_address=seller["seller_address"],
+            seller_gstin=seller["seller_gstin"],
+            tax_details=inv.tax_details,
+        )
+
+    def _seller_details(self) -> dict[str, str]:
+        return {name: lookup.setting(self._db, f"invoice.{name}")
+                for name in ("seller_name", "seller_address", "seller_gstin")}
+
+    def _tax_details(self, amount_rupees: int) -> dict:
+        from app.billing.tax import included_gst
+        tax = included_gst(amount_rupees, self._settings.gst_rate_percent, self._settings.gst_mode)
+        tax["mock_configuration"] = self._settings.gst_configuration_mock
+        return tax
+
+    @staticmethod
+    def _seller_ready(seller: dict[str, str]) -> bool:
+        return all(seller.get(key, "").strip() and "placeholder" not in seller[key].lower()
+                   for key in ("seller_name", "seller_address", "seller_gstin")) and bool(
+            re.fullmatch(r"\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]", seller["seller_gstin"])
+        )
+
+    def invoice_pdf(self, payment_id: str, customer: Customer | None = None) -> tuple[str, bytes]:
+        payment = self._own_payment(customer, payment_id) if customer else self._payment(payment_id)
+        inv = self._db.scalar(select(Invoice).where(Invoice.payment_id == payment.id))
+        if inv is None:
+            raise ApiError("no_invoice", "The admin has not issued this invoice yet.", 404)
+        invoice = self._invoice_out(inv)
+        preview = not self._seller_ready(invoice.model_dump()) or bool(
+            inv.tax_details and inv.tax_details.get("mock_configuration"))
+        if preview and get_settings().environment != "dev":
+            raise ApiError("invoice_settings_incomplete",
+                           "Ask Priveo to configure the invoice supplier details.", 409)
+        from app.billing.pdf import render_invoice
+        filename = re.sub(r"[^A-Za-z0-9_.-]", "_", inv.number) + ".pdf"
+        return filename, render_invoice(
+            invoice, preview=preview, legacy=inv.seller_details is None
         )
 
     # --- the admin ---------------------------------------------------------
@@ -392,6 +437,8 @@ class BillingService:
         due_before: date | None = None,
         due_after: date | None = None,
         limit: int = 100,
+        offset: int = 0,
+        society: str | None = None,
     ) -> list[AdminPaymentOut]:
         q = select(Payment).where(Payment.voided_at.is_(None))
         if status:
@@ -406,7 +453,13 @@ class BillingService:
             q = q.where(Payment.due_date <= due_before)
         if due_after:
             q = q.where(Payment.due_date >= due_after)
-        rows = self._db.scalars(q.order_by(Payment.due_date, Payment.created_at).limit(limit)).all()
+        if society:
+            q = q.join(Customer, Payment.customer_id == Customer.id).outerjoin(
+                Vehicle, Payment.vehicle_id == Vehicle.id).join(
+                Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id)
+            ).where(Society.name == society)
+        rows = self._db.scalars(q.order_by(Payment.due_date, Payment.created_at, Payment.id)
+                               .limit(limit).offset(offset)).all()
         return self._admin_out(list(rows))
 
     def _payment(self, payment_id: str) -> Payment:
@@ -532,6 +585,9 @@ class BillingService:
             if p.vehicle_id
             else "",
             description=p.description,
+            issued_at=now,
+            seller_details=self._seller_details(),
+            tax_details=self._tax_details(p.amount_rupees),
         )
         self._db.add(inv)
         self._db.commit()
@@ -570,10 +626,17 @@ class BillingService:
         admin_id: uuid.UUID,
     ) -> Subscription:
         """ADM-SUB-01, ADM-SUB-02, ADM-SUB-04, ADM-SUB-05."""
-        sub = self._db.get(Subscription, parse_id(subscription_id, "subscription"))
+        sub = self._db.scalar(select(Subscription).where(
+            Subscription.id == parse_id(subscription_id, "subscription")
+        ).with_for_update())
         if sub is None:
             raise ApiError("not_found", "That subscription was not found.", 404)
         old = sub.status
+        reactivated = self._db.scalar(select(SubscriptionEvent.id).where(
+            SubscriptionEvent.subscription_id == sub.id,
+            SubscriptionEvent.from_status == "Inactive",
+            SubscriptionEvent.to_status == "Activating",
+        ).limit(1)) is not None
         allowed = {
             "Inactive": old != "Inactive",
             "Activating": old == "Inactive",  # reactivate (ADM-SUB-04)
@@ -583,6 +646,14 @@ class BillingService:
             raise ApiError(
                 "invalid_transition", f"A subscription cannot go from {old} to {status}.", 409
             )
+        if status == "Active" and reactivated:
+            if first_service_date is None:
+                raise ApiError("validation_failed", "Set the new first service date.", 422,
+                               {"first_service_date": "Choose the new first service date."})
+            if self._db.scalar(select(Payment.id).where(
+                Payment.subscription_id == sub.id, Payment.cycle_start == first_service_date,
+            )) is not None:
+                raise ApiError("cycle_exists", "A payment already exists for that cycle.", 409)
         sub.status = status
         from app.directory.service import audit
 
@@ -613,10 +684,13 @@ class BillingService:
                 )
                 .limit(1)
             )
-            if status == "Active" and initial is not None and previously_active is None:
+            if (status == "Active" and initial is not None
+                    and previously_active is None and not reactivated):
                 initial.cycle_start = first_service_date
                 initial.cycle_end = first_service_date + timedelta(days=self._cycle_days)
                 initial.due_date = first_service_date
+        if status == "Active" and reactivated:
+            self._cycle_payment(sub, self._db.get(Vehicle, sub.vehicle_id), first_service_date)
         self._db.add(
             SubscriptionEvent(
                 subscription_id=sub.id,
@@ -636,8 +710,8 @@ class BillingService:
 
     def generate_due_payments(self, now: datetime) -> int:
         """Creates each plan payment 7 days before the renewal date, Due by the
-        renewal date (ADM-PAY-06). A Due payment moves with the renewal date
-        when a pause shifted it. Returns how many were created."""
+        renewal date (ADM-PAY-06). Pause edits move existing unpaid records
+        transactionally. Returns how many were created."""
         today = today_of(now)
         for pending in self._db.scalars(
             select(Subscription).where(
@@ -669,9 +743,8 @@ class BillingService:
                 .order_by(Payment.cycle_start.desc())
             )
             if due is not None:
-                if due.cycle_start != renewal and due.due_date > today:
-                    due.cycle_start, due.due_date = renewal, renewal
-                    due.cycle_end = renewal + timedelta(days=self._cycle_days)
+                # Pause edits synchronize these dates transactionally. Do not
+                # move a first-cycle/reactivation Due record to a later cycle.
                 continue
             if (renewal - today).days > self._pay_ahead:
                 continue
@@ -713,6 +786,10 @@ class BillingService:
         for p in list(stale):
             sub = self._db.get(Subscription, p.subscription_id)
             if sub is None or sub.status == "Inactive" or sub.id in report.inactivated:
+                continue
+            if (p.cycle_start or p.due_date) < sub.first_service_date:
+                # Historical debt stays readable but belongs to the previous
+                # activation, not the new cycle the admin has just started.
                 continue
             old = sub.status
             sub.status = "Inactive"

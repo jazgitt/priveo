@@ -58,11 +58,29 @@ class AuthController extends AsyncNotifier<Session?> {
       final s = await ref
           .read(authRepositoryProvider)
           .refresh(current.refreshToken);
+      // A response for a previous login must never restore it over a newer
+      // account (including an upload-triggered refresh during account switch).
+      if (session?.refreshToken != current.refreshToken) return false;
       await ref.read(sessionStoreProvider).write(s);
+      if (session?.refreshToken != current.refreshToken) {
+        final active = session;
+        if (active == null) {
+          await ref.read(sessionStoreProvider).clear();
+        } else {
+          await ref.read(sessionStoreProvider).write(active);
+        }
+        return false;
+      }
       state = AsyncData(s);
       return true;
     } catch (_) {
+      if (session?.refreshToken != current.refreshToken) return false;
       await ref.read(sessionStoreProvider).clear();
+      if (session?.refreshToken != current.refreshToken) {
+        final active = session;
+        if (active != null) await ref.read(sessionStoreProvider).write(active);
+        return false;
+      }
       state = const AsyncData(null);
       return false;
     }

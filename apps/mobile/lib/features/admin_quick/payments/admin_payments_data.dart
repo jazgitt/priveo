@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -128,7 +129,7 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
 }
 
 final adminPaymentsRepositoryProvider = Provider<AdminPaymentsRepository>(
-  (ref) => DioAdminPaymentsRepository(ref.watch(dioProvider)),
+  (ref) => DioAdminPaymentsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 final paymentsToConfirmProvider =

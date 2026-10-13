@@ -14,6 +14,7 @@ class VehicleCard(BaseModel):
     # Shown as on the plate. Empty when the number is not on file yet.
     registration: str
     model: str
+    make: str = ""
     society: str
     # For example "B2-14". Empty when it is not on file yet.
     parking: str

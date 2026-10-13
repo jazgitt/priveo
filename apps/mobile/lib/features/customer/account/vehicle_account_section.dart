@@ -11,7 +11,6 @@ import 'account_data.dart';
 import 'account_strings.dart';
 import 'photo_widgets.dart';
 
-const _basements = ['B1', 'B2', 'B3', 'B4']; // ONB-13
 
 /// What a customer can change on a vehicle (VEH-01, VEH-04) and its RC status
 /// (VEH-03): the photo with "Change photo", parking, and the RC document.
@@ -51,10 +50,10 @@ class VehicleAccountSection extends ConsumerWidget {
                     ),
                   ),
                   StatusChip(
-                    vehicle.rcStatus == 'Uploaded'
+                    vehicle.rcStatus == 'Verified' ? 'Verified' : vehicle.rcStatus == 'Uploaded'
                         ? AccountStrings.rcUploaded
                         : AccountStrings.rcNotUploaded,
-                    tone: vehicle.rcStatus == 'Uploaded'
+                    tone: vehicle.rcStatus != 'Not uploaded'
                         ? ChipTone.ok
                         : ChipTone.neutral,
                   ),
@@ -98,7 +97,7 @@ class _EditParking extends ConsumerStatefulWidget {
 }
 
 class _EditParkingState extends ConsumerState<_EditParking> {
-  late String? _basement = _basements.contains(widget.vehicle.parkingBasement)
+  late String? _basement = widget.vehicle.parkingBasements.contains(widget.vehicle.parkingBasement)
       ? widget.vehicle.parkingBasement
       : null;
   late final _number = TextEditingController(
@@ -177,7 +176,7 @@ class _EditParkingState extends ConsumerState<_EditParking> {
           Wrap(
             spacing: 8,
             children: [
-              for (final b in _basements)
+              for (final b in widget.vehicle.parkingBasements)
                 ChoiceChip(
                   label: Text(b),
                   selected: _basement == b,

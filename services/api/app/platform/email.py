@@ -110,7 +110,7 @@ class ResendEmailSender:
         self._from = sender
         self._timeout = timeout
 
-    def _send(self, to: str, message: tuple[str, str, str]) -> None:
+    def _send(self, to: str, message: tuple[str, str, str], *, key: str | None = None) -> None:
         subject, text, body = message
         payload = json.dumps({"from": self._from, "to": [to], "subject": subject,
                               "text": text, "html": body}).encode()
@@ -119,6 +119,8 @@ class ResendEmailSender:
             headers={"Authorization": f"Bearer {self._key}",
                      "Content-Type": "application/json",
                      "User-Agent": "priveo-api/1"})
+        if key:
+            request.add_header("Idempotency-Key", key)
         try:
             with urllib.request.urlopen(request, timeout=self._timeout):
                 pass
@@ -132,6 +134,9 @@ class ResendEmailSender:
 
     def send_welcome(self, to: str, first_name: str) -> None:
         self._send(to, welcome_message(first_name))
+
+    def send_alert(self, to: str, title: str, body: str, key: str) -> None:
+        self._send(to, (title, body, f"<p>{html.escape(body)}</p>"), key=key)
 
 
 _fake = FakeEmailSender()

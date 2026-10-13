@@ -27,6 +27,7 @@ Future<List<Uri>> pumpLogin(WidgetTester tester) async {
       authSupportContactProvider.overrideWith((ref) async =>
           const AuthSupportContact(
               helpline: '+911234567890', whatsapp: '+91 98765 43210')),
+      authLegalLinksProvider.overrideWith((ref) async => {'terms': termsUri.toString(), 'privacy': privacyUri.toString()}),
       linkOpenerProvider.overrideWithValue((uri) async {
         opened.add(uri);
         return true;
@@ -107,6 +108,7 @@ void main() {
     for (final s in spans) {
       (s.recognizer! as TapGestureRecognizer).onTap!();
     }
+    await tester.pumpAndSettle();
     expect(opened, [termsUri, privacyUri]);
   });
 

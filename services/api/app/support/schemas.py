@@ -90,6 +90,7 @@ class ComplaintDetail(ComplaintSummary):
 
 
 class AdminComplaintSummary(ComplaintSummary):
+    vehicle: str = ""
     customer_name: str
     society: str
     flat: str

@@ -9,9 +9,11 @@ import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart' show failureText;
 import 'strings.dart';
+import 'invoice_pdf_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 /// The invoice for one payment (SUB-12): a formatted page the customer can
-/// copy or email to themselves. A PDF and a share sheet need new packages.
+/// open as a PDF. Existing text actions remain until step 5.2 adds PDF save/share.
 class InvoiceScreen extends ConsumerWidget {
   const InvoiceScreen({super.key, required this.paymentId});
 
@@ -55,6 +57,13 @@ class InvoiceScreen extends ConsumerWidget {
                     style: text.headlineSmall,
                   ),
                   const Text(MoneyStrings.gstIncluded),
+                  if (inv.taxDetails case final tax?) ...[
+                    if (tax['mock_configuration'] == true) const Text('Mock GST configuration'),
+                    Text('Taxable value: ₹${((tax['taxable_paise'] as num) / 100).toStringAsFixed(2)}'),
+                    for (final entry in {'cgst_paise': 'CGST', 'sgst_paise': 'SGST', 'igst_paise': 'IGST'}.entries)
+                      if ((tax[entry.key] as num) > 0)
+                        Text('${entry.value}: ₹${((tax[entry.key] as num) / 100).toStringAsFixed(2)}'),
+                  ],
                   const SizedBox(height: 12),
                   Text(inv.customerName),
                   Text('${inv.sellerName}, GSTIN ${inv.sellerGstin}'),
@@ -62,6 +71,13 @@ class InvoiceScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf),
+              label: Text(AppLocalizations.of(context).invoiceOpenPdf),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => InvoicePdfScreen(paymentId: paymentId, number: inv.number))),
+            ),
+            const SizedBox(height: 8),
             OutlinedButton.icon(
               icon: const Icon(Icons.copy_rounded),
               label: const Text(MoneyStrings.invoiceCopy),

@@ -25,11 +25,10 @@ class AddonChangeIn(BaseModel):
 
 
 class StandaloneIn(BaseModel):
-    """DERIVED / OPEN (ADD-15): a standalone Deep Spa is only a request with
-    contact details. Priveo calls to agree the date, the price and the payment."""
+    """Owner decision: an owned no-subscription vehicle uses the Spa rules."""
 
     service: str = "Deep Spa"
-    vehicle_id: str | None = None
+    vehicle_id: str
     date: dt.date
     finish_by: str
     contact_mobile: str = ""

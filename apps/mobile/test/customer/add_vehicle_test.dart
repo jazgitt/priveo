@@ -186,6 +186,7 @@ void main() {
       await choose(tester, 'Model', 'Nexon');
       await choose(tester, 'Variant', 'Pure');
       await tester.enterText(find.byType(TextField), 'hr01zz1234');
+      expect(find.text('HR01ZZ1234'), findsOneWidget);
       await next(tester);
       expect(
         find.text('Complete the required details before continuing.'),

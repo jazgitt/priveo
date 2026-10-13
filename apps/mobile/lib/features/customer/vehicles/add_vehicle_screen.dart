@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -358,6 +359,8 @@ class _State extends ConsumerState<AddVehicleScreen> {
                         Text('${entry['category']} · ${l.addVehicleAuto}'),
                       TextField(
                         controller: _registration,
+                        inputFormatters: [TextInputFormatter.withFunction((old, value) =>
+                            value.copyWith(text: value.text.toUpperCase()))],
                         textCapitalization: TextCapitalization.characters,
                         decoration: InputDecoration(
                           labelText: l.addVehicleRegistration,

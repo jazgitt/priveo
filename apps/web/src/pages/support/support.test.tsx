@@ -69,6 +69,20 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+it("shows complaint vehicle/photos and the linked visit proof", async () => {
+  handlers["/v1/admin/complaints/c1"] = () => ({ ...complaint, vehicle: "HR01ZZ1234 · Creta",
+    visit_id: "visit1", photo_keys: ["photo1"], photo_urls: ["/signed-complaint.jpg"], updates: [] });
+  handlers["/v1/admin/complaints/c1/visit"] = () => ({ status: "Completed", date: "2026-10-09",
+    jobs: [{ id: "j1", service: "Cleaning-External", crew_name: "Ravi",
+      checklist: [{ key: "body", label: "Body clean", checked_at: "2026-10-09T07:00:00Z" }],
+      proof: [{ id: "proof1", kind: "photo", url: "/signed-proof.jpg" }] }] });
+  renderAt("/complaints/c1");
+  expect(await screen.findByText("HR01ZZ1234 · Creta")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Complaint photo 1" })).toHaveAttribute("src", "/signed-complaint.jpg");
+  expect(await screen.findByRole("img", { name: "Linked visit proof" })).toHaveAttribute("src", "/signed-proof.jpg");
+  expect(screen.getByText(/Body clean/)).toBeInTheDocument();
+});
+
 describe("alerts", () => {
   it("merges both sources, tagged, and marks one read on its own endpoint", async () => {
     handlers["/v1/admin/payment-alerts/p1/read"] = () => undefined;

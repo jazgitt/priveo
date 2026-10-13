@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class ProofOut(BaseModel):
+    id: str | None = None
     kind: str  # photo | video
     # A signed, expiring read URL. On the dev server it is relative to the API.
     url: str
@@ -49,6 +50,9 @@ class CalendarJob(BaseModel):
 
 
 class CalendarVisit(BaseModel):
+    finished_at: datetime | None = None
+    checklist_done: int = 0
+    checklist_total: int = 0
     # Empty for a projected day: the scheduler has not planned it yet.
     visit_id: str | None
     vehicle_id: str
@@ -166,6 +170,7 @@ class VehicleSummary(BaseModel):
 
 
 class VehicleDetail(VehicleSummary):
+    parking_basements: list[str] = ["B1", "B2", "B3", "B4"]
     make: str
     variant: str
     category: str

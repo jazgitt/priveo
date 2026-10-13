@@ -304,6 +304,9 @@ Future<ProviderContainer> pumpApp(
   Brightness brightness = Brightness.light,
 }) async {
   final crewBackend = FakeCrewBackend();
+  final uploadQueue = UploadQueue(api: crewBackend,
+      store: MemoryUploadQueueStore(), retryAfter: Duration.zero);
+  addTearDown(uploadQueue.dispose);
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   final container = ProviderContainer(overrides: [
@@ -317,6 +320,7 @@ Future<ProviderContainer> pumpApp(
     // test has no network, no SQLite and no connectivity plugin.
     crewRepositoryProvider.overrideWithValue(crewBackend),
     uploadApiProvider.overrideWithValue(crewBackend),
+    uploadQueueProvider.overrideWithValue(uploadQueue),
     uploadQueueStoreProvider.overrideWithValue(MemoryUploadQueueStore()),
     onlineEventsProvider.overrideWithValue(null),
   ]);
