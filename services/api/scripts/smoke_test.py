@@ -1,4 +1,4 @@
-"""Smoke test for a deployed API: health, a wrong password, three logins, three home calls.
+"""Smoke test for a deployed API: health, a wrong password and each role's entry data.
 
 Usage: python scripts/smoke_test.py https://api-dev.example.com
 Passwords come from SMOKE_CUSTOMER_PASSWORD, SMOKE_CREW_PASSWORD and
@@ -52,8 +52,12 @@ def main() -> None:
         password = os.environ.get(env, "")
         status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})
         check(status == 200 and body.get("role") == role, f"login {role}")
-        status, _ = call(base, f"/v1/{role}/home", token=body["access_token"])
-        check(status == 200, f"home {role}")
+        # Crew home now reads real visits; the old mock /crew/home was removed.
+        path = "/v1/crew/visits" if role == "crew" else f"/v1/{role}/home"
+        status, entry = call(base, path, token=body["access_token"])
+        check(status == 200, f"entry data {role} ({path}, HTTP {status})")
+        if role == "crew":
+            check(isinstance(entry.get("jobs"), list), "crew visits response")
 
 
 if __name__ == "__main__":
