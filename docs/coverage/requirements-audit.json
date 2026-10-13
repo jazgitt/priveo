@@ -15535,7 +15535,7 @@
           "line": 11
         }
       ],
-      "note": "P11 coded: cron configuration runs every five minutes; four-hour Raised threshold marker and inbox/email queue commit atomically under row locks. Dispatch failures retain inbox and bounded email retries. Boundary/repeat/rollback/provider tests written/unrun. Live host cadence and email delivery unverified; phone push remains P10.",
+      "note": "P11 coded: cron temporarily runs daily at 21:00 IST for Vercel Hobby compatibility; overdue alerts/email retries wait until that run; four-hour Raised threshold marker and inbox/email queue commit atomically under row locks. Dispatch failures retain inbox and bounded email retries. Boundary/repeat/rollback/provider tests written/unrun. Live host cadence and email delivery unverified; phone push remains P10.",
       "gap": null,
       "tests": [
         {
@@ -20928,7 +20928,7 @@
         "ADM-CMP-08"
       ],
       "implementation": "Implemented",
-      "note": "P11 coded: cron configuration runs every five minutes; four-hour Raised threshold marker and inbox/email queue commit atomically under row locks. Dispatch failures retain inbox and bounded email retries. Boundary/repeat/rollback/provider tests written/unrun. Live host cadence and email delivery unverified; phone push remains P10. The software records/escalates overdue complaints; a human reply within four hours is an operational SLA, not guaranteed by code."
+      "note": "P11 coded: cron temporarily runs daily at 21:00 IST for Vercel Hobby compatibility; overdue alerts/email retries wait until that run; four-hour Raised threshold marker and inbox/email queue commit atomically under row locks. Dispatch failures retain inbox and bounded email retries. Boundary/repeat/rollback/provider tests written/unrun. Live host cadence and email delivery unverified; phone push remains P10. The software records/escalates overdue complaints; a human reply within four hours is an operational SLA, not guaranteed by code."
     },
     {
       "role": "customer",

@@ -14,13 +14,13 @@ freeze cutoff time (ADM-SCH-25):
       {"path": "/v1/internal/cron/payments-overdue",    "schedule": "40 18 * * *"},
       {"path": "/v1/internal/cron/renewal-reminders",   "schedule": "30 4 * * *"},
       {"path": "/v1/internal/cron/checkin-notify",      "schedule": "0 5 * * *"},
-      {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "*/5 * * * *"}
+      {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "30 15 * * *"}
     ]
 
-`complaints-overdue` runs every five minutes, so a Raised complaint crossing
-the four-hour threshold is detected on the next run. Use a host plan that
-supports this cadence; a daily-only cron is insufficient. Pending alert email
-delivery is retried by the same protected job.
+Automatic planning and complaint escalation temporarily run daily at 21:00 IST
+(15:30 UTC) for Vercel Hobby compatibility. Overdue complaints and pending alert
+email retries are processed on that daily invocation. Hobby invocation timing
+can vary within the scheduled hour. Planning still respects its admin settings.
 
 `CRON_SECRET` is environment configuration, never committed. Without it every
 call is refused."""
