@@ -14,11 +14,21 @@ from app.identity import tokens
 from app.identity.models import AuthEvent, AuthSession, EmailCode, Login
 from app.platform.config import Settings
 from app.platform.db import utcnow
+from app.platform.email import (
+    EmailSender,
+    EmailSendError,
+    email_connected,
+    get_email_sender,
+    new_code,
+)
 from app.platform.errors import ApiError
 
 MAX_WRONG_ATTEMPTS = 5  # CRW-ACC-07, AUTH-13
 CUSTOMER_BLOCK = timedelta(minutes=15)  # AUTH-13
 ADMIN_MOBILE_IDLE = timedelta(hours=24)  # ADM-ACC-13
+# A browser session has no refresh token, so its one access token lasts a
+# working day. The server session behind it can still be ended at any time.
+WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
 CODE_LIFETIME = timedelta(minutes=10)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
@@ -118,20 +128,25 @@ def _signed_out() -> ApiError:
 
 
 class AuthService:
-    def __init__(self, settings: Settings, db: Session):
+    def __init__(self, settings: Settings, db: Session,
+                 email: EmailSender | None = None):
         self._s = settings
         self._db = db
+        self._email = email or get_email_sender(settings)
 
     def _event(self, login: Login | None, kind: str) -> None:
         self._db.add(AuthEvent(login_id=login.id if login else None, kind=kind))
 
     def _result(self, login: Login, session: AuthSession, refresh_token: str) -> LoginResult:
+        minutes = (WEB_SESSION_MINUTES if session.channel == "web"
+                   else self._s.access_token_minutes)
         return LoginResult(
             role=login.role,
             display_name=login.display_name,
-            access_token=tokens.issue_access(self._s, login.id, session.id, login.role),
+            access_token=tokens.issue_access(
+                self._s, login.id, session.id, login.role, minutes),
             refresh_token=refresh_token,
-            expires_in=self._s.access_token_minutes * 60,
+            expires_in=minutes * 60,
         )
 
     def _end(self, session: AuthSession, reason: str) -> None:
@@ -236,10 +251,11 @@ class AuthService:
             raise ApiError("too_many_codes",
                            "Too many codes were requested. Try again in an hour.", 429)
 
-        code = self._s.fixed_email_code
-        if code is None:
-            # Email is not connected yet. Nothing is stored and nothing is sent.
+        if not email_connected(self._s):
+            # Prod without a Resend key: nothing is stored and nothing is sent.
             raise ApiError("not_configured", "Email is not set up yet.", 503)
+        # A random code, or the fixed MOCK_EMAIL_CODE on dev.
+        code = new_code(self._s)
 
         self._db.execute(
             update(EmailCode)
@@ -250,6 +266,15 @@ class AuthService:
         row.code_hash = self._code_hash(row.id, code)
         self._db.add(row)
         self._event(login, "code_sent")
+        purpose = ("sign_in_code" if login.password_hash is None
+                   else "password_reset_code")
+        try:
+            self._email.send_code(login.login_id, code, purpose)
+        except EmailSendError as exc:
+            # The customer never got it, so it does not count as one sent.
+            self._db.rollback()
+            raise ApiError("email_failed",
+                           "We could not send the email. Try again in a moment.", 502) from exc
         self._db.commit()
         return wait
 
@@ -276,6 +301,10 @@ class AuthService:
 
         password_token = tokens.new_refresh_token()
         row.verified_at = now
+        from app.customers.models import Customer
+        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+        if customer is not None:
+            customer.email_verified_at = now
         row.password_token_hash = tokens.refresh_hash(password_token)
         row.password_token_expires_at = now + PASSWORD_TOKEN_LIFETIME
         self._event(login, "code_verified")
@@ -360,11 +389,32 @@ class AuthService:
             self._event(self._db.get(Login, session.login_id), "logout")
             self._db.commit()
 
+    def end_customer_sessions(self, customer_login_id: uuid.UUID, reason: str, *,
+                              actor_id: uuid.UUID, customer_id: uuid.UUID) -> int:
+        """Signs a customer out on every phone (AUTH-17, ADM-CUS-21). Returns
+        how many sessions were ended."""
+        result = self._db.execute(
+            update(AuthSession)
+            .where(AuthSession.login_id == customer_login_id,
+                   AuthSession.ended_at.is_(None))
+            .values(ended_at=utcnow(), ended_reason=reason))
+        self._event(self._db.get(Login, customer_login_id), "sessions_ended")
+        from app.directory.models import DirectoryAudit
+        self._db.add(DirectoryAudit(admin_login_id=actor_id, entity="customer",
+                                    entity_id=str(customer_id), action="sessions_logout",
+                                    detail={"reason": reason, "ended": result.rowcount or 0}))
+        self._db.commit()
+        return result.rowcount or 0
+
     def logout_all(self, user: User) -> None:
         """Ends every session of this login, the one in use included (ADM-ACC-14)."""
-        self._db.execute(
+        result = self._db.execute(
             update(AuthSession)
             .where(AuthSession.login_id == user.id, AuthSession.ended_at.is_(None))
             .values(ended_at=utcnow(), ended_reason="logout_all"))
         self._event(self._db.get(Login, user.id), "logout_all")
+        from app.directory.models import DirectoryAudit
+        self._db.add(DirectoryAudit(admin_login_id=user.id, entity="login",
+                                    entity_id=str(user.id), action="logout_all",
+                                    detail={"reason": "logout_all", "ended": result.rowcount or 0}))
         self._db.commit()

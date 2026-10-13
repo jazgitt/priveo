@@ -17,6 +17,7 @@ final List<GoRoute> routes = [
   ),
   GoRoute(
     path: adminAlertsPath,
-    builder: (_, _) => Theme(data: adminTheme, child: const AdminAlertsScreen()),
+    builder: (_, _) =>
+        Theme(data: adminTheme, child: const AdminAlertsScreen()),
   ),
 ];

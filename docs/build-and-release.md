@@ -12,12 +12,13 @@
 | API: add a migration | Change the models, then `.venv/Scripts/python -m alembic revision -m "what changed"` and write the steps by hand |
 | API: load the existing customers (one time) | `.venv/Scripts/python scripts/import_customers.py "../../seed/<file>.xlsx"` is a trial run that saves nothing. Add `--apply` to save. Needs `DATABASE_URL`. The spreadsheet holds real customer data and stays in `/seed`, which is git-ignored |
 | API: lint and test | `.venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. The tests use an in-memory database and need no setup. Set `TEST_DATABASE_URL` to run them on PostgreSQL; that database is emptied |
+| API: isolated PostgreSQL tests | `.venv/Scripts/python scripts/test_postgres.py`. Uses its own temporary cluster, never `DATABASE_URL`. Set `POSTGRES_BIN` if PostgreSQL is not installed at `C:/Program Files/PostgreSQL/17/bin` |
 | API: export the contract | `.venv/Scripts/python scripts/export_openapi.py` (writes `packages/api-contract/openapi.json`) |
 | API: smoke test a running API | `SMOKE_CUSTOMER_PASSWORD=... SMOKE_CREW_PASSWORD=... SMOKE_ADMIN_PASSWORD=... python scripts/smoke_test.py <url>` |
 | App: get packages | `cd apps/mobile && flutter pub get` |
 | App: theme from tokens | `dart run tool/gen_theme.dart` (after changing `docs/brand/tokens.json`) |
 | App: API client from the contract | `dart run tool/gen_api.dart` (after `packages/api-contract/openapi.json` changes) |
-| App: translations | `flutter gen-l10n` (after changing `lib/l10n/app_en.arb`) |
+| App: translations | `flutter gen-l10n` (after changing `lib/l10n/app_en.arb`; new slice fragment keys must be merged into that file first) |
 | App: analyze and test | `flutter analyze && flutter test` |
 | App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD`, `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
 | App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
@@ -25,6 +26,8 @@
 | App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the `dev` API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-dev.apk` from the Files app |
 
 The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
+
+For actual email delivery, configure `RESEND_API_KEY` and `EMAIL_FROM` using a verified sending domain. Without a provider key, dev uses the logging sender and production verification returns `not_configured`. `MOCK_EMAIL_CODE` is an optional dev override and is ignored in production. No live provider credentials are needed for the test suite.
 
 Each role has one look, whatever the phone's light or dark setting (owner decision, 10-Oct-26): the splash, login and customer screens are dark and follow the prototype; crew screens are plain white; admin screens are cream. **Derived:** the white crew background is not in `tokens.json`. The customer look also uses the prototype's corner sizes (cards 22, inputs 15) where `tokens.json` says 18 and 12. The looks are in `apps/mobile/lib/core/ui/theme.dart`.
 

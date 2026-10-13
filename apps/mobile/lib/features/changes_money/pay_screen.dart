@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
@@ -66,7 +67,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _QrBox(url: d.instructions.qrUrl),
+            _QrBox(uri: d.instructions.upiUri),
             const SizedBox(height: 12),
             const Text(MoneyStrings.payHow),
             const SizedBox(height: 12),
@@ -109,9 +110,9 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 }
 
 class _QrBox extends StatelessWidget {
-  const _QrBox({required this.url});
+  const _QrBox({required this.uri});
 
-  final String? url;
+  final String uri;
 
   @override
   Widget build(BuildContext context) {
@@ -126,21 +127,15 @@ class _QrBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: scheme.outlineVariant),
         ),
-        child: url == null
+        child: uri.isEmpty
             ? const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(MoneyStrings.qrMissing,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.black87)),
               )
-            : Image.network(url!,
-                semanticLabel: 'UPI QR code',
-                errorBuilder: (_, _, _) => const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(MoneyStrings.qrMissing,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.black87)),
-                    )),
+            : Semantics(label: 'UPI QR code for the payable amount',
+                child: QrImageView(data: uri, size: 220, backgroundColor: Colors.white)),
       ),
     );
   }
@@ -168,6 +163,11 @@ class _Submitted extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(detail.payment.description, textAlign: TextAlign.center),
+              if (detail.vehicle.isNotEmpty) Text(detail.vehicle, textAlign: TextAlign.center),
+              if (detail.serviceDetails['cutoff_time'] != null)
+                Text('Service cutoff: ${formatClock(detail.serviceDetails['cutoff_time'] as String)}'),
+              if (detail.serviceDetails['interior_day'] != null)
+                Text('Interior care day: ${detail.serviceDetails['interior_day']}'),
               const SizedBox(height: 8),
               Text(
                   MoneyStrings.submittedBody(

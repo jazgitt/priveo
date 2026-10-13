@@ -1,8 +1,10 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_failure.dart';
 import '../../../core/providers.dart';
+import '../../../core/ui/media_image.dart' show absoluteMediaUrl;
 
 // Hand-written DTOs for the customer read endpoints (/v1/customer/...).
 // They move to the generated client when the contract is regenerated.
@@ -13,79 +15,245 @@ List<T> _list<T>(Object? v, T Function(Map<String, dynamic>) f) => [
   for (final e in (v as List<dynamic>)) f(e as Map<String, dynamic>),
 ];
 
+/// One job of a calendar day, with its crew member and time once the
+/// schedule is frozen (CAL-10).
+class CalendarJobDto {
+  const CalendarJobDto({
+    required this.service,
+    required this.status,
+    this.crewName,
+    this.startTime,
+    this.endTime,
+  });
+
+  final String service;
+  final String status;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
+
+  factory CalendarJobDto.fromJson(Map<String, dynamic> j) => CalendarJobDto(
+    service: j['service'] as String,
+    status: j['status'] as String,
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
+  );
+}
+
 class CalendarVisit {
   const CalendarVisit({
-    required this.visitId,
+    this.finishedAt, this.checklistDone = 0, this.checklistTotal = 0,
+    this.visitId,
     required this.vehicleId,
     required this.date,
     required this.status,
     required this.services,
+    this.source = 'visit',
+    this.state,
+    this.cutoffTime,
+    this.changeRequested = false,
+    this.requestedCutoffTime,
+    this.skipId,
+    this.canChange = false,
+    this.frozen = false,
+    this.coveredOn,
+    this.rescheduledOn,
+    this.jobs = const [],
+    this.crewName,
+    this.startTime,
+    this.endTime,
   });
 
-  final String visitId;
+  /// Empty for a projected day: the scheduler has not planned it yet.
+  final String? visitId;
+  final DateTime? finishedAt;
+  final int checklistDone, checklistTotal;
   final String vehicleId;
   final DateTime date;
 
-  /// Scheduled, In progress, Completed, Skipped or Missed.
+  /// Scheduled, In progress, Completed, Skipped, Missed, Paused or Projected.
   final String status;
   final List<String> services;
 
+  /// `visit` or `projected`.
+  final String source;
+
+  /// What the day card shows: [status], or Covered, Rescheduled or
+  /// Change requested. Falls back to [status].
+  final String? state;
+  final String? cutoffTime;
+  final bool changeRequested;
+  final String? requestedCutoffTime;
+  final String? skipId;
+  final bool canChange;
+  final bool frozen;
+  final DateTime? coveredOn;
+  final DateTime? rescheduledOn;
+  final List<CalendarJobDto> jobs;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
+
+  bool get projected => source == 'projected';
+  String get shownState => state ?? status;
+
   factory CalendarVisit.fromJson(Map<String, dynamic> j) => CalendarVisit(
-    visitId: j['visit_id'] as String,
+    finishedAt: _time(j['finished_at']),
+    checklistDone: j['checklist_done'] as int? ?? 0,
+    checklistTotal: j['checklist_total'] as int? ?? 0,
+    visitId: j['visit_id'] as String?,
     vehicleId: j['vehicle_id'] as String,
     date: _day(j['date']),
     status: j['status'] as String,
     services: [for (final s in j['services'] as List<dynamic>) s as String],
+    source: (j['source'] as String?) ?? 'visit',
+    state: j['state'] as String?,
+    cutoffTime: j['cutoff_time'] as String?,
+    changeRequested: (j['change_requested'] as bool?) ?? false,
+    requestedCutoffTime: j['requested_cutoff_time'] as String?,
+    skipId: j['skip_id'] as String?,
+    canChange: (j['can_change'] as bool?) ?? false,
+    frozen: (j['frozen'] as bool?) ?? false,
+    coveredOn: j['covered_on'] == null ? null : _day(j['covered_on']),
+    rescheduledOn: j['rescheduled_on'] == null
+        ? null
+        : _day(j['rescheduled_on']),
+    jobs: j['jobs'] == null
+        ? const []
+        : _list(j['jobs'], CalendarJobDto.fromJson),
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
   );
 }
 
+class CalendarRenewalDto {
+  const CalendarRenewalDto({required this.vehicleId, required this.date});
+
+  final String vehicleId;
+  final DateTime date;
+
+  factory CalendarRenewalDto.fromJson(Map<String, dynamic> j) =>
+      CalendarRenewalDto(
+        vehicleId: j['vehicle_id'] as String,
+        date: _day(j['date']),
+      );
+}
+
 class CalendarMonthDto {
-  const CalendarMonthDto({required this.month, required this.visits});
+  const CalendarMonthDto({
+    required this.month,
+    required this.visits,
+    this.renewals = const [],
+  });
 
   final String month;
   final List<CalendarVisit> visits;
+  final List<CalendarRenewalDto> renewals;
 
   factory CalendarMonthDto.fromJson(Map<String, dynamic> j) => CalendarMonthDto(
     month: j['month'] as String,
     visits: _list(j['visits'], CalendarVisit.fromJson),
+    renewals: j['renewals'] == null
+        ? const []
+        : _list(j['renewals'], CalendarRenewalDto.fromJson),
   );
 }
 
 class NextServiceDto {
   const NextServiceDto({
     required this.vehicleId,
-    required this.visitId,
+    this.visitId,
     required this.date,
     required this.service,
     required this.status,
+    this.services = const [],
+    this.source = 'visit',
+    this.cutoffTime,
+    this.crewName,
+    this.startTime,
+    this.endTime,
   });
 
   final String vehicleId;
-  final String visitId;
+  final String? visitId;
   final DateTime date;
   final String service;
   final String status;
+  final List<String> services;
+  final String source;
+  final String? cutoffTime;
+  final String? crewName;
+  final String? startTime;
+  final String? endTime;
 
   factory NextServiceDto.fromJson(Map<String, dynamic> j) => NextServiceDto(
     vehicleId: j['vehicle_id'] as String,
-    visitId: j['visit_id'] as String,
+    visitId: j['visit_id'] as String?,
     date: _day(j['date']),
     service: j['service'] as String,
     status: j['status'] as String,
+    services: j['services'] == null
+        ? const []
+        : [for (final s in j['services'] as List<dynamic>) s as String],
+    source: (j['source'] as String?) ?? 'visit',
+    cutoffTime: j['cutoff_time'] as String?,
+    crewName: j['crew_name'] as String?,
+    startTime: j['start_time'] as String?,
+    endTime: j['end_time'] as String?,
   );
 }
 
 class ProofDto {
-  const ProofDto({required this.kind, required this.url});
+  const ProofDto({
+    required this.kind,
+    required this.url,
+    this.stage,
+    this.takenAt,
+    this.id,
+  });
 
   /// `photo` or `video`.
   final String kind;
   final String url;
+  final String? id;
+
+  /// `Before`, `During` or `After` (SVC-04, SVC-05).
+  final String? stage;
+  final DateTime? takenAt;
 
   bool get isVideo => kind == 'video';
+  bool get isAfter => stage == 'After';
 
-  factory ProofDto.fromJson(Map<String, dynamic> j) =>
-      ProofDto(kind: j['kind'] as String, url: j['url'] as String);
+  factory ProofDto.fromJson(Map<String, dynamic> j) => ProofDto(
+    id: j['id'] as String?,
+    kind: j['kind'] as String,
+    url: j['url'] as String,
+    stage: j['stage'] as String?,
+    takenAt: _time(j['taken_at']),
+  );
+}
+
+DateTime? _time(Object? v) =>
+    v == null ? null : DateTime.parse(v as String).toLocal();
+
+class ChecklistItemDto {
+  const ChecklistItemDto({
+    required this.key,
+    required this.label,
+    this.checkedAt,
+  });
+
+  final String key;
+  final String label;
+  final DateTime? checkedAt;
+
+  factory ChecklistItemDto.fromJson(Map<String, dynamic> j) => ChecklistItemDto(
+    key: j['key'] as String,
+    label: j['label'] as String,
+    checkedAt: _time(j['checked_at']),
+  );
 }
 
 class JobDto {
@@ -94,6 +262,11 @@ class JobDto {
     required this.service,
     required this.status,
     required this.proof,
+    this.crewName,
+    this.crewSociety = '',
+    this.startedAt,
+    this.finishedAt,
+    this.checklist = const [],
   });
 
   final String id;
@@ -101,11 +274,27 @@ class JobDto {
   final String status;
   final List<ProofDto> proof;
 
+  /// The crew member's first name for the crew card (SVC-02).
+  final String? crewName;
+  final String crewSociety;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
+  final List<ChecklistItemDto> checklist;
+
+  int get checklistDone => checklist.where((c) => c.checkedAt != null).length;
+
   factory JobDto.fromJson(Map<String, dynamic> j) => JobDto(
     id: j['id'] as String,
     service: j['service'] as String,
     status: j['status'] as String,
     proof: _list(j['proof'], ProofDto.fromJson),
+    crewName: j['crew_name'] as String?,
+    crewSociety: (j['crew_society'] as String?) ?? '',
+    startedAt: _time(j['started_at']),
+    finishedAt: _time(j['finished_at']),
+    checklist: j['checklist'] == null
+        ? const []
+        : _list(j['checklist'], ChecklistItemDto.fromJson),
   );
 }
 
@@ -118,6 +307,8 @@ class VisitDetailDto {
     required this.date,
     required this.status,
     required this.jobs,
+    this.finishedAt,
+    this.rating,
   });
 
   final String id;
@@ -127,6 +318,12 @@ class VisitDetailDto {
   final DateTime date;
   final String status;
   final List<JobDto> jobs;
+
+  /// When the last job finished, for a Completed visit (SVC-01).
+  final DateTime? finishedAt;
+
+  /// The stars the customer gave this visit, or null (SVC-07).
+  final int? rating;
 
   /// Every photo and video of the visit, in job order.
   List<ProofDto> get proof => [for (final j in jobs) ...j.proof];
@@ -139,6 +336,8 @@ class VisitDetailDto {
     date: _day(j['date']),
     status: j['status'] as String,
     jobs: _list(j['jobs'], JobDto.fromJson),
+    finishedAt: _time(j['finished_at']),
+    rating: (j['rating'] as Map<String, dynamic>?)?['rating'] as int?,
   );
 }
 
@@ -150,6 +349,8 @@ class HistoryItemDto {
     required this.status,
     required this.services,
     required this.photoCount,
+    this.finishedAt,
+    this.rating,
   });
 
   final String visitId;
@@ -158,6 +359,8 @@ class HistoryItemDto {
   final String status;
   final List<String> services;
   final int photoCount;
+  final DateTime? finishedAt;
+  final int? rating;
 
   factory HistoryItemDto.fromJson(Map<String, dynamic> j) => HistoryItemDto(
     visitId: j['visit_id'] as String,
@@ -166,6 +369,8 @@ class HistoryItemDto {
     status: j['status'] as String,
     services: [for (final s in j['services'] as List<dynamic>) s as String],
     photoCount: j['photo_count'] as int,
+    finishedAt: _time(j['finished_at']),
+    rating: j['rating'] as int?,
   );
 }
 
@@ -176,6 +381,7 @@ class VehicleSummaryDto {
     required this.model,
     required this.society,
     required this.subscriptionStatus,
+    this.photoUrl,
   });
 
   final String id;
@@ -184,6 +390,10 @@ class VehicleSummaryDto {
   final String society;
   final String? subscriptionStatus;
 
+  /// A signed read URL of the vehicle photo (VEH-01). Show it with
+  /// `MediaImage`, which resolves the dev server's relative URL.
+  final String? photoUrl;
+
   factory VehicleSummaryDto.fromJson(Map<String, dynamic> j) =>
       VehicleSummaryDto(
         id: j['id'] as String,
@@ -191,6 +401,7 @@ class VehicleSummaryDto {
         model: j['model'] as String,
         society: j['society'] as String,
         subscriptionStatus: j['subscription_status'] as String?,
+        photoUrl: j['photo_url'] as String?,
       );
 }
 
@@ -201,6 +412,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     required super.model,
     required super.society,
     required super.subscriptionStatus,
+    super.photoUrl,
     required this.make,
     required this.variant,
     required this.category,
@@ -208,8 +420,18 @@ class VehicleDetailDto extends VehicleSummaryDto {
     required this.monthlyPriceRupees,
     required this.cutoffTime,
     required this.interiorDay,
+    this.parkingBasement = '',
+    this.parkingNumber = '',
+    this.rcStatus = 'Not uploaded',
+    this.parkingBasements = const ['B1', 'B2', 'B3', 'B4'],
   });
 
+  final String parkingBasement;
+  final String parkingNumber;
+
+  /// Uploaded or Not uploaded (VEH-03).
+  final String rcStatus;
+  final List<String> parkingBasements;
   final String make;
   final String variant;
   final String category;
@@ -224,6 +446,7 @@ class VehicleDetailDto extends VehicleSummaryDto {
     model: j['model'] as String,
     society: j['society'] as String,
     subscriptionStatus: j['subscription_status'] as String?,
+    photoUrl: j['photo_url'] as String?,
     make: j['make'] as String,
     variant: j['variant'] as String,
     category: j['category'] as String,
@@ -231,6 +454,10 @@ class VehicleDetailDto extends VehicleSummaryDto {
     monthlyPriceRupees: j['monthly_price_rupees'] as int?,
     cutoffTime: j['cutoff_time'] as String?,
     interiorDay: j['interior_day'] as String?,
+    parkingBasement: (j['parking_basement'] as String?) ?? '',
+    parkingNumber: (j['parking_number'] as String?) ?? '',
+    rcStatus: (j['rc_status'] as String?) ?? 'Not uploaded',
+    parkingBasements: (j['parking_basements'] as List?)?.cast<String>() ?? const ['B1', 'B2', 'B3', 'B4'],
   );
 }
 
@@ -243,6 +470,8 @@ class NotificationDto {
     required this.visitId,
     required this.createdAt,
     required this.read,
+    this.refType,
+    this.refId,
   });
 
   final String id;
@@ -250,6 +479,11 @@ class NotificationDto {
   final String title;
   final String body;
   final String? visitId;
+
+  /// What a tap opens besides a visit: `payment`, `complaint` or `checkin`,
+  /// with its ID.
+  final String? refType;
+  final String? refId;
   final DateTime createdAt;
   final bool read;
 
@@ -259,6 +493,8 @@ class NotificationDto {
     title: j['title'] as String,
     body: j['body'] as String,
     visitId: j['visit_id'] as String?,
+    refType: j['ref_type'] as String?,
+    refId: j['ref_id'] as String?,
     createdAt: DateTime.parse(j['created_at'] as String).toLocal(),
     read: j['read'] as bool,
   );
@@ -339,8 +575,19 @@ class DioCustomerReadsRepository implements CustomerReadsRepository {
   ];
 
   @override
-  Future<VisitDetailDto> visit(String visitId) async =>
-      VisitDetailDto.fromJson(await _object('/v1/customer/visits/$visitId'));
+  Future<VisitDetailDto> visit(String visitId) async {
+    final j = await _object('/v1/customer/visits/$visitId');
+    // The dev store sends URLs relative to the API: make them absolute so an
+    // image or video widget can open them.
+    final base = _dio.options.baseUrl;
+    for (final job in j['jobs'] as List<dynamic>) {
+      for (final p in (job as Map<String, dynamic>)['proof'] as List<dynamic>) {
+        final m = p as Map<String, dynamic>;
+        m['url'] = absoluteMediaUrl(base, m['url'] as String);
+      }
+    }
+    return VisitDetailDto.fromJson(j);
+  }
 
   @override
   Future<List<HistoryItemDto>> history({
@@ -389,7 +636,7 @@ class DioCustomerReadsRepository implements CustomerReadsRepository {
 }
 
 final customerReadsProvider = Provider<CustomerReadsRepository>(
-  (ref) => DioCustomerReadsRepository(ref.watch(dioProvider)),
+  (ref) => DioCustomerReadsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
 );
 
 // Providers for the screens. The Home screen keeps its own in

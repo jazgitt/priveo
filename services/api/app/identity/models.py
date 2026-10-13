@@ -26,6 +26,8 @@ class Login(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255))
     password_changed_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    alert_email: Mapped[str] = mapped_column(String(254), default="", server_default="")
+    alert_email_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
     # Crew and admin: locked until the password is reset (CRW-ACC-07).
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -42,6 +44,9 @@ class AuthSession(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), index=True)
     channel: Mapped[str] = mapped_column(String(8))  # mobile | web
+    device_name: Mapped[str] = mapped_column(String(120), default="")
+    platform: Mapped[str] = mapped_column(String(20), default="")
+    app_version: Mapped[str] = mapped_column(String(40), default="")
     # SHA-256 of the current refresh token. The token itself is never stored.
     refresh_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

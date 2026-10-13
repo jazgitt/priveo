@@ -60,6 +60,11 @@ class HelpScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _Tile(
+              icon: Symbols.help_rounded,
+              label: t('support_faq'),
+              onTap: () => context.push(SupportRoutes.faq),
+            ),
+            _Tile(
               icon: Symbols.report_rounded,
               label: t('support_report_issue'),
               onTap: () => context.push(SupportRoutes.report),

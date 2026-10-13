@@ -34,6 +34,21 @@ def test_password_format():
     assert re.fullmatch(r"Axx\d{4}\$", generate_password("A"))
 
 
+def test_crew_registers_own_session_metadata(client, db, society):
+    created = create(client, society).json()
+    crew_token = sign_in(client, "9000000555", created["password"]).json()
+    headers = auth(crew_token["access_token"])
+    r = client.put("/v1/crew/session-device", headers=headers,
+                   json={"device_name": "Crew phone", "platform": "android", "app_version": "1.2.3"})
+    assert r.status_code == 204, r.text
+    sessions = client.get(f"/v1/admin/crew/{created['crew']['id']}/sessions",
+                          headers=auth(login(client, "admin")["access_token"])).json()
+    assert any(s["device_name"] == "Crew phone" and s["platform"] == "android"
+               and s["app_version"] == "1.2.3" for s in sessions)
+    assert client.put("/v1/crew/session-device", headers=auth(login(client, "customer")["access_token"]),
+                       json={"device_name": "Other", "platform": "android", "app_version": "1"}).status_code == 403
+
+
 def test_admin_creates_crew_and_the_password_works_once_shown(client, society):
     r = create(client, society)
     assert r.status_code == 201, r.text

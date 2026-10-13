@@ -32,6 +32,8 @@ class PayInstructions(BaseModel):
 class PaymentDetail(BaseModel):
     payment: PaymentOut
     instructions: PayInstructions
+    vehicle: str = ""
+    service_details: dict[str, str | None] = {}
 
 
 class SubscriptionView(BaseModel):
@@ -68,6 +70,7 @@ class InvoiceOut(BaseModel):
     seller_name: str
     seller_address: str
     seller_gstin: str
+    tax_details: dict | None = None
 
 
 class AdminPaymentOut(PaymentOut):

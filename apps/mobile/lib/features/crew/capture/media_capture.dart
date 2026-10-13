@@ -37,7 +37,7 @@ enum CaptureProblem { format, tooLarge }
 CaptureProblem? checkCapture(
     {required bool video, required String? contentType, required int bytes}) {
   if (contentType == null) return CaptureProblem.format;
-  if (bytes <= 0 || bytes > (video ? maxVideoBytes : maxPhotoBytes)) {
+  if (bytes <= 0 || bytes >= (video ? maxVideoBytes : maxPhotoBytes)) {
     return CaptureProblem.tooLarge;
   }
   return null;

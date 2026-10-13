@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/network/api_failure.dart';
 import '../../core/ui/widgets.dart';
@@ -36,6 +37,7 @@ class PaymentStatusChip extends StatelessWidget {
 /// The text to show for a failed call: the server's own message, which says
 /// what went wrong (for example that 9 PM has passed), or the network text.
 String failureText(Object error) {
+  if (error is DioException) return failureText(ApiFailure.fromDio(error));
   if (error is ApiFailure) {
     return error.message ??
         'We could not reach the server. Check your connection and try again.';

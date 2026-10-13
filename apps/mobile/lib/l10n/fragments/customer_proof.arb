@@ -1,0 +1,15 @@
+{
+  "cust_proof_crew_line": "Priveo crew",
+  "cust_proof_crew_pending": "Crew member not assigned yet",
+  "cust_proof_checklist_heading": "Checklist",
+  "cust_proof_after_label": "AFTER",
+  "cust_proof_rate_clean": "Rate this clean",
+  "cust_proof_change_rating": "Change rating",
+  "cust_proof_report_issue": "Report an issue with this clean",
+  "cust_proof_load_more": "Load more",
+  "cust_proof_no_rating": "Not rated",
+  "cust_proof_history_month_empty": "No services in this month.",
+  "cust_proof_today_done": "Today's clean is done",
+  "cust_proof_view_proof": "View proof",
+  "cust_proof_rate_today": "Rate today's clean"
+}

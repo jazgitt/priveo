@@ -14,16 +14,22 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../changes_money/routes.dart' as money;
+import '../../changes_money/money_widgets.dart' show showMessage;
 import '../../changes_money/strings.dart';
+import '../../common/push/push_registration.dart';
 import '../../common/signout_button.dart';
 import '../../support/feedback_sheet.dart';
 import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
+import '../account/photo_widgets.dart' show VehiclePhotoThumb;
 import '../calendar/calendar_screen.dart';
-import '../data/customer_reads_repository.dart';
+import '../data/proof_reads_repository.dart' show todayCleansProvider;
+import '../visit/visit_details_screen.dart' show openVisitDetails;
 import '../onboarding/onboarding_review_screen.dart';
 import 'customer_home_data.dart';
+import 'todays_clean_strip.dart';
+import 'home_schedule.dart';
 
 /// Customer shell: bottom tabs Home, Calendar, Account and Support.
 /// The layout follows the prototype's dark home.
@@ -44,6 +50,7 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    ref.watch(pushRegistrationProvider); // registers the phone for push
     // Home opens only after the customer has confirmed their details (ONB-25).
     final home = ref.watch(customerHomeProvider).value;
     if (home != null && !home.onboardingConfirmed) {
@@ -52,20 +59,20 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
     return Scaffold(
       extendBody: true,
       body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _TopBar(onAvatar: () => _go(_accountTab)),
-            Expanded(
-              child: switch (_index) {
-                0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
-                _calendarTab => const CalendarScreen(),
-                _accountTab => const AccountScreen(),
-                _ => const HelpScreen(),
-              },
-            ),
-          ],
-        ),
+          bottom: false,
+          child: Column(
+            children: [
+              _TopBar(onAvatar: () => _go(_accountTab)),
+              Expanded(
+                child: switch (_index) {
+                  0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
+                  _calendarTab => const CalendarScreen(),
+                  _accountTab => const AccountScreen(),
+                  _ => const HelpScreen(),
+                },
+              ),
+            ],
+          ),
       ),
       bottomNavigationBar: _TabBar(
         index: _index,
@@ -223,7 +230,6 @@ class CustomerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final b = context.brand;
     final home = ref.watch(customerHomeProvider);
     return home.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -243,13 +249,7 @@ class CustomerHomeScreen extends ConsumerWidget {
             // Leaves room for the tab bar, which floats over the list.
             padding: const EdgeInsets.only(top: 14, bottom: 110),
             children: [
-              Padding(
-                padding: _side,
-                child: Text(
-                  l.greeting,
-                  style: text.bodyMedium?.copyWith(color: b.mute),
-                ),
-              ),
+              Padding(padding: _side, child: const GreetingLine()),
               Padding(
                 padding: _side,
                 child: Text(h.greetingName, style: text.displaySmall),
@@ -275,9 +275,13 @@ class CustomerHomeScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Padding(
                   padding: _side,
-                  child: _NextServiceCard(vehicle, onCalendar: onCalendar),
+                  child: NextServiceCard(vehicle, onCalendar: onCalendar),
                 ),
               ],
+              const SizedBox(height: 14),
+              const Padding(padding: _side, child: TodaysCleanStrip()),
+              const SizedBox(height: 10),
+              const MonthlyCheckInCard(),
               const SizedBox(height: 24),
               Padding(padding: _side, child: SectionLabel(l.quickActions)),
               const SizedBox(height: 12),
@@ -292,15 +296,25 @@ class CustomerHomeScreen extends ConsumerWidget {
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.4,
                   children: [
-                    for (final a in h.quickActions) _QuickAction(a),
+                    for (final a in h.quickActions)
+                      if (a.key != 'skip_pause' || vehicle?.subscriptionStatus != null) _QuickAction(a),
+                    if (vehicle?.subscriptionStatus != null)
                     _QuickAction(
                       const QuickAction(
-                          key: 'subscription', label: MoneyStrings.subTitle),
+                        key: 'subscription',
+                        label: MoneyStrings.subTitle,
+                      ),
                     ),
-                    _QuickAction(
-                      const QuickAction(
-                          key: 'addons', label: MoneyStrings.addonTitle),
-                    ),
+                    if (vehicle != null && vehicle.subscriptionStatus == null)
+                      const _QuickAction(QuickAction(key: 'standalone', label: 'Deep Spa')),
+                    // Add-ons are for a vehicle with an Active subscription (HOME-09).
+                    if (vehicle?.subscriptionStatus == 'Active')
+                      _QuickAction(
+                        const QuickAction(
+                          key: 'addons',
+                          label: MoneyStrings.addonTitle,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -504,11 +518,18 @@ class _VehicleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            vehicle.model,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: text.titleLarge,
+          Row(
+            children: [
+              VehiclePhotoThumb(vehicle.id), // HOME-02
+              Expanded(
+                child: Text(
+                  [vehicle.make, vehicle.model, vehicle.variant].whereType<String>().where((s) => s.isNotEmpty).join(' '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleLarge,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           line(Symbols.location_on_rounded, vehicle.society),
@@ -528,111 +549,6 @@ class _VehicleCard extends StatelessWidget {
   }
 }
 
-/// The next visit for the selected vehicle (HOME-04). Until visits are
-/// scheduled it shows the customer's service time and interior care day.
-class _NextServiceCard extends ConsumerWidget {
-  const _NextServiceCard(this.vehicle, {required this.onCalendar});
-
-  final VehicleCard vehicle;
-  final VoidCallback onCalendar;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final text = Theme.of(context).textTheme;
-    final b = context.brand;
-    // The home data has no visit yet: ask the customer reads for it.
-    final fromVisits = ref
-        .watch(nextServicesProvider)
-        .value
-        ?.where((n) => n.vehicleId == vehicle.id)
-        .firstOrNull;
-    final next =
-        vehicle.nextService ??
-        (fromVisits == null
-            ? null
-            : NextService(
-                date: fromVisits.date,
-                service: fromVisits.service,
-                status: fromVisits.status,
-              ));
-    final cutoff = vehicle.cutoffTime;
-    final day = vehicle.interiorDay;
-    Widget detail(String service, String value) => Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          _ServiceMarker(service),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(value, style: text.bodyMedium?.copyWith(color: b.mute)),
-          ),
-        ],
-      ),
-    );
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: SectionLabel(l.nextService)),
-              if (next != null)
-                StatusChip(next.status, tone: StatusChip.toneFor(next.status)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            next == null ? l.notScheduledYet : formatDate(next.date),
-            style: text.headlineSmall,
-          ),
-          if (next != null && next.service.isNotEmpty)
-            detail(next.service, next.service),
-          if (cutoff != null)
-            detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
-          if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onCalendar,
-              icon: const Icon(Symbols.calendar_month_rounded, size: 18),
-              label: Text(l.viewCalendar),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The prototype's service markers: a green dot for exterior, a blue square
-/// for interior, a violet star for Deep Spa.
-class _ServiceMarker extends StatelessWidget {
-  const _ServiceMarker(this.service);
-
-  final String service;
-
-  @override
-  Widget build(BuildContext context) {
-    final b = context.brand;
-    final s = service.toLowerCase();
-    if (s.contains('spa')) {
-      return Icon(Symbols.star_rounded, size: 12, color: b.spa, fill: 1);
-    }
-    final interior = s.contains('internal') || s.contains('interior');
-    return Container(
-      width: 7,
-      height: 7,
-      decoration: BoxDecoration(
-        color: interior ? b.info : b.ok,
-        borderRadius: BorderRadius.circular(interior ? 2 : 4),
-      ),
-    );
-  }
-}
-
 class _QuickAction extends ConsumerWidget {
   const _QuickAction(this.action);
 
@@ -640,13 +556,15 @@ class _QuickAction extends ConsumerWidget {
 
   /// Where a quick action leads. The money screens belong to one vehicle: the
   /// one selected on Home.
-  void _open(BuildContext context, WidgetRef ref) {
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
     final home = ref.read(customerHomeProvider).value;
     String? vehicleId;
     if (home != null && home.vehicles.isNotEmpty) {
       vehicleId = home
           .vehicles[selectedIndex(
-              home.vehicles, ref.read(selectedVehicleProvider))]
+            home.vehicles,
+            ref.read(selectedVehicleProvider),
+          )]
           .id;
     }
     switch (action.key) {
@@ -654,6 +572,19 @@ class _QuickAction extends ConsumerWidget {
         context.push('/customer/history');
       case 'feedback':
         showFeedbackSheet(context);
+      case 'rate_today':
+        try {
+          final cleans = await ref.read(todayCleansProvider.future);
+          if (!context.mounted) return;
+          final clean = cleans.where((c) => c.vehicleId == vehicleId).firstOrNull;
+          if (clean != null) {
+            openVisitDetails(context, clean.visitId);
+          } else {
+            showMessage(context, 'No completed clean to rate today.');
+          }
+        } catch (_) {
+          if (context.mounted) showMessage(context, 'Could not load today’s completed service. Try again.');
+        }
       case 'report_issue':
         context.push(SupportRoutes.report);
       case 'skip_pause' when vehicleId != null:
@@ -662,15 +593,19 @@ class _QuickAction extends ConsumerWidget {
         context.push(money.subscriptionPath(vehicleId));
       case 'addons' when vehicleId != null:
         context.push(money.addonsPath(vehicleId));
+      case 'standalone' when vehicleId != null:
+        context.push(money.standalonePath(vehicleId));
     }
   }
 
   static IconData _iconFor(String key) => switch (key) {
     'subscription' => Symbols.workspace_premium_rounded,
     'addons' => Symbols.auto_awesome_rounded,
+    'standalone' => Symbols.auto_awesome_rounded,
     'skip_pause' => Symbols.pause_circle_rounded,
     'history' => Symbols.history_rounded,
     'feedback' => Symbols.star_rounded,
+    'rate_today' => Symbols.star_rounded,
     'report_issue' => Symbols.report_rounded,
     _ => Symbols.arrow_forward_rounded,
   };

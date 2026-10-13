@@ -28,6 +28,20 @@ class Session {
   final String accessToken;
   final String refreshToken;
 
+  /// Stable local queue partition. API authorization still validates the JWT.
+  String? get loginId {
+    try {
+      final payload = jsonDecode(utf8.decode(base64Url.decode(
+          base64Url.normalize(accessToken.split('.')[1])))) as Map;
+      final id = payload['sub'];
+      return id is String && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)
+          ? id.toLowerCase()
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   factory Session.fromLogin(LoginResult r) => Session(
         role: Role.parse(r.role),
         displayName: r.displayName,

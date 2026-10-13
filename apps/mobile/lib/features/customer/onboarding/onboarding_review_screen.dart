@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -11,13 +13,26 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../account/account_data.dart' show vehiclePhotoDoneProvider;
+import '../account/account_strings.dart';
+import '../account/photo_widgets.dart' show VehiclePhotoField;
 import '../home/customer_home_data.dart';
+import '../../changes_money/routes.dart' show payPath;
 
 final onboardingProvider = FutureProvider.autoDispose<Onboarding>(
   (ref) => ref.watch(apiProvider).onboarding(),
 );
 
-const _basements = ['B1', 'B2', 'B3', 'B4']; // ONB-13
+final onboardingSummaryProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final r = await ref
+          .watch(dioProvider)
+          .get<Map<String, dynamic>>('/v1/customer/onboarding-summary');
+      return (r.data!['vehicles'] as List).cast<Map<String, dynamic>>();
+    });
+
+const _defaultBasements = ['B1', 'B2', 'B3', 'B4'];
+
 const _weekdays = [
   'Monday',
   'Tuesday',
@@ -62,7 +77,7 @@ class OnboardingReviewScreen extends ConsumerWidget {
 /// What the customer has entered for one vehicle.
 class _VehicleDraft {
   _VehicleDraft(this.vehicle)
-    : basement = _basements.contains(vehicle.parkingBasement)
+    : basement = (vehicle.parkingBasements ?? _defaultBasements).contains(vehicle.parkingBasement)
           ? vehicle.parkingBasement
           : null,
       number = TextEditingController(text: vehicle.parkingNumber),
@@ -98,9 +113,15 @@ class _ReviewState extends ConsumerState<_Review> {
   Map<String, String> _errors = {};
   String? _failure;
 
-  // Your details, your society, one step for each vehicle, then the review.
-  int get _steps => 3 + _drafts.length;
+  // Personal, society, then vehicle/parking/plan/preferences for each car, review.
+  int get _steps => 3 + 4 * _drafts.length;
   bool get _onReview => _step == _steps - 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _step = (widget.details.step ?? 0).clamp(0, _steps - 1).toInt();
+  }
 
   @override
   void dispose() {
@@ -131,12 +152,17 @@ class _ReviewState extends ConsumerState<_Review> {
         errors['mobile'] = l.enterMobile;
       }
     } else if (step >= 2 && step < _steps - 1) {
-      final d = _drafts[step - 2];
-      if (d.basement == null) errors['basement'] = l.selectBasement;
-      if (!RegExp(r'^\d{1,5}$').hasMatch(d.number.text.trim())) {
+      final d = _drafts[(step - 2) ~/ 4];
+      final part = (step - 2) % 4;
+      // ONB-22: the vehicle photo is required.
+      if (part == 0 && !ref.read(vehiclePhotoDoneProvider(d.vehicle.id))) {
+        errors['photo'] = AccountStrings.photoRequired;
+      }
+      if (part == 1 && d.basement == null) errors['basement'] = l.selectBasement;
+      if (part == 1 && !RegExp(r'^\d{1,5}$').hasMatch(d.number.text.trim())) {
         errors['number'] = l.enterParkingNumber;
       }
-      if (d.vehicle.hasSubscription) {
+      if (part == 3 && d.vehicle.hasSubscription) {
         if (d.cutoff == null) errors['cutoff'] = l.selectCutoff;
         if (d.vehicle.asksInteriorDay && d.day == null) {
           errors['day'] = l.selectInteriorDay;
@@ -155,14 +181,37 @@ class _ReviewState extends ConsumerState<_Review> {
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     FocusScope.of(context).unfocus();
     final errors = _check(_step);
     if (errors.isNotEmpty) {
       setState(() => _errors = errors);
       return;
     }
-    _show(_step + 1);
+    setState(() => _busy = true);
+    final body = <String, dynamic>{'step': _step + 1};
+    if (_step == 0) {
+      body.addAll({'first_name': _first.text.trim(), 'last_name': _last.text.trim(),
+        'mobile': _mobile.text.trim()});
+    } else if (_step >= 2) {
+      final d = _drafts[(_step - 2) ~/ 4];
+      final part = (_step - 2) % 4;
+      body['vehicles'] = [{ 'id': d.vehicle.id,
+        if (part == 1) 'parking_basement': d.basement,
+        if (part == 1) 'parking_number': d.number.text.trim(),
+        if (part == 3 && d.vehicle.hasSubscription) 'cutoff_time': d.cutoff,
+        if (part == 3 && d.vehicle.asksInteriorDay) 'interior_day': d.day,
+      }];
+    }
+    try {
+      await ref.read(dioProvider).patch('/v1/customer/onboarding/draft', data: body);
+      if (mounted) _show(_step + 1);
+    } catch (e) {
+      final message = e is DioException ? ApiFailure.fromDio(e).message : null;
+      if (mounted) setState(() => _failure = message ?? AppLocalizations.of(context).networkError);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _confirm() async {
@@ -172,6 +221,7 @@ class _ReviewState extends ConsumerState<_Review> {
       _failure = null;
     });
     try {
+      final summary = await ref.read(onboardingSummaryProvider.future);
       await ref
           .read(apiProvider)
           .confirmOnboarding(
@@ -193,8 +243,18 @@ class _ReviewState extends ConsumerState<_Review> {
           );
       // Home reads the details again and opens.
       ref.invalidate(customerHomeProvider);
-    } on ApiFailure catch (e) {
-      if (mounted) setState(() => _failure = e.message ?? l.networkError);
+      final due = [
+        for (final v in summary)
+          for (final p in v['payments'] as List)
+            if (p['status'] == 'Due' || p['status'] == 'Over due') p,
+      ];
+      if (due.isNotEmpty && mounted) {
+        final router = GoRouter.of(context);
+        router.go('/customer');
+        router.push(payPath(due.first['id'] as String));
+      }
+    } catch (e) {
+      if (mounted) setState(() => _failure = e is ApiFailure ? e.message ?? l.networkError : l.networkError);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -311,26 +371,41 @@ class _ReviewState extends ConsumerState<_Review> {
     _Note(l.onlyPriveoCanChange),
   ];
 
-  List<Widget> _vehicleStep(AppLocalizations l, _VehicleDraft d) {
+  List<Widget> _vehicleStep(AppLocalizations l, _VehicleDraft d, int part) {
     final v = d.vehicle;
+    final extra = ref.watch(onboardingSummaryProvider).value?.where((r) => r['id'] == v.id).firstOrNull;
+    final plan = extra?['plan'] as Map?;
     final price = v.monthlyPriceRupees;
     final preview = d.basement == null && d.number.text.trim().isEmpty
         ? null
         : '${d.basement ?? '–'} · ${d.number.text.trim().isEmpty ? '–' : d.number.text.trim()}';
     return [
+      if (part == 0) ...[
       _ReadOnly(
         label: l.vehicle,
-        value: v.model,
+        value: [v.make, v.model, v.variant].whereType<String>().where((s) => s.isNotEmpty).join(' '),
         detail: v.registration.isEmpty ? l.noRegistration : v.registration,
       ),
       const SizedBox(height: 8),
       _Note(l.onlyPriveoCanChange),
       const SizedBox(height: 24),
+      const SectionLabel(AccountStrings.vehiclePhoto),
+      const SizedBox(height: 12),
+      VehiclePhotoField(
+        key: ValueKey(v.id),
+        vehicleId: v.id,
+        reportDone: true,
+        height: 90,
+      ),
+      _error('photo'),
+      ],
+      if (part == 1) ...[
+      const SizedBox(height: 24),
       SectionLabel(l.parking),
       const SizedBox(height: 12),
       _Label(l.basement),
       _Choices(
-        options: _basements,
+        options: v.parkingBasements ?? _defaultBasements,
         selected: d.basement,
         enabled: !_busy,
         onSelected: (b) => setState(() {
@@ -355,7 +430,8 @@ class _ReviewState extends ConsumerState<_Review> {
           l.parkingPreview(preview),
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-      if (v.hasSubscription) ...[
+      ],
+      if (part == 3 && v.hasSubscription) ...[
         const SizedBox(height: 24),
         SectionLabel(l.servicePreferences),
         const SizedBox(height: 12),
@@ -383,6 +459,8 @@ class _ReviewState extends ConsumerState<_Review> {
           ),
           _error('day'),
         ],
+      ],
+      if (part == 2) ...[
         const SizedBox(height: 24),
         SectionLabel(l.plan),
         const SizedBox(height: 12),
@@ -392,11 +470,23 @@ class _ReviewState extends ConsumerState<_Review> {
               ? l.notOnFile
               : l.pricePerMonth(formatRupees(price)),
         ),
+        if (plan != null) ...[
+          Text('₹${plan['list_price_rupees']}', style: const TextStyle(decoration: TextDecoration.lineThrough)),
+          Text(plan['badge']?.toString() ?? ''),
+          for (final inclusion in plan['inclusions'] as List) Text('• $inclusion'),
+        ],
       ],
     ];
   }
 
   List<Widget> _reviewStep(AppLocalizations l) {
+    final result = ref.watch(onboardingSummaryProvider);
+    if (result.isLoading) return [const Center(child: CircularProgressIndicator())];
+    if (result.hasError) return [ErrorView(onRetry: () => ref.invalidate(onboardingSummaryProvider))];
+    final summary = result.value ?? [];
+    final total = summary.fold<int>(0, (sum, v) => sum +
+        (v['payments'] as List).where((p) => p['status'] == 'Due' || p['status'] == 'Over due')
+            .fold<int>(0, (n, p) => n + (p['amount_rupees'] as int)));
     Widget row(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -445,8 +535,35 @@ class _ReviewState extends ConsumerState<_Review> {
         row(l.society, widget.details.society),
         if (widget.details.flat.isNotEmpty) row(l.flat, widget.details.flat),
       ]),
+      for (final v in summary)
+        SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${v['society']} · ${v['make']} ${v['model']} ${v['variant']}',
+              ),
+              if (v['plan'] is Map) ...[
+                if (v['plan']['list_price_rupees'] != null)
+                  Text(
+                    '₹${v['plan']['list_price_rupees']}',
+                    style: const TextStyle(
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                Text('${v['plan']['badge'] ?? ''}'),
+                for (final inclusion in v['plan']['inclusions'] as List)
+                  Text('• $inclusion'),
+              ],
+              for (final p in v['payments'] as List)
+                Text('₹${p['amount_rupees']} · ${p['status']}'),
+              const Text('Prices include GST'),
+              Text(l.addVehicleStartNote),
+            ],
+          ),
+        ),
       for (final (i, d) in _drafts.indexed)
-        section(d.vehicle.model, i + 2, [
+        section(d.vehicle.model, 2 + i * 4, [
           row(
             l.registration,
             d.vehicle.registration.isEmpty
@@ -463,6 +580,8 @@ class _ReviewState extends ConsumerState<_Review> {
               l.pricePerMonth(formatRupees(d.vehicle.monthlyPriceRupees!)),
             ),
         ]),
+      Text('${l.addVehicleTotal}: ${formatRupees(total)}'),
+      const Text('Payable today · GST included'),
     ];
   }
 
@@ -478,8 +597,8 @@ class _ReviewState extends ConsumerState<_Review> {
       _ => (
         _drafts.length == 1
             ? l.yourVehicle
-            : l.vehicleOf(_step - 1, _drafts.length),
-        _vehicleStep(l, _drafts[_step - 2]),
+            : l.vehicleOf(((_step - 2) ~/ 4) + 1, _drafts.length),
+        _vehicleStep(l, _drafts[(_step - 2) ~/ 4], (_step - 2) % 4),
       ),
     };
     return Column(
@@ -564,7 +683,17 @@ class _ReviewState extends ConsumerState<_Review> {
               ],
               Expanded(
                 child: PrimaryButton(
-                  label: _onReview ? l.confirmDetails : l.continueButton,
+                  label: _onReview
+                      ? ((ref.watch(onboardingSummaryProvider).value ?? []).any(
+                              (v) => (v['payments'] as List).any(
+                                (p) =>
+                                    p['status'] == 'Due' ||
+                                    p['status'] == 'Over due',
+                              ),
+                            )
+                            ? l.addVehicleConfirm
+                            : l.confirmDetails)
+                      : l.continueButton,
                   busy: _busy,
                   onPressed: _onReview ? _confirm : _continue,
                 ),

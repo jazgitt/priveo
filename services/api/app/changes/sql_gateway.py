@@ -22,7 +22,8 @@ class SqlScheduleChangeGateway:
         self.db = db
 
     def _visits(self, vehicle_id: uuid.UUID, start: date, end: date | None = None):
-        q = select(Visit).where(Visit.vehicle_id == vehicle_id, Visit.date >= start)
+        q = select(Visit).where(Visit.vehicle_id == vehicle_id, Visit.date >= start,
+                                Visit.addon_key == "")
         if end is not None:
             q = q.where(Visit.date <= end)
         return self.db.scalars(q.order_by(Visit.date)).all()
@@ -43,7 +44,7 @@ class SqlScheduleChangeGateway:
 
     def is_frozen(self, vehicle_id, day):
         visit = self.db.scalars(select(Visit).where(
-            Visit.vehicle_id == vehicle_id, Visit.date == day)).first()
+            Visit.vehicle_id == vehicle_id, Visit.date == day, Visit.addon_key == "")).first()
         if visit is None:
             return False
         schedule = self.db.get(Schedule, visit.schedule_id)

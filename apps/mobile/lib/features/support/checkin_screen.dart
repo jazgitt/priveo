@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../customer/home/home_schedule.dart' show homeCheckInsProvider;
 import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
@@ -43,7 +44,8 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
             Map.of(_ratings),
             _comment.text.trim(),
           );
-      ref.invalidate(pendingCheckInsProvider); // CHK-08: the Home card goes.
+      ref.invalidate(pendingCheckInsProvider);
+      ref.invalidate(homeCheckInsProvider); // CHK-08: refresh the actual Home card.
       if (mounted) {
         setState(() {
           _busy = false;
@@ -96,6 +98,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
             message: failureText(context, error),
             onRetry: () {
               ref.invalidate(pendingCheckInsProvider);
+              ref.invalidate(homeCheckInsProvider);
               ref.invalidate(supportOptionsProvider);
             },
           );

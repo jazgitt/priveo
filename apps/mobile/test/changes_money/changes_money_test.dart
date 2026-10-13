@@ -6,11 +6,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/features/changes_money/data/money_models.dart';
 import 'package:priveo/features/changes_money/money_widgets.dart';
 import 'package:priveo/features/changes_money/routes.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'fakes.dart';
 
 void main() {
+  testWidgets('payment QR encodes the backend amount and submitted page shows preferences', (tester) async {
+    final repo = FakeMoneyRepository();
+    await openAt(tester, payPath('p1'), money: repo);
+    expect(find.byType(QrImageView), findsOneWidget);
+    await tester.tap(find.text("I've paid"));
+    await tester.pumpAndSettle();
+    expect(find.text('HR01ZZ1234 · Hyundai Creta SX'), findsOneWidget);
+    expect(find.text('Service cutoff: 7:00 AM'), findsOneWidget);
+    expect(find.text('Interior care day: Friday'), findsOneWidget);
+  });
   group('units', () {
+    test('payment instructions preserve the server amount-bearing QR payload', () {
+      final instructions = PayInstructionsDto.fromJson({'amount_rupees': 1299,
+        'upi_id': 'merchant@upi', 'payee_name': 'Priveo', 'qr_url': '/old-static.png',
+        'upi_uri': 'upi://pay?pa=merchant@upi&am=1299&cu=INR'});
+      expect(Uri.parse(instructions.upiUri).queryParameters['am'], '1299');
+      expect(Uri.parse(instructions.upiUri).queryParameters['pa'], 'merchant@upi');
+    });
     test('payment status labels follow PAY-09', () {
       expect(paymentStatusLabel(payment('a')), 'Due by 07-Nov-26');
       expect(paymentStatusLabel(payment('a', status: 'Over due')), 'Over due');
@@ -197,7 +215,7 @@ void main() {
       final repo = FakeMoneyRepository();
       await openAt(tester, payPath('p1'), money: repo);
       expect(find.text('Amount to pay: ₹1,299'), findsOneWidget);
-      expect(find.text('The UPI QR code will be shown here.'), findsOneWidget);
+      expect(find.byType(QrImageView), findsOneWidget);
       await tester.tap(find.text("I've paid"));
       await tester.pumpAndSettle();
       expect(repo.calls, ['paid p1']);
@@ -240,14 +258,28 @@ void main() {
       expect(repo.calls, ['cancelAddon a1']);
     });
 
-    testWidgets('standalone Deep Spa is a request with a number to call', (tester) async {
+    testWidgets('standalone Spa reuses the priced booking form and requires a date', (tester) async {
       final repo = FakeMoneyRepository();
-      await openAt(tester, standalonePath(), money: repo);
-      expect(find.textContaining('Priveo will call you to agree'), findsOneWidget);
-      await tester.tap(find.text('Send request'));
+      await openAt(tester, standalonePath('v1'), money: repo);
+      expect(find.text('Deep Spa without a subscription'), findsOneWidget);
+      await tester.tap(find.text('Confirm & pay'));
       await tester.pumpAndSettle();
       expect(find.text('Choose a date'), findsOneWidget);
       expect(repo.calls, isEmpty);
+    });
+
+    testWidgets('standalone confirmation opens the Spa UPI payment', (tester) async {
+      final repo = FakeMoneyRepository();
+      await openAt(tester, standalonePath('v1'), money: repo);
+      await tester.tap(find.textContaining('Preferred date:').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm & pay'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['standalone ']);
+      expect(find.text("I've paid"), findsOneWidget);
+      expect(find.textContaining('1,500'), findsWidgets);
     });
   });
 

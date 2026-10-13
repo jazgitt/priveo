@@ -193,6 +193,71 @@ void main() {
     expect(backend.skipped, ['j1']);
   });
 
+  testWidgets('a Manager marks a crew member absent and sees the jobs moved',
+      (tester) async {
+    final backend = FakeCrewBackend(role: 'Manager');
+    await pumpCrew(tester, const CrewHomeScreen(), backend: backend);
+    await tester.tap(find.byTooltip(CrewText.team));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(CrewText.attendance));
+    await tester.pumpAndSettle();
+    expect(find.text('Sunil'), findsOneWidget);
+
+    await tester.tap(find.text('Sunil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('attendance-Sick')));
+    await tester.pumpAndSettle();
+    expect(backend.attendanceSet, {'c2': 'Sick'});
+    expect(find.textContaining('1 job needs scheduling'), findsOneWidget);
+    // The list shows the new status.
+    expect(find.text(CrewText.attendanceSick), findsOneWidget);
+  });
+
+  testWidgets('a Manager changes working hours for a crew member',
+      (tester) async {
+    final backend = FakeCrewBackend(role: 'Manager');
+    await pumpCrew(tester, const CrewHomeScreen(), backend: backend);
+    await tester.tap(find.byTooltip(CrewText.team));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(CrewText.workingHours));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('hours-c2')));
+    await tester.pumpAndSettle();
+
+    // Turn Monday off and save.
+    await tester.tap(find.descendant(
+        of: find.byKey(const ValueKey('hours-day-Monday')),
+        matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, CrewText.save));
+    await tester.pumpAndSettle();
+    final saved = backend.hoursSet['c2']!;
+    expect(saved.first.day, 'Monday');
+    expect(saved.first.working, isFalse);
+    expect(saved[1].working, isTrue);
+    expect(find.text(CrewText.hoursSaved), findsOneWidget);
+  });
+
+  testWidgets('reassign shows why a crew member cannot take the job',
+      (tester) async {
+    final backend = FakeCrewBackend(role: 'Manager')
+      ..blockedReassign['c2'] = 'Is away that day (Leave).';
+    await pumpCrew(tester, const CrewHomeScreen(), backend: backend);
+    await tester.tap(find.byTooltip(CrewText.team));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ravi Kumar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MH12AB1234'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(CrewText.reassign));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Is away that day (Leave).'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('assign-c2')));
+    await tester.pumpAndSettle();
+    expect(backend.reassigned, isEmpty);
+  });
+
   testWidgets('a Member has no team button', (tester) async {
     await pumpCrew(tester, const CrewHomeScreen(), backend: FakeCrewBackend());
     expect(find.byTooltip(CrewText.team), findsNothing);

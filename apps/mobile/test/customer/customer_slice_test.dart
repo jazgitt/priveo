@@ -2,6 +2,7 @@
 // history, vehicles (VEH-), account, notifications (NOTIF-) and the next
 // service card on Home (HOME-04). The data comes from a fake repository.
 import 'package:flutter/material.dart';
+import 'package:priveo/core/network/read_refresh.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +13,10 @@ import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/ui/theme.dart';
 import 'package:priveo/features/customer/account/account_screen.dart';
 import 'package:priveo/features/customer/calendar/calendar_screen.dart';
+import 'package:priveo/features/support/data/support_repository.dart';
 import 'package:priveo/features/customer/data/customer_reads_repository.dart';
+import 'package:priveo/features/customer/data/proof_reads_repository.dart';
+import 'package:priveo/features/customer/home/todays_clean_strip.dart';
 import 'package:priveo/features/customer/history/history_screen.dart';
 import 'package:priveo/features/customer/home/customer_home_data.dart';
 import 'package:priveo/features/customer/home/customer_shell.dart';
@@ -23,6 +27,7 @@ import 'package:priveo/features/customer/visit/visit_details_screen.dart';
 import 'package:priveo/l10n/app_localizations.dart';
 
 import '../support/fakes.dart';
+import '../support/support_fakes.dart';
 
 class FakeReads implements CustomerReadsRepository {
   FakeReads({this.failCalendar = false});
@@ -78,8 +83,65 @@ class FakeReads implements CustomerReadsRepository {
     ),
   ];
 
+  static VisitDetailDto richVisit({int? rating}) => VisitDetailDto(
+    id: 'v-proof',
+    vehicleId: 'v1',
+    vehicleRegistration: 'MH 12 AB 1234',
+    vehicleModel: 'Hyundai Creta',
+    date: DateTime(2026, 11, 2),
+    status: 'Completed',
+    finishedAt: DateTime(2026, 11, 2, 7, 30),
+    rating: rating,
+    jobs: [
+      JobDto(
+        id: 'j-1',
+        service: 'Cleaning-External',
+        status: 'Done',
+        crewName: 'Ravi',
+        crewSociety: 'Green Meadows',
+        finishedAt: DateTime(2026, 11, 2, 7, 30),
+        checklist: [
+          ChecklistItemDto(
+            key: 'body',
+            label: 'Exterior body cleaned',
+            checkedAt: DateTime(2026, 11, 2, 7, 10),
+          ),
+          ChecklistItemDto(
+            key: 'glass',
+            label: 'Glass cleaned',
+            checkedAt: DateTime(2026, 11, 2, 7, 15),
+          ),
+          const ChecklistItemDto(key: 'wheels', label: 'Wheels cleaned'),
+        ],
+        proof: [
+          ProofDto(
+            kind: 'photo',
+            url: 'https://media.test/a.jpg',
+            stage: 'Before',
+            takenAt: DateTime(2026, 11, 2, 7, 0),
+          ),
+          ProofDto(
+            kind: 'photo',
+            url: 'https://media.test/b.jpg',
+            stage: 'After',
+            takenAt: DateTime(2026, 11, 2, 7, 25),
+          ),
+          const ProofDto(
+            kind: 'video',
+            url: 'https://media.test/c.mp4',
+            stage: 'During',
+          ),
+        ],
+      ),
+    ],
+  );
+
+  int? rated;
+
   @override
-  Future<VisitDetailDto> visit(String visitId) async => VisitDetailDto(
+  Future<VisitDetailDto> visit(String visitId) async => visitId == 'v-proof'
+      ? richVisit(rating: rated)
+      : VisitDetailDto(
     id: visitId,
     vehicleId: 'v1',
     vehicleRegistration: 'MH 12 AB 1234',
@@ -196,10 +258,54 @@ class FakeReads implements CustomerReadsRepository {
   Future<void> registerDevice(String token, String platform) async {}
 }
 
+class FakeProofReads implements ProofReadsRepository {
+  FakeProofReads({this.cleans = const []});
+
+  List<TodayCleanDto> cleans;
+
+  @override
+  Future<List<HistoryItemDto>> historyMonth(
+    String month, {
+    String? vehicleId,
+    int offset = 0,
+  }) async => [
+    HistoryItemDto(
+      visitId: 'v-2',
+      vehicleId: 'v1',
+      date: DateTime(2026, 11, 3),
+      status: 'Skipped',
+      services: ['Cleaning-External'],
+      photoCount: 0,
+    ),
+    HistoryItemDto(
+      visitId: 'v-1',
+      vehicleId: 'v1',
+      date: DateTime(2026, 11, 2),
+      status: 'Completed',
+      services: ['Cleaning-External', 'Cleaning-Internal'],
+      photoCount: 2,
+      finishedAt: DateTime(2026, 11, 2, 7, 30),
+      rating: 4,
+    ),
+  ];
+
+  @override
+  Future<HistoryMetaDto> historyMeta({String? vehicleId}) async =>
+      HistoryMetaDto(
+        memberSince: DateTime(2026, 9, 14),
+        latestMonth: '2026-11',
+        earliestMonth: '2026-09',
+      );
+
+  @override
+  Future<List<TodayCleanDto>> today() async => cleans;
+}
+
 Future<ProviderContainer> pumpScreen(
   WidgetTester tester,
   Widget screen, {
   FakeReads? reads,
+  FakeProofReads? proof,
   FakeAuthRepository? auth,
   MemorySessionStore? store,
   bool scaffold = false,
@@ -208,7 +314,11 @@ Future<ProviderContainer> pumpScreen(
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final container = ProviderContainer(
+    retry: (_, _) => null,
     overrides: [
+      readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
+      proofReadsProvider.overrideWithValue(proof ?? FakeProofReads()),
+      supportRepositoryProvider.overrideWithValue(FakeSupportRepository()),
       apiProvider.overrideWithValue(FakePriveoApi()),
       customerReadsProvider.overrideWithValue(reads ?? FakeReads()),
       sessionStoreProvider.overrideWithValue(
@@ -272,8 +382,8 @@ void main() {
       );
       await tester.tap(find.bySemanticsLabel('02-Nov-26'));
       await tester.pumpAndSettle();
-      expect(find.text('View service details'), findsOneWidget);
-      await tester.tap(find.text('View service details'));
+      expect(find.text('Cleaning-External + Cleaning-Internal'), findsOneWidget);
+      await tester.tap(find.text('Cleaning-External + Cleaning-Internal'));
       await tester.pumpAndSettle();
       expect(find.text('Service details'), findsOneWidget);
       expect(find.text('Cleaning-Internal'), findsOneWidget);
@@ -351,9 +461,90 @@ void main() {
       expect(find.text('03-Nov-26'), findsOneWidget);
       expect(find.text('Skipped'), findsOneWidget);
       expect(find.textContaining('2 photos'), findsOneWidget);
-      await tester.tap(find.text('02-Nov-26'));
+      // Finish time and the rating given (HIST-01), and the footer (HIST-02).
+      expect(find.text('02-Nov-26  ·  7:30 AM'), findsOneWidget);
+      expect(find.text('4 stars'), findsOneWidget);
+      expect(find.textContaining('Member since 14-Sep-26'), findsOneWidget);
+      await tester.tap(find.text('02-Nov-26  ·  7:30 AM'));
       await tester.pumpAndSettle();
       expect(find.text('Service details'), findsOneWidget);
+    });
+  });
+
+  group('proof on service details', () {
+    testWidgets('shows the crew card, checklist and AFTER label', (
+      tester,
+    ) async {
+      await pumpScreen(tester, const VisitDetailsScreen(visitId: 'v-proof'));
+      expect(find.text('Finished at 7:30 AM'), findsOneWidget);
+      expect(find.text('Ravi'), findsOneWidget);
+      expect(find.text('Priveo crew · Green Meadows'), findsOneWidget);
+      expect(find.text('2 of 3 done'), findsOneWidget);
+      expect(find.text('Exterior body cleaned'), findsOneWidget);
+      expect(find.text('AFTER'), findsOneWidget);
+      expect(find.text('Report an issue with this clean'), findsOneWidget);
+      // The viewer caption names the stage, time and service.
+      await tester.tap(find.byType(Image).last);
+      await tester.pumpAndSettle();
+      expect(find.text('After · 7:25 AM · Cleaning-External'), findsOneWidget);
+    });
+
+    testWidgets('offers a rating', (tester) async {
+      await pumpScreen(tester, const VisitDetailsScreen(visitId: 'v-proof'));
+      expect(find.text('Rate this clean'), findsNWidgets(2));
+    });
+
+    testWidgets('shows the rating given', (tester) async {
+      final reads = FakeReads()..rated = 5;
+      await pumpScreen(
+        tester,
+        const VisitDetailsScreen(visitId: 'v-proof'),
+        reads: reads,
+      );
+      expect(find.text('You rated this clean 5 of 5'), findsOneWidget);
+      expect(find.text('Change rating'), findsOneWidget);
+    });
+
+    testWidgets('opens the report form linked to the visit', (tester) async {
+      await pumpScreen(tester, const VisitDetailsScreen(visitId: 'v-proof'));
+      await tester.ensureVisible(find.text('Report an issue with this clean'));
+      await tester.tap(find.text('Report an issue with this clean'));
+      await tester.pumpAndSettle();
+      expect(find.text('Report an issue'), findsWidgets);
+    });
+  });
+
+  group('today strip', () {
+    final clean = TodayCleanDto(
+      vehicleId: 'v1',
+      visitId: 'v-proof',
+      finishedAt: DateTime(2026, 11, 2, 7, 30),
+      checksDone: 5,
+      checksTotal: 5,
+      photoCount: 3,
+    );
+
+    testWidgets('shows the summary and opens the proof', (tester) async {
+      await pumpScreen(
+        tester,
+        const TodaysCleanStrip(),
+        proof: FakeProofReads(cleans: [clean]),
+        scaffold: true,
+      );
+      expect(find.text("Today's clean is done"), findsOneWidget);
+      expect(
+        find.text('Finished at 7:30 AM · 5 of 5 checks · 3 photos'),
+        findsOneWidget,
+      );
+      expect(find.text("Rate today's clean"), findsOneWidget);
+      await tester.tap(find.text('View proof'));
+      await tester.pumpAndSettle();
+      expect(find.text('Service details'), findsOneWidget);
+    });
+
+    testWidgets('shows nothing when no clean finished today', (tester) async {
+      await pumpScreen(tester, const TodaysCleanStrip(), scaffold: true);
+      expect(find.text("Today's clean is done"), findsNothing);
     });
   });
 
@@ -436,6 +627,7 @@ void main() {
       final reads = FakeReads();
       final container = ProviderContainer(
         overrides: [
+          readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
           apiProvider.overrideWithValue(FakePriveoApi()),
           customerReadsProvider.overrideWithValue(reads),
           sessionStoreProvider.overrideWithValue(

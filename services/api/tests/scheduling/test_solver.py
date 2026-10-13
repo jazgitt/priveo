@@ -72,6 +72,16 @@ def test_no_crew_leaves_everything_unplaced():
     assert len(result.unplaced) == 2
 
 
+def test_service_cannot_cross_a_gap_between_working_slots():
+    crew = [SolverCrew("a", 360, 660)]
+    slots = ((360, 420), (540, 600))
+    work = [SolverJob("spa", "v", 120, windows=slots)]
+    assert "spa" in solve_day(crew, work).unplaced
+    short = [SolverJob("clean", "v", 20, windows=slots)]
+    start = solve_day(crew, short).placed["clean"][1]
+    assert any(left <= start and start + 20 <= right for left, right in slots)
+
+
 def test_the_same_input_gives_the_same_plan():
     crew = [SolverCrew("a", 360, 420), SolverCrew("b", 360, 420)]
     assert solve_day(crew, jobs(5)).placed == solve_day(crew, jobs(5)).placed

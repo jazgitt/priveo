@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +14,7 @@ abstract class SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   });
   Future<List<Complaint>> complaints();
   Future<Complaint> complaint(String id);
@@ -36,7 +38,6 @@ abstract class SupportRepository {
     Map<String, int> ratings,
     String comment,
   );
-  Future<CrewRatings> crewRatings();
 }
 
 class ApiSupportRepository implements SupportRepository {
@@ -70,12 +71,14 @@ class ApiSupportRepository implements SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   }) =>
       _call(
           () => _dio.post<dynamic>('/v1/customer/complaints', data: {
                 'category': category,
                 'description': description,
                 'visit_id': ?visitId,
+                'photo_keys': photoKeys,
               }),
           (d) => Complaint.fromJson(_map(d)));
 
@@ -152,15 +155,10 @@ class ApiSupportRepository implements SupportRepository {
             }),
         (_) {});
   }
-
-  @override
-  Future<CrewRatings> crewRatings() => _call(
-      () => _dio.get<dynamic>('/v1/crew/ratings'),
-      (d) => CrewRatings.fromJson(_map(d)));
 }
 
 final supportRepositoryProvider = Provider<SupportRepository>(
-    (ref) => ApiSupportRepository(ref.watch(dioProvider)));
+    (ref) => ApiSupportRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2));
 
 final supportContactProvider = FutureProvider.autoDispose<SupportContact>(
     (ref) => ref.watch(supportRepositoryProvider).contact());
@@ -179,6 +177,3 @@ final complaintProvider =
 final pendingCheckInsProvider =
     FutureProvider.autoDispose<List<PendingCheckIn>>(
         (ref) => ref.watch(supportRepositoryProvider).pendingCheckIns());
-
-final crewRatingsProvider = FutureProvider.autoDispose<CrewRatings>(
-    (ref) => ref.watch(supportRepositoryProvider).crewRatings());

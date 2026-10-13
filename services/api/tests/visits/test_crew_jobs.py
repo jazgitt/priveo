@@ -3,6 +3,8 @@ import json
 
 from sqlalchemy import select
 
+from app.directory.models import ChecklistItem, CncReason, DirectoryService
+from app.directory.seed import seed_defaults
 from app.scheduling.models import Visit
 from tests.visits.conftest import DAY, upload_file
 
@@ -221,7 +223,7 @@ def test_profile_photo_needs_a_confirmed_upload(crew_client, make_crew, signin):
     ravi = make_crew("9000000010", "Ravi Kumar")
     headers = signin(ravi)
     assert crew_client.get("/v1/crew/profile/photo", headers=headers).json() == {
-        "upload_id": None}
+        "upload_id": None, "url": None}
 
     unready = crew_client.put("/v1/crew/profile/photo", headers=headers,
                               json={"upload_id": "nope"})
@@ -239,3 +241,48 @@ def test_profile_photo_needs_a_confirmed_upload(crew_client, make_crew, signin):
 
 def test_only_crew_can_use_the_crew_routes(crew_client):
     assert crew_client.get("/v1/crew/visits").status_code == 401
+
+
+# ---- the admin's checklists and reasons are honoured (ADM-CHK, ADM-CNC) -------------
+
+def test_a_switched_off_checklist_item_and_reason_follow_the_admin(
+        crew_client, make_crew, signin, new_visit, db):
+    seed_defaults(db)
+    ravi = make_crew("9000000010", "Ravi")
+    _, (job,) = new_visit(assigned=ravi)
+    headers = signin(ravi)
+    before = crew_client.get(f"/v1/crew/jobs/{job.id}", headers=headers).json()
+    assert "glass" in {i["id"] for i in before["checklist"]}
+
+    item = db.scalar(select(ChecklistItem).where(
+        ChecklistItem.service == job.service, ChecklistItem.key == "glass"))
+    item.active = False
+    reason = db.scalar(select(CncReason).where(CncReason.key == "bad_weather"))
+    reason.active = False
+    db.commit()
+
+    after = crew_client.get(f"/v1/crew/jobs/{job.id}", headers=headers).json()
+    # Issued work retains its checklist; new work picks up catalogue changes.
+    assert after["checklist"] == before["checklist"]
+    _, (future,) = new_visit(assigned=ravi, day=DAY.replace(day=8))
+    next_detail = crew_client.get(f"/v1/crew/jobs/{future.id}", headers=headers).json()
+    assert "glass" not in {i["id"] for i in next_detail["checklist"]}
+    assert len(next_detail["checklist"]) == len(before["checklist"]) - 1
+    reasons = {r["key"] for r in crew_client.get("/v1/crew/reasons", headers=headers).json()}
+    assert "bad_weather" not in reasons and "other" in reasons
+    gone = crew_client.post(f"/v1/crew/jobs/{job.id}/could-not-complete", headers=headers,
+                            json={"reason_key": "bad_weather"})
+    assert gone.status_code == 422
+
+
+def test_a_changed_proof_minimum_is_the_one_required(
+        crew_client, make_crew, signin, new_visit, db):
+    seed_defaults(db)
+    ravi = make_crew("9000000010", "Ravi")
+    _, (job,) = new_visit(assigned=ravi)
+    headers = signin(ravi)
+    row = db.scalar(select(DirectoryService).where(DirectoryService.name == job.service))
+    row.min_photos, row.min_videos = 3, 0
+    db.commit()
+    req = crew_client.get(f"/v1/crew/jobs/{job.id}", headers=headers).json()["requirements"]
+    assert (req["photos_required"], req["videos_required"]) == (3, 0)

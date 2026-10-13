@@ -8,13 +8,54 @@ import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../cust_strings.dart';
-import '../cust_ui.dart';
+import 'calendar_strings.dart';
+import 'day_card.dart';
 import '../data/customer_reads_repository.dart';
 import '../home/customer_home_data.dart';
-import '../visit/visit_details_screen.dart';
 
 /// The marker of a day (CAL-02).
-enum DayMarker { done, doneInterior, spa, scheduled, skipped, missed }
+enum DayMarker {
+  done,
+  doneInterior,
+  spa,
+  scheduled,
+  scheduledInterior,
+  scheduledSpa,
+  expected,
+  skipped,
+  paused,
+  missed,
+}
+
+/// The marker for the visits of one date, or null when there are none.
+DayMarker? dayMarkerFor(List<CalendarVisit> visits) {
+  if (visits.isEmpty) return null;
+  bool any(bool Function(CalendarVisit) f) => visits.any(f);
+  if (any((v) => v.status == 'Missed')) return DayMarker.missed;
+  if (visits.every((v) => v.status == 'Skipped')) return DayMarker.skipped;
+  if (visits.every((v) => v.status == 'Paused')) return DayMarker.paused;
+  bool hasService(Iterable<CalendarVisit> vs, String s) =>
+      vs.any((v) => v.services.any((x) => x.toLowerCase().contains(s)));
+  final done = visits.where((v) => v.status == 'Completed').toList();
+  if (done.isEmpty) {
+    // An upcoming day: outlined, with the interior or spa shape (CAL-02).
+    final open = visits
+        .where((v) => v.status != 'Skipped' && v.status != 'Paused')
+        .toList();
+    if (hasService(open, 'spa')) return DayMarker.scheduledSpa;
+    if (hasService(open, 'internal') || hasService(open, 'interior')) {
+      return DayMarker.scheduledInterior;
+    }
+    return open.every((v) => v.projected)
+        ? DayMarker.expected
+        : DayMarker.scheduled;
+  }
+  if (hasService(done, 'spa')) return DayMarker.spa;
+  if (hasService(done, 'internal') || hasService(done, 'interior')) {
+    return DayMarker.doneInterior;
+  }
+  return DayMarker.done;
+}
 
 /// The service calendar tab (CAL-01 to CAL-06). It is a body, not a page: the
 /// customer shell supplies the scaffold. It follows the vehicle selected on
@@ -42,21 +83,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ? _today
         : _month;
   });
-
-  /// The marker for the visits of one date, or null when there are none.
-  static DayMarker? markerFor(List<CalendarVisit> visits) {
-    if (visits.isEmpty) return null;
-    bool any(bool Function(CalendarVisit) f) => visits.any(f);
-    if (any((v) => v.status == 'Missed')) return DayMarker.missed;
-    if (visits.every((v) => v.status == 'Skipped')) return DayMarker.skipped;
-    final done = visits.where((v) => v.status == 'Completed').toList();
-    if (done.isEmpty) return DayMarker.scheduled;
-    bool has(String s) =>
-        done.any((v) => v.services.any((x) => x.toLowerCase().contains(s)));
-    if (has('spa')) return DayMarker.spa;
-    if (has('internal') || has('interior')) return DayMarker.doneInterior;
-    return DayMarker.done;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +120,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             if (v.id == dayVisits.first.vehicleId) cutoff = v.cutoffTime;
           }
         }
+        final renewal = data.renewals
+            .where((r) => _dateOnly(r.date) == _selected)
+            .firstOrNull
+            ?.date;
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
           children: [
@@ -131,7 +161,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             const SizedBox(height: 14),
             const _Legend(),
             const SizedBox(height: 18),
-            _DayCard(date: _selected, visits: dayVisits, cutoff: cutoff),
+            DayCard(
+              date: _selected,
+              visits: dayVisits,
+              fallbackCutoff: cutoff,
+              today: _today,
+              renewal: renewal,
+            ),
           ],
         );
       },
@@ -196,9 +232,7 @@ class _MonthGrid extends StatelessWidget {
                           date: d,
                           isToday: d == today,
                           isSelected: d == selected,
-                          marker: _CalendarScreenState.markerFor(
-                            byDate[d] ?? const [],
-                          ),
+                          marker: dayMarkerFor(byDate[d] ?? const []),
                           onTap: () => onSelected(d),
                         ),
                 ),
@@ -298,6 +332,14 @@ class MarkerDot extends StatelessWidget {
         return _shape(b.ok, filled: true);
       case DayMarker.scheduled:
         return _shape(b.info, filled: false);
+      case DayMarker.scheduledInterior:
+        return _shape(b.info, filled: false, square: true);
+      case DayMarker.scheduledSpa:
+        return Icon(Symbols.star_rounded, size: 11, color: b.spa, fill: 0);
+      case DayMarker.expected:
+        return Opacity(opacity: 0.55, child: _shape(b.info, filled: false));
+      case DayMarker.paused:
+        return Icon(Symbols.pause_rounded, size: 11, color: b.mute);
       case DayMarker.skipped:
         return Container(width: 9, height: 2, color: b.mute);
       case DayMarker.missed:
@@ -345,97 +387,9 @@ class _Legend extends StatelessWidget {
         item(DayMarker.scheduled, CustStrings.legendScheduled),
         item(DayMarker.skipped, CustStrings.legendSkipped),
         item(DayMarker.missed, CustStrings.legendMissed),
+        item(DayMarker.paused, CalStrings.legendPaused),
+        item(DayMarker.expected, CalStrings.legendExpected),
       ],
-    );
-  }
-}
-
-/// The card for the selected date (CAL-05, CAL-06).
-class _DayCard extends StatelessWidget {
-  const _DayCard({
-    required this.date,
-    required this.visits,
-    required this.cutoff,
-  });
-
-  final DateTime date;
-  final List<CalendarVisit> visits;
-  final String? cutoff;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final b = context.brand;
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(formatDate(date), style: text.titleMedium),
-          const SizedBox(height: 10),
-          if (visits.isEmpty)
-            Row(
-              children: [
-                const StatusChip(CustStrings.noVisitChip),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    CustStrings.noVisit,
-                    style: text.bodyMedium?.copyWith(color: b.mute),
-                  ),
-                ),
-              ],
-            ),
-          for (final v in visits) _DayVisit(visit: v, cutoff: cutoff),
-        ],
-      ),
-    );
-  }
-}
-
-class _DayVisit extends StatelessWidget {
-  const _DayVisit({required this.visit, required this.cutoff});
-
-  final CalendarVisit visit;
-  final String? cutoff;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final b = context.brand;
-    final note = switch (visit.status) {
-      'Completed' => CustStrings.viewDetails,
-      'Skipped' => CustStrings.youSkipped,
-      'Missed' => CustStrings.missedNote,
-      _ =>
-        cutoff == null
-            ? CustStrings.proofAfterVisit
-            : CustStrings.scheduledBy(formatClock(cutoff!)),
-    };
-    final open = visit.status == 'Completed';
-    return InkWell(
-      onTap: open ? () => openVisitDetails(context, visit.visitId) : null,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    visit.services.isEmpty ? '' : visit.services.join(' + '),
-                    style: text.titleSmall,
-                  ),
-                ),
-                StatusChip(visit.status, tone: statusTone(visit.status)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(note, style: text.bodyMedium?.copyWith(color: b.mute)),
-          ],
-        ),
-      ),
     );
   }
 }

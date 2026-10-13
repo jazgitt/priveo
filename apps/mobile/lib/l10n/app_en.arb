@@ -689,5 +689,310 @@
         "type": "int"
       }
     }
-  }
+  },
+  "adminq_home_complaints": "Complaints",
+  "adminq_home_feedback": "Feedback and ratings",
+  "adminq_home_needs_scheduling": "Needs scheduling",
+  "adminq_home_day": "Day schedule",
+  "adminq_home_capacity": "Capacity",
+  "adminq_home_open_complaints": "Open complaints",
+  "adminq_home_to_confirm": "To confirm",
+  "adminq_home_more_payments": "{count} more to confirm",
+  "@adminq_home_more_payments": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_filter_all": "All",
+  "adminq_status_raised": "Raised",
+  "adminq_status_in_progress": "In progress",
+  "adminq_status_resolved": "Resolved",
+  "adminq_complaints_title": "Complaints",
+  "adminq_complaints_empty": "No complaints.",
+  "adminq_complaint_overdue": "Open for more than 4 hours",
+  "adminq_complaint_raised_on": "Raised {date}",
+  "@adminq_complaint_raised_on": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_complaint_status": "Status",
+  "adminq_complaint_note_hint": "Write a note",
+  "adminq_complaint_note_required": "Write a note first.",
+  "adminq_complaint_add_note": "Add note",
+  "adminq_complaint_save_status": "Save status",
+  "adminq_complaint_saved": "Saved.",
+  "adminq_complaint_thread": "History",
+  "adminq_complaint_by_customer": "Customer",
+  "adminq_complaint_by_admin": "Priveo",
+  "adminq_complaint_status_changed": "Status: {status}",
+  "@adminq_complaint_status_changed": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_feedback_title": "Feedback and ratings",
+  "adminq_feedback_empty": "No feedback yet.",
+  "adminq_feedback_ratings": "Visit ratings",
+  "adminq_feedback_average": "Average {average} from {count} ratings",
+  "@adminq_feedback_average": {
+    "placeholders": {
+      "average": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_feedback_no_ratings": "No ratings yet.",
+  "adminq_feedback_stars": "{n} stars",
+  "@adminq_feedback_stars": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_needs_title": "Needs scheduling",
+  "adminq_needs_empty": "Every job has a crew member.",
+  "adminq_day_title": "Day schedule",
+  "adminq_day_summary": "{total} jobs, {done} done, {left} left",
+  "@adminq_day_summary": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "done": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_day_empty": "No jobs on this date.",
+  "adminq_day_status": "Schedule: {status}",
+  "@adminq_day_status": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_day_all_societies": "All societies",
+  "adminq_day_previous": "Previous day",
+  "adminq_day_next": "Next day",
+  "adminq_day_late": "Late",
+  "adminq_day_no_time": "No time",
+  "adminq_capacity_title": "Capacity",
+  "adminq_capacity_empty": "Choose a society to see its capacity.",
+  "adminq_capacity_line": "Crew {capacity} min, work {demand} min, placed {scheduled} min",
+  "@adminq_capacity_line": {
+    "placeholders": {
+      "capacity": {
+        "type": "String"
+      },
+      "demand": {
+        "type": "String"
+      },
+      "scheduled": {
+        "type": "String"
+      }
+    }
+  },
+  "adminq_capacity_over": "Over capacity",
+  "adminq_capacity_previous": "Previous week",
+  "adminq_capacity_next": "Next week",
+  "adminq_society": "Society",
+  "cust_proof_crew_line": "Priveo crew",
+  "cust_proof_crew_pending": "Crew member not assigned yet",
+  "cust_proof_checklist_heading": "Checklist",
+  "cust_proof_after_label": "AFTER",
+  "cust_proof_rate_clean": "Rate this clean",
+  "cust_proof_change_rating": "Change rating",
+  "cust_proof_report_issue": "Report an issue with this clean",
+  "cust_proof_load_more": "Load more",
+  "cust_proof_no_rating": "Not rated",
+  "cust_proof_history_month_empty": "No services in this month.",
+  "cust_proof_today_done": "Today's clean is done",
+  "cust_proof_view_proof": "View proof",
+  "cust_proof_rate_today": "Rate today's clean",
+  "money_invoiceCopy": "Copy invoice",
+  "money_invoiceCopied": "Invoice copied.",
+  "money_invoiceEmail": "Email invoice",
+  "money_invoiceNoMail": "No email app was found on this phone.",
+  "support_faq": "Frequently asked questions",
+  "support_faq_empty": "There are no questions yet.",
+  "support_feedback_tab": "Feedback",
+  "auth_welcome_title": "Welcome to Priveo",
+  "auth_get_started": "Get started",
+  "auth_already_member": "Already a member? Log in",
+  "auth_email_invalid": "Enter a valid email address.",
+  "auth_terms_prefix": "By continuing you accept the ",
+  "auth_terms_link": "Terms",
+  "auth_terms_and": " and the ",
+  "auth_privacy_link": "Privacy Policy",
+  "auth_terms_suffix": ".",
+  "auth_call_support": "Call support",
+  "auth_whatsapp_support": "WhatsApp support",
+  "crew_mgr_attendance": "Attendance",
+  "crew_mgr_working_hours": "Working hours",
+  "crew_mgr_present": "Present",
+  "crew_mgr_sick": "Sick",
+  "crew_mgr_leave": "Leave",
+  "crew_mgr_late_start": "Late start",
+  "crew_mgr_day_off": "Day off",
+  "crew_mgr_working": "Working",
+  "crew_mgr_start_time": "Start",
+  "crew_mgr_end_time": "End",
+  "crew_mgr_save": "Save",
+  "crew_mgr_hours_saved": "Working hours saved.",
+  "crew_mgr_attendance_saved": "Attendance saved.",
+  "crew_mgr_late_start_from": "Starts at",
+  "crew_mgr_choose_late_start": "Choose the start time",
+  "crew_mgr_no_crew": "No crew members.",
+  "crew_mgr_cannot_reassign": "Cannot take this job",
+  "crew_mgr_open_jobs_count": "{count, plural, =1{1 open job} other{{count} open jobs}}",
+  "@crew_mgr_open_jobs_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_mgr_late_start_at": "Late start, from {time}",
+  "@crew_mgr_late_start_at": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "crew_mgr_released_moved": "{count, plural, =1{1 job moved to someone else} other{{count} jobs moved to someone else}}",
+  "@crew_mgr_released_moved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "crew_mgr_released_waiting": "{count, plural, =1{1 job needs scheduling} other{{count} jobs need scheduling}}",
+  "@crew_mgr_released_waiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addVehicleTitle": "Add vehicle",
+  "addVehicleSociety": "Society",
+  "addVehicleCar": "Vehicle details",
+  "addVehicleParking": "Parking",
+  "addVehiclePlan": "Plan",
+  "addVehiclePreferences": "Service preferences",
+  "addVehicleReview": "Review and payment",
+  "addVehicleSearch": "Search societies",
+  "addVehicleNoSocieties": "No serviced societies available at the moment.",
+  "addVehicleSocietyFixed": "Your vehicle's society cannot be changed after it is added.",
+  "addVehicleMake": "Make",
+  "addVehicleModel": "Model",
+  "addVehicleVariant": "Variant",
+  "addVehicleStandard": "Standard",
+  "addVehicleAuto": "Auto-detected",
+  "addVehicleRegistration": "Registration number",
+  "addVehiclePhoto": "Add vehicle photo (required)",
+  "addVehicleReplacePhoto": "Replace vehicle photo",
+  "addVehicleRc": "Upload RC document (optional)",
+  "addVehicleRcUploaded": "RC uploaded Â· Replace",
+  "addVehicleRcLimit": "Choose a JPG, PNG or PDF document up to 5 MB.",
+  "addVehicleBasement": "Basement",
+  "addVehicleParkingNumber": "Parking number",
+  "addVehicleCancel": "Cancel anytime",
+  "addVehicleCutoff": "Service cutoff time",
+  "addVehicleSlotNote": "Choose when your clean should be finished. Priveo assigns the exact slot.",
+  "addVehicleInterior": "Interior care day",
+  "addVehicleTotal": "Total payable today includes GST.",
+  "addVehicleStartNote": "Priveo will confirm the start date.",
+  "addVehicleBack": "Back",
+  "addVehicleConfirm": "Confirm & pay",
+  "addVehicleRequired": "Complete the required details before continuing.",
+  "addonChangeRequest": "Change requested, awaiting Priveo",
+  "addonChangeAction": "Change date or time",
+  "addonNoOffers": "No add-ons are available at the moment.",
+  "addonSupportClosed": "Changes are closed. Call support for help.",
+  "addonViewProof": "View service details",
+  "adminCustomers": "Customers",
+  "adminCustomerSearch": "Search name, mobile, registration or society",
+  "adminNoCustomers": "No customers found.",
+  "adminCustomerDetails": "Customer details",
+  "adminEmailVerified": "Email verified",
+  "adminYes": "Yes",
+  "adminNo": "No",
+  "adminFromDate": "From date",
+  "adminToDate": "To date",
+  "adminSkipDate": "Skip date",
+  "adminPause": "Pause",
+  "adminRenewal": "Renewal",
+  "adminUnskip": "Un-skip",
+  "adminEndPause": "End pause",
+  "adminOperations": "Operations",
+  "adminQueue": "Queue",
+  "adminMissedJobs": "Missed jobs",
+  "adminScheduledWork": "Scheduled work",
+  "adminOutcomeHistory": "Resolution history",
+  "adminSocietyFilter": "Society filter",
+  "adminAllSocieties": "All societies",
+  "adminFailureReason": "Failure reason",
+  "adminAllReasons": "All reasons",
+  "adminClearDates": "Clear dates",
+  "adminNoJobs": "No jobs match these filters.",
+  "adminMissed": "Missed",
+  "adminUnassigned": "Unassigned",
+  "adminCoveredOn": "Covered by the next dayâ€™s regular Exterior service on",
+  "adminRescheduledOn": "Rescheduled on",
+  "adminAssigned": "Assigned",
+  "adminNeedsAssignment": "Needs scheduling",
+  "adminOperationsReason": "Operations reason",
+  "adminOptionalReason": "No reason selected",
+  "adminOutcomeNote": "Outcome note",
+  "adminExteriorExtension": "Skipping adds one day to the plan and moves unpaid renewal dates.",
+  "adminSpaSkip": "Skipping does not extend the plan. Handle any refund or rebooking separately.",
+  "adminInteriorSkip": "Skipping loses this Interior service and does not extend the plan.",
+  "adminSkipJob": "Skip job by operations",
+  "adminRetryNextDay": "Reschedule for next day",
+  "adminSkipVisit": "Skip remaining jobs on this visit",
+  "adminCrew": "Crew",
+  "adminNoCrew": "No crew found.",
+  "adminAddException": "Add crew exception",
+  "adminExceptionType": "Exception type",
+  "adminSick": "Sick",
+  "adminLeave": "Leave",
+  "adminLateStart": "Late start",
+  "adminStartTime": "Start time",
+  "adminSave": "Save",
+  "adminAddonRequests": "Add-on requests",
+  "adminStatusFilter": "Status filter",
+  "adminAllStatuses": "All statuses",
+  "adminNoAddons": "No add-on requests.",
+  "adminStandaloneRequest": "Standalone request",
+  "adminChangeRequested": "Change requested",
+  "adminCheckins": "Monthly check-in results",
+  "adminNoCheckins": "No check-in results.",
+  "adminOperationsForDay": "Operations for this day",
+  "invoiceOpenPdf": "Open invoice PDF",
+  "invoicePdfTitle": "Invoice PDF",
+  "invoicePdfUnavailable": "The invoice PDF could not be opened. Please try again.",
+  "proofVideoTitle": "Proof video",
+  "proofVideoUnavailable": "The video could not be played. Check your connection and try again.",
+  "proofVideoMissing": "This video is no longer available for this visit.",
+  "proofVideoPlay": "Play",
+  "proofVideoPause": "Pause",
+  "proofVideoReplay": "Replay"
 }

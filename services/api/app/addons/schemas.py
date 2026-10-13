@@ -25,11 +25,10 @@ class AddonChangeIn(BaseModel):
 
 
 class StandaloneIn(BaseModel):
-    """DERIVED / OPEN (ADD-15): a standalone Deep Spa is only a request with
-    contact details. Priveo calls to agree the date, the price and the payment."""
+    """Owner decision: an owned no-subscription vehicle uses the Spa rules."""
 
     service: str = "Deep Spa"
-    vehicle_id: str | None = None
+    vehicle_id: str
     date: dt.date
     finish_by: str
     contact_mobile: str = ""
@@ -49,6 +48,12 @@ class AddonOut(BaseModel):
     payment_status: str | None
     can_change: bool
     created_at: dt.datetime
+    requested_date: dt.date | None = None
+    requested_finish_by: str | None = None
+    change_requested: bool = False
+    crew_name: str | None = None
+    start_time: str | None = None
+    visit_id: str | None = None
 
 
 class AddonsOut(BaseModel):
@@ -69,3 +74,9 @@ class AdminAddonIn(BaseModel):
     status: str | None = None
     date: dt.date | None = None
     finish_by: str | None = None
+    resolve_change: bool = False
+    reject_change: bool = False
+
+
+class AdminAddonCreate(AddonRequestIn):
+    vehicle_id: str

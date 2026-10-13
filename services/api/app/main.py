@@ -7,18 +7,23 @@ from app import (
     changes,
     crew,
     customer_reads,
+    directory,
     media,
     notifications,
     scheduling,
     support,
     visits,
+    webauth,
 )
+from app.customers import administration
 from app.customers import router as customers
 from app.home import router as home
 from app.identity import router as identity
 from app.platform.errors import install_error_handlers
 from app.platform.middleware import RequestIdMiddleware
+from app.scheduling import administration as scheduling_admin
 from app.system import router as system
+from app.visits import operations
 
 
 def create_app() -> FastAPI:
@@ -29,6 +34,10 @@ def create_app() -> FastAPI:
     app.include_router(identity.router)
     app.include_router(identity.admin)
     app.include_router(customers.router)
+    app.include_router(administration.admin)
+    app.include_router(administration.customer)
+    app.include_router(scheduling_admin.router)
+    app.include_router(operations.router)
     app.include_router(home.crew)
     app.include_router(home.admin)
     crew.register(app)
@@ -41,6 +50,8 @@ def create_app() -> FastAPI:
     changes.register(app)
     billing.register(app)
     addons.register(app)
+    webauth.register(app)
+    directory.register(app)
     return app
 
 

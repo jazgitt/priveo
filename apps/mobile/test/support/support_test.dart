@@ -6,6 +6,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart';
 import 'package:priveo/features/admin_quick/alerts/alerts_data.dart';
 import 'package:priveo/features/support/data/support_models.dart';
 import 'package:priveo/features/support/feedback_sheet.dart';
@@ -281,6 +283,10 @@ void main() {
       final repo = FakeSupportRepository()..pending = [due];
       await pumpSupport(tester, initial: SupportRoutes.checkin, repo: repo);
       expect(find.text('Value for money'), findsOneWidget);
+      final container = ProviderScope.containerOf(tester.element(find.text('Value for money')));
+      final listener = container.listen(homeCheckInsProvider, (_, _) {});
+      addTearDown(listener.close);
+      expect(await container.read(homeCheckInsProvider.future), hasLength(1));
       expect(find.text('Schedule fit'), findsOneWidget);
       expect(enabled(tester, 'Submit'), isFalse);
 
@@ -294,6 +300,7 @@ void main() {
         'comment': 'All fine',
       });
       expect(find.text('Thank you. Your check-in is saved.'), findsOneWidget);
+      expect(await container.read(homeCheckInsProvider.future), isEmpty);
     });
 
     testWidgets('tapping the same star again leaves the category unrated',
@@ -309,28 +316,6 @@ void main() {
       await pumpSupport(tester, initial: SupportRoutes.checkin);
       expect(find.text('There is no check-in to give right now.'),
           findsOneWidget);
-    });
-  });
-
-  group('crew ratings', () {
-    testWidgets('shows the average and count, and nothing personal',
-        (tester) async {
-      await pumpSupport(tester, initial: SupportRoutes.crewRatings);
-      expect(find.text('4.5'), findsOneWidget);
-      expect(find.text('4 ratings in the last 30 days'), findsOneWidget);
-      expect(
-          find.text(
-              'Customers rate each visit as a whole. A rating is never given to a crew member.'),
-          findsOneWidget);
-    });
-
-    testWidgets('says so when there are none', (tester) async {
-      final repo = FakeSupportRepository()
-        ..ratings = const CrewRatings(
-            periodDays: 30, count: 0, average: null, stars: {});
-      await pumpSupport(tester,
-          initial: SupportRoutes.crewRatings, repo: repo);
-      expect(find.text('No ratings yet.'), findsOneWidget);
     });
   });
 
@@ -419,16 +404,6 @@ void main() {
           'https://wa.me/919876543210');
     });
 
-    test('crew ratings JSON', () {
-      final r = CrewRatings.fromJson({
-        'period_days': 30,
-        'count': 1,
-        'average': 3.0,
-        'stars': {'1': 0, '3': 1},
-      });
-      expect(r.stars[3], 1);
-      expect(r.average, 3.0);
-    });
   });
 }
 

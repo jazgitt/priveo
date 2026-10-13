@@ -51,6 +51,10 @@ dependencies:
   url_launcher: ^6.3.3
   table_calendar: ^3.2.1
   path: ^1.9.1
+  file_selector: ^1.1.0
+  pdfx: ^2.11.0
+  video_player: ^2.14.1
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +81,7 @@ flutter:
   generate: true
   assets:
     - assets/brand/
+    - assets/content/
   fonts:
     - family: Manrope
       fonts:

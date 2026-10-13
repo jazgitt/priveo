@@ -11,6 +11,7 @@ class _Api implements UploadApi {
   Object? failRequest;
   Object? failSend;
   Object? failConfirm;
+  Completer<void>? requestGate;
   int _n = 0;
 
   @override
@@ -25,6 +26,7 @@ class _Api implements UploadApi {
     if (failRequest != null) throw failRequest!;
     final id = 'u${++_n}';
     calls.add('request $id');
+    if (requestGate != null) await requestGate!.future;
     return UploadTicket(
         id: id, url: '/media/$id', method: 'PUT', headers: const {'a': 'b'});
   }
@@ -52,6 +54,10 @@ Future<QueuedUpload> _add(UploadQueue q, {String job = 'j1'}) => q.enqueue(
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
+class UnavailableStore extends MemoryUploadQueueStore {
+  @override Future<List<QueuedUpload>> all() async => throw StateError('Storage unavailable');
+}
+
 void main() {
   late _Api api;
   late MemoryUploadQueueStore store;
@@ -62,6 +68,76 @@ void main() {
   setUp(() {
     api = _Api();
     store = MemoryUploadQueueStore();
+  });
+
+  test('unavailable local storage does not prevent opening an empty queue',()async{
+    final q=UploadQueue(api:api,store:UnavailableStore(),retryAfter:Duration.zero);addTearDown(q.dispose);
+    await q.start();expect(q.items,isEmpty);expect(api.calls,isEmpty);
+  });
+  test('a file read failure is parked and can be retried after repair',()async{
+    final q=make();addTearDown(q.dispose);api.failSend=StateError('Cannot read file');
+    final item=await _add(q);await _settle();expect(q.items.single.step,UploadStep.failed);expect(q.items.single.lastError,contains('Cannot read file'));
+    api.failSend=null;await q.retry(item.id);await _settle();expect(q.items,isEmpty);await q.retry(999);expect(await store.all(),isEmpty);
+  });
+  test('retry timer resumes an offline upload without another user action',()async{
+    final q=UploadQueue(api:api,store:store,retryAfter:const Duration(milliseconds:20));addTearDown(q.dispose);
+    api.failRequest=const ApiFailure();await _add(q);await _settle();expect(q.items,hasLength(1));
+    api.failRequest=null;await Future<void>.delayed(const Duration(milliseconds:50));expect(q.items,isEmpty);expect(api.calls.last,'confirm u1');
+  });
+  test('account change during file stashing discards the copy and queues nothing',()async{
+    var active=true;final discarded=<String>[];
+    final q=UploadQueue(api:api,store:store,ownerId:'owner-a',isCurrent:()=>active,retryAfter:Duration.zero,stash:(path)async{active=false;return '/kept/photo.jpg';},discard:(path)async{discarded.add(path);});addTearDown(q.dispose);
+    await expectLater(_add(q),throwsA(isA<ApiFailure>().having((e)=>e.code,'code','signed_out')));
+    expect(discarded,['/kept/photo.jpg']);expect(await store.all(),isEmpty);expect(api.calls,isEmpty);
+  });
+
+  test('account queues ignore other owners and unknown legacy records', () async {
+    for (final owner in ['owner-a', 'owner-b', null]) {
+      await store.add(QueuedUpload(id: 0, jobId: 'job-$owner', kind: 'photo',
+          stage: 'After', path: '/photo.jpg', contentType: 'image/jpeg',
+          sizeBytes: 100, ownerId: owner));
+    }
+    final q = UploadQueue(api: api, store: store, ownerId: 'owner-b',
+        retryAfter: Duration.zero);
+    addTearDown(q.dispose);
+    await q.start();
+    final remaining = await store.all();
+    expect(remaining.map((i) => i.ownerId), ['owner-a', null]);
+    expect(api.calls, ['request u1', 'send u1', 'confirm u1']);
+  });
+
+  test('account switch stops after in-flight request and resumes for original owner', () async {
+    var current = 'owner-a';
+    api.requestGate = Completer<void>();
+    final q = UploadQueue(api: api, store: store, ownerId: 'owner-a',
+        isCurrent: () => current == 'owner-a', retryAfter: Duration.zero);
+    addTearDown(q.dispose);
+    await _add(q);
+    await _settle();
+    current = 'owner-b';
+    api.requestGate!.complete();
+    await _settle();
+    expect(api.calls, ['request u1']);
+    expect((await store.all()).single.ownerId, 'owner-a');
+    expect((await store.all()).single.step, UploadStep.requested);
+    await q.drain();
+    expect(api.calls, ['request u1']);
+    api.requestGate = null;
+    final resumed = UploadQueue(api: api, store: store, ownerId: 'owner-a',
+        retryAfter: Duration.zero);
+    addTearDown(resumed.dispose);
+    await resumed.start();
+    expect(api.calls, ['request u1', 'send u1', 'confirm u1']);
+    expect(await store.all(), isEmpty);
+  });
+
+  test('signed-out immediate upload cannot reach the API', () async {
+    final q = UploadQueue(api: api, store: store, ownerId: 'owner-a',
+        isCurrent: () => false, retryAfter: Duration.zero);
+    addTearDown(q.dispose);
+    await expectLater(q.sendNow(purpose: 'profile', kind: 'photo', path: '/photo.jpg',
+        contentType: 'image/jpeg', sizeBytes: 100), throwsA(isA<ApiFailure>()));
+    expect(api.calls, isEmpty);
   });
 
   test('a queued file is requested, sent and confirmed, then removed',
@@ -229,6 +305,7 @@ void main() {
       step: UploadStep.requested,
       attempts: 2,
       lastError: 'oops',
+      ownerId: 'owner-a',
     );
     final back = QueuedUpload.fromRow(item.toRow());
     expect(back.id, 4);
@@ -236,5 +313,6 @@ void main() {
     expect(back.ticket!.headers, {'Content-Type': 'video/mp4'});
     expect(back.attempts, 2);
     expect(back.lastError, 'oops');
+    expect(back.ownerId, 'owner-a');
   });
 }

@@ -153,3 +153,17 @@ class AdminAlert(Base):
     ref_id: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)
     read_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+
+
+class AdminAlertEmail(Base):
+    """Durable recipient delivery; inbox alerts survive provider failures."""
+    __tablename__ = "admin_alert_emails"
+    __table_args__ = (UniqueConstraint("alert_id", "login_id", name="admin_alert_email_once"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    alert_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("admin_alerts.id"), index=True)
+    login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), index=True)
+    recipient_email: Mapped[str] = mapped_column(String(254))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    delivered_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    stopped_at: Mapped[datetime | None] = mapped_column(UtcDateTime)

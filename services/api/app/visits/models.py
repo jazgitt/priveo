@@ -4,9 +4,9 @@ The visits and jobs themselves belong to the scheduling module
 (`app.scheduling.models`). These tables hang off its jobs.
 """
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Date, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 import app.scheduling.models  # noqa: F401  (the jobs table these link to)
@@ -15,8 +15,8 @@ from app.platform.db import Base, UtcDateTime, utcnow
 
 class JobChecklistProgress(Base):
     """One checked item of a job's checklist, with the time (CRW-SVC-03).
-    An item with no row is not checked. The items themselves are the service's
-    checklist in `app.visits.service.CHECKLISTS`."""
+    An item with no row is not checked. The issued definition lives on the
+    job's checklist_snapshot, independent of mutable directory labels."""
 
     __tablename__ = "job_checklist_progress"
     __table_args__ = (UniqueConstraint("job_id", "item_key"),)
@@ -57,6 +57,19 @@ class JobReassignment(Base):
     at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
+class OperationsDecision(Base):
+    """Resolution of one job, preserving its original failure and proof."""
+
+    __tablename__ = "operations_decisions"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), unique=True)
+    action: Mapped[str] = mapped_column(String(16))
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    by_login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"))
+    at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
 class CrewPhoto(Base):
     """A crew member's profile photo: a confirmed upload (CRW-PRF-02)."""
 
@@ -75,3 +88,20 @@ class JobTiming(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), primary_key=True)
     started_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     finished_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+
+
+class CrewManagerChange(Base):
+    """A Manager marked attendance or changed working hours for a crew member
+    of their society: who and when (CRW-MGR-04, CRW-MGR-05)."""
+
+    __tablename__ = "crew_manager_changes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    crew_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("scheduling_crew.id"), index=True)
+    by_login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"))
+    kind: Mapped[str] = mapped_column(String(12))  # attendance | hours
+    # Attendance: the first date changed. Hours: the day the change was made.
+    on_date: Mapped[date] = mapped_column(Date)
+    detail: Mapped[str] = mapped_column(Text, default="")
+    at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

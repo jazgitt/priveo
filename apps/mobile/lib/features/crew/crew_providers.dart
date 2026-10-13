@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_controller.dart';
+import '../../core/auth/session.dart';
+import '../../core/network/api_client.dart';
 import '../../core/providers.dart';
 import 'capture/media_capture.dart';
 import 'data/crew_models.dart';
 import 'data/crew_repository.dart';
+import 'data/manager_models.dart';
 import 'upload/sqlite_store.dart';
 import 'upload/upload_queue.dart';
 
@@ -14,15 +18,42 @@ import 'upload/upload_queue.dart';
 final crewRepositoryProvider = Provider<CrewRepository>(
     (ref) => ApiCrewRepository(ref.watch(dioProvider)));
 
-/// Uploads go through the same client. Tests override this with a fake.
-final uploadApiProvider = Provider<UploadApi>(
-    (ref) => ApiCrewRepository(ref.watch(dioProvider)));
+/// Uploads use an owner-bound client. Tests override this with a fake.
+final crewUploadOwnerProvider = Provider<String?>((ref) {
+  final session = ref.watch(authControllerProvider).value;
+  return session?.role == Role.crew ? session?.loginId : null;
+});
+
+final uploadApiProvider = Provider<UploadApi>((ref) {
+  final owner = ref.watch(crewUploadOwnerProvider);
+  var active = true;
+  // This client can never retry a pending upload with another login's token.
+  final dio = buildDio(
+    baseUrl: ref.watch(appConfigProvider).apiBaseUrl,
+    accessToken: () {
+      if (!active) return null;
+      final session = ref.read(authControllerProvider).value;
+      return owner != null && session?.role == Role.crew && session?.loginId == owner
+          ? session?.accessToken : null;
+    },
+    refreshTokens: () async {
+      if (!active || owner == null || ref.read(crewUploadOwnerProvider) != owner) return false;
+      final refreshed = await ref.read(authControllerProvider.notifier).refreshTokens();
+      return active && refreshed && ref.read(crewUploadOwnerProvider) == owner;
+    },
+  );
+  ref.onDispose(() { active = false; dio.close(force: true); });
+  return ApiCrewRepository(dio);
+});
 
 final mediaCaptureProvider =
     Provider<MediaCapture>((ref) => DeviceMediaCapture());
 
-final uploadQueueStoreProvider =
-    Provider<UploadQueueStore>((ref) => SqliteUploadQueueStore());
+final uploadQueueStoreProvider = Provider<UploadQueueStore>((ref) {
+  final owner = ref.watch(crewUploadOwnerProvider);
+  if (owner == null) throw StateError('Crew sign-in required for uploads');
+  return SqliteUploadQueueStore(ownerId: owner);
+});
 
 /// Emits true each time the phone gets a connection.
 final onlineEventsProvider = Provider<Stream<bool>?>((ref) {
@@ -38,14 +69,18 @@ final onlineEventsProvider = Provider<Stream<bool>?>((ref) {
 /// crew home opens, so unsent files go out on app open and again whenever
 /// the connection changes (CRW-SVC-10).
 final uploadQueueProvider = Provider<UploadQueue>((ref) {
+  final owner = ref.watch(crewUploadOwnerProvider);
+  var active = true;
   final queue = UploadQueue(
     api: ref.watch(uploadApiProvider),
     store: ref.watch(uploadQueueStoreProvider),
     online: ref.watch(onlineEventsProvider),
-    stash: stashFile,
+    ownerId: owner,
+    isCurrent: () => active && owner != null && ref.read(crewUploadOwnerProvider) == owner,
+    stash: (path) => stashFile(path, ownerId: owner),
     discard: discardFile,
   );
-  ref.onDispose(queue.dispose);
+  ref.onDispose(() { active = false; queue.dispose(); });
   unawaited(queue.start());
   return queue;
 });
@@ -86,3 +121,15 @@ final managerScheduleProvider = FutureProvider.autoDispose
 
 final managerCrewProvider = FutureProvider.autoDispose<List<CrewRef>>(
     (ref) => ref.watch(crewRepositoryProvider).managerCrew());
+
+/// `yyyy-mm-dd` for the day of the attendance list.
+final managerAttendanceProvider = FutureProvider.autoDispose
+    .family<AttendanceDay, String>((ref, key) =>
+        ref.watch(crewRepositoryProvider).managerAttendance(DateTime.parse(key)));
+
+final managerHoursProvider = FutureProvider.autoDispose<List<CrewHours>>(
+    (ref) => ref.watch(crewRepositoryProvider).managerHours());
+
+final managerReassignOptionsProvider = FutureProvider.autoDispose
+    .family<List<ReassignOption>, String>((ref, jobId) =>
+        ref.watch(crewRepositoryProvider).managerReassignOptions(jobId));

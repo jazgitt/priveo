@@ -9,6 +9,8 @@ from app.changes.schemas import (
     ChangesOut,
     CutoffChangeIn,
     PauseIn,
+    PreferencesIn,
+    PreferencesOut,
     SkipIn,
     UpcomingDay,
 )
@@ -41,8 +43,8 @@ def my_changes(vehicle_id: str, user: User = Depends(require_role("customer")),
 def upcoming(vehicle_id: str, user: User = Depends(require_role("customer")),
              db: Session = Depends(get_db),
              svc: ChangesService = Depends(get_changes_service)):
-    _, vehicle, _ = owned_vehicle(db, user.id, vehicle_id)
-    return svc.upcoming(vehicle)
+    _, vehicle, sub = owned_vehicle(db, user.id, vehicle_id)
+    return svc.upcoming(vehicle, sub=sub)
 
 
 @customer.post("/vehicles/{vehicle_id}/skips", response_model=ChangeOut, status_code=201)
@@ -87,6 +89,17 @@ def cutoff_change(vehicle_id: str, body: CutoffChangeIn,
     c, vehicle, sub = owned_vehicle(db, user.id, vehicle_id)
     return svc.change_cutoff(Actor("customer", user.id), c, vehicle, sub, body.date,
                              body.cutoff_time, idempotency_key)
+
+
+@customer.patch("/vehicles/{vehicle_id}/preferences", response_model=PreferencesOut)
+def update_preferences(vehicle_id: str, body: PreferencesIn,
+                       user: User = Depends(require_role("customer")),
+                       db: Session = Depends(get_db),
+                       svc: ChangesService = Depends(get_changes_service)):
+    """The default service cutoff time and interior care day (SUB-08)."""
+    _, vehicle, sub = owned_vehicle(db, user.id, vehicle_id)
+    return svc.update_preferences(Actor("customer", user.id), vehicle, sub,
+                                  body.cutoff_time, body.interior_day)
 
 
 # --- the admin, on behalf of a customer (ADM-ACC-07 e, ADM-CUS-09) -------------

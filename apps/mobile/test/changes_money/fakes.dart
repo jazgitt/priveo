@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:priveo/core/providers.dart';
+import 'package:priveo/core/api/api.g.dart' as wire;
+import 'package:priveo/core/network/read_refresh.dart';
+import 'package:priveo/features/support/widgets.dart' show LinkOpener, linkOpenerProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -143,10 +148,11 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<PaymentDetailDto> paymentDetail(String id) async => PaymentDetailDto(
-        payment: payment(id),
-        instructions: const PayInstructionsDto(
-            amountRupees: 1299,
+        payment: payment(id, amount: id == 'p-addon' ? 1500 : 1299),
+        instructions: PayInstructionsDto(
+            amountRupees: id == 'p-addon' ? 1500 : 1299,
             upiId: 'priveo-placeholder@upi',
+            upiUri: 'upi://pay?pa=priveo-placeholder@upi&am=${id == 'p-addon' ? 1500 : 1299}&cu=INR',
             payeeName: 'Priveo (placeholder)'),
       );
 
@@ -161,6 +167,8 @@ class FakeMoneyRepository implements MoneyRepository {
     _check();
     calls.add('paid $id');
     return PaymentDetailDto(
+        vehicle: 'HR01ZZ1234 · Hyundai Creta SX',
+        serviceDetails: const {'cutoff_time': '07:00', 'interior_day': 'Friday'},
         payment: payment(id, status: 'Initiated'),
         instructions: const PayInstructionsDto(
             amountRupees: 1299, upiId: 'x@upi', payeeName: 'Priveo'));
@@ -211,9 +219,9 @@ class FakeMoneyRepository implements MoneyRepository {
         date: date,
         finishBy: finishBy,
         status: 'Requested',
-        priceRupees: null,
-        paymentId: null,
-        paymentStatus: null,
+        priceRupees: 1500,
+        paymentId: 'p-addon',
+        paymentStatus: 'Due',
         canChange: true);
   }
 
@@ -294,6 +302,9 @@ Future<void> openAt(
   String path, {
   FakeMoneyRepository? money,
   FakeAdminPaymentsRepository? admin,
+  Dio? dio,
+  wire.PriveoApi? api,
+  LinkOpener? linkOpener,
 }) async {
   tester.view.physicalSize = const Size(900, 2400);
   tester.view.devicePixelRatio = 2;
@@ -308,7 +319,12 @@ Future<void> openAt(
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(ProviderScope(
+    retry: (_, _) => null,
     overrides: [
+      if (dio != null) dioProvider.overrideWithValue(dio),
+      if (api != null) apiProvider.overrideWithValue(api),
+      if (linkOpener != null) linkOpenerProvider.overrideWithValue(linkOpener),
+      readRefreshProvider.overrideWith((_) => const Stream<int>.empty()),
       moneyRepositoryProvider.overrideWithValue(money ?? FakeMoneyRepository()),
       adminPaymentsRepositoryProvider
           .overrideWithValue(admin ?? FakeAdminPaymentsRepository()),

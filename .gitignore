@@ -37,6 +37,11 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.pytest-tmp*/
+.coverage
+/apps/mobile/coverage/
+/apps/web/coverage/
+coverage-*.json
 
 # Logs and local data
 *.log
@@ -51,3 +56,6 @@ venv/
 
 # Real customer data for the one-time migration. Never commit.
 /seed/
+
+# Dedicated synthetic manual/E2E fixture databases and manifests
+/.local/test-data/

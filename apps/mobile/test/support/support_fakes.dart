@@ -65,13 +65,6 @@ class FakeSupportRepository implements SupportRepository {
   List<Complaint> complaintList = [];
   Complaint? detail;
   List<PendingCheckIn> pending = [];
-  CrewRatings ratings = const CrewRatings(
-    periodDays: 30,
-    count: 4,
-    average: 4.5,
-    stars: {1: 0, 2: 0, 3: 0, 4: 2, 5: 2},
-  );
-
   /// When set, the next write fails with this message.
   String? failWith;
 
@@ -102,12 +95,14 @@ class FakeSupportRepository implements SupportRepository {
     required String category,
     required String description,
     String? visitId,
+    List<String> photoKeys = const [],
   }) async {
     _maybeFail();
     created.add({
       'category': category,
       'description': description,
       'visitId': visitId,
+      if (photoKeys.isNotEmpty) 'photoKeys': photoKeys,
     });
     final c = makeComplaint(
         id: 'new', displayId: '#C-0009', description: description);
@@ -176,9 +171,6 @@ class FakeSupportRepository implements SupportRepository {
     });
     pending = [];
   }
-
-  @override
-  Future<CrewRatings> crewRatings() async => ratings;
 }
 
 class FakeAlertsRepository implements AlertsRepository {

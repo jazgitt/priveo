@@ -8,10 +8,13 @@ import '../crew_providers.dart';
 import '../crew_text.dart';
 import '../crew_ui.dart';
 import '../data/crew_repository.dart';
+import 'manager_attendance_screen.dart';
+import 'manager_hours_screen.dart';
 import 'manager_job_screen.dart';
 
 /// The whole society's schedule for a day, read-only, by crew member
-/// (CRW-MGR-01). Attendance and working hours are not here yet.
+/// (CRW-MGR-01). Attendance (CRW-MGR-04) and working hours (CRW-MGR-05) open
+/// from the bar.
 class ManagerScheduleScreen extends ConsumerStatefulWidget {
   const ManagerScheduleScreen({super.key});
 
@@ -33,7 +36,29 @@ class _State extends ConsumerState<ManagerScheduleScreen> {
     final key = apiDate(_day);
     final schedule = ref.watch(managerScheduleProvider(key));
     return Scaffold(
-      appBar: AppBar(title: Text(CrewText.team)),
+      appBar: AppBar(
+        title: Text(CrewText.team),
+        actions: [
+          IconButton(
+            tooltip: CrewText.attendance,
+            icon: const Icon(Symbols.event_available_rounded),
+            onPressed: () async {
+              await Navigator.of(context)
+                  .push(crewRoute(const ManagerAttendanceScreen()));
+              ref.invalidate(managerScheduleProvider(key));
+            },
+          ),
+          IconButton(
+            tooltip: CrewText.workingHours,
+            icon: const Icon(Symbols.schedule_rounded),
+            onPressed: () async {
+              await Navigator.of(context)
+                  .push(crewRoute(const ManagerHoursScreen()));
+              ref.invalidate(managerScheduleProvider(key));
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Row(

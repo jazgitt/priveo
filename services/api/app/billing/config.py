@@ -1,4 +1,6 @@
 from functools import lru_cache
+from typing import Literal
+from pydantic import Field
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,6 +19,10 @@ class MoneySettings(BaseSettings):
     seller_name: str = "Priveo (placeholder seller)"
     seller_address: str = "Placeholder address"
     seller_gstin: str = "00PLACEHOLDER0Z0"
+    gst_rate_percent: int = Field(default=18, ge=0, le=100)
+    # Mock split until business configuration is supplied offline.
+    gst_mode: Literal["CGST_SGST", "IGST"] = "CGST_SGST"
+    gst_configuration_mock: bool = True
     # Placeholder price of the Deep Spa add-on, GST included (ADM-ADD-01).
     deep_spa_price_rupees: int = 1500
     deep_spa_list_price_rupees: int = 2000

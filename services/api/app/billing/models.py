@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, Date, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -72,6 +72,8 @@ class Invoice(Base):
     customer_name: Mapped[str] = mapped_column(String(160))
     vehicle_label: Mapped[str] = mapped_column(String(120), default="")
     description: Mapped[str] = mapped_column(String(120))
+    seller_details: Mapped[dict | None] = mapped_column(JSON)
+    tax_details: Mapped[dict | None] = mapped_column(JSON)
 
 
 class MoneyAlert(Base):

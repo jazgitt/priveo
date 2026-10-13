@@ -1,0 +1,103 @@
+"""The admin's home and the read-only day schedule (ADM-ACC-07, BE-19).
+
+Counts come from the module that owns each list, so the number on the home
+always matches the list behind it."""
+import uuid
+from datetime import date
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.billing.models import MoneyAlert, Payment
+from app.billing.service import customer_name, vehicle_label
+from app.customers.models import Customer, Vehicle
+from app.directory.models import Society
+from app.home.schemas import (
+    AdminDayCrew,
+    AdminDayJob,
+    AdminDaySchedule,
+    AdminHome,
+    AdminHomeSociety,
+    PaymentToConfirm,
+)
+from app.identity.models import Login
+from app.scheduling import service as scheduling
+from app.scheduling.models import Schedule, Visit
+from app.support import alerts as support_alerts
+from app.support.models import Complaint
+
+PAYMENTS_ON_HOME = 20
+UNASSIGNED = "Not assigned"
+
+
+def admin_home(db: Session) -> AdminHome:
+    support_unread = support_alerts.unread_count(db)
+    payment_unread = db.scalar(
+        select(func.count()).select_from(MoneyAlert).where(MoneyAlert.read_at.is_(None))) or 0
+    initiated = (Payment.status == "Initiated", Payment.voided_at.is_(None))
+    to_confirm = db.scalar(select(func.count()).select_from(Payment).where(*initiated)) or 0
+    payments = db.scalars(
+        select(Payment).where(*initiated)
+        .order_by(Payment.initiated_at, Payment.created_at).limit(PAYMENTS_ON_HOME)).all()
+    cards = []
+    for p in payments:
+        customer = db.get(Customer, p.customer_id)
+        vehicle = db.get(Vehicle, p.vehicle_id) if p.vehicle_id else None
+        society = db.get(Society, (vehicle.society_id if vehicle else None)
+                         or customer.society_id) if customer else None
+        label = ", ".join(x for x in (
+            customer_name(customer) if customer else "",
+            f"Flat {customer.flat}" if customer and customer.flat else "") if x)
+        cards.append(PaymentToConfirm(
+            id=str(p.id), customer_label=label, amount_rupees=p.amount_rupees,
+            reference=p.description, vehicle=vehicle_label(vehicle),
+            society=society.name if society else ""))
+    open_complaints = db.scalar(
+        select(func.count()).select_from(Complaint).where(Complaint.status != "Resolved")) or 0
+    societies = db.scalars(
+        select(Society).where(Society.active.is_(True)).order_by(Society.name)).all()
+    return AdminHome(
+        alert_count=support_unread + payment_unread,
+        payments_to_confirm=cards,
+        needs_scheduling_count=len(scheduling.needs_scheduling(db, None)),
+        support_alert_count=support_unread,
+        payment_alert_count=payment_unread,
+        payments_to_confirm_count=to_confirm,
+        open_complaints_count=open_complaints,
+        societies=[AdminHomeSociety(id=str(s.id), name=s.name) for s in societies],
+    )
+
+
+def day_schedule(db: Session, day: date, society_id: uuid.UUID | None) -> AdminDaySchedule:
+    """Every job of one date, grouped by crew member. Read only. With a society,
+    crew members with no job that day are listed too."""
+    where = [Visit.date == day]
+    if society_id is not None:
+        where.append(Schedule.society_id == society_id)
+    rows = scheduling.job_rows(db, *where)
+    groups: dict[str | None, AdminDayCrew] = {}
+    if society_id is not None:
+        crew = scheduling.load_crew(db, society_id)
+        names = {r.id: r.display_name for r in db.scalars(
+            select(Login).where(Login.id.in_([c.login_id for c in crew.values()])))}
+        for c in crew.values():
+            groups[str(c.id)] = AdminDayCrew(
+                crew_id=str(c.id), crew_name=names.get(c.login_id, ""), role=c.role, jobs=[])
+    for r in rows:
+        key = str(r["crew_id"]) if r["crew_id"] else None
+        if key not in groups:
+            groups[key] = AdminDayCrew(
+                crew_id=key, crew_name=r["crew_name"] or UNASSIGNED, role=None, jobs=[])
+        groups[key].jobs.append(AdminDayJob(
+            id=str(r["id"]), time=r["start_time"], end_time=r["end_time"],
+            vehicle=r["vehicle"], registration=r["registration"], service=r["service"],
+            status=r["status"], late=r["late"]))
+    statuses = {r["schedule_status"] for r in rows}
+    done = sum(1 for r in rows if r["status"] in ("Completed", "Skipped"))
+    left = sum(1 for r in rows if r["status"] in ("Scheduled", "In progress"))
+    ordered = sorted(groups.values(), key=lambda g: (g.crew_id is None, g.crew_name))
+    return AdminDaySchedule(
+        date=day, society_id=str(society_id) if society_id else None,
+        schedule_status=(None if not statuses else
+                         statuses.pop() if len(statuses) == 1 else "Mixed"),
+        total=len(rows), done=done, left=left, crew=ordered)

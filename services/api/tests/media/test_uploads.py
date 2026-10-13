@@ -1,6 +1,8 @@
 """Signed uploads: request, send, confirm (CRW-SVC-04 to CRW-SVC-06, CRW-SVC-10)."""
 from datetime import timedelta
 
+import pytest
+
 from app.media.service import MB
 from app.platform.db import utcnow
 
@@ -100,3 +102,43 @@ def test_another_crew_member_cannot_confirm_my_upload(
     ticket = request(crew_client, signin(ravi), str(job.id)).json()
     r = crew_client.post(f"/v1/media/uploads/{ticket['id']}/confirm", headers=signin(sunil))
     assert r.status_code == 404
+
+
+@pytest.mark.parametrize("kind,limit,mime", [("photo", 10 * MB, "image/jpeg"),
+                                           ("video", 25 * MB, "video/mp4")])
+@pytest.mark.parametrize("offset,expected", [(-1, 201), (0, 422), (1, 422)])
+def test_exact_media_limits_on_upload_request(
+        crew_client, make_crew, signin, new_visit, kind, limit, mime, offset, expected):
+    member = make_crew("9000000010", "Ravi")
+    _, (job,) = new_visit(assigned=member)
+    result = request(crew_client, signin(member), str(job.id), kind=kind,
+                     content_type=mime, size_bytes=limit + offset)
+    assert result.status_code == expected, result.text
+
+
+@pytest.mark.parametrize("kind,limit,mime", [("photo", 10 * MB, "image/jpeg"),
+                                           ("video", 25 * MB, "video/mp4")])
+def test_exact_media_limit_refused_at_signed_put_and_confirmation(
+        crew_client, make_crew, signin, new_visit, store, db, kind, limit, mime):
+    from app.media.models import MediaUpload
+    import uuid
+
+    member = make_crew("9000000010", "Ravi")
+    _, (job,) = new_visit(assigned=member)
+    headers = signin(member)
+    ticket = request(crew_client, headers, str(job.id), kind=kind, content_type=mime).json()
+    assert crew_client.put(ticket["upload_url"], content=b"x" * limit).status_code == 422
+    # Simulate a store receiving invalid bytes outside the local upload route.
+    upload = db.get(MediaUpload, uuid.UUID(ticket["id"]))
+    store.put(upload.object_key, b"x" * limit)
+    result = crew_client.post(f"/v1/media/uploads/{upload.id}/confirm", headers=headers)
+    assert result.status_code == 422
+    db.expire_all()
+    assert upload.status == "requested"
+
+
+def test_rc_document_keeps_its_inclusive_five_mb_limit():
+    from app.media.service import valid_size
+
+    assert valid_size("document", 5 * MB)
+    assert not valid_size("document", 5 * MB + 1)

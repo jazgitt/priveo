@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.8: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.9: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -40,6 +40,8 @@ Rules followed:
 14. Deferred to V2 and out of scope
 
 ---
+
+Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording; see [the decision record](owner-decisions-2026-10-13.md).
 
 ## 1. Access and roles
 
@@ -339,7 +341,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-CHK-04 | The customer sees the checked items, with the time each was checked, in Service Details (SVC-03 in the customer file). | Derived |
 | ADM-CHK-05 | An edit applies to visits from then on. A deactivated or renamed item stays readable on visits already done, as it was then (like ADM-FDB-07). | Derived |
 | ADM-CHK-06 | For each service the admin sets the minimum number of photos and the minimum number of videos the crew must upload before they can mark a job complete (CRW-SVC-07, CRW-SVC-08). | Owner |
-| ADM-CHK-07 | Starting checklist for Cleaning-External, taken from the prototype: exterior body cleaned, glass cleaned, wheels cleaned, tyres dressed, final inspection completed. The starting lists for Cleaning-Internal and Deep Spa are to be supplied by the owner. | Derived and Open |
+| ADM-CHK-07 | External cleaning retains the prototype list. Use five-step samples for Cleaning-Internal and Deep Spa, editable in the portal and viewable by admin on mobile (owner decision 13 Oct 2026). Issued checklist history remains unchanged. | Owner |
 
 ---
 
@@ -358,7 +360,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-ADD-09 | Every admin action on an add-on request is recorded with the admin and the time. | Derived |
 | ADM-ADD-10 | Deep Spa is also a standalone service: a customer who has no subscription can take it (ADD-14 in the customer file). | Owner |
 | ADM-ADD-11 | A customer can therefore exist with a vehicle and no subscription. The one-time load of existing customers brings in the people who have taken only a Deep Spa in this way, with their Deep Spa as history. | Derived |
-| ADM-ADD-12 | How a standalone Deep Spa is requested, paid for and recorded for a customer without a subscription is not decided yet (ADD-15 in the customer file). | Open |
+| ADM-ADD-12 | Admin creates a customer/vehicle without a subscription; standalone Spa follows the subscriber Spa booking, UPI, scheduling, proof and history rules. Admin can create its booking too (owner decision 13 Oct 2026). | Owner |
 
 ## 10. Business rules
 
@@ -459,8 +461,8 @@ For your reference when you write the data model. This is a reading of the requi
 
 Open from the crew work and the review:
 
-1. The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07). The owner will supply them later.
-2. How a customer without a subscription requests, pays for and follows a standalone Deep Spa (ADM-ADD-12, ADD-15). The owner will decide later.
+Resolved 13 Oct 2026: use editable five-step samples for ADM-CHK-07, with mobile read access.
+Resolved 13 Oct 2026: standalone Spa uses the same rules as subscriber add-on Spa; see [the owner decisions](owner-decisions-2026-10-13.md).
 
 Answered during the review: Deep Spa is bought separately, as an add-on by subscribers and as a standalone service by others (revised 10 Oct 2026), and is separate from the day's plan visit; the customer proposes one date and a finish-by time; scheduling does not wait for payment; the customer can change or cancel until 9 PM the day before; a job that cannot fit goes to the admin's list; the plan is chosen before service preferences when a customer adds a vehicle; a Trainee has no jobs when the paired Member is absent; sign-in limits are as written in AUTH-05 to AUTH-13; the customer can change names, mobile number, parking, vehicle photo, cutoff time and interior day in the onboarding review; the first payment is asked only if Due or Over due; ratings are general; one crew card for each job; a skipped interior day is lost for that week; Deep Spa is 2 hours and Internal is 20 minutes; a plan change starts at the next renewal; Missed shows "Missed. Rescheduled on dd-Mon-yy"; crew roles and privileges.
 
@@ -477,8 +479,8 @@ Answered during the review: Deep Spa is bought separately, as an add-on by subsc
 
 ### To be specified later by the owner
 
-- The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07).
-- The standalone Deep Spa flow for a customer without a subscription (ADM-ADD-12).
+- Starting checklists were resolved on 13 Oct 2026 (ADM-CHK-07).
+- Standalone Spa flow was resolved on 13 Oct 2026 (ADM-ADD-12).
 
 ### Out of scope for this file
 

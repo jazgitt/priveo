@@ -1,3 +1,5 @@
+import 'package:priveo/features/customer/account/account_data.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,9 @@ import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
+import 'package:priveo/core/network/read_refresh.dart';
+import 'package:priveo/features/admin_quick/data/admin_quick_models.dart';
+import 'package:priveo/features/admin_quick/data/admin_quick_repository.dart';
 import 'package:priveo/features/auth/data/auth_repository.dart';
 import 'package:priveo/features/crew/crew_providers.dart';
 import 'package:priveo/features/crew/upload/upload_queue.dart';
@@ -134,9 +139,6 @@ class FakePriveoApi implements PriveoApi {
   }
 
   @override
-  Future<CrewHome> crewHome() async => CrewHome.fromJson(crewJson);
-
-  @override
   Future<AdminHome> adminHome() async => AdminHome.fromJson(adminJson);
 
   @override
@@ -249,32 +251,6 @@ const onboardingJson = {
   ],
 };
 
-const crewJson = {
-  'date': '2026-11-07',
-  'society': 'Green Meadows',
-  'total': 2,
-  'done': 1,
-  'left': 1,
-  'jobs': [
-    {
-      'id': 'j1',
-      'time': '07:00',
-      'vehicle': 'MH 12 AB 1234',
-      'parking': 'B2-14',
-      'service': 'Cleaning-External',
-      'status': 'Done',
-    },
-    {
-      'id': 'j2',
-      'time': '07:20',
-      'vehicle': 'MH 12 CD 5678',
-      'parking': 'B2-15',
-      'service': 'Cleaning-Internal',
-      'status': 'Pending',
-    },
-  ],
-};
-
 const adminJson = {
   'alert_count': 3,
   'needs_scheduling_count': 2,
@@ -288,26 +264,65 @@ const adminJson = {
   ],
 };
 
+/// The admin home reads its own endpoint. Everything else is not used by the
+/// app tests, so it goes to a Dio with no server.
+class FakeAdminQuickHome extends ApiAdminQuickRepository {
+  FakeAdminQuickHome() : super(Dio());
+
+  @override
+  Future<QuickHome> home() async => QuickHome.fromJson(adminJson);
+}
+
 /// Starts the real app with fake data sources.
+/// The customer's account calls with one thing: whether each vehicle has its
+/// photo (ONB-22). Everything else answers with nothing.
+class PhotoAccount implements AccountRepository {
+  PhotoAccount({this.hasPhoto = true});
+
+  bool hasPhoto;
+
+  @override
+  Future<VehicleAccountDto> vehicleAccount(String vehicleId) async =>
+      VehicleAccountDto(
+        id: vehicleId,
+        parkingBasement: '',
+        parkingNumber: '',
+        photoUrl: hasPhoto ? 'https://media.test/car.jpg' : null,
+        rcStatus: 'Not uploaded',
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName}');
+}
+
 Future<ProviderContainer> pumpApp(
   WidgetTester tester, {
+  AccountRepository? account,
   SessionStore? store,
   FakeAuthRepository? auth,
   FakePriveoApi? api,
   Brightness brightness = Brightness.light,
 }) async {
   final crewBackend = FakeCrewBackend();
+  final uploadQueue = UploadQueue(api: crewBackend,
+      store: MemoryUploadQueueStore(), retryAfter: Duration.zero);
+  addTearDown(uploadQueue.dispose);
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   final container = ProviderContainer(overrides: [
+    readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
     appConfigProvider.overrideWithValue(AppConfig.dev),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
     apiProvider.overrideWithValue(api ?? FakePriveoApi()),
+    accountRepositoryProvider.overrideWithValue(account ?? PhotoAccount()),
+    adminQuickRepositoryProvider.overrideWithValue(FakeAdminQuickHome()),
     // The crew home reads its own endpoints and starts the upload queue. A
     // test has no network, no SQLite and no connectivity plugin.
     crewRepositoryProvider.overrideWithValue(crewBackend),
     uploadApiProvider.overrideWithValue(crewBackend),
+    uploadQueueProvider.overrideWithValue(uploadQueue),
     uploadQueueStoreProvider.overrideWithValue(MemoryUploadQueueStore()),
     onlineEventsProvider.overrideWithValue(null),
   ]);
@@ -323,4 +338,10 @@ Future<ProviderContainer> pumpApp(
 Future<void> passSplash(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 3));
   await tester.pumpAndSettle();
+  // The sign-in starts on the welcome screen (AUTH-01).
+  final start = find.text('Get started');
+  if (start.evaluate().isNotEmpty) {
+    await tester.tap(start);
+    await tester.pumpAndSettle();
+  }
 }

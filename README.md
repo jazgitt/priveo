@@ -2,17 +2,25 @@
 
 A subscription car-care service for housing societies. A customer pays per vehicle for a daily exterior clean, with interior cleaning on a chosen day, and an optional Deep Spa that is bought separately: as an add-on by a subscriber, or as a standalone service by a customer without a subscription. The crew does each job in the society's parking basement and sends proof of every job: a checklist, photos and a video. A Flutter app on iOS and Android serves customers and crew, with a small set of admin quick actions. Admins do their full work on a React web portal. The role on each login decides what appears.
 
-This repository currently holds the product requirements and the prototype material they were built from. There is no application code yet.
+The repository includes a FastAPI backend, a Flutter customer/crew app and a React admin portal. Development is on `integration/complete-build`; `main` does not yet contain all integrated work. See [the current handoff and remaining implementation plan](docs/codex-handoff-plan.md) for progress, verification and remaining gaps.
+
+For synthetic manual testing, see [the scenario catalogue, full/partial seed commands and E2E plan](docs/testing/test-data-plan.md). The fixture tool supports a dedicated local database with one Admin login and independently resettable Customer/Crew scenarios.
+
+Implementation packages through the owner-approved standalone Spa, GST, checklist and optional-planning work are committed and pushed as `2c3ba73` on `integration/complete-build`. The owner has now authorized tests and coverage improvements. Fresh coverage exceeds 90% of executable lines for Customer, Crew, Admin Mobile, Admin Web and shared code; see [the measured report](docs/coverage/unit-test-coverage.md). Coverage improvements are uncommitted. Migrations 0024-0028 remain unapplied to the application database; deployment and live integration are pending.
 
 ## Requirements
+
+Packages P01-P07, P08/P11 sources and owner-approved P12/GST/checklist/optional-planning changes are implemented and committed in `2c3ba73`; the fresh automated suites now pass as recorded in the measured coverage report. Automatic planning is disabled by default and requires an admin-selected IST time. Environment mocks preserve existing local values; real integration is deferred. The [audit](docs/coverage/requirements-audit.md) has 392 Implemented source rows, 34 Partial and 0 Open. Migrations 0024-0028 are unapplied. Immediate real-time refresh, PDF save/share/inline proof, P10 push, S3 and date/security/release work remain pending.
+
+The [full source audit](docs/coverage/requirements-audit.md) replaces the old coverage summaries: 426 requirement rows, 67 business rules and 67 entity bullets, with separate implementation, test-source and functional-script findings. Remaining work includes correctness and UI gaps beyond the Step 5 integrations. No tests were run for this audit.
 
 All three documents are drafts for the MVP (Phase 1). Each requirement has an ID, so items can be added, removed or reprioritised without renumbering the rest.
 
 | Document | Version | Covers |
 |---|---|---|
-| [`docs/reqs/customer-app-functional-requirements.md`](docs/reqs/customer-app-functional-requirements.md) | v0.5 | Onboarding, plan choice, UPI payment, home, calendar, proof of service, skip and pause, account, subscription, vehicles, complaints, feedback, monthly check-in, notifications |
-| [`docs/reqs/admin-functional-requirements.md`](docs/reqs/admin-functional-requirements.md) | v0.4 | Customers and subscriptions, crew, services and slots, capacity, payments and invoices, scheduler with draft and freeze, complaints, feedback, reference data, checklists |
-| [`docs/reqs/crew-functional-requirements.md`](docs/reqs/crew-functional-requirements.md) | v0.1 | Login, job cards, performing a job with checklist and proof, could-not-complete, Manager features |
+| [`docs/reqs/customer-app-functional-requirements.md`](docs/reqs/customer-app-functional-requirements.md) | v0.11 | Onboarding, plan choice, UPI payment, home, calendar, proof of service, skip and pause, account, subscription, vehicles, complaints, feedback, monthly check-in, notifications |
+| [`docs/reqs/admin-functional-requirements.md`](docs/reqs/admin-functional-requirements.md) | v0.9 | Customers and subscriptions, crew, services and slots, capacity, payments and invoices, scheduler with draft and freeze, complaints, feedback, reference data, checklists |
+| [`docs/reqs/crew-functional-requirements.md`](docs/reqs/crew-functional-requirements.md) | v0.5 | Login, job cards, performing a job with checklist and proof, could-not-complete, Manager features |
 
 Start with the customer document, then admin, then crew. Each file ends with its open questions and its V2 list.
 

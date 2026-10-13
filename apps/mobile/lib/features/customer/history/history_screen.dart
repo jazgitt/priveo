@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
+import '../../../core/providers.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../cust_strings.dart';
 import '../cust_ui.dart';
 import '../data/customer_reads_repository.dart';
+import '../data/proof_reads_repository.dart';
 import '../home/customer_home_data.dart';
 import '../visit/visit_details_screen.dart';
+import '../visit/visit_strings.dart';
 
 /// Opens the service history over the current screen.
 void openHistory(BuildContext context) {
@@ -17,77 +24,236 @@ void openHistory(BuildContext context) {
   ).push(MaterialPageRoute<void>(builder: (_) => const HistoryScreen()));
 }
 
-/// Visits that are over, newest first, for the selected vehicle (SVC-09).
-class HistoryScreen extends ConsumerWidget {
+/// A page of history is this many visits (the API's default).
+const _pageSize = 30;
+
+final importedHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(readRefreshProvider);
+  final response = await ref.watch(dioProvider).get<List<dynamic>>('/v1/customer/history/imported');
+  return (response.data ?? []).cast<Map<String, dynamic>>();
+});
+
+String _monthKey(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
+
+DateTime _monthStart(String key) {
+  final p = key.split('-');
+  return DateTime(int.parse(p[0]), int.parse(p[1]));
+}
+
+/// Visits that are over, one month at a time, newest first, for the selected
+/// vehicle (SVC-09, HIST-01, HIST-02). It starts at the current month.
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final home = ref.watch(customerHomeProvider).value;
-    String? vehicleId;
-    if (home != null && home.vehicles.isNotEmpty) {
-      vehicleId = home
-          .vehicles[selectedIndex(
-            home.vehicles,
-            ref.watch(selectedVehicleProvider),
-          )]
-          .id;
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  late String _month = _monthKey(DateTime.now());
+  List<HistoryItemDto> _items = const [];
+  bool _loading = true;
+  bool _more = false;
+  Object? _error;
+  String? _vehicleId;
+  bool _started = false;
+
+  String? _selectedVehicle() {
+    final home = ref.read(customerHomeProvider).value;
+    if (home == null || home.vehicles.isEmpty) return null;
+    return home
+        .vehicles[selectedIndex(home.vehicles, ref.read(selectedVehicleProvider))]
+        .id;
+  }
+
+  Future<void> _load({bool append = false}) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final page = await ref
+          .read(proofReadsProvider)
+          .historyMonth(
+            _month,
+            vehicleId: _vehicleId,
+            offset: append ? _items.length : 0,
+          );
+      if (!mounted) return;
+      setState(() {
+        _items = append ? [..._items, ...page] : page;
+        _more = page.length >= _pageSize;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
     }
+  }
+
+  void _shift(int months) {
+    final d = _monthStart(_month);
+    _month = _monthKey(DateTime(d.year, d.month + months));
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(readRefreshProvider, (_, next) {
+      if (next.hasValue && !_loading) _load();
+    });
+    if (!_started) {
+      _started = true;
+      _vehicleId = _selectedVehicle();
+      Future.microtask(_load);
+    }
+    final meta = ref.watch(historyMetaProvider(_vehicleId)).value;
     final text = Theme.of(context).textTheme;
     final b = context.brand;
+    final current = _monthKey(DateTime.now());
+    final earliest = meta?.earliestMonth;
+    final canGoBack = earliest == null || _month.compareTo(earliest) > 0;
+    final canGoForward = _month.compareTo(current) < 0;
+    final label = DateFormat('MMMM yyyy').format(_monthStart(_month));
     return CustPage(
       title: CustStrings.historyTitle,
-      body: AsyncBody<List<HistoryItemDto>>(
-        value: ref.watch(historyProvider(vehicleId)),
-        onRetry: () => ref.invalidate(historyProvider(vehicleId)),
-        builder: (items) {
-          if (items.isEmpty) {
-            return Center(child: Text(CustStrings.historyEmpty));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final h = items[i];
-              final completed = h.status == 'Completed';
-              return Card(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: completed
-                      ? () => openVisitDetails(context, h.visitId)
-                      : null,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
+      body: Column(
+        children: [
+          ref.watch(importedHistoryProvider).when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => TextButton(onPressed: () => ref.invalidate(importedHistoryProvider),
+                child: const Text('Retry imported service history')),
+            data: (records) => records.isEmpty ? const SizedBox.shrink() : ConstrainedBox(constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView(shrinkWrap: true, children: [
+                const ListTile(title: Text('Imported service history · all dates')),
+                for (final record in records)
+                  if (_vehicleId == null || record['vehicle_id'] == _vehicleId || record['vehicle_id'] == null)
+                    ListTile(title: Text('${record['service']} · ${record['date'] == null ? 'Date unknown' : formatDate(DateTime.parse(record['date'] as String))}'),
+                      subtitle: Text('Imported record · ${record['vehicle']}\nCompletion not recorded · Payment ${record['payment_status'] ?? 'unknown'}\n${record['notes'] ?? ''}')),
+              ])),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: CustStrings.previousMonth,
+                  onPressed: canGoBack ? () => _shift(-1) : null,
+                  icon: const Icon(Symbols.chevron_left_rounded),
+                ),
+                Expanded(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: text.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: CustStrings.nextMonth,
+                  onPressed: canGoForward ? () => _shift(1) : null,
+                  icon: const Icon(Symbols.chevron_right_rounded),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _body(context, text, b)),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              VisitStrings.historyFooter(
+                label,
+                meta?.memberSince == null
+                    ? null
+                    : formatDate(meta!.memberSince!),
+              ),
+              style: text.bodySmall?.copyWith(color: b.mute),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, TextTheme text, BrandColors b) {
+    if (_loading && _items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _items.isEmpty) {
+      return ErrorView(
+        message: _error is ApiFailure ? (_error as ApiFailure).message : null,
+        onRetry: _load,
+      );
+    }
+    if (_items.isEmpty) {
+      return Center(child: Text(VisitStrings.historyMonthEmpty));
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: _items.length + (_more ? 1 : 0),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        if (i == _items.length) {
+          return TextButton(
+            onPressed: _loading ? null : () => _load(append: true),
+            child: const Text(VisitStrings.loadMore),
+          );
+        }
+        final h = _items[i];
+        final completed = h.status == 'Completed';
+        return Card(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: completed
+                ? () => openVisitDetails(context, h.visitId)
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(formatDate(h.date), style: text.titleSmall),
-                              const SizedBox(height: 4),
-                              Text(
-                                [
-                                  h.services.join(' + '),
-                                  if (h.photoCount > 0)
-                                    CustStrings.photoCount(h.photoCount),
-                                ].where((s) => s.isNotEmpty).join('  ·  '),
-                                style: text.bodySmall?.copyWith(color: b.mute),
-                              ),
-                            ],
-                          ),
+                        Text(
+                          [
+                            formatDate(h.date),
+                            if (h.finishedAt != null)
+                              VisitStrings.finishedShort(h.finishedAt!),
+                          ].join('  ·  '),
+                          style: text.titleSmall,
                         ),
-                        StatusChip(h.status, tone: statusTone(h.status)),
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            h.services.join(' + '),
+                            if (h.photoCount > 0)
+                              CustStrings.photoCount(h.photoCount),
+                          ].where((s) => s.isNotEmpty).join('  ·  '),
+                          style: text.bodySmall?.copyWith(color: b.mute),
+                        ),
+                        if (completed) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            h.rating == null
+                                ? VisitStrings.noRating
+                                : VisitStrings.stars(h.rating!),
+                            style: text.bodySmall?.copyWith(color: b.mute),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                  StatusChip(h.status, tone: statusTone(h.status)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

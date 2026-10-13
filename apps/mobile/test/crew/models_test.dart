@@ -6,6 +6,15 @@ import 'package:priveo/features/crew/data/crew_repository.dart';
 import 'support.dart';
 
 void main() {
+  for (final video in [false, true]) {
+    test('capture enforces strict ${video ? 'video' : 'photo'} size boundary', () {
+      final limit = video ? maxVideoBytes : maxPhotoBytes;
+      final mime = video ? 'video/mp4' : 'image/heic';
+      expect(checkCapture(video: video, contentType: mime, bytes: limit - 1), isNull);
+      expect(checkCapture(video: video, contentType: mime, bytes: limit), isNotNull);
+      expect(checkCapture(video: video, contentType: mime, bytes: limit + 1), isNotNull);
+    });
+  }
   test('a visit list maps the cards and the counts', () {
     final v = CrewVisitList.fromJson({
       'date': '2026-11-07',
@@ -116,18 +125,18 @@ void main() {
     test('photos are under 10 MB and videos under 25 MB', () {
       const mb = 1024 * 1024;
       expect(
-          checkCapture(video: false, contentType: 'image/jpeg', bytes: 10 * mb),
+          checkCapture(video: false, contentType: 'image/jpeg', bytes: 10 * mb - 1),
           isNull);
       expect(
           checkCapture(
-              video: false, contentType: 'image/jpeg', bytes: 10 * mb + 1),
+              video: false, contentType: 'image/jpeg', bytes: 10 * mb),
           CaptureProblem.tooLarge);
       expect(
-          checkCapture(video: true, contentType: 'video/mp4', bytes: 25 * mb),
+          checkCapture(video: true, contentType: 'video/mp4', bytes: 25 * mb - 1),
           isNull);
       expect(
           checkCapture(
-              video: true, contentType: 'video/mp4', bytes: 25 * mb + 1),
+              video: true, contentType: 'video/mp4', bytes: 25 * mb),
           CaptureProblem.tooLarge);
       expect(checkCapture(video: false, contentType: null, bytes: 5),
           CaptureProblem.format);

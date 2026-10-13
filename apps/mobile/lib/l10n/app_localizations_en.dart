@@ -1313,4 +1313,681 @@ class AppLocalizationsEn extends AppLocalizations {
   String money_addonDuration(int minutes) {
     return '$minutes minutes';
   }
+
+  @override
+  String get adminq_home_complaints => 'Complaints';
+
+  @override
+  String get adminq_home_feedback => 'Feedback and ratings';
+
+  @override
+  String get adminq_home_needs_scheduling => 'Needs scheduling';
+
+  @override
+  String get adminq_home_day => 'Day schedule';
+
+  @override
+  String get adminq_home_capacity => 'Capacity';
+
+  @override
+  String get adminq_home_open_complaints => 'Open complaints';
+
+  @override
+  String get adminq_home_to_confirm => 'To confirm';
+
+  @override
+  String adminq_home_more_payments(String count) {
+    return '$count more to confirm';
+  }
+
+  @override
+  String get adminq_filter_all => 'All';
+
+  @override
+  String get adminq_status_raised => 'Raised';
+
+  @override
+  String get adminq_status_in_progress => 'In progress';
+
+  @override
+  String get adminq_status_resolved => 'Resolved';
+
+  @override
+  String get adminq_complaints_title => 'Complaints';
+
+  @override
+  String get adminq_complaints_empty => 'No complaints.';
+
+  @override
+  String get adminq_complaint_overdue => 'Open for more than 4 hours';
+
+  @override
+  String adminq_complaint_raised_on(String date) {
+    return 'Raised $date';
+  }
+
+  @override
+  String get adminq_complaint_status => 'Status';
+
+  @override
+  String get adminq_complaint_note_hint => 'Write a note';
+
+  @override
+  String get adminq_complaint_note_required => 'Write a note first.';
+
+  @override
+  String get adminq_complaint_add_note => 'Add note';
+
+  @override
+  String get adminq_complaint_save_status => 'Save status';
+
+  @override
+  String get adminq_complaint_saved => 'Saved.';
+
+  @override
+  String get adminq_complaint_thread => 'History';
+
+  @override
+  String get adminq_complaint_by_customer => 'Customer';
+
+  @override
+  String get adminq_complaint_by_admin => 'Priveo';
+
+  @override
+  String adminq_complaint_status_changed(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get adminq_feedback_title => 'Feedback and ratings';
+
+  @override
+  String get adminq_feedback_empty => 'No feedback yet.';
+
+  @override
+  String get adminq_feedback_ratings => 'Visit ratings';
+
+  @override
+  String adminq_feedback_average(String average, String count) {
+    return 'Average $average from $count ratings';
+  }
+
+  @override
+  String get adminq_feedback_no_ratings => 'No ratings yet.';
+
+  @override
+  String adminq_feedback_stars(String n) {
+    return '$n stars';
+  }
+
+  @override
+  String get adminq_needs_title => 'Needs scheduling';
+
+  @override
+  String get adminq_needs_empty => 'Every job has a crew member.';
+
+  @override
+  String get adminq_day_title => 'Day schedule';
+
+  @override
+  String adminq_day_summary(String total, String done, String left) {
+    return '$total jobs, $done done, $left left';
+  }
+
+  @override
+  String get adminq_day_empty => 'No jobs on this date.';
+
+  @override
+  String adminq_day_status(String status) {
+    return 'Schedule: $status';
+  }
+
+  @override
+  String get adminq_day_all_societies => 'All societies';
+
+  @override
+  String get adminq_day_previous => 'Previous day';
+
+  @override
+  String get adminq_day_next => 'Next day';
+
+  @override
+  String get adminq_day_late => 'Late';
+
+  @override
+  String get adminq_day_no_time => 'No time';
+
+  @override
+  String get adminq_capacity_title => 'Capacity';
+
+  @override
+  String get adminq_capacity_empty => 'Choose a society to see its capacity.';
+
+  @override
+  String adminq_capacity_line(
+    String capacity,
+    String demand,
+    String scheduled,
+  ) {
+    return 'Crew $capacity min, work $demand min, placed $scheduled min';
+  }
+
+  @override
+  String get adminq_capacity_over => 'Over capacity';
+
+  @override
+  String get adminq_capacity_previous => 'Previous week';
+
+  @override
+  String get adminq_capacity_next => 'Next week';
+
+  @override
+  String get adminq_society => 'Society';
+
+  @override
+  String get cust_proof_crew_line => 'Priveo crew';
+
+  @override
+  String get cust_proof_crew_pending => 'Crew member not assigned yet';
+
+  @override
+  String get cust_proof_checklist_heading => 'Checklist';
+
+  @override
+  String get cust_proof_after_label => 'AFTER';
+
+  @override
+  String get cust_proof_rate_clean => 'Rate this clean';
+
+  @override
+  String get cust_proof_change_rating => 'Change rating';
+
+  @override
+  String get cust_proof_report_issue => 'Report an issue with this clean';
+
+  @override
+  String get cust_proof_load_more => 'Load more';
+
+  @override
+  String get cust_proof_no_rating => 'Not rated';
+
+  @override
+  String get cust_proof_history_month_empty => 'No services in this month.';
+
+  @override
+  String get cust_proof_today_done => 'Today\'s clean is done';
+
+  @override
+  String get cust_proof_view_proof => 'View proof';
+
+  @override
+  String get cust_proof_rate_today => 'Rate today\'s clean';
+
+  @override
+  String get money_invoiceCopy => 'Copy invoice';
+
+  @override
+  String get money_invoiceCopied => 'Invoice copied.';
+
+  @override
+  String get money_invoiceEmail => 'Email invoice';
+
+  @override
+  String get money_invoiceNoMail => 'No email app was found on this phone.';
+
+  @override
+  String get support_faq => 'Frequently asked questions';
+
+  @override
+  String get support_faq_empty => 'There are no questions yet.';
+
+  @override
+  String get support_feedback_tab => 'Feedback';
+
+  @override
+  String get auth_welcome_title => 'Welcome to Priveo';
+
+  @override
+  String get auth_get_started => 'Get started';
+
+  @override
+  String get auth_already_member => 'Already a member? Log in';
+
+  @override
+  String get auth_email_invalid => 'Enter a valid email address.';
+
+  @override
+  String get auth_terms_prefix => 'By continuing you accept the ';
+
+  @override
+  String get auth_terms_link => 'Terms';
+
+  @override
+  String get auth_terms_and => ' and the ';
+
+  @override
+  String get auth_privacy_link => 'Privacy Policy';
+
+  @override
+  String get auth_terms_suffix => '.';
+
+  @override
+  String get auth_call_support => 'Call support';
+
+  @override
+  String get auth_whatsapp_support => 'WhatsApp support';
+
+  @override
+  String get crew_mgr_attendance => 'Attendance';
+
+  @override
+  String get crew_mgr_working_hours => 'Working hours';
+
+  @override
+  String get crew_mgr_present => 'Present';
+
+  @override
+  String get crew_mgr_sick => 'Sick';
+
+  @override
+  String get crew_mgr_leave => 'Leave';
+
+  @override
+  String get crew_mgr_late_start => 'Late start';
+
+  @override
+  String get crew_mgr_day_off => 'Day off';
+
+  @override
+  String get crew_mgr_working => 'Working';
+
+  @override
+  String get crew_mgr_start_time => 'Start';
+
+  @override
+  String get crew_mgr_end_time => 'End';
+
+  @override
+  String get crew_mgr_save => 'Save';
+
+  @override
+  String get crew_mgr_hours_saved => 'Working hours saved.';
+
+  @override
+  String get crew_mgr_attendance_saved => 'Attendance saved.';
+
+  @override
+  String get crew_mgr_late_start_from => 'Starts at';
+
+  @override
+  String get crew_mgr_choose_late_start => 'Choose the start time';
+
+  @override
+  String get crew_mgr_no_crew => 'No crew members.';
+
+  @override
+  String get crew_mgr_cannot_reassign => 'Cannot take this job';
+
+  @override
+  String crew_mgr_open_jobs_count(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open jobs',
+      one: '1 open job',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_mgr_late_start_at(String time) {
+    return 'Late start, from $time';
+  }
+
+  @override
+  String crew_mgr_released_moved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs moved to someone else',
+      one: '1 job moved to someone else',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String crew_mgr_released_waiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs need scheduling',
+      one: '1 job needs scheduling',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addVehicleTitle => 'Add vehicle';
+
+  @override
+  String get addVehicleSociety => 'Society';
+
+  @override
+  String get addVehicleCar => 'Vehicle details';
+
+  @override
+  String get addVehicleParking => 'Parking';
+
+  @override
+  String get addVehiclePlan => 'Plan';
+
+  @override
+  String get addVehiclePreferences => 'Service preferences';
+
+  @override
+  String get addVehicleReview => 'Review and payment';
+
+  @override
+  String get addVehicleSearch => 'Search societies';
+
+  @override
+  String get addVehicleNoSocieties =>
+      'No serviced societies available at the moment.';
+
+  @override
+  String get addVehicleSocietyFixed =>
+      'Your vehicle\'s society cannot be changed after it is added.';
+
+  @override
+  String get addVehicleMake => 'Make';
+
+  @override
+  String get addVehicleModel => 'Model';
+
+  @override
+  String get addVehicleVariant => 'Variant';
+
+  @override
+  String get addVehicleStandard => 'Standard';
+
+  @override
+  String get addVehicleAuto => 'Auto-detected';
+
+  @override
+  String get addVehicleRegistration => 'Registration number';
+
+  @override
+  String get addVehiclePhoto => 'Add vehicle photo (required)';
+
+  @override
+  String get addVehicleReplacePhoto => 'Replace vehicle photo';
+
+  @override
+  String get addVehicleRc => 'Upload RC document (optional)';
+
+  @override
+  String get addVehicleRcUploaded => 'RC uploaded Â· Replace';
+
+  @override
+  String get addVehicleRcLimit =>
+      'Choose a JPG, PNG or PDF document up to 5 MB.';
+
+  @override
+  String get addVehicleBasement => 'Basement';
+
+  @override
+  String get addVehicleParkingNumber => 'Parking number';
+
+  @override
+  String get addVehicleCancel => 'Cancel anytime';
+
+  @override
+  String get addVehicleCutoff => 'Service cutoff time';
+
+  @override
+  String get addVehicleSlotNote =>
+      'Choose when your clean should be finished. Priveo assigns the exact slot.';
+
+  @override
+  String get addVehicleInterior => 'Interior care day';
+
+  @override
+  String get addVehicleTotal => 'Total payable today includes GST.';
+
+  @override
+  String get addVehicleStartNote => 'Priveo will confirm the start date.';
+
+  @override
+  String get addVehicleBack => 'Back';
+
+  @override
+  String get addVehicleConfirm => 'Confirm & pay';
+
+  @override
+  String get addVehicleRequired =>
+      'Complete the required details before continuing.';
+
+  @override
+  String get addonChangeRequest => 'Change requested, awaiting Priveo';
+
+  @override
+  String get addonChangeAction => 'Change date or time';
+
+  @override
+  String get addonNoOffers => 'No add-ons are available at the moment.';
+
+  @override
+  String get addonSupportClosed => 'Changes are closed. Call support for help.';
+
+  @override
+  String get addonViewProof => 'View service details';
+
+  @override
+  String get adminCustomers => 'Customers';
+
+  @override
+  String get adminCustomerSearch =>
+      'Search name, mobile, registration or society';
+
+  @override
+  String get adminNoCustomers => 'No customers found.';
+
+  @override
+  String get adminCustomerDetails => 'Customer details';
+
+  @override
+  String get adminEmailVerified => 'Email verified';
+
+  @override
+  String get adminYes => 'Yes';
+
+  @override
+  String get adminNo => 'No';
+
+  @override
+  String get adminFromDate => 'From date';
+
+  @override
+  String get adminToDate => 'To date';
+
+  @override
+  String get adminSkipDate => 'Skip date';
+
+  @override
+  String get adminPause => 'Pause';
+
+  @override
+  String get adminRenewal => 'Renewal';
+
+  @override
+  String get adminUnskip => 'Un-skip';
+
+  @override
+  String get adminEndPause => 'End pause';
+
+  @override
+  String get adminOperations => 'Operations';
+
+  @override
+  String get adminQueue => 'Queue';
+
+  @override
+  String get adminMissedJobs => 'Missed jobs';
+
+  @override
+  String get adminScheduledWork => 'Scheduled work';
+
+  @override
+  String get adminOutcomeHistory => 'Resolution history';
+
+  @override
+  String get adminSocietyFilter => 'Society filter';
+
+  @override
+  String get adminAllSocieties => 'All societies';
+
+  @override
+  String get adminFailureReason => 'Failure reason';
+
+  @override
+  String get adminAllReasons => 'All reasons';
+
+  @override
+  String get adminClearDates => 'Clear dates';
+
+  @override
+  String get adminNoJobs => 'No jobs match these filters.';
+
+  @override
+  String get adminMissed => 'Missed';
+
+  @override
+  String get adminUnassigned => 'Unassigned';
+
+  @override
+  String get adminCoveredOn =>
+      'Covered by the next dayâ€™s regular Exterior service on';
+
+  @override
+  String get adminRescheduledOn => 'Rescheduled on';
+
+  @override
+  String get adminAssigned => 'Assigned';
+
+  @override
+  String get adminNeedsAssignment => 'Needs scheduling';
+
+  @override
+  String get adminOperationsReason => 'Operations reason';
+
+  @override
+  String get adminOptionalReason => 'No reason selected';
+
+  @override
+  String get adminOutcomeNote => 'Outcome note';
+
+  @override
+  String get adminExteriorExtension =>
+      'Skipping adds one day to the plan and moves unpaid renewal dates.';
+
+  @override
+  String get adminSpaSkip =>
+      'Skipping does not extend the plan. Handle any refund or rebooking separately.';
+
+  @override
+  String get adminInteriorSkip =>
+      'Skipping loses this Interior service and does not extend the plan.';
+
+  @override
+  String get adminSkipJob => 'Skip job by operations';
+
+  @override
+  String get adminRetryNextDay => 'Reschedule for next day';
+
+  @override
+  String get adminSkipVisit => 'Skip remaining jobs on this visit';
+
+  @override
+  String get adminCrew => 'Crew';
+
+  @override
+  String get adminNoCrew => 'No crew found.';
+
+  @override
+  String get adminAddException => 'Add crew exception';
+
+  @override
+  String get adminExceptionType => 'Exception type';
+
+  @override
+  String get adminSick => 'Sick';
+
+  @override
+  String get adminLeave => 'Leave';
+
+  @override
+  String get adminLateStart => 'Late start';
+
+  @override
+  String get adminStartTime => 'Start time';
+
+  @override
+  String get adminSave => 'Save';
+
+  @override
+  String get adminAddonRequests => 'Add-on requests';
+
+  @override
+  String get adminStatusFilter => 'Status filter';
+
+  @override
+  String get adminAllStatuses => 'All statuses';
+
+  @override
+  String get adminNoAddons => 'No add-on requests.';
+
+  @override
+  String get adminStandaloneRequest => 'Standalone request';
+
+  @override
+  String get adminChangeRequested => 'Change requested';
+
+  @override
+  String get adminCheckins => 'Monthly check-in results';
+
+  @override
+  String get adminNoCheckins => 'No check-in results.';
+
+  @override
+  String get adminOperationsForDay => 'Operations for this day';
+
+  @override
+  String get invoiceOpenPdf => 'Open invoice PDF';
+
+  @override
+  String get invoicePdfTitle => 'Invoice PDF';
+
+  @override
+  String get invoicePdfUnavailable =>
+      'The invoice PDF could not be opened. Please try again.';
+
+  @override
+  String get proofVideoTitle => 'Proof video';
+
+  @override
+  String get proofVideoUnavailable =>
+      'The video could not be played. Check your connection and try again.';
+
+  @override
+  String get proofVideoMissing =>
+      'This video is no longer available for this visit.';
+
+  @override
+  String get proofVideoPlay => 'Play';
+
+  @override
+  String get proofVideoPause => 'Pause';
+
+  @override
+  String get proofVideoReplay => 'Replay';
 }

@@ -6,6 +6,7 @@ placed to use as much of the crew's time as possible. A job that cannot meet
 its finish-by time is still placed when it fits, and flagged late; a job that
 fits nowhere is returned as unplaced with a reason.
 """
+
 from dataclasses import dataclass, field
 
 from ortools.sat.python import cp_model
@@ -13,8 +14,8 @@ from ortools.sat.python import cp_model
 STEP = 5  # Start times fall on a grid of 5 minutes.
 
 _PLACED = 1_000_000_000  # per minute of work placed: capacity use comes first
-_LATE = 10_000_000       # then meeting the cutoff times
-_EARLY = 1               # then earlier starts
+_LATE = 10_000_000  # then meeting the cutoff times
+_EARLY = 1  # then earlier starts
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class SolverJob:
     duration: int
     finish_by: int | None = None
     fixed: tuple[str, int] | None = None  # (crew key, start minute)
+    windows: tuple[tuple[int, int], ...] | None = None
 
 
 @dataclass
@@ -44,8 +46,9 @@ def _up(minutes: int) -> int:
     return -(-minutes // STEP)
 
 
-def solve_day(crew: list[SolverCrew], jobs: list[SolverJob],
-              max_seconds: float = 10.0) -> SolverResult:
+def solve_day(
+    crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float = 10.0
+) -> SolverResult:
     result = SolverResult()
     crew_by_key = {c.key: c for c in crew}
     free: list[SolverJob] = []
@@ -72,8 +75,7 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob],
 
     for job in kept:
         crew_key, start = job.fixed
-        interval = model.NewFixedSizeIntervalVar(start // STEP, _up(job.duration),
-                                                 f"fix_{job.key}")
+        interval = model.NewFixedSizeIntervalVar(start // STEP, _up(job.duration), f"fix_{job.key}")
         per_crew[crew_key].append(interval)
         per_vehicle.setdefault(job.vehicle, []).append(interval)
 
@@ -84,13 +86,22 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob],
 
     for job in free:
         dur = _up(job.duration)
-        fits = [c for c in crew if _up(c.start) + dur <= c.end // STEP]
+        allowed = job.windows if job.windows is not None else ((0, 1440),)
+        domains = [[_up(s), e // STEP - dur] for s, e in allowed if _up(s) + dur <= e // STEP]
+        if not domains:
+            result.unplaced[job.key] = "No working slot allows this service that day."
+            continue
+        fits = [
+            c
+            for c in crew
+            if any(
+                max(_up(c.start), lo) + dur <= min(c.end // STEP, hi + dur) for lo, hi in domains
+            )
+        ]
         if not fits:
             result.unplaced[job.key] = "No crew member's hours are long enough for this job."
             continue
-        lo = min(_up(c.start) for c in fits)
-        hi = max(c.end // STEP for c in fits)
-        start = model.NewIntVar(lo, hi - dur, f"s_{job.key}")
+        start = model.NewIntVarFromDomain(cp_model.Domain.FromIntervals(domains), f"s_{job.key}")
         start_vars[job.key] = start
         flags = []
         for c in fits:
@@ -100,13 +111,15 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob],
             model.Add(start >= _up(c.start)).OnlyEnforceIf(p)
             model.Add(start + dur <= c.end // STEP).OnlyEnforceIf(p)
             per_crew[c.key].append(
-                model.NewOptionalFixedSizeIntervalVar(start, dur, p, f"i_{job.key}_{c.key}"))
+                model.NewOptionalFixedSizeIntervalVar(start, dur, p, f"i_{job.key}_{c.key}")
+            )
         placed = model.NewBoolVar(f"placed_{job.key}")
         model.Add(sum(flags) == placed)
         placed_vars[job.key] = placed
         # One vehicle is not worked on by two crew members at the same time.
         per_vehicle.setdefault(job.vehicle, []).append(
-            model.NewOptionalFixedSizeIntervalVar(start, dur, placed, f"v_{job.key}"))
+            model.NewOptionalFixedSizeIntervalVar(start, dur, placed, f"v_{job.key}")
+        )
         objective.append(_PLACED * job.duration * placed)
         objective.append(-_EARLY * start)
         if job.finish_by is not None:
@@ -137,9 +150,11 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob],
         if not solver.Value(placed_vars[job.key]):
             result.unplaced[job.key] = "Capacity is short for that day."
             continue
-        crew_key = next(c.key for c in crew
-                        if (job.key, c.key) in presence
-                        and solver.Value(presence[(job.key, c.key)]))
+        crew_key = next(
+            c.key
+            for c in crew
+            if (job.key, c.key) in presence and solver.Value(presence[(job.key, c.key)])
+        )
         begin = solver.Value(start_vars[job.key]) * STEP
         result.placed[job.key] = (crew_key, begin)
         if job.finish_by is not None and begin + job.duration > job.finish_by:

@@ -1,0 +1,2663 @@
+{
+  "AccountEmailChange": {
+    "email": "wire-value"
+  },
+  "AccountEmailCode": {
+    "code": "wire-value"
+  },
+  "AccountEmailCodeSent": {
+    "email": "wire-value",
+    "expires_in_seconds": 1
+  },
+  "AccountPasswordChange": {
+    "current_password": "wire-value",
+    "new_password": "wire-value"
+  },
+  "AccountProfileEdit": {
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "mobile": "wire-value"
+  },
+  "AccountProfileOut": {
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "email": "wire-value",
+    "mobile": "wire-value",
+    "society": "wire-value",
+    "flat": "wire-value",
+    "initials": "wire-value",
+    "member_since": "2026-10-20T07:30:00+00:00",
+    "pending_email": "wire-value"
+  },
+  "AccountUploadRequest": {
+    "purpose": "wire-value",
+    "vehicle_id": "wire-value",
+    "content_type": "wire-value",
+    "size_bytes": 1
+  },
+  "AccountUploadState": {
+    "id": "wire-value",
+    "status": "wire-value",
+    "purpose": "wire-value",
+    "url": "wire-value"
+  },
+  "AccountUploadTicket": {
+    "id": "wire-value",
+    "upload_url": "wire-value",
+    "method": "wire-value",
+    "headers": {}
+  },
+  "AccountVehicleEdit": {
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value"
+  },
+  "AccountVehicleOut": {
+    "id": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "photo_url": "wire-value",
+    "rc_status": "wire-value"
+  },
+  "AddonChangeIn": {
+    "date": "2026-10-20",
+    "finish_by": "wire-value"
+  },
+  "AddonOffer": {
+    "service": "wire-value",
+    "name": "wire-value",
+    "description": "wire-value",
+    "price_rupees": 1,
+    "list_price_rupees": 1,
+    "duration_minutes": 1
+  },
+  "AddonOut": {
+    "id": "wire-value",
+    "service": "wire-value",
+    "vehicle_id": "wire-value",
+    "standalone": true,
+    "date": "2026-10-20",
+    "finish_by": "wire-value",
+    "status": "wire-value",
+    "price_rupees": 1,
+    "payment_id": "wire-value",
+    "payment_status": "wire-value",
+    "can_change": true,
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "requested_date": "2026-10-20",
+    "requested_finish_by": "wire-value",
+    "change_requested": true,
+    "crew_name": "wire-value",
+    "start_time": "wire-value",
+    "visit_id": "wire-value"
+  },
+  "AddonRequestIn": {
+    "service": "Deep Spa",
+    "date": "2026-10-20",
+    "finish_by": "wire-value"
+  },
+  "AddonsOut": {
+    "offers": [
+      {
+        "service": "wire-value",
+        "name": "wire-value",
+        "description": "wire-value",
+        "price_rupees": 1,
+        "list_price_rupees": 1,
+        "duration_minutes": 1
+      }
+    ],
+    "requests": [
+      {
+        "id": "wire-value",
+        "service": "wire-value",
+        "vehicle_id": "wire-value",
+        "standalone": true,
+        "date": "2026-10-20",
+        "finish_by": "wire-value",
+        "status": "wire-value",
+        "price_rupees": 1,
+        "payment_id": "wire-value",
+        "payment_status": "wire-value",
+        "can_change": true,
+        "created_at": "2026-10-20T07:30:00+00:00",
+        "requested_date": "2026-10-20",
+        "requested_finish_by": "wire-value",
+        "change_requested": true,
+        "crew_name": "wire-value",
+        "start_time": "wire-value",
+        "visit_id": "wire-value"
+      }
+    ]
+  },
+  "AdminAddonCreate": {
+    "service": "Deep Spa",
+    "date": "2026-10-20",
+    "finish_by": "wire-value",
+    "vehicle_id": "wire-value"
+  },
+  "AdminAddonIn": {
+    "status": "wire-value",
+    "date": "2026-10-20",
+    "finish_by": "wire-value",
+    "resolve_change": true,
+    "reject_change": true
+  },
+  "AdminAddonOut": {
+    "id": "wire-value",
+    "service": "wire-value",
+    "vehicle_id": "wire-value",
+    "standalone": true,
+    "date": "2026-10-20",
+    "finish_by": "wire-value",
+    "status": "wire-value",
+    "price_rupees": 1,
+    "payment_id": "wire-value",
+    "payment_status": "wire-value",
+    "can_change": true,
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "requested_date": "2026-10-20",
+    "requested_finish_by": "wire-value",
+    "change_requested": true,
+    "crew_name": "wire-value",
+    "start_time": "wire-value",
+    "visit_id": "wire-value",
+    "customer_name": "wire-value",
+    "flat": "wire-value",
+    "society": "wire-value",
+    "vehicle": "wire-value",
+    "contact_mobile": "wire-value",
+    "notes": "wire-value"
+  },
+  "AdminComplaintDetail": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "number": 1,
+    "display_id": "wire-value",
+    "category": "wire-value",
+    "description": "wire-value",
+    "status": "wire-value",
+    "visit_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "latest_note": "wire-value",
+    "vehicle": "wire-value",
+    "customer_name": "wire-value",
+    "society": "wire-value",
+    "flat": "wire-value",
+    "overdue": true,
+    "photo_keys": [
+      "wire-value"
+    ],
+    "photo_urls": [
+      "wire-value"
+    ],
+    "updates": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "author_role": "wire-value",
+        "note": "wire-value",
+        "status": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "AdminComplaintSummary": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "number": 1,
+    "display_id": "wire-value",
+    "category": "wire-value",
+    "description": "wire-value",
+    "status": "wire-value",
+    "visit_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "latest_note": "wire-value",
+    "vehicle": "wire-value",
+    "customer_name": "wire-value",
+    "society": "wire-value",
+    "flat": "wire-value",
+    "overdue": true
+  },
+  "AdminDayCrew": {
+    "crew_id": "wire-value",
+    "crew_name": "wire-value",
+    "role": "wire-value",
+    "jobs": [
+      {
+        "id": "wire-value",
+        "time": "wire-value",
+        "end_time": "wire-value",
+        "vehicle": "wire-value",
+        "registration": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "late": true
+      }
+    ]
+  },
+  "AdminDayJob": {
+    "id": "wire-value",
+    "time": "wire-value",
+    "end_time": "wire-value",
+    "vehicle": "wire-value",
+    "registration": "wire-value",
+    "service": "wire-value",
+    "status": "wire-value",
+    "late": true
+  },
+  "AdminDaySchedule": {
+    "date": "2026-10-20",
+    "society_id": "wire-value",
+    "schedule_status": "wire-value",
+    "total": 1,
+    "done": 1,
+    "left": 1,
+    "crew": [
+      {
+        "crew_id": "wire-value",
+        "crew_name": "wire-value",
+        "role": "wire-value",
+        "jobs": [
+          {
+            "id": "wire-value",
+            "time": "wire-value",
+            "end_time": "wire-value",
+            "vehicle": "wire-value",
+            "registration": "wire-value",
+            "service": "wire-value",
+            "status": "wire-value",
+            "late": true
+          }
+        ]
+      }
+    ]
+  },
+  "AdminHome": {
+    "alert_count": 1,
+    "payments_to_confirm": [
+      {
+        "id": "wire-value",
+        "customer_label": "wire-value",
+        "amount_rupees": 1,
+        "reference": "wire-value",
+        "vehicle": "wire-value",
+        "society": "wire-value"
+      }
+    ],
+    "needs_scheduling_count": 1,
+    "support_alert_count": 1,
+    "payment_alert_count": 1,
+    "payments_to_confirm_count": 1,
+    "open_complaints_count": 1,
+    "societies": [
+      {
+        "id": "wire-value",
+        "name": "wire-value"
+      }
+    ]
+  },
+  "AdminHomeSociety": {
+    "id": "wire-value",
+    "name": "wire-value"
+  },
+  "AdminJob": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "visit_id": "11111111-1111-1111-1111-111111111111",
+    "schedule_id": "11111111-1111-1111-1111-111111111111",
+    "schedule_status": "wire-value",
+    "date": "2026-10-20",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "vehicle": "wire-value",
+    "customer_name": "wire-value",
+    "service": "wire-value",
+    "status": "wire-value",
+    "duration_minutes": 1,
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "crew_name": "wire-value",
+    "start_minute": 1,
+    "start_time": "wire-value",
+    "end_time": "wire-value",
+    "finish_by": "wire-value",
+    "late": true,
+    "manual": true,
+    "reason": "wire-value"
+  },
+  "AdminPaymentIn": {
+    "vehicle_id": "wire-value",
+    "kind": "Plan",
+    "description": "wire-value",
+    "amount_rupees": 1,
+    "due_date": "2026-10-20",
+    "cycle_start": "2026-10-20",
+    "status": "Due"
+  },
+  "AdminPaymentOut": {
+    "id": "wire-value",
+    "kind": "wire-value",
+    "description": "wire-value",
+    "amount_rupees": 1,
+    "status": "wire-value",
+    "due_date": "2026-10-20",
+    "cycle_start": "2026-10-20",
+    "cycle_end": "2026-10-20",
+    "vehicle_id": "wire-value",
+    "received_on": "2026-10-20",
+    "invoice_number": "wire-value",
+    "customer_name": "wire-value",
+    "flat": "wire-value",
+    "society": "wire-value",
+    "vehicle": "wire-value",
+    "initiated_at": "2026-10-20T07:30:00+00:00"
+  },
+  "AlertEmailPreferences": {
+    "enabled": true,
+    "email": "wire-value"
+  },
+  "AlertList": {
+    "unread_count": 1,
+    "items": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "kind": "wire-value",
+        "title": "wire-value",
+        "body": "wire-value",
+        "ref_type": "wire-value",
+        "ref_id": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00",
+        "read": true
+      }
+    ]
+  },
+  "AlertOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "kind": "wire-value",
+    "title": "wire-value",
+    "body": "wire-value",
+    "ref_type": "wire-value",
+    "ref_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "read": true
+  },
+  "AppConfig": {
+    "min_app_version": "wire-value"
+  },
+  "AuthSupportContact": {
+    "helpline": "wire-value",
+    "whatsapp": "wire-value",
+    "hours": "wire-value"
+  },
+  "AutomaticPlanningSettings": {
+    "enabled": true,
+    "time_ist": "wire-value"
+  },
+  "Board": {
+    "schedule": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "society_id": "11111111-1111-1111-1111-111111111111",
+      "society_name": "wire-value",
+      "start_date": "2026-10-20",
+      "end_date": "2026-10-20",
+      "status": "wire-value",
+      "frozen_at": "2026-10-20T07:30:00+00:00",
+      "freeze_deadline": "2026-10-20T07:30:00+00:00"
+    },
+    "days": [
+      {
+        "date": "2026-10-20",
+        "capacity_minutes": 1,
+        "demand_minutes": 1,
+        "scheduled_minutes": 1,
+        "over_capacity": true
+      }
+    ],
+    "crew": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value",
+        "role": "wire-value",
+        "start_minute": 1,
+        "end_minute": 1
+      }
+    ],
+    "jobs": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "visit_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_status": "wire-value",
+        "date": "2026-10-20",
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "vehicle": "wire-value",
+        "customer_name": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "duration_minutes": 1,
+        "crew_id": "11111111-1111-1111-1111-111111111111",
+        "crew_name": "wire-value",
+        "start_minute": 1,
+        "start_time": "wire-value",
+        "end_time": "wire-value",
+        "finish_by": "wire-value",
+        "late": true,
+        "manual": true,
+        "reason": "wire-value"
+      }
+    ]
+  },
+  "CalendarJob": {
+    "service": "wire-value",
+    "status": "wire-value",
+    "crew_name": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value"
+  },
+  "CalendarMonth": {
+    "month": "wire-value",
+    "visits": [
+      {
+        "finished_at": "2026-10-20T07:30:00+00:00",
+        "checklist_done": 1,
+        "checklist_total": 1,
+        "visit_id": "wire-value",
+        "vehicle_id": "wire-value",
+        "date": "2026-10-20",
+        "status": "wire-value",
+        "services": [
+          "wire-value"
+        ],
+        "source": "visit",
+        "state": "Scheduled",
+        "cutoff_time": "wire-value",
+        "change_requested": true,
+        "requested_cutoff_time": "wire-value",
+        "skip_id": "wire-value",
+        "can_change": true,
+        "frozen": true,
+        "covered_on": "2026-10-20",
+        "rescheduled_on": "2026-10-20",
+        "jobs": [
+          {
+            "service": "wire-value",
+            "status": "wire-value",
+            "crew_name": "wire-value",
+            "start_time": "wire-value",
+            "end_time": "wire-value"
+          }
+        ],
+        "crew_name": "wire-value",
+        "start_time": "wire-value",
+        "end_time": "wire-value"
+      }
+    ],
+    "renewals": [
+      {
+        "vehicle_id": "wire-value",
+        "date": "2026-10-20"
+      }
+    ]
+  },
+  "CalendarRenewal": {
+    "vehicle_id": "wire-value",
+    "date": "2026-10-20"
+  },
+  "CalendarVisit": {
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "checklist_done": 1,
+    "checklist_total": 1,
+    "visit_id": "wire-value",
+    "vehicle_id": "wire-value",
+    "date": "2026-10-20",
+    "status": "wire-value",
+    "services": [
+      "wire-value"
+    ],
+    "source": "visit",
+    "state": "Scheduled",
+    "cutoff_time": "wire-value",
+    "change_requested": true,
+    "requested_cutoff_time": "wire-value",
+    "skip_id": "wire-value",
+    "can_change": true,
+    "frozen": true,
+    "covered_on": "2026-10-20",
+    "rescheduled_on": "2026-10-20",
+    "jobs": [
+      {
+        "service": "wire-value",
+        "status": "wire-value",
+        "crew_name": "wire-value",
+        "start_time": "wire-value",
+        "end_time": "wire-value"
+      }
+    ],
+    "crew_name": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value"
+  },
+  "ChangeOut": {
+    "id": "wire-value",
+    "vehicle_id": "wire-value",
+    "kind": "wire-value",
+    "status": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "days": 1,
+    "cutoff_time": "wire-value",
+    "actor": "wire-value",
+    "visits_paused": 1,
+    "renewal_date": "2026-10-20",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "ChangesOut": {
+    "vehicle_id": "wire-value",
+    "skips": [
+      {
+        "id": "wire-value",
+        "vehicle_id": "wire-value",
+        "kind": "wire-value",
+        "status": "wire-value",
+        "start_date": "2026-10-20",
+        "end_date": "2026-10-20",
+        "days": 1,
+        "cutoff_time": "wire-value",
+        "actor": "wire-value",
+        "visits_paused": 1,
+        "renewal_date": "2026-10-20",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "pauses": [
+      {
+        "id": "wire-value",
+        "vehicle_id": "wire-value",
+        "kind": "wire-value",
+        "status": "wire-value",
+        "start_date": "2026-10-20",
+        "end_date": "2026-10-20",
+        "days": 1,
+        "cutoff_time": "wire-value",
+        "actor": "wire-value",
+        "visits_paused": 1,
+        "renewal_date": "2026-10-20",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "cutoff_changes": [
+      {
+        "id": "wire-value",
+        "vehicle_id": "wire-value",
+        "kind": "wire-value",
+        "status": "wire-value",
+        "start_date": "2026-10-20",
+        "end_date": "2026-10-20",
+        "days": 1,
+        "cutoff_time": "wire-value",
+        "actor": "wire-value",
+        "visits_paused": 1,
+        "renewal_date": "2026-10-20",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "renewal_date": "2026-10-20"
+  },
+  "CheckInAdmin": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "customer_name": "wire-value",
+    "society": "wire-value",
+    "vehicle_label": "wire-value",
+    "cycle_start": "2026-10-20",
+    "answers": [
+      {
+        "category": "wire-value",
+        "rating": 1
+      }
+    ],
+    "comment": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "CheckInAnswer": {
+    "category": "wire-value",
+    "rating": 1
+  },
+  "CheckInCreate": {
+    "subscription_id": "11111111-1111-1111-1111-111111111111",
+    "answers": [
+      {
+        "category": "wire-value",
+        "rating": 1
+      }
+    ],
+    "comment": "wire-value"
+  },
+  "CheckInOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "cycle_start": "2026-10-20"
+  },
+  "CheckInsReport": {
+    "category_averages": {},
+    "items": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "customer_name": "wire-value",
+        "society": "wire-value",
+        "vehicle_label": "wire-value",
+        "cycle_start": "2026-10-20",
+        "answers": [
+          {
+            "category": "wire-value",
+            "rating": 1
+          }
+        ],
+        "comment": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "ChecklistItem": {
+    "id": "wire-value",
+    "label": "wire-value",
+    "checked_at": "2026-10-20T07:30:00+00:00"
+  },
+  "ChecklistTick": {
+    "checked": true
+  },
+  "CodeRequest": {
+    "email": "wire-value"
+  },
+  "CodeSent": {
+    "resend_in_seconds": 1
+  },
+  "CodeVerified": {
+    "password_token": "wire-value"
+  },
+  "ComplaintCreate": {
+    "category": "wire-value",
+    "description": "wire-value",
+    "visit_id": "wire-value",
+    "photo_keys": [
+      "wire-value"
+    ]
+  },
+  "ComplaintDetail": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "number": 1,
+    "display_id": "wire-value",
+    "category": "wire-value",
+    "description": "wire-value",
+    "status": "wire-value",
+    "visit_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "latest_note": "wire-value",
+    "photo_keys": [
+      "wire-value"
+    ],
+    "photo_urls": [
+      "wire-value"
+    ],
+    "updates": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "author_role": "wire-value",
+        "note": "wire-value",
+        "status": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "ComplaintSummary": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "number": 1,
+    "display_id": "wire-value",
+    "category": "wire-value",
+    "description": "wire-value",
+    "status": "wire-value",
+    "visit_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "latest_note": "wire-value"
+  },
+  "CouldNotComplete": {
+    "reason_key": "wire-value",
+    "note": "wire-value",
+    "upload_id": "wire-value"
+  },
+  "CrewChange": {
+    "crew": {
+      "id": "wire-value",
+      "name": "wire-value",
+      "mobile": "wire-value",
+      "society_id": "wire-value",
+      "society": "wire-value",
+      "role": "wire-value",
+      "active": true,
+      "locked": true,
+      "working_hours": [
+        {
+          "day": "wire-value",
+          "working": true,
+          "start": "wire-value",
+          "end": "wire-value"
+        }
+      ],
+      "paired_member_id": "wire-value",
+      "paired_member": "wire-value",
+      "exceptions": [
+        {
+          "id": "wire-value",
+          "date": "2026-10-20",
+          "kind": "wire-value",
+          "start": "wire-value"
+        }
+      ]
+    },
+    "released_jobs": [
+      {
+        "job_id": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "vehicle_id": "wire-value",
+        "registration": "wire-value"
+      }
+    ]
+  },
+  "CrewDay": {
+    "date": "2026-10-20",
+    "society": "wire-value",
+    "total": 1,
+    "done": 1,
+    "left": 1,
+    "jobs": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "visit_id": "11111111-1111-1111-1111-111111111111",
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "make": "wire-value",
+        "model": "wire-value",
+        "category": "wire-value",
+        "parking_basement": "wire-value",
+        "parking_number": "wire-value",
+        "society": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "start_time": "wire-value",
+        "end_time": "wire-value",
+        "finish_by": "wire-value"
+      }
+    ]
+  },
+  "CrewDayJob": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "visit_id": "11111111-1111-1111-1111-111111111111",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "make": "wire-value",
+    "model": "wire-value",
+    "category": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "society": "wire-value",
+    "service": "wire-value",
+    "status": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value",
+    "finish_by": "wire-value"
+  },
+  "CrewDeactivate": {
+    "release_jobs": true
+  },
+  "CrewDeviceIn": {
+    "device_name": "wire-value",
+    "platform": "wire-value",
+    "app_version": "wire-value"
+  },
+  "CrewEdit": {
+    "name": "wire-value",
+    "mobile": "wire-value"
+  },
+  "CrewExceptionEdit": {
+    "kind": "wire-value",
+    "start": "wire-value"
+  },
+  "CrewExceptionNew": {
+    "kind": "wire-value",
+    "from_date": "2026-10-20",
+    "to_date": "2026-10-20",
+    "start": "wire-value"
+  },
+  "CrewExceptionOut": {
+    "id": "wire-value",
+    "date": "2026-10-20",
+    "kind": "wire-value",
+    "start": "wire-value"
+  },
+  "CrewExceptionResult": {
+    "crew": {
+      "id": "wire-value",
+      "name": "wire-value",
+      "mobile": "wire-value",
+      "society_id": "wire-value",
+      "society": "wire-value",
+      "role": "wire-value",
+      "active": true,
+      "locked": true,
+      "working_hours": [
+        {
+          "day": "wire-value",
+          "working": true,
+          "start": "wire-value",
+          "end": "wire-value"
+        }
+      ],
+      "paired_member_id": "wire-value",
+      "paired_member": "wire-value",
+      "exceptions": [
+        {
+          "id": "wire-value",
+          "date": "2026-10-20",
+          "kind": "wire-value",
+          "start": "wire-value"
+        }
+      ]
+    },
+    "exceptions": [
+      {
+        "id": "wire-value",
+        "date": "2026-10-20",
+        "kind": "wire-value",
+        "start": "wire-value"
+      }
+    ],
+    "released_jobs": [
+      {
+        "job_id": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "vehicle_id": "wire-value",
+        "registration": "wire-value"
+      }
+    ]
+  },
+  "CrewHoursChange": {
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ]
+  },
+  "CrewJobCard": {
+    "id": "wire-value",
+    "visit_id": "wire-value",
+    "visit_status": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "status": "wire-value",
+    "vehicle": {
+      "id": "wire-value",
+      "registration": "wire-value",
+      "make": "wire-value",
+      "model": "wire-value",
+      "category": "wire-value",
+      "photo_url": "wire-value"
+    },
+    "society": "wire-value",
+    "parking": "wire-value",
+    "start_time": "wire-value",
+    "finish_by": "wire-value",
+    "checklist_total": 1,
+    "checklist_done": 1,
+    "assigned_to": {
+      "id": "wire-value",
+      "name": "wire-value"
+    }
+  },
+  "CrewManagerAttendance": {
+    "date": "2026-10-20",
+    "society": "wire-value",
+    "crew": [
+      {
+        "crew_id": "wire-value",
+        "name": "wire-value",
+        "role": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value",
+        "status": "wire-value",
+        "late_start": "wire-value",
+        "open_jobs": 1
+      }
+    ]
+  },
+  "CrewManagerAttendanceEntry": {
+    "crew_id": "wire-value",
+    "name": "wire-value",
+    "role": "wire-value",
+    "working": true,
+    "start": "wire-value",
+    "end": "wire-value",
+    "status": "wire-value",
+    "late_start": "wire-value",
+    "open_jobs": 1
+  },
+  "CrewManagerAttendanceResult": {
+    "attendance": {
+      "date": "2026-10-20",
+      "society": "wire-value",
+      "crew": [
+        {
+          "crew_id": "wire-value",
+          "name": "wire-value",
+          "role": "wire-value",
+          "working": true,
+          "start": "wire-value",
+          "end": "wire-value",
+          "status": "wire-value",
+          "late_start": "wire-value",
+          "open_jobs": 1
+        }
+      ]
+    },
+    "released_jobs": [
+      {
+        "job_id": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "registration": "wire-value",
+        "reassigned": true
+      }
+    ]
+  },
+  "CrewManagerAttendanceSet": {
+    "status": "wire-value",
+    "from_date": "2026-10-20",
+    "to_date": "2026-10-20",
+    "start": "wire-value"
+  },
+  "CrewManagerHours": {
+    "crew_id": "wire-value",
+    "name": "wire-value",
+    "role": "wire-value",
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ]
+  },
+  "CrewManagerHoursResult": {
+    "hours": {
+      "crew_id": "wire-value",
+      "name": "wire-value",
+      "role": "wire-value",
+      "working_hours": [
+        {
+          "day": "wire-value",
+          "working": true,
+          "start": "wire-value",
+          "end": "wire-value"
+        }
+      ]
+    },
+    "released_jobs": [
+      {
+        "job_id": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "registration": "wire-value",
+        "reassigned": true
+      }
+    ]
+  },
+  "CrewManagerHoursSet": {
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ]
+  },
+  "CrewManagerReassignOption": {
+    "crew_id": "wire-value",
+    "name": "wire-value",
+    "role": "wire-value",
+    "can_assign": true,
+    "problem_code": "wire-value",
+    "problem": "wire-value"
+  },
+  "CrewManagerReleasedJob": {
+    "job_id": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "registration": "wire-value",
+    "reassigned": true
+  },
+  "CrewOut": {
+    "id": "wire-value",
+    "name": "wire-value",
+    "mobile": "wire-value",
+    "society_id": "wire-value",
+    "society": "wire-value",
+    "role": "wire-value",
+    "active": true,
+    "locked": true,
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ],
+    "paired_member_id": "wire-value",
+    "paired_member": "wire-value",
+    "exceptions": [
+      {
+        "id": "wire-value",
+        "date": "2026-10-20",
+        "kind": "wire-value",
+        "start": "wire-value"
+      }
+    ]
+  },
+  "CrewPairChange": {
+    "paired_member_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "CrewPassword": {
+    "crew": {
+      "id": "wire-value",
+      "name": "wire-value",
+      "mobile": "wire-value",
+      "society_id": "wire-value",
+      "society": "wire-value",
+      "role": "wire-value",
+      "active": true,
+      "locked": true,
+      "working_hours": [
+        {
+          "day": "wire-value",
+          "working": true,
+          "start": "wire-value",
+          "end": "wire-value"
+        }
+      ],
+      "paired_member_id": "wire-value",
+      "paired_member": "wire-value",
+      "exceptions": [
+        {
+          "id": "wire-value",
+          "date": "2026-10-20",
+          "kind": "wire-value",
+          "start": "wire-value"
+        }
+      ]
+    },
+    "login_id": "wire-value",
+    "password": "wire-value"
+  },
+  "CrewProfile": {
+    "name": "wire-value",
+    "mobile": "wire-value",
+    "society": "wire-value",
+    "role": "wire-value",
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ]
+  },
+  "CrewRef": {
+    "id": "wire-value",
+    "name": "wire-value"
+  },
+  "CrewReleasedJob": {
+    "job_id": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "vehicle_id": "wire-value",
+    "registration": "wire-value"
+  },
+  "CrewRoleChange": {
+    "role": "wire-value",
+    "paired_member_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "CrewSessionOut": {
+    "id": "wire-value",
+    "channel": "wire-value",
+    "signed_in_at": "2026-10-20T07:30:00+00:00",
+    "last_active_at": "2026-10-20T07:30:00+00:00",
+    "device_name": "wire-value",
+    "platform": "wire-value",
+    "app_version": "wire-value"
+  },
+  "CrewSessionsEnded": {
+    "ended": 1
+  },
+  "CustomerCreate": {
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "email": "wire-value",
+    "mobile": "wire-value",
+    "flat": "wire-value",
+    "vehicle": {
+      "society_id": "11111111-1111-1111-1111-111111111111",
+      "catalogue_id": "11111111-1111-1111-1111-111111111111",
+      "registration": "wire-value",
+      "parking_basement": "wire-value",
+      "parking_number": "wire-value",
+      "plan_id": "11111111-1111-1111-1111-111111111111",
+      "cutoff_time": "wire-value",
+      "interior_day": "wire-value",
+      "photo_upload_id": "11111111-1111-1111-1111-111111111111",
+      "rc_upload_id": "11111111-1111-1111-1111-111111111111",
+      "first_payment_status": "Due"
+    }
+  },
+  "CustomerEdit": {
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "mobile": "wire-value",
+    "flat": "wire-value"
+  },
+  "CustomerHome": {
+    "greeting_name": "wire-value",
+    "onboarding_confirmed": true,
+    "vehicles": [
+      {
+        "id": "wire-value",
+        "registration": "wire-value",
+        "model": "wire-value",
+        "make": "wire-value",
+        "society": "wire-value",
+        "parking": "wire-value",
+        "subscription_status": "wire-value",
+        "monthly_price_rupees": 1,
+        "cutoff_time": "wire-value",
+        "interior_day": "wire-value",
+        "variant": "wire-value",
+        "photo_url": "wire-value",
+        "next_service": {
+          "date": "2026-10-20",
+          "service": "wire-value",
+          "status": "wire-value"
+        }
+      }
+    ],
+    "quick_actions": [
+      {
+        "key": "wire-value",
+        "label": "wire-value"
+      }
+    ]
+  },
+  "CustomerNextJob": {
+    "job_id": "11111111-1111-1111-1111-111111111111",
+    "visit_id": "11111111-1111-1111-1111-111111111111",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "vehicle": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "status": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value",
+    "crew_name": "wire-value",
+    "finish_by": "wire-value"
+  },
+  "CustomerNextService": {
+    "job": {
+      "job_id": "11111111-1111-1111-1111-111111111111",
+      "visit_id": "11111111-1111-1111-1111-111111111111",
+      "vehicle_id": "11111111-1111-1111-1111-111111111111",
+      "registration": "wire-value",
+      "vehicle": "wire-value",
+      "date": "2026-10-20",
+      "service": "wire-value",
+      "status": "wire-value",
+      "start_time": "wire-value",
+      "end_time": "wire-value",
+      "crew_name": "wire-value",
+      "finish_by": "wire-value"
+    }
+  },
+  "CustomerSessionsEnded": {
+    "ended": 1
+  },
+  "CutoffChangeIn": {
+    "date": "2026-10-20",
+    "cutoff_time": "wire-value"
+  },
+  "DayCapacity": {
+    "date": "2026-10-20",
+    "capacity_minutes": 1,
+    "demand_minutes": 1,
+    "scheduled_minutes": 1,
+    "over_capacity": true
+  },
+  "DayHours": {
+    "day": "wire-value",
+    "working": true,
+    "start": "wire-value",
+    "end": "wire-value"
+  },
+  "DeviceBody": {
+    "token": "wire-value",
+    "platform": "android"
+  },
+  "DirectoryAddonCreate": {
+    "name": "wire-value",
+    "description": "wire-value",
+    "service": "Deep Spa",
+    "price_rupees": 1,
+    "list_price_rupees": 1,
+    "duration_minutes": 5,
+    "sort_order": 1
+  },
+  "DirectoryAddonOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "description": "wire-value",
+    "service": "wire-value",
+    "price_rupees": 1,
+    "list_price_rupees": 1,
+    "duration_minutes": 1,
+    "sort_order": 1,
+    "active": true
+  },
+  "DirectoryAddonUpdate": {
+    "name": "wire-value",
+    "description": "wire-value",
+    "price_rupees": 1,
+    "list_price_rupees": 1,
+    "clear_list_price": true,
+    "duration_minutes": 5,
+    "sort_order": 1
+  },
+  "DirectoryAuditOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "at": "2026-10-20T07:30:00+00:00",
+    "admin_login_id": "11111111-1111-1111-1111-111111111111",
+    "entity": "wire-value",
+    "entity_id": "wire-value",
+    "action": "wire-value",
+    "detail": {}
+  },
+  "DirectoryChecklistItemCreate": {
+    "label": "wire-value"
+  },
+  "DirectoryChecklistItemOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "service": "wire-value",
+    "key": "wire-value",
+    "label": "wire-value",
+    "sort_order": 1,
+    "active": true
+  },
+  "DirectoryChecklistItemRenamed": {
+    "item": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "service": "wire-value",
+      "key": "wire-value",
+      "label": "wire-value",
+      "sort_order": 1,
+      "active": true
+    },
+    "replaced_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "DirectoryChecklistItemUpdate": {
+    "label": "wire-value"
+  },
+  "DirectoryChecklistOut": {
+    "service": "wire-value",
+    "min_photos": 1,
+    "min_videos": 1,
+    "items": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "service": "wire-value",
+        "key": "wire-value",
+        "label": "wire-value",
+        "sort_order": 1,
+        "active": true
+      }
+    ]
+  },
+  "DirectoryCustomerAddonOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "description": "wire-value",
+    "service": "wire-value",
+    "price_rupees": 1,
+    "list_price_rupees": 1,
+    "duration_minutes": 1
+  },
+  "DirectoryCustomerPlanOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "monthly_price_rupees": 1,
+    "list_price_rupees": 1,
+    "includes_interior": true,
+    "inclusions": [
+      "wire-value"
+    ],
+    "badge": "wire-value"
+  },
+  "DirectoryCustomerSocietyOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "sector": "wire-value",
+    "city": "wire-value",
+    "cars_serviced": 1,
+    "parking_basements": [
+      "wire-value"
+    ]
+  },
+  "DirectoryCustomerVehicleOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "make": "wire-value",
+    "model": "wire-value",
+    "variant": "wire-value",
+    "category": "wire-value"
+  },
+  "DirectoryOrder": {
+    "ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
+  },
+  "DirectoryPlanCreate": {
+    "name": "wire-value",
+    "monthly_price_rupees": 1,
+    "list_price_rupees": 1,
+    "includes_interior": true,
+    "inclusions": [
+      "wire-value"
+    ],
+    "badge": "wire-value",
+    "sort_order": 1
+  },
+  "DirectoryPlanOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "monthly_price_rupees": 1,
+    "list_price_rupees": 1,
+    "includes_interior": true,
+    "inclusions": [
+      "wire-value"
+    ],
+    "badge": "wire-value",
+    "sort_order": 1,
+    "active": true,
+    "active_subscriptions": 1
+  },
+  "DirectoryPlanUpdate": {
+    "name": "wire-value",
+    "monthly_price_rupees": 1,
+    "list_price_rupees": 1,
+    "clear_list_price": true,
+    "includes_interior": true,
+    "inclusions": [
+      "wire-value"
+    ],
+    "badge": "wire-value",
+    "sort_order": 1
+  },
+  "DirectoryReasonCreate": {
+    "label": "wire-value"
+  },
+  "DirectoryReasonOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "key": "wire-value",
+    "label": "wire-value",
+    "sort_order": 1,
+    "active": true
+  },
+  "DirectoryReasonUpdate": {
+    "label": "wire-value"
+  },
+  "DirectoryServiceOut": {
+    "name": "wire-value",
+    "duration_minutes": 1,
+    "min_photos": 1,
+    "min_videos": 1
+  },
+  "DirectoryServiceUpdate": {
+    "duration_minutes": 5,
+    "min_photos": 1,
+    "min_videos": 1
+  },
+  "DirectorySettingOut": {
+    "key": "wire-value",
+    "label": "wire-value",
+    "group": "wire-value",
+    "kind": "wire-value",
+    "value": "wire-value",
+    "is_default": true,
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "updated_by": "11111111-1111-1111-1111-111111111111"
+  },
+  "DirectorySettingPut": {
+    "value": "wire-value"
+  },
+  "DirectorySettingsPatch": {
+    "values": {}
+  },
+  "DirectorySlotCreate": {
+    "service": "wire-value",
+    "start": "wire-value",
+    "end": "wire-value",
+    "days": [
+      "wire-value"
+    ]
+  },
+  "DirectorySlotOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "service": "wire-value",
+    "start": "wire-value",
+    "end": "wire-value",
+    "days": [
+      "wire-value"
+    ]
+  },
+  "DirectorySlotUpdate": {
+    "start": "wire-value",
+    "end": "wire-value",
+    "days": [
+      "wire-value"
+    ]
+  },
+  "DirectorySocietyCreate": {
+    "name": "wire-value",
+    "sector": "wire-value",
+    "city": "wire-value",
+    "parking_basements": [
+      "wire-value"
+    ]
+  },
+  "DirectorySocietyOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "sector": "wire-value",
+    "city": "wire-value",
+    "active": true,
+    "parking_basements": [
+      "wire-value"
+    ],
+    "cars_serviced": 1,
+    "active_subscriptions": 1,
+    "active_crew": 1
+  },
+  "DirectorySocietyUpdate": {
+    "name": "wire-value",
+    "sector": "wire-value",
+    "city": "wire-value",
+    "parking_basements": [
+      "wire-value"
+    ]
+  },
+  "DirectoryVehicleCreate": {
+    "make": "wire-value",
+    "model": "wire-value",
+    "variant": "wire-value",
+    "category": "wire-value"
+  },
+  "DirectoryVehicleOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "make": "wire-value",
+    "model": "wire-value",
+    "variant": "wire-value",
+    "category": "wire-value",
+    "active": true
+  },
+  "DirectoryVehicleUpdate": {
+    "make": "wire-value",
+    "model": "wire-value",
+    "variant": "wire-value",
+    "category": "wire-value"
+  },
+  "EmailCorrection": {
+    "email": "wire-value"
+  },
+  "FeedbackAdmin": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "category": "wire-value",
+    "rating": 1,
+    "comment": "wire-value",
+    "testimonial_permission": true,
+    "customer_name": "wire-value",
+    "society": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "FeedbackCreate": {
+    "category": "wire-value",
+    "rating": 1,
+    "comment": "wire-value",
+    "testimonial_permission": true
+  },
+  "FeedbackOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "FreezeDue": {
+    "frozen": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
+  },
+  "HTTPValidationError": {
+    "detail": [
+      {
+        "loc": [
+          "wire-value"
+        ],
+        "msg": "wire-value",
+        "type": "wire-value",
+        "input": "wire-value",
+        "ctx": {}
+      }
+    ]
+  },
+  "Health": {
+    "status": "wire-value",
+    "version": "wire-value",
+    "build_number": "wire-value"
+  },
+  "HistoryItem": {
+    "visit_id": "wire-value",
+    "vehicle_id": "wire-value",
+    "date": "2026-10-20",
+    "status": "wire-value",
+    "services": [
+      "wire-value"
+    ],
+    "photo_count": 1,
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "rating": 1
+  },
+  "HistoryMetaOut": {
+    "member_since": "2026-10-20",
+    "latest_month": "wire-value",
+    "earliest_month": "wire-value"
+  },
+  "Inbox": {
+    "unread_count": 1,
+    "items": [
+      {
+        "id": "wire-value",
+        "event": "wire-value",
+        "title": "wire-value",
+        "body": "wire-value",
+        "visit_id": "wire-value",
+        "ref_type": "wire-value",
+        "ref_id": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00",
+        "read": true
+      }
+    ]
+  },
+  "InvoiceOut": {
+    "number": "wire-value",
+    "issued_on": "2026-10-20",
+    "amount_rupees": 1,
+    "description": "wire-value",
+    "customer_name": "wire-value",
+    "vehicle": "wire-value",
+    "gst_included": true,
+    "seller_name": "wire-value",
+    "seller_address": "wire-value",
+    "seller_gstin": "wire-value",
+    "tax_details": {}
+  },
+  "JobDetail": {
+    "job": {
+      "id": "wire-value",
+      "visit_id": "wire-value",
+      "visit_status": "wire-value",
+      "date": "2026-10-20",
+      "service": "wire-value",
+      "status": "wire-value",
+      "vehicle": {
+        "id": "wire-value",
+        "registration": "wire-value",
+        "make": "wire-value",
+        "model": "wire-value",
+        "category": "wire-value",
+        "photo_url": "wire-value"
+      },
+      "society": "wire-value",
+      "parking": "wire-value",
+      "start_time": "wire-value",
+      "finish_by": "wire-value",
+      "checklist_total": 1,
+      "checklist_done": 1,
+      "assigned_to": {
+        "id": "wire-value",
+        "name": "wire-value"
+      }
+    },
+    "checklist": [
+      {
+        "id": "wire-value",
+        "label": "wire-value",
+        "checked_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "requirements": {
+      "photos_required": 1,
+      "videos_required": 1,
+      "photos_confirmed": 1,
+      "videos_confirmed": 1,
+      "pending_uploads": 1
+    },
+    "uploads": [
+      {
+        "id": "wire-value",
+        "kind": "wire-value",
+        "stage": "wire-value",
+        "status": "wire-value"
+      }
+    ],
+    "missing": [
+      "wire-value"
+    ],
+    "can_complete": true,
+    "outcome": {
+      "kind": "wire-value",
+      "reason_key": "wire-value",
+      "note": "wire-value",
+      "at": "2026-10-20T07:30:00+00:00"
+    },
+    "started_at": "2026-10-20T07:30:00+00:00",
+    "finished_at": "2026-10-20T07:30:00+00:00"
+  },
+  "JobOut": {
+    "id": "wire-value",
+    "service": "wire-value",
+    "status": "wire-value",
+    "proof": [
+      {
+        "id": "wire-value",
+        "kind": "wire-value",
+        "url": "wire-value",
+        "stage": "wire-value",
+        "taken_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "crew_name": "wire-value",
+    "crew_society": "wire-value",
+    "started_at": "2026-10-20T07:30:00+00:00",
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "checklist": [
+      {
+        "key": "wire-value",
+        "label": "wire-value",
+        "checked_at": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "checklist_done": 1,
+    "checklist_total": 1
+  },
+  "LoginRequest": {
+    "login_id": "wire-value",
+    "password": "wire-value"
+  },
+  "LoginResult": {
+    "role": "wire-value",
+    "display_name": "wire-value",
+    "access_token": "wire-value",
+    "refresh_token": "wire-value",
+    "expires_in": 1
+  },
+  "ManagerSchedule": {
+    "date": "2026-10-20",
+    "society": "wire-value",
+    "crew": [
+      {
+        "id": "wire-value",
+        "name": "wire-value",
+        "role": "wire-value",
+        "jobs": [
+          {
+            "id": "wire-value",
+            "visit_id": "wire-value",
+            "visit_status": "wire-value",
+            "date": "2026-10-20",
+            "service": "wire-value",
+            "status": "wire-value",
+            "vehicle": {
+              "id": "wire-value",
+              "registration": "wire-value",
+              "make": "wire-value",
+              "model": "wire-value",
+              "category": "wire-value",
+              "photo_url": "wire-value"
+            },
+            "society": "wire-value",
+            "parking": "wire-value",
+            "start_time": "wire-value",
+            "finish_by": "wire-value",
+            "checklist_total": 1,
+            "checklist_done": 1,
+            "assigned_to": {
+              "id": "wire-value",
+              "name": "wire-value"
+            }
+          }
+        ]
+      }
+    ],
+    "unassigned": [
+      {
+        "id": "wire-value",
+        "visit_id": "wire-value",
+        "visit_status": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "status": "wire-value",
+        "vehicle": {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "make": "wire-value",
+          "model": "wire-value",
+          "category": "wire-value",
+          "photo_url": "wire-value"
+        },
+        "society": "wire-value",
+        "parking": "wire-value",
+        "start_time": "wire-value",
+        "finish_by": "wire-value",
+        "checklist_total": 1,
+        "checklist_done": 1,
+        "assigned_to": {
+          "id": "wire-value",
+          "name": "wire-value"
+        }
+      }
+    ]
+  },
+  "MessageCreate": {
+    "note": "wire-value"
+  },
+  "MoveRequest": {
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "start_minute": 1
+  },
+  "NeedsScheduling": {
+    "jobs": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "visit_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_status": "wire-value",
+        "date": "2026-10-20",
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "vehicle": "wire-value",
+        "customer_name": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "duration_minutes": 1,
+        "crew_id": "11111111-1111-1111-1111-111111111111",
+        "crew_name": "wire-value",
+        "start_minute": 1,
+        "start_time": "wire-value",
+        "end_time": "wire-value",
+        "finish_by": "wire-value",
+        "late": true,
+        "manual": true,
+        "reason": "wire-value"
+      }
+    ],
+    "pending_addons": [
+      {}
+    ]
+  },
+  "NewCrew": {
+    "name": "wire-value",
+    "mobile": "wire-value",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "role": "wire-value",
+    "working_hours": [
+      {
+        "day": "wire-value",
+        "working": true,
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ],
+    "paired_member_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "NextService": {
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "status": "wire-value"
+  },
+  "NextServiceItem": {
+    "vehicle_id": "wire-value",
+    "visit_id": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "status": "wire-value",
+    "services": [
+      "wire-value"
+    ],
+    "source": "visit",
+    "cutoff_time": "wire-value",
+    "crew_name": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value"
+  },
+  "NotificationOut": {
+    "id": "wire-value",
+    "event": "wire-value",
+    "title": "wire-value",
+    "body": "wire-value",
+    "visit_id": "wire-value",
+    "ref_type": "wire-value",
+    "ref_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "read": true
+  },
+  "NotificationPreferenceIn": {
+    "event": "wire-value",
+    "enabled": true
+  },
+  "NotificationPreferenceOut": {
+    "event": "wire-value",
+    "title": "wire-value",
+    "description": "wire-value",
+    "enabled": true
+  },
+  "NotificationPreferencesIn": {
+    "items": [
+      {
+        "event": "wire-value",
+        "enabled": true
+      }
+    ]
+  },
+  "NotificationPreferencesOut": {
+    "items": [
+      {
+        "event": "wire-value",
+        "title": "wire-value",
+        "description": "wire-value",
+        "enabled": true
+      }
+    ]
+  },
+  "Onboarding": {
+    "confirmed": true,
+    "step": 1,
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "email": "wire-value",
+    "mobile": "wire-value",
+    "society": "wire-value",
+    "flat": "wire-value",
+    "vehicles": [
+      {
+        "id": "wire-value",
+        "registration": "wire-value",
+        "model": "wire-value",
+        "make": "wire-value",
+        "variant": "wire-value",
+        "parking_basements": [
+          "wire-value"
+        ],
+        "parking_basement": "wire-value",
+        "parking_number": "wire-value",
+        "has_subscription": true,
+        "plan_name": "wire-value",
+        "monthly_price_rupees": 1,
+        "cutoff_time": "wire-value",
+        "asks_interior_day": true,
+        "interior_day": "wire-value",
+        "has_photo": true,
+        "photo_url": "wire-value"
+      }
+    ]
+  },
+  "OnboardingAnswers": {
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "mobile": "wire-value",
+    "vehicles": [
+      {
+        "id": "wire-value",
+        "parking_basement": "wire-value",
+        "parking_number": "wire-value",
+        "cutoff_time": "wire-value",
+        "interior_day": "wire-value"
+      }
+    ]
+  },
+  "OnboardingDraft": {
+    "step": 1,
+    "first_name": "wire-value",
+    "last_name": "wire-value",
+    "mobile": "wire-value",
+    "vehicles": [
+      {
+        "id": "wire-value",
+        "parking_basement": "wire-value",
+        "parking_number": "wire-value",
+        "cutoff_time": "wire-value",
+        "interior_day": "wire-value"
+      }
+    ]
+  },
+  "OnboardingVehicle": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "model": "wire-value",
+    "make": "wire-value",
+    "variant": "wire-value",
+    "parking_basements": [
+      "wire-value"
+    ],
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "has_subscription": true,
+    "plan_name": "wire-value",
+    "monthly_price_rupees": 1,
+    "cutoff_time": "wire-value",
+    "asks_interior_day": true,
+    "interior_day": "wire-value",
+    "has_photo": true,
+    "photo_url": "wire-value"
+  },
+  "OptionAdmin": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "description": "wire-value",
+    "kind": "wire-value",
+    "sort_order": 1,
+    "active": true
+  },
+  "OptionCreate": {
+    "kind": "wire-value",
+    "name": "wire-value",
+    "description": "wire-value"
+  },
+  "OptionOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "description": "wire-value"
+  },
+  "OptionPatch": {
+    "name": "wire-value",
+    "description": "wire-value",
+    "active": true,
+    "sort_order": 1
+  },
+  "Outcome": {
+    "kind": "wire-value",
+    "reason_key": "wire-value",
+    "note": "wire-value",
+    "at": "2026-10-20T07:30:00+00:00"
+  },
+  "PauseIn": {
+    "from_date": "2026-10-20",
+    "to_date": "2026-10-20"
+  },
+  "PayInstructions": {
+    "amount_rupees": 1,
+    "upi_id": "wire-value",
+    "payee_name": "wire-value",
+    "qr_url": "wire-value",
+    "upi_uri": "wire-value",
+    "note": "wire-value"
+  },
+  "PaymentAlertOut": {
+    "id": "wire-value",
+    "kind": "wire-value",
+    "message": "wire-value",
+    "payment_id": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "read": true
+  },
+  "PaymentDetail": {
+    "payment": {
+      "id": "wire-value",
+      "kind": "wire-value",
+      "description": "wire-value",
+      "amount_rupees": 1,
+      "status": "wire-value",
+      "due_date": "2026-10-20",
+      "cycle_start": "2026-10-20",
+      "cycle_end": "2026-10-20",
+      "vehicle_id": "wire-value",
+      "received_on": "2026-10-20",
+      "invoice_number": "wire-value"
+    },
+    "instructions": {
+      "amount_rupees": 1,
+      "upi_id": "wire-value",
+      "payee_name": "wire-value",
+      "qr_url": "wire-value",
+      "upi_uri": "wire-value",
+      "note": "wire-value"
+    },
+    "vehicle": "wire-value",
+    "service_details": {}
+  },
+  "PaymentOut": {
+    "id": "wire-value",
+    "kind": "wire-value",
+    "description": "wire-value",
+    "amount_rupees": 1,
+    "status": "wire-value",
+    "due_date": "2026-10-20",
+    "cycle_start": "2026-10-20",
+    "cycle_end": "2026-10-20",
+    "vehicle_id": "wire-value",
+    "received_on": "2026-10-20",
+    "invoice_number": "wire-value"
+  },
+  "PaymentToConfirm": {
+    "id": "wire-value",
+    "customer_label": "wire-value",
+    "amount_rupees": 1,
+    "reference": "wire-value",
+    "vehicle": "wire-value",
+    "society": "wire-value"
+  },
+  "PendingCheckIn": {
+    "subscription_id": "11111111-1111-1111-1111-111111111111",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "vehicle_label": "wire-value",
+    "cycle_start": "2026-10-20",
+    "renewal_date": "2026-10-20"
+  },
+  "PhotoState": {
+    "upload_id": "wire-value",
+    "url": "wire-value"
+  },
+  "PreferencesIn": {
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value"
+  },
+  "PreferencesOut": {
+    "vehicle_id": "wire-value",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value",
+    "applies_from": "2026-10-20",
+    "frozen_days_unchanged": 1
+  },
+  "ProfilePhoto": {
+    "upload_id": "wire-value"
+  },
+  "ProofOut": {
+    "id": "wire-value",
+    "kind": "wire-value",
+    "url": "wire-value",
+    "stage": "wire-value",
+    "taken_at": "2026-10-20T07:30:00+00:00"
+  },
+  "QuickAction": {
+    "key": "wire-value",
+    "label": "wire-value"
+  },
+  "RatingAdmin": {
+    "visit_id": "wire-value",
+    "rating": 1,
+    "tags": [
+      "wire-value"
+    ],
+    "comment": "wire-value",
+    "testimonial_permission": true,
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "society": "wire-value"
+  },
+  "RatingCreate": {
+    "rating": 1,
+    "tags": [
+      "wire-value"
+    ],
+    "comment": "wire-value",
+    "testimonial_permission": true
+  },
+  "RatingOut": {
+    "visit_id": "wire-value",
+    "rating": 1,
+    "tags": [
+      "wire-value"
+    ],
+    "comment": "wire-value",
+    "testimonial_permission": true,
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "RatingsReport": {
+    "count": 1,
+    "average": 1.0,
+    "tag_counts": {},
+    "items": [
+      {
+        "visit_id": "wire-value",
+        "rating": 1,
+        "tags": [
+          "wire-value"
+        ],
+        "comment": "wire-value",
+        "testimonial_permission": true,
+        "created_at": "2026-10-20T07:30:00+00:00",
+        "society": "wire-value"
+      }
+    ]
+  },
+  "Reason": {
+    "key": "wire-value",
+    "label": "wire-value"
+  },
+  "Reassign": {
+    "crew_id": "wire-value"
+  },
+  "RefreshRequest": {
+    "refresh_token": "wire-value"
+  },
+  "Requirements": {
+    "photos_required": 1,
+    "videos_required": 1,
+    "photos_confirmed": 1,
+    "videos_confirmed": 1,
+    "pending_uploads": 1
+  },
+  "Resolution": {
+    "action": "Skip",
+    "reason": "wire-value",
+    "note": "wire-value"
+  },
+  "ResolveCutoff": {
+    "apply": true
+  },
+  "RunRequest": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "start_date": "2026-10-20",
+    "days": 1
+  },
+  "RunResponse": {
+    "schedules": [
+      {
+        "schedule_id": "11111111-1111-1111-1111-111111111111",
+        "society_id": "11111111-1111-1111-1111-111111111111",
+        "status": "wire-value",
+        "placed": 1,
+        "unscheduled": 1,
+        "late": 1
+      }
+    ]
+  },
+  "RunResult": {
+    "schedule_id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "status": "wire-value",
+    "placed": 1,
+    "unscheduled": 1,
+    "late": 1
+  },
+  "ScheduleOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "society_name": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "status": "wire-value",
+    "frozen_at": "2026-10-20T07:30:00+00:00",
+    "freeze_deadline": "2026-10-20T07:30:00+00:00"
+  },
+  "SchedulingCrewOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "role": "wire-value",
+    "start_minute": 1,
+    "end_minute": 1
+  },
+  "SessionDevice": {
+    "device_name": "wire-value",
+    "platform": "wire-value",
+    "app_version": "wire-value"
+  },
+  "SetPasswordRequest": {
+    "password_token": "wire-value",
+    "password": "wire-value"
+  },
+  "SkipIn": {
+    "date": "2026-10-20"
+  },
+  "SkipVisit": {
+    "reason": "wire-value",
+    "note": "wire-value"
+  },
+  "StandaloneIn": {
+    "service": "Deep Spa",
+    "vehicle_id": "wire-value",
+    "date": "2026-10-20",
+    "finish_by": "wire-value",
+    "contact_mobile": "wire-value",
+    "notes": "wire-value"
+  },
+  "StartRequest": {
+    "login_id": "wire-value"
+  },
+  "StartResult": {
+    "next": "wire-value",
+    "resend_in_seconds": 1
+  },
+  "StatusChange": {
+    "status": "wire-value",
+    "note": "wire-value"
+  },
+  "StatusIn": {
+    "status": "wire-value"
+  },
+  "SubscriptionEdit": {
+    "plan_id": "11111111-1111-1111-1111-111111111111",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value"
+  },
+  "SubscriptionStatusIn": {
+    "status": "wire-value",
+    "reason": "wire-value",
+    "first_service_date": "2026-10-20"
+  },
+  "SubscriptionStatusOut": {
+    "subscription_id": "wire-value",
+    "status": "wire-value"
+  },
+  "SubscriptionView": {
+    "vehicle_id": "wire-value",
+    "subscription_id": "wire-value",
+    "plan_name": "wire-value",
+    "vehicle": "wire-value",
+    "registration": "wire-value",
+    "society": "wire-value",
+    "status": "wire-value",
+    "monthly_price_rupees": 1,
+    "payment_method": "wire-value",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value",
+    "cycle_start": "2026-10-20",
+    "renewal_date": "2026-10-20",
+    "cycle_days": 1,
+    "days_left": 1,
+    "latest_payment": {
+      "id": "wire-value",
+      "kind": "wire-value",
+      "description": "wire-value",
+      "amount_rupees": 1,
+      "status": "wire-value",
+      "due_date": "2026-10-20",
+      "cycle_start": "2026-10-20",
+      "cycle_end": "2026-10-20",
+      "vehicle_id": "wire-value",
+      "received_on": "2026-10-20",
+      "invoice_number": "wire-value"
+    },
+    "can_pay_next": true
+  },
+  "SuggestionApply": {
+    "fingerprint": "wire-value",
+    "job_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
+  },
+  "SupportContact": {
+    "helpline": "wire-value",
+    "whatsapp": "wire-value",
+    "hours": "wire-value",
+    "complaints_in_progress": 1
+  },
+  "SupportFaqItem": {
+    "question": "wire-value",
+    "answer": "wire-value"
+  },
+  "SupportFaqOut": {
+    "items": [
+      {
+        "question": "wire-value",
+        "answer": "wire-value"
+      }
+    ]
+  },
+  "SupportOptionsOut": {
+    "issue_categories": [
+      "wire-value"
+    ],
+    "feedback_categories": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value",
+        "description": "wire-value"
+      }
+    ],
+    "positive_tags": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value",
+        "description": "wire-value"
+      }
+    ],
+    "checkin_categories": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value",
+        "description": "wire-value"
+      }
+    ]
+  },
+  "SwapIn": {
+    "first_job_id": "11111111-1111-1111-1111-111111111111",
+    "second_job_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "TeamMember": {
+    "id": "wire-value",
+    "name": "wire-value",
+    "role": "wire-value",
+    "jobs": [
+      {
+        "id": "wire-value",
+        "visit_id": "wire-value",
+        "visit_status": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "status": "wire-value",
+        "vehicle": {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "make": "wire-value",
+          "model": "wire-value",
+          "category": "wire-value",
+          "photo_url": "wire-value"
+        },
+        "society": "wire-value",
+        "parking": "wire-value",
+        "start_time": "wire-value",
+        "finish_by": "wire-value",
+        "checklist_total": 1,
+        "checklist_done": 1,
+        "assigned_to": {
+          "id": "wire-value",
+          "name": "wire-value"
+        }
+      }
+    ]
+  },
+  "TodayCleanOut": {
+    "vehicle_id": "wire-value",
+    "visit_id": "wire-value",
+    "date": "2026-10-20",
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "checks_done": 1,
+    "checks_total": 1,
+    "photo_count": 1,
+    "rating": 1
+  },
+  "UnfreezeRequest": {
+    "code": "wire-value"
+  },
+  "UpcomingDay": {
+    "date": "2026-10-20",
+    "services": [
+      "wire-value"
+    ],
+    "state": "wire-value",
+    "skip_id": "wire-value",
+    "pause_id": "wire-value",
+    "cutoff_time": "wire-value",
+    "can_change": true,
+    "frozen": true
+  },
+  "UpdateOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "author_role": "wire-value",
+    "note": "wire-value",
+    "status": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "UploadIn": {
+    "purpose": "wire-value",
+    "content_type": "wire-value",
+    "size_bytes": 1
+  },
+  "UploadInfo": {
+    "id": "wire-value",
+    "kind": "wire-value",
+    "stage": "wire-value",
+    "status": "wire-value"
+  },
+  "UploadRequest": {
+    "purpose": "proof",
+    "job_id": "wire-value",
+    "kind": "wire-value",
+    "stage": "wire-value",
+    "content_type": "wire-value",
+    "size_bytes": 1
+  },
+  "UploadState": {
+    "id": "wire-value",
+    "status": "wire-value",
+    "size_bytes": 1
+  },
+  "UploadTicket": {
+    "id": "wire-value",
+    "upload_url": "wire-value",
+    "method": "wire-value",
+    "headers": {},
+    "expires_at": "2026-10-20T07:30:00+00:00"
+  },
+  "ValidationError": {
+    "loc": [
+      "wire-value"
+    ],
+    "msg": "wire-value",
+    "type": "wire-value",
+    "input": "wire-value",
+    "ctx": {}
+  },
+  "VehicleAnswer": {
+    "id": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value"
+  },
+  "VehicleCard": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "model": "wire-value",
+    "make": "wire-value",
+    "society": "wire-value",
+    "parking": "wire-value",
+    "subscription_status": "wire-value",
+    "monthly_price_rupees": 1,
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value",
+    "variant": "wire-value",
+    "photo_url": "wire-value",
+    "next_service": {
+      "date": "2026-10-20",
+      "service": "wire-value",
+      "status": "wire-value"
+    }
+  },
+  "VehicleCreate": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "catalogue_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "plan_id": "11111111-1111-1111-1111-111111111111",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value",
+    "photo_upload_id": "11111111-1111-1111-1111-111111111111",
+    "rc_upload_id": "11111111-1111-1111-1111-111111111111",
+    "first_payment_status": "Due"
+  },
+  "VehicleDetail": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "model": "wire-value",
+    "society": "wire-value",
+    "subscription_status": "wire-value",
+    "photo_url": "wire-value",
+    "parking_basements": [
+      "wire-value"
+    ],
+    "make": "wire-value",
+    "variant": "wire-value",
+    "category": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "parking": "wire-value",
+    "rc_status": "Not uploaded",
+    "monthly_price_rupees": 1,
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value"
+  },
+  "VehicleDraft": {
+    "id": "wire-value",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "cutoff_time": "wire-value",
+    "interior_day": "wire-value"
+  },
+  "VehicleEdit": {
+    "registration": "wire-value",
+    "catalogue_id": "11111111-1111-1111-1111-111111111111",
+    "parking_basement": "wire-value",
+    "parking_number": "wire-value",
+    "photo_upload_id": "11111111-1111-1111-1111-111111111111",
+    "rc_upload_id": "11111111-1111-1111-1111-111111111111",
+    "rc_verified": true
+  },
+  "VehicleInfo": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "make": "wire-value",
+    "model": "wire-value",
+    "category": "wire-value",
+    "photo_url": "wire-value"
+  },
+  "VehicleSummary": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "model": "wire-value",
+    "society": "wire-value",
+    "subscription_status": "wire-value",
+    "photo_url": "wire-value"
+  },
+  "VerifyCodeRequest": {
+    "email": "wire-value",
+    "code": "wire-value"
+  },
+  "VisitChecklistItem": {
+    "key": "wire-value",
+    "label": "wire-value",
+    "checked_at": "2026-10-20T07:30:00+00:00"
+  },
+  "VisitDetail": {
+    "id": "wire-value",
+    "vehicle_id": "wire-value",
+    "vehicle_registration": "wire-value",
+    "vehicle_model": "wire-value",
+    "date": "2026-10-20",
+    "status": "wire-value",
+    "jobs": [
+      {
+        "id": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "proof": [
+          {
+            "id": "wire-value",
+            "kind": "wire-value",
+            "url": "wire-value",
+            "stage": "wire-value",
+            "taken_at": "2026-10-20T07:30:00+00:00"
+          }
+        ],
+        "crew_name": "wire-value",
+        "crew_society": "wire-value",
+        "started_at": "2026-10-20T07:30:00+00:00",
+        "finished_at": "2026-10-20T07:30:00+00:00",
+        "checklist": [
+          {
+            "key": "wire-value",
+            "label": "wire-value",
+            "checked_at": "2026-10-20T07:30:00+00:00"
+          }
+        ],
+        "checklist_done": 1,
+        "checklist_total": 1
+      }
+    ],
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "rating": {
+      "rating": 1,
+      "tags": [
+        "wire-value"
+      ]
+    }
+  },
+  "VisitList": {
+    "date": "2026-10-20",
+    "society": "wire-value",
+    "total": 1,
+    "done": 1,
+    "left": 1,
+    "jobs": [
+      {
+        "id": "wire-value",
+        "visit_id": "wire-value",
+        "visit_status": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "status": "wire-value",
+        "vehicle": {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "make": "wire-value",
+          "model": "wire-value",
+          "category": "wire-value",
+          "photo_url": "wire-value"
+        },
+        "society": "wire-value",
+        "parking": "wire-value",
+        "start_time": "wire-value",
+        "finish_by": "wire-value",
+        "checklist_total": 1,
+        "checklist_done": 1,
+        "assigned_to": {
+          "id": "wire-value",
+          "name": "wire-value"
+        }
+      }
+    ]
+  },
+  "VisitRatingGiven": {
+    "rating": 1,
+    "tags": [
+      "wire-value"
+    ]
+  },
+  "WebAuthLoginRequest": {
+    "login_id": "wire-value",
+    "password": "wire-value"
+  },
+  "WebAuthProfile": {
+    "user_id": "11111111-1111-1111-1111-111111111111",
+    "role": "wire-value",
+    "display_name": "wire-value"
+  }
+}

@@ -19,8 +19,7 @@ from tests.test_api import auth
 
 
 def raise_complaint(client, headers, **changes):
-    body = {"category": "Cleaning quality", "description": "Streaks on the glass",
-            "visit_id": "visit-1", **changes}
+    body = {"category": "Cleaning quality", "description": "Streaks on the glass", **changes}
     return client.post("/v1/customer/complaints", json=body, headers=headers)
 
 
@@ -32,7 +31,7 @@ def test_complaint_goes_from_customer_to_admin_and_back(client, customer, admin)
     c = r.json()
     assert c["display_id"] == "#C-0001"
     assert c["status"] == "Raised"
-    assert c["visit_id"] == "visit-1"
+    assert c["visit_id"] is None
 
     # The admin is alerted (ADM-CMP-08), in the list, by push and by email.
     a = client.get("/v1/admin/alerts", headers=admin).json()
@@ -115,7 +114,7 @@ def test_roles_are_enforced(client, customer, admin, crew):
     assert client.get("/v1/admin/complaints", headers=customer).status_code == 403
     assert client.get("/v1/admin/alerts", headers=crew).status_code == 403
     assert client.get("/v1/customer/complaints", headers=admin).status_code == 403
-    assert client.get("/v1/crew/ratings", headers=customer).status_code == 403
+    assert client.get("/v1/crew/ratings", headers=crew).status_code == 404
     assert client.get("/v1/customer/complaints").status_code == 401
 
 
@@ -170,6 +169,15 @@ def test_contact_comes_from_settings(client, customer, monkeypatch):
         get_support_settings.cache_clear()
 
 
+def test_a_saved_helpline_and_checkin_window_win_over_the_environment(
+        client, customer, engine):
+    from tests.directory_helpers import set_setting
+    set_setting(engine, "support.helpline", "+919999999999")
+    set_setting(engine, "support.hours", "8 AM to 8 PM")
+    r = client.get("/v1/customer/support/contact", headers=customer).json()
+    assert r["helpline"] == "+919999999999" and r["hours"] == "8 AM to 8 PM"
+
+
 def test_options_start_with_the_owner_lists_and_admin_edits_them(client, customer, admin):
     o = client.get("/v1/customer/support/options", headers=customer).json()
     assert len(o["issue_categories"]) == 6
@@ -195,6 +203,18 @@ def test_options_start_with_the_owner_lists_and_admin_edits_them(client, custome
 
 # Feedback and ratings -------------------------------------------------
 
+
+def test_renaming_an_option_keeps_earlier_feedback_under_its_original_name(client, customer, admin):
+    original = client.get('/v1/customer/support/options', headers=customer).json()['feedback_categories'][0]
+    assert client.post('/v1/customer/feedback', headers=customer,
+        json={'category': original['name'], 'rating': 4}).status_code == 201
+    assert client.patch(f"/v1/admin/support/options/{original['id']}", headers=admin,
+                        json={'name': 'Renamed category'}).status_code == 200
+    earlier = client.get('/v1/admin/feedback', headers=admin).json()
+    assert earlier[0]['category'] == original['name']
+    current = client.get('/v1/customer/support/options', headers=customer).json()['feedback_categories']
+    assert any(entry['name'] == 'Renamed category' for entry in current)
+
 def test_feedback_needs_a_rating_or_a_comment(client, customer, admin):
     r = client.post("/v1/customer/feedback", headers=customer, json={"category": "Glass"})
     assert r.status_code == 422  # FDBK-07
@@ -215,8 +235,8 @@ def test_feedback_needs_a_rating_or_a_comment(client, customer, admin):
     assert len(client.get("/v1/admin/feedback?category=Glass", headers=admin).json()) == 1
 
 
-def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew):
-    put = "/v1/customer/visits/visit-9/rating"
+def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew, rating_visit):
+    put = f"/v1/customer/visits/{rating_visit.id}/rating"
     ok = client.put(put, headers=customer, json={"rating": 5, "tags": ["Spotless"]})
     assert ok.status_code == 200 and ok.json()["tags"] == ["Spotless"]
     # Issue tags are not allowed at 5 stars, and positive tags are not allowed below.
@@ -233,12 +253,21 @@ def test_visit_rating_tags_follow_the_stars(client, customer, admin, crew):
     report = client.get("/v1/admin/ratings", headers=admin).json()
     assert report["count"] == 1 and report["average"] == 3.0
     assert report["tag_counts"] == {"Glass": 1, "Timing": 1}
-    assert report["items"][0]["visit_id"] == "visit-9"
+    assert report["items"][0]["visit_id"] == str(rating_visit.id)
 
-    # Crew see only the count and the average. No tags, comments or names.
-    mine = client.get("/v1/crew/ratings", headers=crew).json()
-    assert mine == {"period_days": 30, "count": 1, "average": 3.0,
-                    "stars": {"1": 0, "2": 0, "3": 1, "4": 0, "5": 0}}
+    # The crew app shows no ratings (CRW-RAT-01): there is no crew route.
+    assert client.get("/v1/crew/ratings", headers=crew).status_code == 404
+
+
+def test_admin_complaint_lists_vehicle_and_opens_owned_linked_visit(client, customer, admin, rating_visit):
+    result = raise_complaint(client, customer, visit_id=str(rating_visit.id))
+    assert result.status_code == 201, result.text
+    cid = result.json()["id"]
+    listed = client.get("/v1/admin/complaints", headers=admin).json()
+    assert listed[0]["vehicle"] and " · " in listed[0]["vehicle"]
+    visit = client.get(f"/v1/admin/complaints/{cid}/visit", headers=admin)
+    assert visit.status_code == 200 and visit.json()["id"] == str(rating_visit.id)
+    assert client.get(f"/v1/admin/complaints/{cid}/visit", headers=customer).status_code == 403
 
 
 # Check-in -------------------------------------------------------------
@@ -280,6 +309,14 @@ def test_checkin_is_due_in_the_last_four_days_and_saved_once(client, customer, a
     report = client.get("/v1/admin/checkins", headers=admin).json()
     assert report["category_averages"] == {"Value for money": 4.0, "Schedule fit": 5.0}
     assert report["items"][0]["customer_name"] == "Aarav Mehta"
+
+
+def test_a_changed_checkin_window_is_the_one_used(client, customer, db, engine):
+    from tests.directory_helpers import set_setting
+    make_due(db, 10)
+    assert client.get("/v1/customer/checkins/pending", headers=customer).json() == []
+    set_setting(engine, "support.checkin_days_before", 12)
+    assert len(client.get("/v1/customer/checkins/pending", headers=customer).json()) == 1
 
 
 def test_checkin_rules(client, customer, db):

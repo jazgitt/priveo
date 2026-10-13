@@ -7,6 +7,7 @@ import 'package:priveo/features/crew/capture/media_capture.dart';
 import 'package:priveo/features/crew/crew_providers.dart';
 import 'package:priveo/features/crew/data/crew_models.dart';
 import 'package:priveo/features/crew/data/crew_repository.dart';
+import 'package:priveo/features/crew/data/manager_models.dart';
 import 'package:priveo/features/crew/upload/upload_queue.dart';
 import 'package:priveo/l10n/app_localizations.dart';
 
@@ -260,6 +261,106 @@ class FakeCrewBackend implements CrewRepository, UploadApi {
     return _detail(jobs[jobId]!);
   }
 
+  // ---- Manager attendance, hours and reassign checks ---------------------------
+
+  /// Crew ids the reassign check refuses, with the words the server gives.
+  final blockedReassign = <String, String>{};
+  final attendanceSet = <String, String>{};
+  final hoursSet = <String, List<HoursDay>>{};
+  final _attendance = <String, String>{};
+
+  @override
+  Future<AttendanceDay> managerAttendance(DateTime date) async {
+    _guard();
+    AttendanceEntry entry(String id, String name, String role, int open) =>
+        AttendanceEntry(
+            crewId: id,
+            name: name,
+            role: role,
+            working: true,
+            start: '06:00',
+            end: '11:00',
+            status: _attendance[id] ?? Attendance.present,
+            lateStart: '',
+            openJobs: open);
+    return AttendanceDay(date: date, society: 'Green Meadows', crew: [
+      entry('c1', 'Ravi Kumar', 'Manager', 1),
+      entry('c2', 'Sunil', 'Member', 1),
+    ]);
+  }
+
+  @override
+  Future<AttendanceResult> managerSetAttendance(String crewId,
+      {required String status,
+      required DateTime from,
+      DateTime? to,
+      String start = ''}) async {
+    _guard();
+    attendanceSet[crewId] = status;
+    _attendance[crewId] = status;
+    return AttendanceResult(
+        attendance: await managerAttendance(from),
+        released: status == Attendance.present
+            ? const []
+            : [
+                ReleasedJob(
+                    jobId: 'j2',
+                    date: from,
+                    service: 'Cleaning-External',
+                    registration: 'MH12CD5678',
+                    reassigned: false)
+              ]);
+  }
+
+  CrewHours _hours(String id, String name, String role) => CrewHours(
+      crewId: id,
+      name: name,
+      role: role,
+      days: hoursSet[id] ??
+          [
+            for (final d in const [
+              'Monday',
+              'Tuesday',
+              'Wednesday',
+              'Thursday',
+              'Friday',
+              'Saturday',
+              'Sunday'
+            ])
+              HoursDay(day: d, working: d != 'Sunday', start: '06:00', end: '11:00'),
+          ]);
+
+  @override
+  Future<List<CrewHours>> managerHours() async {
+    _guard();
+    return [_hours('c1', 'Ravi Kumar', 'Manager'), _hours('c2', 'Sunil', 'Member')];
+  }
+
+  @override
+  Future<HoursResult> managerSetHours(String crewId, List<HoursDay> days) async {
+    _guard();
+    hoursSet[crewId] = days;
+    return HoursResult(
+        hours: _hours(crewId, crewId == 'c1' ? 'Ravi Kumar' : 'Sunil', 'Member'),
+        released: const []);
+  }
+
+  @override
+  Future<List<ReassignOption>> managerReassignOptions(String jobId) async {
+    _guard();
+    return [
+      for (final c in await managerCrew())
+        ReassignOption(
+            crewId: c.id,
+            name: c.name,
+            role: 'Member',
+            canAssign: !blockedReassign.containsKey(c.id),
+            problem: blockedReassign[c.id] ?? '',
+            problemCode:
+                blockedReassign.containsKey(c.id) ? 'crew_not_working' : ''),
+    ];
+  }
+
   // ---- Uploads ---------------------------------------------------------------
 
   final _kinds = <String, String>{};
@@ -349,6 +450,7 @@ Future<UploadQueue> pumpCrew(
       retryAfter: Duration.zero);
   addTearDown(queue.dispose);
   await tester.pumpWidget(ProviderScope(
+    retry: (_, _) => null,
     overrides: [
       crewRepositoryProvider.overrideWithValue(backend),
       uploadApiProvider.overrideWithValue(backend),

@@ -1,3 +1,4 @@
+import '../../../core/network/read_refresh.dart';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -170,7 +171,7 @@ class DioMoneyRepository implements MoneyRepository {
 }
 
 final moneyRepositoryProvider = Provider<MoneyRepository>(
-    (ref) => DioMoneyRepository(ref.watch(dioProvider)));
+    (ref) => DioMoneyRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2));
 
 final upcomingProvider = FutureProvider.autoDispose
     .family<List<UpcomingDayDto>, String>(

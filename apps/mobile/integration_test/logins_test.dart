@@ -52,6 +52,11 @@ void main() {
 
     for (final (id, password, homeLabel) in _logins) {
       expect(password, isNotEmpty, reason: 'No password given for $id');
+      final getStarted = find.text('Get started');
+      if (getStarted.evaluate().isNotEmpty) {
+        await tester.tap(getStarted);
+        await tester.pumpAndSettle();
+      }
       await tester.enterText(find.byType(TextField), id);
       await tester.tap(find.text('Continue'));
       await _waitFor(tester, find.text('Change'));

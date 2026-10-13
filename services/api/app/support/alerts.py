@@ -14,7 +14,6 @@ from app.platform.errors import ApiError
 from app.support.models import AdminAlert
 from app.support.notify import (
     EmailNotifier,
-    LoggingEmailNotifier,
     LoggingPushNotifier,
     PushNotifier,
 )
@@ -25,18 +24,35 @@ log = logging.getLogger("priveo.support.alerts")
 def raise_alert(db: Session, kind: str, title: str, body: str = "", *,
                 ref_type: str | None = None, ref_id: str | None = None,
                 push: PushNotifier | None = None,
-                email: EmailNotifier | None = None) -> AdminAlert:
+                email: EmailNotifier | None = None, commit: bool = True) -> AdminAlert:
     alert = AdminAlert(kind=kind, title=title[:160], body=body[:500],
                        ref_type=ref_type, ref_id=ref_id)
     db.add(alert)
+    db.flush()
+    from app.support.email_delivery import enqueue
+    enqueue(db, alert)
+    if not commit:
+        return alert
     db.commit()
+    dispatch_alert(db, alert, push=push, email=email)
+    return alert
+
+
+def dispatch_alert(db, alert, *, push=None, email=None):
     # A failed push or email must not lose the alert, which is already saved.
     try:
-        (push or LoggingPushNotifier()).push_admin(title, body)
-        (email or LoggingEmailNotifier()).send_admin_alert(title, body)
+        (push or LoggingPushNotifier()).push_admin(alert.title, alert.body)
     except Exception:
-        log.exception("alert %s saved, but the push or email failed", alert.id)
-    return alert
+        log.exception("alert %s saved, but the push failed", alert.id)
+    try:
+        if email is not None:
+            email.send_admin_alert(alert.title, alert.body)
+        else:
+            from app.support.email_delivery import deliver_pending
+            deliver_pending(db)
+    except Exception:
+        db.rollback()
+        log.exception("alert %s saved, but the email failed", alert.id)
 
 
 def unread_count(db: Session) -> int:

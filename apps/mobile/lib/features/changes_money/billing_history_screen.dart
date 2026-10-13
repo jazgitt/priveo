@@ -6,6 +6,7 @@ import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
+import 'invoice_screen.dart';
 import 'money_widgets.dart';
 import 'strings.dart';
 import 'routes.dart';
@@ -17,25 +18,11 @@ class BillingHistoryScreen extends ConsumerWidget {
 
   final String vehicleId;
 
-  Future<void> _showInvoice(BuildContext context, WidgetRef ref, PaymentDto p) async {
-    try {
-      final inv = await ref.read(moneyRepositoryProvider).invoice(p.id);
-      if (!context.mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text(MoneyStrings.invoiceTitle),
-          content: _InvoiceBody(inv),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text('Close')),
-          ],
-        ),
+  // SUB-12: the invoice opens as a page with an authenticated PDF preview.
+  void _showInvoice(BuildContext context, PaymentDto p) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => InvoiceScreen(paymentId: p.id)),
       );
-    } catch (e) {
-      if (context.mounted) showFailure(context, e);
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,8 +32,9 @@ class BillingHistoryScreen extends ConsumerWidget {
       body: history.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
-            message: failureText(e),
-            onRetry: () => ref.invalidate(billingHistoryProvider(vehicleId))),
+          message: failureText(e),
+          onRetry: () => ref.invalidate(billingHistoryProvider(vehicleId)),
+        ),
         data: (rows) => rows.isEmpty
             ? const Center(child: Text(MoneyStrings.historyEmpty))
             : ListView.separated(
@@ -65,8 +53,10 @@ class BillingHistoryScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(p.description,
-                                    style: Theme.of(context).textTheme.titleSmall),
+                                Text(
+                                  p.description,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
                                 Text(formatRupees(p.amountRupees)),
                                 Text(formatDate(p.dueDate)),
                               ],
@@ -78,7 +68,7 @@ class BillingHistoryScreen extends ConsumerWidget {
                               PaymentStatusChip(p),
                               if (p.invoiceNumber != null)
                                 TextButton(
-                                  onPressed: () => _showInvoice(context, ref, p),
+                                  onPressed: () => _showInvoice(context, p),
                                   child: const Text(MoneyStrings.invoice),
                                 ),
                             ],
@@ -92,27 +82,4 @@ class BillingHistoryScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _InvoiceBody extends StatelessWidget {
-  const _InvoiceBody(this.inv);
-
-  final InvoiceDto inv;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(inv.number, style: Theme.of(context).textTheme.titleMedium),
-          Text(formatDate(inv.issuedOn)),
-          const SizedBox(height: 8),
-          Text(inv.description),
-          Text(formatRupees(inv.amountRupees)),
-          const Text(MoneyStrings.gstIncluded),
-          const SizedBox(height: 8),
-          Text(inv.customerName),
-          Text('${inv.sellerName}, GSTIN ${inv.sellerGstin}'),
-        ],
-      );
 }

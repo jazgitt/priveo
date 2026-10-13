@@ -1,17 +1,26 @@
+import re
 import uuid
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.customer_reads.deps import get_customer_reads
+from app.customer_reads.schemas import VisitDetail
+from app.customer_reads.service import CustomerReads
+from app.customers.models import Customer
+from app.directory import lookup
+from app.identity.models import Login
 from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
+from app.platform.errors import ApiError
 from app.support import alerts
-from app.support.config import SupportSettings, get_support_settings
+from app.support.faq import SupportFaqOut, load_faq
+from app.support.models import Complaint
 from app.support.notify import (
     EmailNotifier,
-    LoggingEmailNotifier,
-    LoggingPushNotifier,
+    QueuedEmailNotifier,
     PushNotifier,
 )
 from app.support.schemas import (
@@ -25,7 +34,6 @@ from app.support.schemas import (
     ComplaintCreate,
     ComplaintDetail,
     ComplaintSummary,
-    CrewRatings,
     FeedbackAdmin,
     FeedbackCreate,
     FeedbackOut,
@@ -33,13 +41,13 @@ from app.support.schemas import (
     OptionAdmin,
     OptionCreate,
     OptionPatch,
-    Options,
     PendingCheckIn,
     RatingCreate,
     RatingOut,
     RatingsReport,
     StatusChange,
     SupportContact,
+    SupportOptionsOut,
 )
 from app.support.service import SupportService
 
@@ -48,12 +56,15 @@ crew = APIRouter(prefix="/v1/crew", tags=["support"])
 admin = APIRouter(prefix="/v1/admin", tags=["support"])
 
 
-def get_push_notifier() -> PushNotifier:
-    return LoggingPushNotifier()
+def get_push_notifier(db: Session = Depends(get_db)) -> PushNotifier:
+    # The inbox and push of the notifications module (CMP-04, CHK-01).
+    from app.notifications.bridge import SupportNotifier
+
+    return SupportNotifier(db)
 
 
-def get_email_notifier() -> EmailNotifier:
-    return LoggingEmailNotifier()
+def get_email_notifier(db: Session = Depends(get_db)) -> EmailNotifier:
+    return QueuedEmailNotifier(db)
 
 
 def get_support_service(db: Session = Depends(get_db),
@@ -66,22 +77,29 @@ def get_support_service(db: Session = Depends(get_db),
 
 @customer.get("/support/contact", response_model=SupportContact)
 def contact(user: User = Depends(require_role("customer")),
-            service: SupportService = Depends(get_support_service),
-            settings: SupportSettings = Depends(get_support_settings)):
+            service: SupportService = Depends(get_support_service)):
     """The helpline and WhatsApp numbers and hours (SUP-02 to SUP-04), and the
     count of complaints in progress (SUP-01)."""
     me = service.customer_for(user.id)
-    return SupportContact(helpline=settings.support_helpline, whatsapp=settings.support_whatsapp,
-                          hours=settings.support_hours,
+    db = service.db
+    return SupportContact(helpline=lookup.setting(db, "support.helpline"),
+                          whatsapp=lookup.setting(db, "support.whatsapp"),
+                          hours=lookup.setting(db, "support.hours"),
                           complaints_in_progress=service.in_progress_count(me))
 
 
-@customer.get("/support/options", response_model=Options)
+@customer.get("/support/options", response_model=SupportOptionsOut)
 def options(user: User = Depends(require_role("customer")),
             service: SupportService = Depends(get_support_service)):
     """The lists the forms use: issue categories (ISS-01), feedback categories
     (FDBK-06), positive tags (SVC-11), check-in categories (CHK-03)."""
     return service.options()
+
+
+@customer.get("/faq", response_model=SupportFaqOut)
+def faq(user: User = Depends(require_role("customer"))):
+    """The Frequently asked questions in order (SUP-05)."""
+    return SupportFaqOut(items=load_faq())
 
 
 @customer.post("/complaints", response_model=ComplaintDetail, status_code=201)
@@ -142,15 +160,6 @@ def submit_checkin(body: CheckInCreate, user: User = Depends(require_role("custo
     return CheckInOut(id=row.id, cycle_start=row.cycle_start)
 
 
-# Crew -----------------------------------------------------------------
-
-@crew.get("/ratings", response_model=CrewRatings)
-def crew_ratings(user: User = Depends(require_role("crew")),
-                 service: SupportService = Depends(get_support_service)):
-    """General visit ratings of the last 30 days. No names, tags or comments."""
-    return service.crew_ratings()
-
-
 # Admin ----------------------------------------------------------------
 
 @admin.get("/complaints", response_model=list[AdminComplaintSummary])
@@ -164,6 +173,18 @@ def admin_complaints(status: str | None = None, category: str | None = None,
 def admin_complaint(complaint_id: uuid.UUID, user: User = Depends(require_role("admin")),
                     service: SupportService = Depends(get_support_service)):
     return service.detail_for_admin(complaint_id)
+
+
+@admin.get("/complaints/{complaint_id}/visit", response_model=VisitDetail)
+def admin_complaint_visit(complaint_id: uuid.UUID,
+                          _: User = Depends(require_role("admin")),
+                          db: Session = Depends(get_db),
+                          reads: CustomerReads = Depends(get_customer_reads)):
+    complaint = db.get(Complaint, complaint_id)
+    if complaint is None or not complaint.visit_id:
+        raise ApiError("not_found", "No linked visit was found.", 404)
+    customer = db.get(Customer, complaint.customer_id)
+    return reads.visit_detail(customer.login_id, complaint.visit_id)
 
 
 @admin.post("/complaints/{complaint_id}/status", response_model=AdminComplaintDetail)
@@ -234,6 +255,35 @@ def admin_alerts(unread_only: bool = False, user: User = Depends(require_role("a
     """The alert list with the unread count for the bell (ADM-ACC-09)."""
     return AlertList(unread_count=alerts.unread_count(db),
                      items=[_alert_out(a) for a in alerts.list_alerts(db, unread_only)])
+
+
+class AlertEmailPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+    email: str = Field(max_length=254)
+
+
+@admin.get("/alerts/email-preferences", response_model=AlertEmailPreferences)
+def alert_email_preferences(user: User = Depends(require_role("admin")),
+                            db: Session = Depends(get_db)):
+    login = db.get(Login, user.id)
+    return AlertEmailPreferences(enabled=login.alert_email_enabled, email=login.alert_email)
+
+
+@admin.put("/alerts/email-preferences", response_model=AlertEmailPreferences)
+def save_alert_email_preferences(body: AlertEmailPreferences,
+                                 user: User = Depends(require_role("admin")),
+                                 db: Session = Depends(get_db)):
+    from app.customers.administration import audit
+    email = body.email.strip().lower()
+    if (email or body.enabled) and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ApiError("validation_failed", "Enter an email address for alerts.", 422,
+                       {"email": "invalid"})
+    login = db.get(Login, user.id)
+    login.alert_email, login.alert_email_enabled = email, body.enabled
+    audit(db, user.id, "login", user.id, "alert_email", {"enabled": body.enabled, "email": email})
+    db.commit()
+    return AlertEmailPreferences(enabled=body.enabled, email=email)
 
 
 @admin.post("/alerts/read-all", status_code=204)

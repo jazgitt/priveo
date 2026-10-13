@@ -24,7 +24,7 @@ class OptionAdmin(OptionOut):
     active: bool
 
 
-class Options(BaseModel):
+class SupportOptionsOut(BaseModel):
     issue_categories: list[str]
     feedback_categories: list[OptionOut]
     positive_tags: list[OptionOut]
@@ -83,11 +83,14 @@ class ComplaintSummary(BaseModel):
 
 
 class ComplaintDetail(ComplaintSummary):
+    # Upload IDs of the photos (ISS-04), and signed read URLs in the same order.
     photo_keys: list[str]
+    photo_urls: list[str] = []
     updates: list[UpdateOut]
 
 
 class AdminComplaintSummary(ComplaintSummary):
+    vehicle: str = ""
     customer_name: str
     society: str
     flat: str
@@ -97,6 +100,7 @@ class AdminComplaintSummary(ComplaintSummary):
 
 class AdminComplaintDetail(AdminComplaintSummary):
     photo_keys: list[str]
+    photo_urls: list[str] = []
     updates: list[UpdateOut]
 
 

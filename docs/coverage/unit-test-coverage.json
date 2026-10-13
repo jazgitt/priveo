@@ -1,0 +1,2080 @@
+{
+  "measured_at_utc": "2026-10-13T14:13:21.340311+00:00",
+  "metric": "executable line coverage",
+  "threshold": 90,
+  "areas": {
+    "Backend shared": {
+      "covered": 8710,
+      "total": 9377,
+      "percent": 92.8869
+    },
+    "Admin Web": {
+      "covered": 1547,
+      "total": 1709,
+      "percent": 90.5208
+    },
+    "Mobile shared": {
+      "covered": 935,
+      "total": 1007,
+      "percent": 92.85
+    },
+    "Crew Mobile": {
+      "covered": 1491,
+      "total": 1655,
+      "percent": 90.0906
+    },
+    "Mobile generated": {
+      "covered": 4026,
+      "total": 4027,
+      "percent": 99.9752
+    },
+    "Customer Mobile": {
+      "covered": 4659,
+      "total": 5164,
+      "percent": 90.2208
+    },
+    "Admin Mobile": {
+      "covered": 1384,
+      "total": 1518,
+      "percent": 91.1726
+    },
+    "Mobile all (including generated)": {
+      "covered": 12495,
+      "total": 13371,
+      "percent": 93.4485
+    },
+    "All application sources": {
+      "covered": 22752,
+      "total": 24457,
+      "percent": 93.0286
+    }
+  },
+  "unmeasured_mobile_sources": [],
+  "mobile_declarative_sources": [
+    "lib/core/ui/tokens.g.dart",
+    "lib/main.dart"
+  ],
+  "backend_branch_percent": 79.6231,
+  "web_branches": {
+    "total": 1577,
+    "covered": 1276,
+    "skipped": 0,
+    "pct": 80.91
+  },
+  "web_statements": {
+    "total": 2101,
+    "covered": 1855,
+    "skipped": 0,
+    "pct": 88.29
+  },
+  "web_functions": {
+    "total": 1047,
+    "covered": 878,
+    "skipped": 0,
+    "pct": 83.85
+  },
+  "mobile_files": [
+    {
+      "file": "lib/features/admin_quick/actions/actions_screens.dart",
+      "area": "Admin Mobile",
+      "covered": 488,
+      "total": 541,
+      "percent": 90.2033,
+      "missing_lines": [
+        70,
+        95,
+        96,
+        97,
+        99,
+        100,
+        113,
+        130,
+        206,
+        222,
+        223,
+        266,
+        267,
+        306,
+        351,
+        373,
+        374,
+        375,
+        392,
+        393,
+        394,
+        412,
+        413,
+        414,
+        421,
+        422,
+        424,
+        425,
+        433,
+        434,
+        436,
+        437,
+        445,
+        446,
+        447,
+        497,
+        535,
+        537,
+        577,
+        591,
+        592,
+        593,
+        618,
+        638,
+        790,
+        812,
+        813,
+        814,
+        837,
+        838,
+        845,
+        846,
+        876
+      ]
+    },
+    {
+      "file": "lib/features/customer/vehicles/add_vehicle_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 263,
+      "total": 315,
+      "percent": 83.4921,
+      "missing_lines": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        32,
+        33,
+        34,
+        82,
+        88,
+        89,
+        90,
+        91,
+        92,
+        95,
+        96,
+        110,
+        111,
+        112,
+        114,
+        115,
+        117,
+        120,
+        121,
+        123,
+        126,
+        128,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        143,
+        144,
+        145,
+        146,
+        148,
+        150,
+        204,
+        205,
+        238,
+        239,
+        240,
+        286,
+        351,
+        386,
+        452
+      ]
+    },
+    {
+      "file": "lib/features/customer/onboarding/onboarding_review_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 404,
+      "total": 446,
+      "percent": 90.583,
+      "missing_lines": [
+        23,
+        29,
+        30,
+        31,
+        66,
+        67,
+        68,
+        143,
+        146,
+        151,
+        152,
+        163,
+        168,
+        257,
+        263,
+        266,
+        267,
+        268,
+        270,
+        271,
+        272,
+        274,
+        275,
+        276,
+        277,
+        278,
+        279,
+        282,
+        288,
+        289,
+        290,
+        291,
+        336,
+        411,
+        412,
+        413,
+        455,
+        456,
+        457,
+        470,
+        570,
+        600
+      ]
+    },
+    {
+      "file": "lib/features/customer/home/customer_shell.dart",
+      "area": "Customer Mobile",
+      "covered": 255,
+      "total": 294,
+      "percent": 86.7347,
+      "missing_lines": [
+        70,
+        236,
+        237,
+        238,
+        247,
+        259,
+        261,
+        264,
+        359,
+        559,
+        560,
+        562,
+        564,
+        565,
+        566,
+        568,
+        570,
+        571,
+        572,
+        573,
+        574,
+        575,
+        577,
+        578,
+        579,
+        581,
+        583,
+        586,
+        588,
+        589,
+        590,
+        591,
+        592,
+        593,
+        594,
+        595,
+        596,
+        597,
+        625
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/skip_pause_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 150,
+      "total": 187,
+      "percent": 80.2139,
+      "missing_lines": [
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        88,
+        90,
+        91,
+        93,
+        95,
+        96,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        153,
+        223,
+        224,
+        225,
+        226,
+        227,
+        237,
+        244,
+        257,
+        259,
+        262,
+        264
+      ]
+    },
+    {
+      "file": "lib/features/crew/crew_providers.dart",
+      "area": "Crew Mobile",
+      "covered": 38,
+      "total": 71,
+      "percent": 53.5211,
+      "missing_lines": [
+        19,
+        22,
+        23,
+        24,
+        28,
+        31,
+        32,
+        33,
+        35,
+        36,
+        37,
+        39,
+        40,
+        41,
+        42,
+        45,
+        46,
+        53,
+        54,
+        55,
+        61,
+        62,
+        72,
+        74,
+        75,
+        76,
+        77,
+        79,
+        80,
+        83,
+        84,
+        122,
+        123
+      ]
+    },
+    {
+      "file": "lib/features/customer/visit/proof_video_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 101,
+      "total": 134,
+      "percent": 75.3731,
+      "missing_lines": [
+        15,
+        33,
+        34,
+        35,
+        36,
+        38,
+        39,
+        54,
+        56,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        73,
+        74,
+        75,
+        80,
+        83,
+        108,
+        109,
+        130,
+        182,
+        183,
+        184
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/vehicle_account_section.dart",
+      "area": "Customer Mobile",
+      "covered": 64,
+      "total": 96,
+      "percent": 66.6667,
+      "missing_lines": [
+        115,
+        116,
+        117,
+        120,
+        121,
+        124,
+        125,
+        126,
+        128,
+        129,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        138,
+        139,
+        140,
+        141,
+        142,
+        145,
+        147,
+        148,
+        149,
+        150,
+        152,
+        201,
+        203,
+        204,
+        205,
+        208
+      ]
+    },
+    {
+      "file": "lib/features/customer/history/history_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 104,
+      "total": 135,
+      "percent": 77.037,
+      "missing_lines": [
+        21,
+        22,
+        24,
+        33,
+        64,
+        66,
+        67,
+        81,
+        90,
+        91,
+        92,
+        93,
+        98,
+        99,
+        100,
+        101,
+        107,
+        130,
+        131,
+        133,
+        134,
+        135,
+        136,
+        145,
+        157,
+        186,
+        187,
+        188,
+        192,
+        200,
+        201
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/photo_widgets.dart",
+      "area": "Customer Mobile",
+      "covered": 130,
+      "total": 153,
+      "percent": 84.9673,
+      "missing_lines": [
+        62,
+        63,
+        175,
+        176,
+        183,
+        237,
+        239,
+        240,
+        241,
+        242,
+        243,
+        244,
+        283,
+        284,
+        290,
+        291,
+        292,
+        327,
+        349,
+        351,
+        352,
+        353,
+        356
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/scheduling/scheduling_screens.dart",
+      "area": "Admin Mobile",
+      "covered": 139,
+      "total": 159,
+      "percent": 87.4214,
+      "missing_lines": [
+        28,
+        29,
+        30,
+        33,
+        88,
+        127,
+        134,
+        152,
+        153,
+        162,
+        163,
+        164,
+        232,
+        233,
+        252,
+        259,
+        271,
+        284,
+        285,
+        286
+      ]
+    },
+    {
+      "file": "lib/features/crew/home/crew_home_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 71,
+      "total": 90,
+      "percent": 78.8889,
+      "missing_lines": [
+        48,
+        50,
+        68,
+        69,
+        70,
+        89,
+        93,
+        95,
+        104,
+        155,
+        158,
+        160,
+        161,
+        162,
+        163,
+        166,
+        167,
+        168,
+        169
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/complaints/complaints_screens.dart",
+      "area": "Admin Mobile",
+      "covered": 209,
+      "total": 225,
+      "percent": 92.8889,
+      "missing_lines": [
+        61,
+        62,
+        63,
+        66,
+        67,
+        89,
+        90,
+        159,
+        160,
+        161,
+        282,
+        335,
+        338,
+        364,
+        365,
+        366
+      ]
+    },
+    {
+      "file": "lib/features/customer/visit/visit_details_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 186,
+      "total": 202,
+      "percent": 92.0792,
+      "missing_lines": [
+        46,
+        81,
+        83,
+        266,
+        268,
+        269,
+        270,
+        284,
+        285,
+        286,
+        336,
+        337,
+        338,
+        339,
+        340,
+        411
+      ]
+    },
+    {
+      "file": "lib/features/crew/job/perform_service_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 133,
+      "total": 148,
+      "percent": 89.8649,
+      "missing_lines": [
+        52,
+        76,
+        156,
+        170,
+        174,
+        178,
+        202,
+        203,
+        204,
+        205,
+        206,
+        272,
+        273,
+        274,
+        275
+      ]
+    },
+    {
+      "file": "lib/features/crew/manager/manager_attendance_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 83,
+      "total": 97,
+      "percent": 85.567,
+      "missing_lines": [
+        18,
+        45,
+        46,
+        48,
+        49,
+        75,
+        76,
+        81,
+        82,
+        101,
+        128,
+        140,
+        142,
+        143
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/addon_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 201,
+      "total": 214,
+      "percent": 93.9252,
+      "missing_lines": [
+        67,
+        111,
+        140,
+        174,
+        175,
+        240,
+        284,
+        329,
+        330,
+        331,
+        332,
+        386,
+        395
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/invoice_pdf_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 10,
+      "total": 23,
+      "percent": 43.4783,
+      "missing_lines": [
+        14,
+        35,
+        38,
+        39,
+        44,
+        45,
+        46,
+        47,
+        48,
+        50,
+        51,
+        52,
+        53
+      ]
+    },
+    {
+      "file": "lib/features/crew/manager/manager_schedule_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 56,
+      "total": 69,
+      "percent": 81.1594,
+      "missing_lines": [
+        31,
+        32,
+        48,
+        57,
+        69,
+        79,
+        91,
+        114,
+        116,
+        117,
+        119,
+        120,
+        135
+      ]
+    },
+    {
+      "file": "lib/features/crew/manager/manager_job_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 74,
+      "total": 87,
+      "percent": 85.0575,
+      "missing_lines": [
+        72,
+        73,
+        74,
+        75,
+        127,
+        128,
+        130,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147
+      ]
+    },
+    {
+      "file": "lib/features/customer/vehicles/vehicles_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 79,
+      "total": 92,
+      "percent": 85.8696,
+      "missing_lines": [
+        16,
+        17,
+        19,
+        34,
+        35,
+        38,
+        41,
+        63,
+        65,
+        66,
+        67,
+        70,
+        145
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/home/admin_home_screen.dart",
+      "area": "Admin Mobile",
+      "covered": 93,
+      "total": 105,
+      "percent": 88.5714,
+      "missing_lines": [
+        28,
+        29,
+        31,
+        80,
+        81,
+        83,
+        109,
+        114,
+        119,
+        183,
+        184,
+        185
+      ]
+    },
+    {
+      "file": "lib/features/crew/upload/sqlite_store.dart",
+      "area": "Crew Mobile",
+      "covered": 28,
+      "total": 40,
+      "percent": 70.0,
+      "missing_lines": [
+        84,
+        85,
+        86,
+        88,
+        89,
+        91,
+        92,
+        93,
+        94,
+        99,
+        101,
+        102
+      ]
+    },
+    {
+      "file": "lib/features/support/checkin_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 68,
+      "total": 80,
+      "percent": 85.0,
+      "missing_lines": [
+        56,
+        57,
+        58,
+        59,
+        84,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        109
+      ]
+    },
+    {
+      "file": "lib/features/support/complaints_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 108,
+      "total": 120,
+      "percent": 90.0,
+      "missing_lines": [
+        30,
+        31,
+        32,
+        34,
+        65,
+        136,
+        137,
+        138,
+        139,
+        153,
+        154,
+        155
+      ]
+    },
+    {
+      "file": "lib/core/auth/auth_controller.dart",
+      "area": "Mobile shared",
+      "covered": 33,
+      "total": 44,
+      "percent": 75.0,
+      "missing_lines": [
+        64,
+        65,
+        66,
+        68,
+        70,
+        74,
+        78,
+        79,
+        80,
+        81,
+        84
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/payments/payments_screens.dart",
+      "area": "Admin Mobile",
+      "covered": 79,
+      "total": 90,
+      "percent": 87.7778,
+      "missing_lines": [
+        39,
+        52,
+        53,
+        54,
+        57,
+        70,
+        136,
+        137,
+        138,
+        145,
+        176
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/subscription_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 87,
+      "total": 97,
+      "percent": 89.6907,
+      "missing_lines": [
+        34,
+        98,
+        99,
+        101,
+        102,
+        103,
+        105,
+        111,
+        115,
+        120
+      ]
+    },
+    {
+      "file": "lib/features/customer/settings/settings_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 31,
+      "total": 41,
+      "percent": 75.6098,
+      "missing_lines": [
+        11,
+        12,
+        14,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        63
+      ]
+    },
+    {
+      "file": "lib/core/network/api_client.dart",
+      "area": "Mobile shared",
+      "covered": 13,
+      "total": 22,
+      "percent": 59.0909,
+      "missing_lines": [
+        28,
+        29,
+        31,
+        32,
+        33,
+        35,
+        36,
+        37,
+        40
+      ]
+    },
+    {
+      "file": "lib/features/support/feedback_sheet.dart",
+      "area": "Customer Mobile",
+      "covered": 136,
+      "total": 145,
+      "percent": 93.7931,
+      "missing_lines": [
+        116,
+        117,
+        118,
+        119,
+        224,
+        225,
+        226,
+        227,
+        284
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/invoice_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 50,
+      "total": 59,
+      "percent": 84.7458,
+      "missing_lines": [
+        40,
+        41,
+        42,
+        61,
+        62,
+        63,
+        64,
+        65,
+        110
+      ]
+    },
+    {
+      "file": "lib/features/crew/crew_text.dart",
+      "area": "Crew Mobile",
+      "covered": 23,
+      "total": 32,
+      "percent": 71.875,
+      "missing_lines": [
+        84,
+        88,
+        92,
+        103,
+        106,
+        107,
+        126,
+        127,
+        128
+      ]
+    },
+    {
+      "file": "lib/features/customer/notifications/notifications_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 63,
+      "total": 72,
+      "percent": 87.5,
+      "missing_lines": [
+        28,
+        29,
+        30,
+        31,
+        44,
+        45,
+        72,
+        78,
+        82
+      ]
+    },
+    {
+      "file": "lib/features/people/vehicles/vehicles_screen.dart",
+      "area": "Mobile shared",
+      "covered": 91,
+      "total": 100,
+      "percent": 91.0,
+      "missing_lines": [
+        28,
+        29,
+        31,
+        32,
+        34,
+        38,
+        125,
+        126,
+        132
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/alerts/alerts_screen.dart",
+      "area": "Admin Mobile",
+      "covered": 45,
+      "total": 53,
+      "percent": 84.9057,
+      "missing_lines": [
+        28,
+        29,
+        30,
+        54,
+        55,
+        56,
+        59,
+        95
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/routes.dart",
+      "area": "Admin Mobile",
+      "covered": 22,
+      "total": 30,
+      "percent": 73.3333,
+      "missing_lines": [
+        21,
+        22,
+        23,
+        29,
+        33,
+        37,
+        41,
+        45
+      ]
+    },
+    {
+      "file": "lib/features/auth/data/support_contact.dart",
+      "area": "Mobile shared",
+      "covered": 14,
+      "total": 22,
+      "percent": 63.6364,
+      "missing_lines": [
+        10,
+        15,
+        16,
+        17,
+        18,
+        28,
+        41,
+        42
+      ]
+    },
+    {
+      "file": "lib/features/crew/notifications/crew_notifications.dart",
+      "area": "Crew Mobile",
+      "covered": 70,
+      "total": 78,
+      "percent": 89.7436,
+      "missing_lines": [
+        102,
+        117,
+        118,
+        144,
+        145,
+        146,
+        153,
+        157
+      ]
+    },
+    {
+      "file": "lib/core/ui/widgets.dart",
+      "area": "Mobile shared",
+      "covered": 70,
+      "total": 77,
+      "percent": 90.9091,
+      "missing_lines": [
+        128,
+        202,
+        204,
+        205,
+        206,
+        207,
+        208
+      ]
+    },
+    {
+      "file": "lib/features/crew/job/job_card_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 76,
+      "total": 83,
+      "percent": 91.5663,
+      "missing_lines": [
+        39,
+        40,
+        73,
+        117,
+        118,
+        119,
+        122
+      ]
+    },
+    {
+      "file": "lib/features/crew/profile/crew_profile_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 64,
+      "total": 71,
+      "percent": 90.1408,
+      "missing_lines": [
+        86,
+        87,
+        88,
+        91,
+        92,
+        94,
+        95
+      ]
+    },
+    {
+      "file": "lib/features/people/data/people_repository.dart",
+      "area": "Mobile shared",
+      "covered": 18,
+      "total": 25,
+      "percent": 72.0,
+      "missing_lines": [
+        67,
+        71,
+        74,
+        75,
+        76,
+        77,
+        83
+      ]
+    },
+    {
+      "file": "lib/features/customer/calendar/calendar_strings.dart",
+      "area": "Customer Mobile",
+      "covered": 15,
+      "total": 21,
+      "percent": 71.4286,
+      "missing_lines": [
+        4,
+        25,
+        31,
+        32,
+        34,
+        37
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/profile_screens.dart",
+      "area": "Customer Mobile",
+      "covered": 190,
+      "total": 196,
+      "percent": 96.9388,
+      "missing_lines": [
+        60,
+        182,
+        183,
+        184,
+        185,
+        188
+      ]
+    },
+    {
+      "file": "lib/features/support/faq_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 29,
+      "total": 35,
+      "percent": 82.8571,
+      "missing_lines": [
+        16,
+        17,
+        51,
+        52,
+        53,
+        56
+      ]
+    },
+    {
+      "file": "lib/core/auth/session.dart",
+      "area": "Mobile shared",
+      "covered": 34,
+      "total": 39,
+      "percent": 87.1795,
+      "missing_lines": [
+        87,
+        93,
+        95,
+        97,
+        98
+      ]
+    },
+    {
+      "file": "lib/features/crew/upload/upload_queue.dart",
+      "area": "Crew Mobile",
+      "covered": 182,
+      "total": 187,
+      "percent": 97.3262,
+      "missing_lines": [
+        77,
+        123,
+        243,
+        319,
+        384
+      ]
+    },
+    {
+      "file": "lib/features/customer/routes.dart",
+      "area": "Customer Mobile",
+      "covered": 6,
+      "total": 11,
+      "percent": 54.5455,
+      "missing_lines": [
+        19,
+        20,
+        26,
+        27,
+        31
+      ]
+    },
+    {
+      "file": "lib/features/customer/calendar/calendar_page.dart",
+      "area": "Customer Mobile",
+      "covered": 0,
+      "total": 5,
+      "percent": 0.0,
+      "missing_lines": [
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "file": "lib/features/common/push/push_registration.dart",
+      "area": "Mobile shared",
+      "covered": 21,
+      "total": 26,
+      "percent": 80.7692,
+      "missing_lines": [
+        73,
+        74,
+        75,
+        76,
+        79
+      ]
+    },
+    {
+      "file": "lib/features/customer/data/customer_reads_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 226,
+      "total": 231,
+      "percent": 97.8355,
+      "missing_lines": [
+        99,
+        680,
+        681,
+        682,
+        683
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/account_sections.dart",
+      "area": "Customer Mobile",
+      "covered": 104,
+      "total": 109,
+      "percent": 95.4128,
+      "missing_lines": [
+        62,
+        64,
+        65,
+        116,
+        210
+      ]
+    },
+    {
+      "file": "lib/features/customer/data/proof_reads_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 59,
+      "total": 64,
+      "percent": 92.1875,
+      "missing_lines": [
+        138,
+        139,
+        140,
+        141,
+        142
+      ]
+    },
+    {
+      "file": "lib/features/customer/settings/routes.dart",
+      "area": "Customer Mobile",
+      "covered": 15,
+      "total": 20,
+      "percent": 75.0,
+      "missing_lines": [
+        9,
+        23,
+        39,
+        40,
+        42
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/pay_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 79,
+      "total": 83,
+      "percent": 95.1807,
+      "missing_lines": [
+        92,
+        93,
+        94,
+        95
+      ]
+    },
+    {
+      "file": "lib/features/support/help_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 55,
+      "total": 59,
+      "percent": 93.2203,
+      "missing_lines": [
+        26,
+        40,
+        70,
+        79
+      ]
+    },
+    {
+      "file": "lib/features/customer/home/home_schedule.dart",
+      "area": "Customer Mobile",
+      "covered": 106,
+      "total": 110,
+      "percent": 96.3636,
+      "missing_lines": [
+        181,
+        211,
+        212,
+        225
+      ]
+    },
+    {
+      "file": "lib/features/support/report_issue_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 87,
+      "total": 91,
+      "percent": 95.6044,
+      "missing_lines": [
+        90,
+        91,
+        92,
+        117
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/strings.dart",
+      "area": "Customer Mobile",
+      "covered": 14,
+      "total": 17,
+      "percent": 82.3529,
+      "missing_lines": [
+        8,
+        31,
+        32
+      ]
+    },
+    {
+      "file": "lib/features/auth/presentation/login_screen.dart",
+      "area": "Mobile shared",
+      "covered": 324,
+      "total": 327,
+      "percent": 99.0826,
+      "missing_lines": [
+        204,
+        213,
+        347
+      ]
+    },
+    {
+      "file": "lib/features/customer/calendar/defaults_sheet.dart",
+      "area": "Customer Mobile",
+      "covered": 50,
+      "total": 53,
+      "percent": 94.3396,
+      "missing_lines": [
+        110,
+        111,
+        112
+      ]
+    },
+    {
+      "file": "lib/features/crew/manager/manager_hours_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 86,
+      "total": 89,
+      "percent": 96.6292,
+      "missing_lines": [
+        27,
+        78,
+        100
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/account_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 23,
+      "total": 26,
+      "percent": 88.4615,
+      "missing_lines": [
+        52,
+        57,
+        72
+      ]
+    },
+    {
+      "file": "lib/features/customer/cust_ui.dart",
+      "area": "Customer Mobile",
+      "covered": 15,
+      "total": 18,
+      "percent": 83.3333,
+      "missing_lines": [
+        33,
+        34,
+        35
+      ]
+    },
+    {
+      "file": "lib/core/providers.dart",
+      "area": "Mobile shared",
+      "covered": 12,
+      "total": 14,
+      "percent": 85.7143,
+      "missing_lines": [
+        22,
+        23
+      ]
+    },
+    {
+      "file": "lib/core/network/api_failure.dart",
+      "area": "Mobile shared",
+      "covered": 10,
+      "total": 12,
+      "percent": 83.3333,
+      "missing_lines": [
+        26,
+        27
+      ]
+    },
+    {
+      "file": "lib/app.dart",
+      "area": "Mobile shared",
+      "covered": 18,
+      "total": 20,
+      "percent": 90.0,
+      "missing_lines": [
+        42,
+        43
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/routes_paths.dart",
+      "area": "Admin Mobile",
+      "covered": 0,
+      "total": 2,
+      "percent": 0.0,
+      "missing_lines": [
+        7,
+        14
+      ]
+    },
+    {
+      "file": "lib/features/customer/calendar/day_card.dart",
+      "area": "Customer Mobile",
+      "covered": 155,
+      "total": 157,
+      "percent": 98.7261,
+      "missing_lines": [
+        160,
+        324
+      ]
+    },
+    {
+      "file": "lib/features/customer/calendar/calendar_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 183,
+      "total": 185,
+      "percent": 98.9189,
+      "missing_lines": [
+        336,
+        338
+      ]
+    },
+    {
+      "file": "lib/features/customer/visit/visit_strings.dart",
+      "area": "Customer Mobile",
+      "covered": 26,
+      "total": 28,
+      "percent": 92.8571,
+      "missing_lines": [
+        6,
+        25
+      ]
+    },
+    {
+      "file": "lib/features/customer/home/todays_clean_strip.dart",
+      "area": "Customer Mobile",
+      "covered": 29,
+      "total": 31,
+      "percent": 93.5484,
+      "missing_lines": [
+        62,
+        63
+      ]
+    },
+    {
+      "file": "lib/core/ui/theme.dart",
+      "area": "Mobile shared",
+      "covered": 52,
+      "total": 53,
+      "percent": 98.1132,
+      "missing_lines": [
+        87
+      ]
+    },
+    {
+      "file": "lib/features/crew/data/crew_repository.dart",
+      "area": "Crew Mobile",
+      "covered": 120,
+      "total": 121,
+      "percent": 99.1736,
+      "missing_lines": [
+        147
+      ]
+    },
+    {
+      "file": "lib/features/crew/data/manager_models.dart",
+      "area": "Crew Mobile",
+      "covered": 64,
+      "total": 65,
+      "percent": 98.4615,
+      "missing_lines": [
+        140
+      ]
+    },
+    {
+      "file": "lib/l10n/app_localizations.dart",
+      "area": "Mobile generated",
+      "covered": 14,
+      "total": 15,
+      "percent": 93.3333,
+      "missing_lines": [
+        3728
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/data/admin_quick_models.dart",
+      "area": "Admin Mobile",
+      "covered": 95,
+      "total": 96,
+      "percent": 98.9583,
+      "missing_lines": [
+        183
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/data/admin_quick_repository.dart",
+      "area": "Admin Mobile",
+      "covered": 55,
+      "total": 56,
+      "percent": 98.2143,
+      "missing_lines": [
+        145
+      ]
+    },
+    {
+      "file": "lib/core/util/format.dart",
+      "area": "Mobile shared",
+      "covered": 7,
+      "total": 8,
+      "percent": 87.5,
+      "missing_lines": [
+        9
+      ]
+    },
+    {
+      "file": "lib/features/support/widgets.dart",
+      "area": "Customer Mobile",
+      "covered": 27,
+      "total": 28,
+      "percent": 96.4286,
+      "missing_lines": [
+        14
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/alerts/alerts_data.dart",
+      "area": "Admin Mobile",
+      "covered": 32,
+      "total": 33,
+      "percent": 96.9697,
+      "missing_lines": [
+        91
+      ]
+    },
+    {
+      "file": "lib/features/admin_quick/payments/admin_payments_data.dart",
+      "area": "Admin Mobile",
+      "covered": 50,
+      "total": 51,
+      "percent": 98.0392,
+      "missing_lines": [
+        132
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/billing_history_screen.dart",
+      "area": "Customer Mobile",
+      "covered": 38,
+      "total": 39,
+      "percent": 97.4359,
+      "missing_lines": [
+        49
+      ]
+    },
+    {
+      "file": "lib/features/changes_money/data/invoice_pdf_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 19,
+      "total": 20,
+      "percent": 95.0,
+      "missing_lines": [
+        37
+      ]
+    },
+    {
+      "file": "lib/features/crew/home/crew_home_data.dart",
+      "area": "Crew Mobile",
+      "covered": 12,
+      "total": 13,
+      "percent": 92.3077,
+      "missing_lines": [
+        21
+      ]
+    },
+    {
+      "file": "lib/features/crew/job/could_not_complete_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 68,
+      "total": 69,
+      "percent": 98.5507,
+      "missing_lines": [
+        63
+      ]
+    },
+    {
+      "file": "lib/features/customer/cust_strings.dart",
+      "area": "Customer Mobile",
+      "covered": 4,
+      "total": 5,
+      "percent": 80.0,
+      "missing_lines": [
+        6
+      ]
+    },
+    {
+      "file": "lib/features/customer/account/account_strings.dart",
+      "area": "Customer Mobile",
+      "covered": 0,
+      "total": 1,
+      "percent": 0.0,
+      "missing_lines": [
+        5
+      ]
+    },
+    {
+      "file": "lib/features/customer/settings/notification_prefs_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 33,
+      "total": 34,
+      "percent": 97.0588,
+      "missing_lines": [
+        86
+      ]
+    },
+    {
+      "file": "lib/features/people/crew/crew_profile_screen.dart",
+      "area": "Crew Mobile",
+      "covered": 57,
+      "total": 58,
+      "percent": 98.2759,
+      "missing_lines": [
+        34
+      ]
+    },
+    {
+      "file": "lib/features/crew/routes.dart",
+      "area": "Crew Mobile",
+      "covered": 2,
+      "total": 3,
+      "percent": 66.6667,
+      "missing_lines": [
+        14
+      ]
+    },
+    {
+      "file": "lib/features/crew/capture/media_capture.dart",
+      "area": "Crew Mobile",
+      "covered": 26,
+      "total": 26,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/crew/data/crew_models.dart",
+      "area": "Crew Mobile",
+      "covered": 121,
+      "total": 121,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/customer/account/account_data.dart",
+      "area": "Customer Mobile",
+      "covered": 94,
+      "total": 94,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/core/api/api.g.dart",
+      "area": "Mobile generated",
+      "covered": 3340,
+      "total": 3340,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/core/config/app_config.dart",
+      "area": "Mobile shared",
+      "covered": 1,
+      "total": 1,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/core/network/read_refresh.dart",
+      "area": "Mobile shared",
+      "covered": 16,
+      "total": 16,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/auth/data/auth_repository.dart",
+      "area": "Mobile shared",
+      "covered": 21,
+      "total": 21,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/core/ui/media_image.dart",
+      "area": "Mobile shared",
+      "covered": 14,
+      "total": 14,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/actions/actions_data.dart",
+      "area": "Admin Mobile",
+      "covered": 20,
+      "total": 20,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/actions/checklists_screen.dart",
+      "area": "Admin Mobile",
+      "covered": 14,
+      "total": 14,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/admin_quick_strings.dart",
+      "area": "Admin Mobile",
+      "covered": 4,
+      "total": 4,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/support/support_strings.dart",
+      "area": "Customer Mobile",
+      "covered": 4,
+      "total": 4,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/alerts/routes.dart",
+      "area": "Admin Mobile",
+      "covered": 2,
+      "total": 2,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/data/admin_quick_providers.dart",
+      "area": "Admin Mobile",
+      "covered": 29,
+      "total": 29,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/home/admin_home_data.dart",
+      "area": "Admin Mobile",
+      "covered": 1,
+      "total": 1,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/common/signout_button.dart",
+      "area": "Mobile shared",
+      "covered": 5,
+      "total": 5,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/admin_quick/payments/routes.dart",
+      "area": "Admin Mobile",
+      "covered": 7,
+      "total": 7,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/changes_money/money_widgets.dart",
+      "area": "Customer Mobile",
+      "covered": 26,
+      "total": 26,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/changes_money/data/money_models.dart",
+      "area": "Customer Mobile",
+      "covered": 119,
+      "total": 119,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/l10n/app_localizations_en.dart",
+      "area": "Mobile generated",
+      "covered": 672,
+      "total": 672,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/core/routing/router.dart",
+      "area": "Mobile shared",
+      "covered": 35,
+      "total": 35,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/customer/home/customer_home_data.dart",
+      "area": "Customer Mobile",
+      "covered": 9,
+      "total": 9,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/support/feedback_tab.dart",
+      "area": "Customer Mobile",
+      "covered": 29,
+      "total": 29,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/changes_money/routes.dart",
+      "area": "Customer Mobile",
+      "covered": 21,
+      "total": 21,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/people/routes.dart",
+      "area": "Mobile shared",
+      "covered": 10,
+      "total": 10,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/support/routes.dart",
+      "area": "Customer Mobile",
+      "covered": 14,
+      "total": 14,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/splash/splash_screen.dart",
+      "area": "Mobile shared",
+      "covered": 45,
+      "total": 45,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/auth/presentation/auth_strings.dart",
+      "area": "Mobile shared",
+      "covered": 12,
+      "total": 12,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/changes_money/data/money_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 102,
+      "total": 102,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/crew/crew_ui.dart",
+      "area": "Crew Mobile",
+      "covered": 37,
+      "total": 37,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/customer/calendar/calendar_actions.dart",
+      "area": "Customer Mobile",
+      "covered": 43,
+      "total": 43,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/support/data/support_repository.dart",
+      "area": "Customer Mobile",
+      "covered": 73,
+      "total": 73,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/support/data/support_models.dart",
+      "area": "Customer Mobile",
+      "covered": 48,
+      "total": 48,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/people/people_strings.dart",
+      "area": "Mobile shared",
+      "covered": 13,
+      "total": 13,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/main_dev.dart",
+      "area": "Mobile shared",
+      "covered": 1,
+      "total": 1,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/features/scheduling/dto.dart",
+      "area": "Mobile shared",
+      "covered": 44,
+      "total": 44,
+      "percent": 100.0,
+      "missing_lines": []
+    },
+    {
+      "file": "lib/main_prod.dart",
+      "area": "Mobile shared",
+      "covered": 1,
+      "total": 1,
+      "percent": 100.0,
+      "missing_lines": []
+    }
+  ],
+  "passed": true,
+  "failed_areas": []
+}

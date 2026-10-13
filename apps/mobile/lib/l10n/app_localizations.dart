@@ -2463,6 +2463,1242 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{minutes} minutes'**
   String money_addonDuration(int minutes);
+
+  /// No description provided for @adminq_home_complaints.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaints'**
+  String get adminq_home_complaints;
+
+  /// No description provided for @adminq_home_feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback and ratings'**
+  String get adminq_home_feedback;
+
+  /// No description provided for @adminq_home_needs_scheduling.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminq_home_needs_scheduling;
+
+  /// No description provided for @adminq_home_day.
+  ///
+  /// In en, this message translates to:
+  /// **'Day schedule'**
+  String get adminq_home_day;
+
+  /// No description provided for @adminq_home_capacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get adminq_home_capacity;
+
+  /// No description provided for @adminq_home_open_complaints.
+  ///
+  /// In en, this message translates to:
+  /// **'Open complaints'**
+  String get adminq_home_open_complaints;
+
+  /// No description provided for @adminq_home_to_confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'To confirm'**
+  String get adminq_home_to_confirm;
+
+  /// No description provided for @adminq_home_more_payments.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more to confirm'**
+  String adminq_home_more_payments(String count);
+
+  /// No description provided for @adminq_filter_all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get adminq_filter_all;
+
+  /// No description provided for @adminq_status_raised.
+  ///
+  /// In en, this message translates to:
+  /// **'Raised'**
+  String get adminq_status_raised;
+
+  /// No description provided for @adminq_status_in_progress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get adminq_status_in_progress;
+
+  /// No description provided for @adminq_status_resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get adminq_status_resolved;
+
+  /// No description provided for @adminq_complaints_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaints'**
+  String get adminq_complaints_title;
+
+  /// No description provided for @adminq_complaints_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No complaints.'**
+  String get adminq_complaints_empty;
+
+  /// No description provided for @adminq_complaint_overdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Open for more than 4 hours'**
+  String get adminq_complaint_overdue;
+
+  /// No description provided for @adminq_complaint_raised_on.
+  ///
+  /// In en, this message translates to:
+  /// **'Raised {date}'**
+  String adminq_complaint_raised_on(String date);
+
+  /// No description provided for @adminq_complaint_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get adminq_complaint_status;
+
+  /// No description provided for @adminq_complaint_note_hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note'**
+  String get adminq_complaint_note_hint;
+
+  /// No description provided for @adminq_complaint_note_required.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note first.'**
+  String get adminq_complaint_note_required;
+
+  /// No description provided for @adminq_complaint_add_note.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get adminq_complaint_add_note;
+
+  /// No description provided for @adminq_complaint_save_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Save status'**
+  String get adminq_complaint_save_status;
+
+  /// No description provided for @adminq_complaint_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get adminq_complaint_saved;
+
+  /// No description provided for @adminq_complaint_thread.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get adminq_complaint_thread;
+
+  /// No description provided for @adminq_complaint_by_customer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get adminq_complaint_by_customer;
+
+  /// No description provided for @adminq_complaint_by_admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo'**
+  String get adminq_complaint_by_admin;
+
+  /// No description provided for @adminq_complaint_status_changed.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String adminq_complaint_status_changed(String status);
+
+  /// No description provided for @adminq_feedback_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback and ratings'**
+  String get adminq_feedback_title;
+
+  /// No description provided for @adminq_feedback_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No feedback yet.'**
+  String get adminq_feedback_empty;
+
+  /// No description provided for @adminq_feedback_ratings.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit ratings'**
+  String get adminq_feedback_ratings;
+
+  /// No description provided for @adminq_feedback_average.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {average} from {count} ratings'**
+  String adminq_feedback_average(String average, String count);
+
+  /// No description provided for @adminq_feedback_no_ratings.
+  ///
+  /// In en, this message translates to:
+  /// **'No ratings yet.'**
+  String get adminq_feedback_no_ratings;
+
+  /// No description provided for @adminq_feedback_stars.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} stars'**
+  String adminq_feedback_stars(String n);
+
+  /// No description provided for @adminq_needs_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminq_needs_title;
+
+  /// No description provided for @adminq_needs_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Every job has a crew member.'**
+  String get adminq_needs_empty;
+
+  /// No description provided for @adminq_day_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Day schedule'**
+  String get adminq_day_title;
+
+  /// No description provided for @adminq_day_summary.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} jobs, {done} done, {left} left'**
+  String adminq_day_summary(String total, String done, String left);
+
+  /// No description provided for @adminq_day_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs on this date.'**
+  String get adminq_day_empty;
+
+  /// No description provided for @adminq_day_status.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule: {status}'**
+  String adminq_day_status(String status);
+
+  /// No description provided for @adminq_day_all_societies.
+  ///
+  /// In en, this message translates to:
+  /// **'All societies'**
+  String get adminq_day_all_societies;
+
+  /// No description provided for @adminq_day_previous.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get adminq_day_previous;
+
+  /// No description provided for @adminq_day_next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get adminq_day_next;
+
+  /// No description provided for @adminq_day_late.
+  ///
+  /// In en, this message translates to:
+  /// **'Late'**
+  String get adminq_day_late;
+
+  /// No description provided for @adminq_day_no_time.
+  ///
+  /// In en, this message translates to:
+  /// **'No time'**
+  String get adminq_day_no_time;
+
+  /// No description provided for @adminq_capacity_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get adminq_capacity_title;
+
+  /// No description provided for @adminq_capacity_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a society to see its capacity.'**
+  String get adminq_capacity_empty;
+
+  /// No description provided for @adminq_capacity_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew {capacity} min, work {demand} min, placed {scheduled} min'**
+  String adminq_capacity_line(String capacity, String demand, String scheduled);
+
+  /// No description provided for @adminq_capacity_over.
+  ///
+  /// In en, this message translates to:
+  /// **'Over capacity'**
+  String get adminq_capacity_over;
+
+  /// No description provided for @adminq_capacity_previous.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get adminq_capacity_previous;
+
+  /// No description provided for @adminq_capacity_next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get adminq_capacity_next;
+
+  /// No description provided for @adminq_society.
+  ///
+  /// In en, this message translates to:
+  /// **'Society'**
+  String get adminq_society;
+
+  /// No description provided for @cust_proof_crew_line.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo crew'**
+  String get cust_proof_crew_line;
+
+  /// No description provided for @cust_proof_crew_pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew member not assigned yet'**
+  String get cust_proof_crew_pending;
+
+  /// No description provided for @cust_proof_checklist_heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist'**
+  String get cust_proof_checklist_heading;
+
+  /// No description provided for @cust_proof_after_label.
+  ///
+  /// In en, this message translates to:
+  /// **'AFTER'**
+  String get cust_proof_after_label;
+
+  /// No description provided for @cust_proof_rate_clean.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate this clean'**
+  String get cust_proof_rate_clean;
+
+  /// No description provided for @cust_proof_change_rating.
+  ///
+  /// In en, this message translates to:
+  /// **'Change rating'**
+  String get cust_proof_change_rating;
+
+  /// No description provided for @cust_proof_report_issue.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an issue with this clean'**
+  String get cust_proof_report_issue;
+
+  /// No description provided for @cust_proof_load_more.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get cust_proof_load_more;
+
+  /// No description provided for @cust_proof_no_rating.
+  ///
+  /// In en, this message translates to:
+  /// **'Not rated'**
+  String get cust_proof_no_rating;
+
+  /// No description provided for @cust_proof_history_month_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No services in this month.'**
+  String get cust_proof_history_month_empty;
+
+  /// No description provided for @cust_proof_today_done.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s clean is done'**
+  String get cust_proof_today_done;
+
+  /// No description provided for @cust_proof_view_proof.
+  ///
+  /// In en, this message translates to:
+  /// **'View proof'**
+  String get cust_proof_view_proof;
+
+  /// No description provided for @cust_proof_rate_today.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate today\'s clean'**
+  String get cust_proof_rate_today;
+
+  /// No description provided for @money_invoiceCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy invoice'**
+  String get money_invoiceCopy;
+
+  /// No description provided for @money_invoiceCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice copied.'**
+  String get money_invoiceCopied;
+
+  /// No description provided for @money_invoiceEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email invoice'**
+  String get money_invoiceEmail;
+
+  /// No description provided for @money_invoiceNoMail.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app was found on this phone.'**
+  String get money_invoiceNoMail;
+
+  /// No description provided for @support_faq.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently asked questions'**
+  String get support_faq;
+
+  /// No description provided for @support_faq_empty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no questions yet.'**
+  String get support_faq_empty;
+
+  /// No description provided for @support_feedback_tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get support_feedback_tab;
+
+  /// No description provided for @auth_welcome_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Priveo'**
+  String get auth_welcome_title;
+
+  /// No description provided for @auth_get_started.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get auth_get_started;
+
+  /// No description provided for @auth_already_member.
+  ///
+  /// In en, this message translates to:
+  /// **'Already a member? Log in'**
+  String get auth_already_member;
+
+  /// No description provided for @auth_email_invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get auth_email_invalid;
+
+  /// No description provided for @auth_terms_prefix.
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing you accept the '**
+  String get auth_terms_prefix;
+
+  /// No description provided for @auth_terms_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms'**
+  String get auth_terms_link;
+
+  /// No description provided for @auth_terms_and.
+  ///
+  /// In en, this message translates to:
+  /// **' and the '**
+  String get auth_terms_and;
+
+  /// No description provided for @auth_privacy_link.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get auth_privacy_link;
+
+  /// No description provided for @auth_terms_suffix.
+  ///
+  /// In en, this message translates to:
+  /// **'.'**
+  String get auth_terms_suffix;
+
+  /// No description provided for @auth_call_support.
+  ///
+  /// In en, this message translates to:
+  /// **'Call support'**
+  String get auth_call_support;
+
+  /// No description provided for @auth_whatsapp_support.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp support'**
+  String get auth_whatsapp_support;
+
+  /// No description provided for @crew_mgr_attendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get crew_mgr_attendance;
+
+  /// No description provided for @crew_mgr_working_hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours'**
+  String get crew_mgr_working_hours;
+
+  /// No description provided for @crew_mgr_present.
+  ///
+  /// In en, this message translates to:
+  /// **'Present'**
+  String get crew_mgr_present;
+
+  /// No description provided for @crew_mgr_sick.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick'**
+  String get crew_mgr_sick;
+
+  /// No description provided for @crew_mgr_leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get crew_mgr_leave;
+
+  /// No description provided for @crew_mgr_late_start.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start'**
+  String get crew_mgr_late_start;
+
+  /// No description provided for @crew_mgr_day_off.
+  ///
+  /// In en, this message translates to:
+  /// **'Day off'**
+  String get crew_mgr_day_off;
+
+  /// No description provided for @crew_mgr_working.
+  ///
+  /// In en, this message translates to:
+  /// **'Working'**
+  String get crew_mgr_working;
+
+  /// No description provided for @crew_mgr_start_time.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get crew_mgr_start_time;
+
+  /// No description provided for @crew_mgr_end_time.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get crew_mgr_end_time;
+
+  /// No description provided for @crew_mgr_save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get crew_mgr_save;
+
+  /// No description provided for @crew_mgr_hours_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours saved.'**
+  String get crew_mgr_hours_saved;
+
+  /// No description provided for @crew_mgr_attendance_saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance saved.'**
+  String get crew_mgr_attendance_saved;
+
+  /// No description provided for @crew_mgr_late_start_from.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at'**
+  String get crew_mgr_late_start_from;
+
+  /// No description provided for @crew_mgr_choose_late_start.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the start time'**
+  String get crew_mgr_choose_late_start;
+
+  /// No description provided for @crew_mgr_no_crew.
+  ///
+  /// In en, this message translates to:
+  /// **'No crew members.'**
+  String get crew_mgr_no_crew;
+
+  /// No description provided for @crew_mgr_cannot_reassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot take this job'**
+  String get crew_mgr_cannot_reassign;
+
+  /// No description provided for @crew_mgr_open_jobs_count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 open job} other{{count} open jobs}}'**
+  String crew_mgr_open_jobs_count(int count);
+
+  /// No description provided for @crew_mgr_late_start_at.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start, from {time}'**
+  String crew_mgr_late_start_at(String time);
+
+  /// No description provided for @crew_mgr_released_moved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job moved to someone else} other{{count} jobs moved to someone else}}'**
+  String crew_mgr_released_moved(int count);
+
+  /// No description provided for @crew_mgr_released_waiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job needs scheduling} other{{count} jobs need scheduling}}'**
+  String crew_mgr_released_waiting(int count);
+
+  /// No description provided for @addVehicleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle'**
+  String get addVehicleTitle;
+
+  /// No description provided for @addVehicleSociety.
+  ///
+  /// In en, this message translates to:
+  /// **'Society'**
+  String get addVehicleSociety;
+
+  /// No description provided for @addVehicleCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle details'**
+  String get addVehicleCar;
+
+  /// No description provided for @addVehicleParking.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking'**
+  String get addVehicleParking;
+
+  /// No description provided for @addVehiclePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get addVehiclePlan;
+
+  /// No description provided for @addVehiclePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Service preferences'**
+  String get addVehiclePreferences;
+
+  /// No description provided for @addVehicleReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and payment'**
+  String get addVehicleReview;
+
+  /// No description provided for @addVehicleSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search societies'**
+  String get addVehicleSearch;
+
+  /// No description provided for @addVehicleNoSocieties.
+  ///
+  /// In en, this message translates to:
+  /// **'No serviced societies available at the moment.'**
+  String get addVehicleNoSocieties;
+
+  /// No description provided for @addVehicleSocietyFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vehicle\'s society cannot be changed after it is added.'**
+  String get addVehicleSocietyFixed;
+
+  /// No description provided for @addVehicleMake.
+  ///
+  /// In en, this message translates to:
+  /// **'Make'**
+  String get addVehicleMake;
+
+  /// No description provided for @addVehicleModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get addVehicleModel;
+
+  /// No description provided for @addVehicleVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Variant'**
+  String get addVehicleVariant;
+
+  /// No description provided for @addVehicleStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get addVehicleStandard;
+
+  /// No description provided for @addVehicleAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-detected'**
+  String get addVehicleAuto;
+
+  /// No description provided for @addVehicleRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration number'**
+  String get addVehicleRegistration;
+
+  /// No description provided for @addVehiclePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vehicle photo (required)'**
+  String get addVehiclePhoto;
+
+  /// No description provided for @addVehicleReplacePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace vehicle photo'**
+  String get addVehicleReplacePhoto;
+
+  /// No description provided for @addVehicleRc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload RC document (optional)'**
+  String get addVehicleRc;
+
+  /// No description provided for @addVehicleRcUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'RC uploaded Â· Replace'**
+  String get addVehicleRcUploaded;
+
+  /// No description provided for @addVehicleRcLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a JPG, PNG or PDF document up to 5 MB.'**
+  String get addVehicleRcLimit;
+
+  /// No description provided for @addVehicleBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Basement'**
+  String get addVehicleBasement;
+
+  /// No description provided for @addVehicleParkingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Parking number'**
+  String get addVehicleParkingNumber;
+
+  /// No description provided for @addVehicleCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel anytime'**
+  String get addVehicleCancel;
+
+  /// No description provided for @addVehicleCutoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Service cutoff time'**
+  String get addVehicleCutoff;
+
+  /// No description provided for @addVehicleSlotNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose when your clean should be finished. Priveo assigns the exact slot.'**
+  String get addVehicleSlotNote;
+
+  /// No description provided for @addVehicleInterior.
+  ///
+  /// In en, this message translates to:
+  /// **'Interior care day'**
+  String get addVehicleInterior;
+
+  /// No description provided for @addVehicleTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total payable today includes GST.'**
+  String get addVehicleTotal;
+
+  /// No description provided for @addVehicleStartNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Priveo will confirm the start date.'**
+  String get addVehicleStartNote;
+
+  /// No description provided for @addVehicleBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get addVehicleBack;
+
+  /// No description provided for @addVehicleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm & pay'**
+  String get addVehicleConfirm;
+
+  /// No description provided for @addVehicleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the required details before continuing.'**
+  String get addVehicleRequired;
+
+  /// No description provided for @addonChangeRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Change requested, awaiting Priveo'**
+  String get addonChangeRequest;
+
+  /// No description provided for @addonChangeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date or time'**
+  String get addonChangeAction;
+
+  /// No description provided for @addonNoOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'No add-ons are available at the moment.'**
+  String get addonNoOffers;
+
+  /// No description provided for @addonSupportClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes are closed. Call support for help.'**
+  String get addonSupportClosed;
+
+  /// No description provided for @addonViewProof.
+  ///
+  /// In en, this message translates to:
+  /// **'View service details'**
+  String get addonViewProof;
+
+  /// No description provided for @adminCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers'**
+  String get adminCustomers;
+
+  /// No description provided for @adminCustomerSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name, mobile, registration or society'**
+  String get adminCustomerSearch;
+
+  /// No description provided for @adminNoCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'No customers found.'**
+  String get adminNoCustomers;
+
+  /// No description provided for @adminCustomerDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer details'**
+  String get adminCustomerDetails;
+
+  /// No description provided for @adminEmailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified'**
+  String get adminEmailVerified;
+
+  /// No description provided for @adminYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get adminYes;
+
+  /// No description provided for @adminNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get adminNo;
+
+  /// No description provided for @adminFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'From date'**
+  String get adminFromDate;
+
+  /// No description provided for @adminToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'To date'**
+  String get adminToDate;
+
+  /// No description provided for @adminSkipDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip date'**
+  String get adminSkipDate;
+
+  /// No description provided for @adminPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get adminPause;
+
+  /// No description provided for @adminRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Renewal'**
+  String get adminRenewal;
+
+  /// No description provided for @adminUnskip.
+  ///
+  /// In en, this message translates to:
+  /// **'Un-skip'**
+  String get adminUnskip;
+
+  /// No description provided for @adminEndPause.
+  ///
+  /// In en, this message translates to:
+  /// **'End pause'**
+  String get adminEndPause;
+
+  /// No description provided for @adminOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations'**
+  String get adminOperations;
+
+  /// No description provided for @adminQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get adminQueue;
+
+  /// No description provided for @adminMissedJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed jobs'**
+  String get adminMissedJobs;
+
+  /// No description provided for @adminScheduledWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled work'**
+  String get adminScheduledWork;
+
+  /// No description provided for @adminOutcomeHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution history'**
+  String get adminOutcomeHistory;
+
+  /// No description provided for @adminSocietyFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Society filter'**
+  String get adminSocietyFilter;
+
+  /// No description provided for @adminAllSocieties.
+  ///
+  /// In en, this message translates to:
+  /// **'All societies'**
+  String get adminAllSocieties;
+
+  /// No description provided for @adminFailureReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure reason'**
+  String get adminFailureReason;
+
+  /// No description provided for @adminAllReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'All reasons'**
+  String get adminAllReasons;
+
+  /// No description provided for @adminClearDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear dates'**
+  String get adminClearDates;
+
+  /// No description provided for @adminNoJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs match these filters.'**
+  String get adminNoJobs;
+
+  /// No description provided for @adminMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get adminMissed;
+
+  /// No description provided for @adminUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get adminUnassigned;
+
+  /// No description provided for @adminCoveredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Covered by the next dayâ€™s regular Exterior service on'**
+  String get adminCoveredOn;
+
+  /// No description provided for @adminRescheduledOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescheduled on'**
+  String get adminRescheduledOn;
+
+  /// No description provided for @adminAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned'**
+  String get adminAssigned;
+
+  /// No description provided for @adminNeedsAssignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs scheduling'**
+  String get adminNeedsAssignment;
+
+  /// No description provided for @adminOperationsReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations reason'**
+  String get adminOperationsReason;
+
+  /// No description provided for @adminOptionalReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason selected'**
+  String get adminOptionalReason;
+
+  /// No description provided for @adminOutcomeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome note'**
+  String get adminOutcomeNote;
+
+  /// No description provided for @adminExteriorExtension.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping adds one day to the plan and moves unpaid renewal dates.'**
+  String get adminExteriorExtension;
+
+  /// No description provided for @adminSpaSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping does not extend the plan. Handle any refund or rebooking separately.'**
+  String get adminSpaSkip;
+
+  /// No description provided for @adminInteriorSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipping loses this Interior service and does not extend the plan.'**
+  String get adminInteriorSkip;
+
+  /// No description provided for @adminSkipJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip job by operations'**
+  String get adminSkipJob;
+
+  /// No description provided for @adminRetryNextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule for next day'**
+  String get adminRetryNextDay;
+
+  /// No description provided for @adminSkipVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip remaining jobs on this visit'**
+  String get adminSkipVisit;
+
+  /// No description provided for @adminCrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew'**
+  String get adminCrew;
+
+  /// No description provided for @adminNoCrew.
+  ///
+  /// In en, this message translates to:
+  /// **'No crew found.'**
+  String get adminNoCrew;
+
+  /// No description provided for @adminAddException.
+  ///
+  /// In en, this message translates to:
+  /// **'Add crew exception'**
+  String get adminAddException;
+
+  /// No description provided for @adminExceptionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Exception type'**
+  String get adminExceptionType;
+
+  /// No description provided for @adminSick.
+  ///
+  /// In en, this message translates to:
+  /// **'Sick'**
+  String get adminSick;
+
+  /// No description provided for @adminLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get adminLeave;
+
+  /// No description provided for @adminLateStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Late start'**
+  String get adminLateStart;
+
+  /// No description provided for @adminStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get adminStartTime;
+
+  /// No description provided for @adminSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get adminSave;
+
+  /// No description provided for @adminAddonRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Add-on requests'**
+  String get adminAddonRequests;
+
+  /// No description provided for @adminStatusFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Status filter'**
+  String get adminStatusFilter;
+
+  /// No description provided for @adminAllStatuses.
+  ///
+  /// In en, this message translates to:
+  /// **'All statuses'**
+  String get adminAllStatuses;
+
+  /// No description provided for @adminNoAddons.
+  ///
+  /// In en, this message translates to:
+  /// **'No add-on requests.'**
+  String get adminNoAddons;
+
+  /// No description provided for @adminStandaloneRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Standalone request'**
+  String get adminStandaloneRequest;
+
+  /// No description provided for @adminChangeRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Change requested'**
+  String get adminChangeRequested;
+
+  /// No description provided for @adminCheckins.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly check-in results'**
+  String get adminCheckins;
+
+  /// No description provided for @adminNoCheckins.
+  ///
+  /// In en, this message translates to:
+  /// **'No check-in results.'**
+  String get adminNoCheckins;
+
+  /// No description provided for @adminOperationsForDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations for this day'**
+  String get adminOperationsForDay;
+
+  /// No description provided for @invoiceOpenPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Open invoice PDF'**
+  String get invoiceOpenPdf;
+
+  /// No description provided for @invoicePdfTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice PDF'**
+  String get invoicePdfTitle;
+
+  /// No description provided for @invoicePdfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The invoice PDF could not be opened. Please try again.'**
+  String get invoicePdfUnavailable;
+
+  /// No description provided for @proofVideoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof video'**
+  String get proofVideoTitle;
+
+  /// No description provided for @proofVideoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The video could not be played. Check your connection and try again.'**
+  String get proofVideoUnavailable;
+
+  /// No description provided for @proofVideoMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This video is no longer available for this visit.'**
+  String get proofVideoMissing;
+
+  /// No description provided for @proofVideoPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get proofVideoPlay;
+
+  /// No description provided for @proofVideoPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get proofVideoPause;
+
+  /// No description provided for @proofVideoReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get proofVideoReplay;
 }
 
 class _AppLocalizationsDelegate

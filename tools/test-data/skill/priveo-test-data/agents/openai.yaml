@@ -1,0 +1,6 @@
+interface:
+  display_name: "Priveo Test Data"
+  short_description: "Refresh full or selected Priveo test scenarios"
+  default_prompt: "Use $priveo-test-data to prepare or refresh Priveo test scenarios and report the seeded accounts and checks."
+policy:
+  allow_implicit_invocation: true
