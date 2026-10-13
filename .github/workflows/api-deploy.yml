@@ -84,9 +84,42 @@ jobs:
             --env BUILD_NUMBER=${{ github.run_number }}
 
       - name: Portal check
+        env:
+          API_DEV_URL: ${{ vars.API_DEV_URL }}
         run: |
-          curl -fsS "${{ vars.API_DEV_URL }}/portal/" | grep -q 'id="root"'
-          curl -fsS "${{ vars.API_DEV_URL }}/portal/customers" | grep -q 'id="root"'
+          # The deployment alias can briefly serve the previous deployment.
+          # Retry HTTP errors and missing portal HTML, with a three-minute limit.
+          response=$(mktemp)
+          trap 'rm -f "$response"' EXIT
+          deadline=$((SECONDS + 180))
+          while (( SECONDS < deadline )); do
+            ready=true
+            for path in /portal/ /portal/customers; do
+              remaining=$((deadline - SECONDS))
+              if (( remaining <= 0 )); then
+                ready=false
+                break
+              fi
+              timeout=$((remaining < 10 ? remaining : 10))
+              if curl -fsS --connect-timeout 5 --max-time "$timeout" \
+                "${API_DEV_URL%/}${path}" -o "$response" && grep -q 'id="root"' "$response"; then
+                echo "Portal ready: $path"
+              else
+                echo "Portal not ready: $path"
+                head -c 1000 "$response"
+                ready=false
+              fi
+            done
+            if "$ready"; then
+              exit 0
+            fi
+            remaining=$((deadline - SECONDS))
+            if (( remaining > 0 )); then
+              sleep "$((remaining < 10 ? remaining : 10))"
+            fi
+          done
+          echo "::error::Portal did not become ready within three minutes."
+          exit 1
 
       - name: Smoke test
         env:
