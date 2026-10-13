@@ -19,6 +19,14 @@ For an ambiguous “full refresh,” clarify whether settings/catalogue edits mu
 
 ## Execute and verify
 
+For explicitly requested hosted dev seeding, read the Hosted dev dataset
+section in `docs/testing/test-data-plan.md`. The separate reviewed
+`seed-test-data` workflow uses the existing database secret and additive
+`seed_shared_test_data.py` implementation. It preserves all existing records,
+settings and Admin credentials. Do not use the SQLite reset tool for hosted
+databases. Check the workflow's hosted API verification result and retrieve
+its password-free account artifact. Shared refresh/deletion is not supported.
+
 The tool requires an explicit file and a fixture marker, and never consumes `DATABASE_URL`. Only local SQLite and `ENVIRONMENT=dev` are supported. Do not point it at production or try to bypass the marker. PostgreSQL/shared dev seeding needs a separate reviewed implementation.
 
 Read `TEST_DATA_PASSWORD` and, for first initialization, `TEST_DATA_ADMIN_PASSWORD` from the process environment. Do not print secrets or tokens, copy real `.env` values, or silently change retained accounts' passwords. Use the same fixture password on partial refreshes. Exactly one Admin login, `priveopapa`, serves every Admin variation.

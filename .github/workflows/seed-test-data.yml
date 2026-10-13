@@ -1,0 +1,48 @@
+name: seed-test-data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        working-directory: services/api
+        run: pip install -q -e .
+      - name: Add missing synthetic scenarios to dev
+        working-directory: services/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
+          ENVIRONMENT: dev
+        run: |
+          python scripts/seed_shared_test_data.py --output ../../.local/test-data/hosted-manifest.json
+          python scripts/seed_shared_test_data.py --apply --output ../../.local/test-data/hosted-manifest.json
+      - name: Export test accounts
+        run: python tools/test-data/export_accounts.py --manifest .local/test-data/hosted-manifest.json --output .local/test-data/hosted-accounts.md
+      - name: Verify hosted scenario API journeys
+        env:
+          TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
+          TEST_DATA_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+          API_DEV_URL: ${{ vars.API_DEV_URL }}
+        run: python tools/test-data/api_smoke.py --base-url "$API_DEV_URL" --manifest .local/test-data/hosted-manifest.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hosted-test-accounts
+          path: |
+            .local/test-data/hosted-manifest.json
+            .local/test-data/hosted-accounts.md
+          retention-days: 30

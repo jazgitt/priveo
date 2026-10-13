@@ -1,5 +1,27 @@
 # Manual and E2E test data
 
+## Hosted dev dataset
+
+The manual `seed-test-data` GitHub Actions workflow uses
+`services/api/scripts/seed_shared_test_data.py` to add the same 39 families to
+the configured dev PostgreSQL database. It uses the existing `DATABASE_URL`
+secret and a separate `TEST_DATA_PASSWORD` secret. It requires schema revision
+0028 and the existing single `priveopapa` Admin. It adds synthetic societies,
+plans and scenarios atomically, without resetting existing data, directory
+settings or Admin credentials. It records scenario snapshots in
+`shared_test_data_manifest`; repeat runs preserve existing scenario edits and
+passwords. It does not support deleting or refreshing shared scenarios.
+
+The workflow verifies the accounts through the hosted API and uploads the
+`hosted-test-accounts` artifact containing `hosted-accounts.md` and
+`hosted-manifest.json`. Download them into `.local/test-data/` for manual use.
+The account sheet does not include passwords. Customer and Crew fixture
+passwords are maintained in the GitHub Actions `TEST_DATA_PASSWORD` secret;
+Admin keeps its existing password. Normal hosted cron/billing jobs may change
+the seeded payment and scheduling states over time.
+
+The original local SQLite seeder below retains its isolation and reset guards.
+
 ## Review of the requested scenarios
 
 The original 16 cases are retained as **C01–C16** in the [executable catalogue](../../tools/test-data/scenarios.json). A plan provides daily **external** cleaning and, when included, weekly **internal** cleaning. Deep Spa is purchased separately. Multiple add-ons currently mean multiple bookings of Deep Spa; this application does not yet have several distinct Spa service types.
