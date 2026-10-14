@@ -59,3 +59,8 @@ coverage-*.json
 
 # Dedicated synthetic manual/E2E fixture databases and manifests
 /.local/test-data/
+
+# Playwright
+playwright-report/
+test-results/
+/.local/e2e/

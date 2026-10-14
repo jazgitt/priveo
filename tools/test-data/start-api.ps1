@@ -1,11 +1,14 @@
 param(
     [Parameter(Mandatory = $true)][string]$DatabaseFile,
-    [int]$Port = 8000
+    [int]$Port = 8000,
+    # One request thread: needed when a browser drives the SQLite fixture API.
+    [switch]$SerializeRequests
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $apiRoot = Join-Path $repoRoot 'services/api'
-$pythonExe = Join-Path $apiRoot '.venv/Scripts/python.exe'
+# E2E_PYTHON lets CI (Linux, no .venv) name its interpreter.
+$pythonExe = if ($env:E2E_PYTHON) { $env:E2E_PYTHON } else { Join-Path $apiRoot '.venv/Scripts/python.exe' }
 $databasePath = (Resolve-Path -LiteralPath $DatabaseFile).Path
 $databaseUrl = 'sqlite:///' + $databasePath.Replace('\', '/')
 $mediaRoot = Join-Path (Split-Path -Parent $databasePath) 'media'
@@ -39,7 +42,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Test database verification failed.' }
     Write-Host "Test API: http://127.0.0.1:$Port (phone: use this computer's LAN address)"
     Write-Host 'This process uses the dedicated test database and logging email sender.'
-    & $pythonExe -m uvicorn app.main:app --host 0.0.0.0 --port $Port
+    if ($SerializeRequests) {
+        $toolDir = Join-Path $repoRoot 'tools/test-data'
+        & $pythonExe -m uvicorn serial_app:app --app-dir $toolDir --host 0.0.0.0 --port $Port
+    } else {
+        & $pythonExe -m uvicorn app.main:app --host 0.0.0.0 --port $Port
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Test API exited with an error.' }
 }
 finally {

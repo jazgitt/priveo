@@ -1,5 +1,7 @@
 # Claude handoff and remaining implementation plan
 
+> **Current handoff:** Read [claude-handoff.md](claude-handoff.md), prepared 14 October 2026 at `cb2ed29` on `main`. The historical checkpoint below predates the merge, deployment workflow updates and hosted fixture/password work; its resume instructions are superseded.
+
 ## Resume checkpoint
 
 **Latest test-data work:** [39-family scenario catalogue and manual/E2E plan](testing/test-data-plan.md), dedicated SQLite seed with full fresh-start and selected-scenario refresh, local API launcher, manifest-based API smoke suite, and installed `$priveo-test-data` skill. Customer cases C01-C16 retain the owner's list; C17-C29/R01-R06/A01-A04 add plan/onboarding/history/legacy/multi-society/inbox and Crew/Admin variations. One Admin login is preserved. The sample database and account sheet are ignored local files; existing application databases are untouched. Fixture integrity and API compatibility are tested on disposable databases; phone/browser UI E2E, sample proof media and additional action/boundary cases are planned, not completed. See the test-data plan for exact commands and reset scope.
