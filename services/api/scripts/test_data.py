@@ -713,7 +713,13 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
                 description=f"Synthetic {status} complaint",
                 photo_keys=[],
                 status=status,
-                created_at=now - timedelta(hours=5 if index == 3 else 1),
+                # The overdue one must be over 4 hours old by the real clock, even
+                # when the fixture day's 10:00 IST anchor is still in the future.
+                created_at=(
+                    min(now, datetime.now(UTC)) - timedelta(hours=5)
+                    if index == 3
+                    else now - timedelta(hours=1)
+                ),
                 updated_at=now,
             )
             db.add(complaint)
