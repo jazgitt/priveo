@@ -170,6 +170,17 @@ void main() {
       }
       // Recover to the sign-in screen whatever happened.
       try {
+        // A check may leave a pushed screen open; go back to the shell first.
+        for (
+          var i = 0;
+          i < 4 &&
+              find.byTooltip('Sign out').evaluate().isEmpty &&
+              login.evaluate().isEmpty;
+          i++
+        ) {
+          await tester.pageBack();
+          await tester.pump(const Duration(milliseconds: 500));
+        }
         if (find.byTooltip('Sign out').evaluate().isNotEmpty) {
           await _signOut(tester);
         } else if (login.evaluate().isEmpty) {
