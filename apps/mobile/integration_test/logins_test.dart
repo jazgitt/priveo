@@ -7,14 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart';
 import 'package:priveo/main_dev.dart' as app;
 
-/// Login ID, password, and a label that only that role's home shows.
+/// Login ID, password, and a label that only that role's home shows. The
+/// customer home greets by the hour, so it is matched by its greeting line.
 const _logins = [
   (
     'customer@priveo.test',
     String.fromEnvironment('LIVE_CUSTOMER_PASSWORD'),
-    'Hello,',
+    null,
   ),
   ('9000000002', String.fromEnvironment('LIVE_CREW_PASSWORD'), 'Total'),
   (
@@ -36,15 +38,20 @@ Future<void> _waitFor(WidgetTester tester, Finder finder) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('each role signs in, sees its home and signs out',
-      (tester) async {
+  testWidgets('each role signs in, sees its home and signs out', (
+    tester,
+  ) async {
     app.main();
     final signOut = find.byTooltip('Sign out');
     final login = find.byType(LoginScreen);
 
     // The phone may still hold a session from an earlier run.
-    await _waitFor(tester, find.byWidgetPredicate(
-        (w) => w is LoginScreen || (w is IconButton && w.tooltip == 'Sign out')));
+    await _waitFor(
+      tester,
+      find.byWidgetPredicate(
+        (w) => w is LoginScreen || (w is IconButton && w.tooltip == 'Sign out'),
+      ),
+    );
     if (signOut.evaluate().isNotEmpty) {
       await tester.tap(signOut);
       await _waitFor(tester, login);
@@ -62,7 +69,10 @@ void main() {
       await _waitFor(tester, find.text('Change'));
       await tester.enterText(find.byType(TextField), password);
       await tester.tap(find.text('Sign in').last);
-      await _waitFor(tester, find.text(homeLabel));
+      await _waitFor(
+        tester,
+        homeLabel == null ? find.byType(GreetingLine) : find.text(homeLabel),
+      );
       expect(login, findsNothing);
 
       await tester.tap(signOut);

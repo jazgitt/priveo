@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart';
 import 'package:priveo/main_dev.dart' as app;
 
 const _manifestJson = String.fromEnvironment('SCENARIO_MANIFEST');
@@ -40,6 +41,17 @@ Future<void> _signIn(WidgetTester tester, String id, String password) async {
   final getStarted = find.text('Get started');
   if (getStarted.evaluate().isNotEmpty) {
     await tester.tap(getStarted);
+    await tester.pumpAndSettle();
+  }
+  // A sign-in left on its password step shows "Change" instead of "Continue".
+  await _waitFor(
+    tester,
+    find.byWidgetPredicate(
+      (w) => w is Text && (w.data == 'Continue' || w.data == 'Change'),
+    ),
+  );
+  if (find.text('Change').evaluate().isNotEmpty) {
+    await tester.tap(find.text('Change'));
     await tester.pumpAndSettle();
   }
   await tester.enterText(find.byType(TextField), id);
@@ -88,7 +100,8 @@ void main() {
 
     // Home labels that only one role's home shows.
     Future<void> customerHome(WidgetTester t) async {
-      await _waitFor(t, find.text('Hello,'));
+      // Home greets by the hour, so wait for the greeting line itself.
+      await _waitFor(t, find.byType(GreetingLine));
     }
 
     final steps = <(String, String, String, _Check)>[
