@@ -64,3 +64,4 @@ coverage-*.json
 playwright-report/
 test-results/
 /.local/e2e/
+/.local/widget/
