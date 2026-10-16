@@ -67,8 +67,22 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock', 'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       - run: flutter pub get
         working-directory: apps/mobile
+
+      # Build the app before the emulator starts. Building while it boots
+      # starves the emulator of CPU and it stops responding.
+      - name: Pre-build the app
+        working-directory: apps/mobile
+        run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
 
       - name: Sign in as each role on an emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -154,8 +168,22 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock', 'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       - run: flutter pub get
         working-directory: apps/mobile
+
+      # Build the app before the emulator starts. Building while it boots
+      # starves the emulator of CPU and it stops responding.
+      - name: Pre-build the app
+        working-directory: apps/mobile
+        run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
 
       - name: Check manifest scenarios on an emulator
         uses: reactivecircus/android-emulator-runner@v2
