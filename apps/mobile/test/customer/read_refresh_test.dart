@@ -28,8 +28,15 @@ void main() {
     await ticks.close();
   });
 
-  testWidgets('refresh emits once on resume and never on a timer', (tester) async {
-    final container = ProviderContainer();
+  testWidgets('refresh on resume only after 5 minutes away, never on a timer', (tester) async {
+    var clock = DateTime(2026, 10, 16, 9);
+    final container = ProviderContainer(overrides: [
+      readPulseProvider.overrideWith((ref) {
+        final pulse = ReadPulse(now: () => clock);
+        ref.onDispose(pulse.dispose);
+        return pulse;
+      }),
+    ]);
     final pulses = <int>[];
     final sub = container.listen(readRefreshProvider, (_, value) {
       if (value.hasValue) pulses.add(value.value!);
@@ -38,6 +45,14 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(const Duration(seconds: 30));
     expect(pulses, isEmpty);
+    // Back after 4 minutes: nothing refreshes.
+    clock = clock.add(const Duration(minutes: 4));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(pulses, isEmpty);
+    // Away for 5 minutes: it refreshes once.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    clock = clock.add(const Duration(minutes: 5));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(pulses.length, 1);

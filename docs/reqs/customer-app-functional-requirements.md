@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.15 (one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.16 (refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -167,7 +167,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | HOME-07 | A customer with more than one vehicle can switch the selected vehicle from Home. The selection carries over to the calendar, history, skip/pause and subscription screens. A customer with one vehicle sees no switcher. | Owner |
 | HOME-08 | A "Monthly check-in" card appears on Home from 4 days before the renewal date until the customer completes that cycle's check-in (CHK-08). Tapping it opens the check-in. | Owner |
 | HOME-09 | An "Add-ons" card on Home opens the add-on list (ADD-02). It is shown only for a vehicle with an Active subscription. | Owner |
-| HOME-10 | The app does not refresh screens on a timer. Data is read when a screen opens and once when the app returns to the foreground. A refresh never shows a loading state or flash: the current data stays on screen until the new data arrives. A loading indicator shows only on the first load of a screen. A bottom tab that has been opened stays loaded, so going back to it shows its data at once. | Owner |
+| HOME-10 | The app does not refresh screens on a timer. Data is read when a screen opens, and once when the app returns to the foreground after being in the background for 5 minutes or more. A shorter absence refreshes nothing. A refresh never shows a loading state or flash: the current data stays on screen until the new data arrives. A loading indicator shows only on the first load of a screen. A bottom tab that has been opened stays loaded, so going back to it shows its data at once. | Owner |
 
 ---
 

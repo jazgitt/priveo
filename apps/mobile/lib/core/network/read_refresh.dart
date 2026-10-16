@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Active read providers refresh once when the app returns to the foreground.
-/// There is no timer and no polling. Forms retain their local edits; only
+/// Active read providers refresh once when the app returns to the foreground
+/// after being away for [awayBeforeRefresh] or more. A shorter absence changes
+/// nothing. There is no timer and no polling. Forms retain their local edits; only
 /// watched queries issue network reads. Screens keep their data on screen
 /// while a refresh runs (see `skipLoadingOnReload` on their `.when` calls).
+/// How long the app must be in the background before returning refreshes it.
+const awayBeforeRefresh = Duration(minutes: 5);
+
 final readPulseProvider = Provider<ReadPulse>((ref) {
   final pulse = ReadPulse();
   ref.onDispose(pulse.dispose);
@@ -26,9 +30,11 @@ Future<void> refreshAll(WidgetRef ref, [Future<Object?> Function()? read]) async
 }
 
 class ReadPulse with WidgetsBindingObserver {
-  ReadPulse() {
+  ReadPulse({DateTime Function()? now}) : _now = now ?? DateTime.now {
     WidgetsBinding.instance.addObserver(this);
   }
+  final DateTime Function() _now;
+  DateTime? _leftAt;
   final _controller = StreamController<int>();
   int _revision = 0;
   bool _active = WidgetsBinding.instance.lifecycleState == null ||
@@ -38,7 +44,15 @@ class ReadPulse with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _active = state == AppLifecycleState.resumed;
-    if (_active) _controller.add(++_revision);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _leftAt ??= _now();
+    } else if (_active) {
+      final left = _leftAt;
+      _leftAt = null;
+      if (left != null && _now().difference(left) >= awayBeforeRefresh) {
+        _controller.add(++_revision);
+      }
+    }
   }
 
   /// Tells every watching read to load again.
