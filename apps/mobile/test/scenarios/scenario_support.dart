@@ -179,3 +179,13 @@ Future<void> scrollTo(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder.first);
   await tester.pump(const Duration(milliseconds: 200));
 }
+
+/// Taps something in a long, lazily built list: waits for the screen, scrolls
+/// until it is built, then taps it.
+Future<void> tapScrolling(WidgetTester tester, Finder finder) async {
+  await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+  await tester.pump(const Duration(milliseconds: 200));
+  await scrollTo(tester, finder);
+  await tester.tap(finder.first);
+  await tester.pump(const Duration(milliseconds: 300));
+}

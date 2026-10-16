@@ -380,6 +380,7 @@ class _AdminOperationsState extends ConsumerState<AdminOperationsScreen> {
             retry: refresh,
             builder: (items) => DropdownButtonFormField<String>(
               initialValue: society,
+              isExpanded: true,
               decoration: InputDecoration(labelText: l.adminSocietyFilter),
               items: [
                 DropdownMenuItem(value: '', child: Text(l.adminAllSocieties)),
@@ -400,6 +401,7 @@ class _AdminOperationsState extends ConsumerState<AdminOperationsScreen> {
             retry: refresh,
             builder: (items) => DropdownButtonFormField<String>(
               initialValue: reason,
+              isExpanded: true,
               decoration: InputDecoration(labelText: l.adminFailureReason),
               items: [
                 DropdownMenuItem(value: '', child: Text(l.adminAllReasons)),
@@ -550,6 +552,7 @@ class _OperationCardState extends ConsumerState<_OperationCard> {
               retry: widget.onSaved,
               builder: (items) => DropdownButtonFormField<String>(
                 initialValue: reason,
+                isExpanded: true,
                 decoration: InputDecoration(labelText: l.adminOperationsReason),
                 items: [
                   DropdownMenuItem(

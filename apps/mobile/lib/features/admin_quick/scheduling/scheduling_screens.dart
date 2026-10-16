@@ -78,6 +78,7 @@ class SocietyPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<String>(
     initialValue: value,
+    isExpanded: true,
     decoration: InputDecoration(labelText: q('adminq_society')),
     items: [
       if (allowAll)
