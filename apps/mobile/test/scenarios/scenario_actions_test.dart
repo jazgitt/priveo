@@ -87,8 +87,12 @@ void main() {
     });
 
     testWidgets('C04 pauses for dates and ends the pause', (tester) async {
-      await openSkipPause(tester, 'C04');
-      await tapFinder(tester, find.text('Pause'));
+      // Pausing has its own screen, opened from My subscription.
+      await home(tester, 'C04');
+      await tapFinder(tester, find.text('My subscription'));
+      await untilFound(tester, find.text('Pause service'));
+      await tapFinder(tester, find.text('Pause service'));
+      await untilFound(tester, find.text('Confirm pause'));
 
       // Both dates are needed.
       await tapFinder(tester, find.text('Confirm pause'));

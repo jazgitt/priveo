@@ -641,7 +641,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get support_issue_send => 'Send report';
 
   @override
-  String get support_issue_sent => 'Thank you. We will reply within 4 hours.';
+  String get support_issue_sent =>
+      'Your Issue has been received. We will respond back asap';
 
   @override
   String get support_complaints_title => 'My complaints';

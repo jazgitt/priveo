@@ -5,8 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
-import '../../changes_money/data/money_repository.dart';
 import '../../changes_money/money_widgets.dart';
+import '../../changes_money/schedule_refresh.dart';
 import '../../support/data/support_repository.dart';
 import '../../support/widgets.dart' show linkOpenerProvider;
 import '../cust_strings.dart';
@@ -144,12 +144,7 @@ class _DayVisitTileState extends ConsumerState<DayVisitTile> {
     _ => v.status,
   };
 
-  void _refresh() {
-    ref.invalidate(calendarMonthProvider);
-    ref.invalidate(nextServicesProvider);
-    ref.invalidate(upcomingProvider);
-    ref.invalidate(changesProvider);
-  }
+  void _refresh() => refreshAfterScheduleChange(ref);
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() => _busy = true);

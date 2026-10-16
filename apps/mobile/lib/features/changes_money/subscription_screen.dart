@@ -114,7 +114,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               ),
             if (s.status == 'Active' || s.status == 'Paused')
               OutlinedButton(
-                onPressed: () => context.push(skipPausePath(widget.vehicleId)),
+                onPressed: () => context.push(pausePath(widget.vehicleId)),
                 child: const Text(MoneyStrings.pauseService),
               ),
             OutlinedButton(

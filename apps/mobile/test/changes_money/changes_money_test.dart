@@ -155,11 +155,22 @@ void main() {
       expect(find.textContaining('closed at 9 PM the evening before'), findsOneWidget);
     });
 
+    testWidgets('the skip screen has no pause; pause service opens its own screen',
+        (tester) async {
+      await openAt(tester, skipPausePath(vehicle), money: FakeMoneyRepository());
+      expect(find.text('Confirm skip'), findsOneWidget);
+      expect(find.text('Pause'), findsNothing);
+      expect(find.text('Confirm pause'), findsNothing);
+      await openAt(tester, subscriptionPath(vehicle), money: FakeMoneyRepository());
+      await tester.tap(find.text('Pause service'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm pause'), findsOneWidget);
+      expect(find.text('Confirm skip'), findsNothing);
+    });
+
     testWidgets('pause needs both dates', (tester) async {
       final repo = FakeMoneyRepository();
-      await openAt(tester, skipPausePath(vehicle), money: repo);
-      await tester.tap(find.text('Pause').first);
-      await tester.pumpAndSettle();
+      await openAt(tester, pausePath(vehicle), money: repo);
       await tester.tap(find.text('Confirm pause'));
       await tester.pumpAndSettle();
       expect(find.text('Choose the start and end dates first.'), findsOneWidget);
@@ -177,9 +188,7 @@ void main() {
               endDate: d(25),
               days: 14),
         ];
-      await openAt(tester, skipPausePath(vehicle), money: repo);
-      await tester.tap(find.text('Pause').first);
-      await tester.pumpAndSettle();
+      await openAt(tester, pausePath(vehicle), money: repo);
       expect(find.text('12-Oct-26 to 25-Oct-26'), findsOneWidget);
       await tester.tap(find.text('End pause'));
       await tester.pumpAndSettle();

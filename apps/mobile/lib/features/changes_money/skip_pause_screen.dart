@@ -12,11 +12,12 @@ import '../customer/calendar/day_card.dart' show CallSupportButton;
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
+import 'schedule_refresh.dart';
 import 'strings.dart';
 
-/// Skip, un-skip, pause and end a pause (SKIP-01 to SKIP-08, PAUSE-01 to
-/// PAUSE-07). The 9 PM rule is checked by the API; the chips for dates past
-/// it are disabled (SCHED-02).
+/// Skip and un-skip a day (SKIP-01 to SKIP-08). Pausing is on its own screen
+/// (`pause_screen.dart`). The 9 PM rule is checked by the API (SCHED-02); a
+/// day past it shows the cutoff message and cannot be skipped.
 class SkipPauseScreen extends ConsumerStatefulWidget {
   const SkipPauseScreen({super.key, required this.vehicleId});
 
@@ -27,19 +28,11 @@ class SkipPauseScreen extends ConsumerStatefulWidget {
 }
 
 class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
-  bool _pauseTab = false;
   DateTime? _picked;
-  DateTime? _from;
-  DateTime? _to;
   bool _busy = false;
   String? _pickError;
-  String? _pauseError;
-  String? _pauseResult;
 
-  void _refresh() {
-    ref.invalidate(upcomingProvider(widget.vehicleId));
-    ref.invalidate(changesProvider(widget.vehicleId));
-  }
+  void _refresh() => refreshAfterScheduleChange(ref);
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() => _busy = true);
@@ -78,57 +71,9 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
     });
   }
 
-  Future<void> _pickDate(bool from) async {
-    final now = DateTime.now();
-    final first = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
-    final chosen = await showDatePicker(
-      context: context,
-      initialDate: (from ? _from : _to) ?? _from ?? first,
-      firstDate: from ? first : (_from ?? first),
-      lastDate: first.add(const Duration(days: 365)),
-    );
-    if (chosen == null) return;
-    setState(() {
-      if (from) {
-        _from = chosen;
-        if (_to != null && _to!.isBefore(chosen)) _to = chosen;
-      } else {
-        _to = chosen;
-      }
-      _pauseError = null;
-      _pauseResult = null;
-    });
-  }
-
-  Future<void> _confirmPause() async {
-    if (_from == null || _to == null) {
-      setState(() => _pauseError = MoneyStrings.pauseChoose);
-      return;
-    }
-    await _run(() async {
-      final p = await ref
-          .read(moneyRepositoryProvider)
-          .pause(widget.vehicleId, _from!, _to!);
-      _pauseResult = MoneyStrings.pauseDone(
-          formatDate(p.startDate),
-          formatDate(p.endDate),
-          p.renewalDate == null ? '' : formatDate(p.renewalDate!));
-      _from = null;
-      _to = null;
-      _refresh();
-    });
-  }
-
-  Future<void> _endPause(ChangeDto pause) => _run(() async {
-        await ref.read(moneyRepositoryProvider).endPause(widget.vehicleId, pause.id);
-        if (mounted) showMessage(context, MoneyStrings.pauseEnded);
-        _refresh();
-      });
-
   @override
   Widget build(BuildContext context) {
     final upcoming = ref.watch(upcomingProvider(widget.vehicleId));
-    final changes = ref.watch(changesProvider(widget.vehicleId));
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.skipTitle)),
       body: upcoming.when(
@@ -140,16 +85,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         data: (days) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text(MoneyStrings.skipTab)),
-                ButtonSegment(value: true, label: Text(MoneyStrings.pauseTab)),
-              ],
-              selected: {_pauseTab},
-              onSelectionChanged: (s) => setState(() => _pauseTab = s.first),
-            ),
-            const SizedBox(height: 16),
-            if (!_pauseTab) ..._skipSection(days) else ..._pauseSection(changes.value),
+            ..._skipSection(days),
             const SizedBox(height: 24),
             ViewCalendarButton(onCalendar: () => openCalendarPage(context)),
           ],
@@ -171,7 +107,8 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
     final shown = selected ?? (_picked == null ? firstClosed : null);
     final closedShown =
         shown != null && !shown.canChange && shown.state != 'Paused' ? shown : null;
-    return [      SizedBox(
+    return [
+      SizedBox(
         height: 116,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -209,71 +146,6 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         const SizedBox(height: 8),
         const Align(
             alignment: Alignment.centerLeft, child: CallSupportButton()),
-      ],
-    ];
-  }
-
-  /// The visits paused and the new renewal date, before confirming
-  /// (PAUSE-02). One visit a day, and the renewal moves a day for each.
-  String _pausePreview(DateTime? renewal) {
-    final n = _to!.difference(_from!).inDays + 1;
-    final moved = renewal?.add(Duration(days: n));
-    return CalStrings.pausePreview(
-        n, renewal == null ? null : formatDate(renewal), moved == null ? null : formatDate(moved));
-  }
-
-  List<Widget> _pauseSection(ChangesDto? changes) {
-    String show(DateTime? d) => d == null ? '--' : formatDate(d);
-    return [
-      Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _pickDate(true),
-              child: Text('${MoneyStrings.pauseFrom}: ${show(_from)}'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _pickDate(false),
-              child: Text('${MoneyStrings.pauseTo}: ${show(_to)}'),
-            ),
-          ),
-        ],
-      ),
-      if (_pauseError != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(_pauseError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
-        ),
-      if (_from != null && _to != null && _pauseResult == null)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text(_pausePreview(changes?.renewalDate)),
-        ),
-      if (_pauseResult != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text(_pauseResult!),
-        ),
-      const SizedBox(height: 16),
-      PrimaryButton(
-          label: MoneyStrings.pauseConfirm, busy: _busy, onPressed: _confirmPause),
-      if (changes != null && changes.pauses.isNotEmpty) ...[
-        const SizedBox(height: 24),
-        const SectionLabel(MoneyStrings.yourPauses),
-        for (final p in changes.pauses)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(MoneyStrings.pausePeriod(
-                formatDate(p.startDate), formatDate(p.endDate))),
-            trailing: TextButton(
-              onPressed: _busy ? null : () => _endPause(p),
-              child: const Text(MoneyStrings.endPause),
-            ),
-          ),
       ],
     ];
   }

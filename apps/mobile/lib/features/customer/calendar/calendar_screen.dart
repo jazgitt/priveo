@@ -8,6 +8,7 @@ import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
+import '../../changes_money/data/money_repository.dart' show subscriptionProvider;
 import '../cust_strings.dart';
 import 'calendar_strings.dart';
 import 'day_card.dart';
@@ -103,6 +104,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
     final month = ref.watch(calendarMonthProvider(key));
     final text = Theme.of(context).textTheme;
+    // Only the plan's billing cycle is active: days outside it are greyed out,
+    // cannot be selected and carry no status marks. Without a subscription
+    // there is no cycle and nothing is greyed out.
+    final sub = vehicleId == null
+        ? null
+        : ref.watch(subscriptionProvider(vehicleId)).value;
+    final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);
+    final cycleEnd = sub == null
+        ? null
+        : _dateOnly(sub.renewalDate).subtract(const Duration(days: 1));
+    bool inCycle(DateTime d) =>
+        cycleStart == null ||
+        (!d.isBefore(cycleStart) && !d.isAfter(cycleEnd!));
     return month.when(
       skipLoadingOnReload: true,
       skipError: true,
@@ -156,24 +170,32 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ),
               ],
             ),
+            if (cycleStart != null)
+              Text(
+                'Billing cycle: ${formatDate(cycleStart)} to ${formatDate(cycleEnd!)}',
+                textAlign: TextAlign.center,
+                style: text.bodySmall?.copyWith(color: context.brand.mute),
+              ),
             const SizedBox(height: 8),
             _MonthGrid(
               month: _month,
               today: _today,
               selected: _selected,
               byDate: byDate,
+              inCycle: inCycle,
               onSelected: (d) => setState(() => _selected = d),
             ),
             const SizedBox(height: 14),
             const _Legend(),
             const SizedBox(height: 18),
-            DayCard(
-              date: _selected,
-              visits: dayVisits,
-              fallbackCutoff: cutoff,
-              today: _today,
-              renewal: renewal,
-            ),
+            if (inCycle(_selected))
+              DayCard(
+                date: _selected,
+                visits: dayVisits,
+                fallbackCutoff: cutoff,
+                today: _today,
+                renewal: renewal,
+              ),
           ],
         ),
         );
@@ -188,6 +210,7 @@ class _MonthGrid extends StatelessWidget {
     required this.today,
     required this.selected,
     required this.byDate,
+    required this.inCycle,
     required this.onSelected,
   });
 
@@ -195,6 +218,9 @@ class _MonthGrid extends StatelessWidget {
   final DateTime today;
   final DateTime selected;
   final Map<DateTime, List<CalendarVisit>> byDate;
+
+  /// Whether a date is inside the plan's billing cycle.
+  final bool Function(DateTime) inCycle;
   final ValueChanged<DateTime> onSelected;
 
   @override
@@ -238,8 +264,11 @@ class _MonthGrid extends StatelessWidget {
                       : _DayCell(
                           date: d,
                           isToday: d == today,
-                          isSelected: d == selected,
-                          marker: dayMarkerFor(byDate[d] ?? const []),
+                          isSelected: d == selected && inCycle(d),
+                          enabled: inCycle(d),
+                          marker: inCycle(d)
+                              ? dayMarkerFor(byDate[d] ?? const [])
+                              : null,
                           onTap: () => onSelected(d),
                         ),
                 ),
@@ -255,6 +284,7 @@ class _DayCell extends StatelessWidget {
     required this.date,
     required this.isToday,
     required this.isSelected,
+    required this.enabled,
     required this.marker,
     required this.onTap,
   });
@@ -262,6 +292,9 @@ class _DayCell extends StatelessWidget {
   final DateTime date;
   final bool isToday;
   final bool isSelected;
+
+  /// False for a day outside the billing cycle: greyed out, not selectable.
+  final bool enabled;
   final DayMarker? marker;
   final VoidCallback onTap;
 
@@ -271,12 +304,15 @@ class _DayCell extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Semantics(
       button: true,
+      enabled: enabled,
       selected: isSelected,
       label: formatDate(date),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
+        onTap: enabled ? onTap : null,
+        child: Opacity(
+          opacity: enabled ? 1 : 0.35,
+          child: Container(
           height: 54,
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
@@ -308,6 +344,7 @@ class _DayCell extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

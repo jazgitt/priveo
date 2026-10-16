@@ -1267,7 +1267,7 @@ abstract class AppLocalizations {
   /// No description provided for @support_issue_sent.
   ///
   /// In en, this message translates to:
-  /// **'Thank you. We will reply within 4 hours.'**
+  /// **'Your Issue has been received. We will respond back asap'**
   String get support_issue_sent;
 
   /// No description provided for @support_complaints_title.

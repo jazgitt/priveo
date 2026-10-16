@@ -2,11 +2,13 @@ import 'package:go_router/go_router.dart';
 
 import 'addon_screen.dart';
 import 'billing_history_screen.dart';
+import 'pause_screen.dart';
 import 'pay_screen.dart';
 import 'skip_pause_screen.dart';
 import 'subscription_screen.dart';
 
 String skipPausePath(String vehicleId) => '/customer/vehicles/$vehicleId/skip-pause';
+String pausePath(String vehicleId) => '/customer/vehicles/$vehicleId/pause';
 String subscriptionPath(String vehicleId) => '/customer/vehicles/$vehicleId/subscription';
 String billingPath(String vehicleId) => '/customer/vehicles/$vehicleId/billing';
 String addonsPath(String vehicleId) => '/customer/vehicles/$vehicleId/addons';
@@ -23,6 +25,10 @@ final List<GoRoute> routes = [
   GoRoute(
     path: '/customer/vehicles/:vehicleId/skip-pause',
     builder: (_, s) => SkipPauseScreen(vehicleId: s.pathParameters['vehicleId']!),
+  ),
+  GoRoute(
+    path: '/customer/vehicles/:vehicleId/pause',
+    builder: (_, s) => PauseScreen(vehicleId: s.pathParameters['vehicleId']!),
   ),
   GoRoute(
     path: '/customer/vehicles/:vehicleId/subscription',

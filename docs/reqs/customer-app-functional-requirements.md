@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.18 (complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.19 (separate Pause screen; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -177,7 +177,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 |---|---|---|
 | CAL-01 | Monthly calendar view (Monday-first) with month title. Previous/next arrows move between months. Past months show completed and skipped days; future months show the visits expected from the subscription. The admin schedules crew one period at a time (a week by default), so the crew assignment is not known further ahead. | Owner |
 | CAL-02 | Each date has a marker: Exterior done, Exterior + Interior, Full spa (a day with an add-on), Scheduled (upcoming), Skipped, Missed. Interior days show a filled marker when done and an outlined one when upcoming. | Defined |
-| CAL-03 | A legend explains the markers. | Defined |
+| CAL-03 | A legend explains the markers. Markers and the day card show only for days inside the plan's current billing cycle (for example 11 Nov to 10 Dec). Days outside the cycle are greyed out and cannot be selected. A vehicle with no subscription has no cycle, so nothing is greyed out. The cycle dates are shown above the grid. | Owner (16 Oct 2026) |
 | CAL-04 | Today is highlighted. The selected date is highlighted. | Defined |
 | CAL-05 | Selecting a date shows a day card: service type, a status chip (Completed, Scheduled, Skipped, Missed, No visit) and a one-line summary (finish time and checks, service cutoff time, "You skipped this date"). | Defined |
 | CAL-06 | Tapping the day card for a completed service opens Service Details. Tapping a scheduled day shows "Scheduled to be completed by <cutoff time>. Proof appears after the visit." and, once assigned, the crew member and assigned time (CAL-10). Tapping a skipped day shows "No visit on this day." | Defined |
@@ -218,7 +218,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 
 ## 6. Skip and pause
 
-Screen with two tabs: "Skip a date" and "Pause service". Both act on the selected vehicle's subscription.
+Two screens, both acting on the selected vehicle's subscription: "Skip or pause" (skip a date only; no pause here) and "Pause service" (pause only), which opens from My subscription (SUB-03). A skip or pause updates every screen that shows the schedule (Home, the service calendar, My subscription, both of these screens) without a visible reload.
 
 ### 6.1 Skip a date
 
@@ -301,7 +301,7 @@ Each vehicle has its own subscription. The screen opens for the selected vehicle
 | SUB-10 | The screen shows the status of the latest payment: Due by dd-Mon-yy, Over due, Initiated or Received (PAY-09). | Owner |
 | SUB-11 | A plan payment that has been Over due for 7 days makes the subscription Inactive automatically (ADM-SUB-03). An Over due add-on payment does not. The admin can also set it Inactive, and can reactivate it (ADM-SUB-02, ADM-SUB-04). The customer cannot renew an Inactive subscription themselves in MVP. | Owner |
 | SUB-02 | Details: car and registration, society, service cutoff time, interior day (when the plan has it). | Defined |
-| SUB-03 | "Pause service" shortcut opens the skip/pause screen. | Defined |
+| SUB-03 | "Pause service" shortcut opens the Pause service screen, which has only the pause feature (PAUSE-01 to PAUSE-07). Skipping a day is a separate screen. | Owner (16 Oct 2026) |
 | SUB-05 | Subscription states: **Active** (membership running), **Activating** (started, waiting for the admin to set the first service date and activate it), **Paused** (paused by customer), **Inactive** (stopped by the admin, or automatically when a plan payment has been Over due for 7 days). | Defined (Inactive: Owner) |
 | SUB-06 | Billing history ("View billing history") lists the subscription's payments, newest first, each with its amount, due date and status (PAY-09). | Derived |
 | SUB-12 | For a payment the admin has generated a GST invoice for (ADM-PAY-08), billing history shows an invoice that the customer can open and save. | Owner |

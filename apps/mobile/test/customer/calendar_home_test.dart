@@ -8,8 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/providers.dart';
 import 'package:priveo/core/ui/theme.dart';
+import 'package:priveo/features/changes_money/data/money_models.dart';
+import 'package:priveo/features/changes_money/data/money_repository.dart';
 import 'package:priveo/features/customer/calendar/calendar_actions.dart';
 import 'package:priveo/features/customer/calendar/calendar_screen.dart';
+import 'package:priveo/features/customer/calendar/day_card.dart';
 import 'package:priveo/features/customer/data/customer_reads_repository.dart';
 import 'package:priveo/features/customer/home/customer_home_data.dart';
 import 'package:priveo/features/customer/home/customer_shell.dart';
@@ -19,6 +22,7 @@ import 'package:priveo/features/support/data/support_repository.dart';
 import 'package:priveo/features/support/widgets.dart' show linkOpenerProvider;
 import 'package:priveo/l10n/app_localizations.dart';
 
+import '../changes_money/fakes.dart' show FakeMoneyRepository;
 import '../support/fakes.dart';
 import '../support/support_fakes.dart';
 import 'customer_slice_test.dart' show FakeReads;
@@ -121,6 +125,7 @@ Future<void> pumpWith(
   FakeSupportRepository? support,
   DateTime? now,
   String? selectVehicle,
+  FakeMoneyRepository? money,
 }) async {
   tester.view.physicalSize = const Size(800, 2600);
   tester.view.devicePixelRatio = 2;
@@ -130,6 +135,7 @@ Future<void> pumpWith(
       readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       apiProvider.overrideWithValue(FakePriveoApi()),
       customerReadsProvider.overrideWithValue(reads),
+      if (money != null) moneyRepositoryProvider.overrideWithValue(money),
       calendarActionsProvider.overrideWithValue(actions ?? _Actions()),
       supportRepositoryProvider.overrideWithValue(
         support ?? FakeSupportRepository(),
@@ -346,6 +352,44 @@ void main() {
       expect(m(['Cleaning-External']), DayMarker.scheduled);
       expect(dayMarkerFor([visit(12)]), DayMarker.expected);
       expect(dayMarkerFor([visit(12, status: 'Paused')]), DayMarker.paused);
+    });
+  });
+
+  group('billing cycle', () {
+    testWidgets('days outside the plan cycle are greyed out and cannot be selected',
+        (tester) async {
+      // Cycle 11-Nov-26 to 10-Dec-26. Today (10-Nov) is before it.
+      final money = FakeMoneyRepository()
+        ..sub = SubscriptionDto(
+          vehicleId: 'v1',
+          planName: 'Premium Care',
+          vehicle: 'Hyundai Creta',
+          registration: 'HR 26 DK 8337',
+          society: 'DLF Meadows',
+          status: 'Active',
+          monthlyPriceRupees: 1299,
+          paymentMethod: 'UPI',
+          cutoffTime: '07:00',
+          interiorDay: 'Friday',
+          cycleStart: DateTime(2026, 11, 11),
+          renewalDate: DateTime(2026, 12, 11),
+          cycleDays: 30,
+          daysLeft: 30,
+          latestPayment: null,
+          canPayNext: false,
+        );
+      await pumpWith(tester, calendar(), reads: _Reads(const []), money: money);
+      expect(find.text('Billing cycle: 11-Nov-26 to 10-Dec-26'), findsOneWidget);
+      // The selected day (today) is outside the cycle, so no day card shows.
+      expect(find.byType(DayCard), findsNothing);
+      // A day outside the cycle cannot be selected.
+      await tester.tap(find.text('5'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.byType(DayCard), findsNothing);
+      // A day inside it can.
+      await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DayCard), findsOneWidget);
     });
   });
 
