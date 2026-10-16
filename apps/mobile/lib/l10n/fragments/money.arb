@@ -2,7 +2,6 @@
   "money_skipTitle": "Skip or pause",
   "money_skipTab": "Skip",
   "money_pauseTab": "Pause",
-  "money_skipInstruction": "Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.",
   "money_skipConfirm": "Confirm skip",
   "money_skipPickFirst": "Pick a date to skip first.",
   "money_skipped": "Skipped",

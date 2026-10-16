@@ -235,6 +235,22 @@ class SupportService:
                 out.append(str(upload.id))
         return out
 
+    def _raised_body(self, customer: Customer, complaint: Complaint) -> str:
+        """The admin alert text: who, what, the visit it is about and what the
+        customer wrote (shortened; the full text is in the portal)."""
+        lines = [f"{customer.first_name}: {complaint.category}"]
+        visit = None
+        if complaint.visit_id:
+            try:
+                visit = self.db.get(Visit, uuid.UUID(complaint.visit_id))
+            except ValueError:
+                visit = None
+        if visit is not None:
+            lines.append(f"Visit: {visit.date:%d-%b-%y}")
+        text = " ".join(complaint.description.split())
+        lines.append(text if len(text) <= 300 else text[:297] + "...")
+        return "\n".join(lines)
+
     def create_complaint(self, customer: Customer, category: str, description: str,
                          visit_id: str | None, photo_keys: list[str]) -> ComplaintDetail:
         if category not in ISSUE_CATEGORIES:  # ISS-05
@@ -256,8 +272,8 @@ class SupportService:
         # ADM-CMP-08
         alerts.raise_alert(
             self.db, "complaint_raised", f"New complaint {display_id(number)}",
-            f"{customer.first_name}: {category}", ref_type="complaint", ref_id=str(complaint.id),
-            push=self.push, email=self.email)
+            self._raised_body(customer, complaint), ref_type="complaint",
+            ref_id=str(complaint.id), push=self.push, email=self.email)
         return self.detail_for_customer(customer, complaint.id)
 
     def list_for_customer(self, customer: Customer) -> list[ComplaintSummary]:

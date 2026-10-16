@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.10 (welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.11 (complaint 4-hour target is internal only; welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -279,9 +279,9 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-CMP-03 | The admin can change a complaint's status: **Raised**, **In progress**, **Resolved**. | Owner |
 | ADM-CMP-04 | The admin can add an update note to a complaint, for example "Supervisor visit booked". The customer sees it in My complaints. | Owner |
 | ADM-CMP-05 | Each status change and each new update note sends the customer a "Complaint update" push notification, if they have it switched on (CMP-04 in the customer file). | Owner |
-| ADM-CMP-06 | The customer is promised a reply within 4 hours (ISS-06 in the customer file). A complaint still in Raised after 4 hours is highlighted in the list. | Derived |
+| ADM-CMP-06 | The team's own target is a reply within 4 hours. It is not promised to the customer (ISS-06 in the customer file). A complaint still in Raised after 4 hours is highlighted in the list. | Derived |
 | ADM-CMP-07 | Each status change and note records which admin made it and when. | Derived |
-| ADM-CMP-08 | The admin is alerted when a customer raises a complaint (ADM-ACC-09), and again when a complaint is still Raised after 4 hours (ADM-CMP-06). | Owner |
+| ADM-CMP-08 | The admin is alerted when a customer raises a complaint (ADM-ACC-09), and again when a complaint is still Raised after 4 hours (ADM-CMP-06). The alert email gives the customer's first name, the category, the visit date if one is linked, the start of the description, and a link that opens the complaint in the web portal. Photos are not attached; the admin sees them in the portal. | Owner |
 
 ### 8.2 Visits skipped by operations
 

@@ -13,6 +13,14 @@ from app.support.models import AdminAlert, AdminAlertEmail
 log = logging.getLogger(__name__)
 
 
+def _portal_link(alert, settings):
+    """Where the admin opens what the alert is about (complaints only)."""
+    base = settings.public_base_url.strip().rstrip("/")
+    if base and alert.ref_type == "complaint" and alert.ref_id:
+        return f"{base}/portal/complaints/{alert.ref_id}"
+    return None
+
+
 def enqueue(db, alert):
     for login in db.scalars(select(Login).where(Login.role == "admin", Login.active.is_(True),
                                                Login.alert_email_enabled.is_(True),
@@ -45,7 +53,8 @@ def deliver_pending(db, *, now=None, sender=None, limit=50):
         alert = db.get(AdminAlert, row.alert_id)
         row.attempts += 1
         try:
-            sender.send_alert(row.recipient_email, alert.title, alert.body, f"admin-alert/{row.id}")
+            sender.send_alert(row.recipient_email, alert.title, alert.body,
+                              f"admin-alert/{row.id}", link=_portal_link(alert, settings))
         except EmailSendError:
             row.next_attempt_at = now + timedelta(minutes=min(60, 5 * 2 ** (row.attempts - 1)))
             if row.attempts >= 5:

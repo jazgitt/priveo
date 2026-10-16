@@ -26,7 +26,6 @@ class CalStrings {
 
   static String renews(String date) => 'Your plan renews on $date.';
 
-  static const viewCalendar = 'View calendar';
 
   static String pausePreview(int visits, String? from, String? to) {
     final base = visits == 1
@@ -44,6 +43,11 @@ class CalStrings {
   static const callSupport = 'Call support';
   static const closedMessage =
       'The cutoff for this date has passed (9 PM the evening before). '
+      'Please call support for an emergency change.';
+
+  /// The same message for one named date (the Skip screen).
+  static String closedMessageFor(String date) =>
+      'The cutoff for $date has passed (9 PM the evening before). '
       'Please call support for an emergency change.';
 
   static String skipDone(String date) => 'Skipped $date.';

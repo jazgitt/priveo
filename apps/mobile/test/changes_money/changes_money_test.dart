@@ -3,6 +3,7 @@
 // the admin's payment confirmation. Fake repositories, no network.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:priveo/core/ui/theme.dart';
 import 'package:priveo/features/changes_money/data/money_models.dart';
 import 'package:priveo/features/changes_money/money_widgets.dart';
 import 'package:priveo/features/changes_money/routes.dart';
@@ -84,17 +85,32 @@ void main() {
       expect(repo.calls, isEmpty);
     });
 
-    testWidgets('skip a date, with the note and a confirmation', (tester) async {
+    testWidgets('skip a date, with a confirmation and no plan note', (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, skipPausePath(vehicle), money: repo);
       await tester.tap(find.text('15').first);
       await tester.pumpAndSettle();
-      expect(find.text("No cleaning on 15-Oct-26. Your plan isn't charged for this visit."),
-          findsOneWidget);
+      expect(find.textContaining("isn't charged"), findsNothing);
       await tester.tap(find.text('Confirm skip'));
       await tester.pumpAndSettle();
       expect(repo.calls, ['skip 15']);
       expect(find.text('Skipped 15-Oct-26. The crew has been told.'), findsOneWidget);
+    });
+
+    testWidgets('shows the calendar button and no upcoming list or cutoff instruction',
+        (tester) async {
+      await openAt(tester, skipPausePath(vehicle), money: FakeMoneyRepository());
+      expect(find.textContaining('Cutoff time to submit a skip'), findsNothing);
+      expect(find.text('Upcoming schedule'), findsNothing);
+      expect(find.text('View calendar'), findsNothing);
+      expect(find.text('View Service Calendar'), findsOneWidget);
+    });
+
+    testWidgets('a skipped day is yellow', (tester) async {
+      await openAt(tester, skipPausePath(vehicle), money: FakeMoneyRepository());
+      final skipped = find.text('Skipped').first;
+      final warn = tester.element(skipped).brand.warn;
+      expect(tester.widget<Text>(skipped).style?.color, warn);
     });
 
     testWidgets('a skipped date can be undone', (tester) async {
@@ -108,14 +124,24 @@ void main() {
       expect(repo.calls, ['unskip skip-14']);
     });
 
-    testWidgets('a date past its 9 PM cutoff cannot be picked', (tester) async {
+    testWidgets('a date past its 9 PM cutoff shows the cutoff message and cannot be skipped',
+        (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, skipPausePath(vehicle), money: repo);
-      await tester.tap(find.text('12').first, warnIfMissed: false);
+      final message = find.textContaining('The cutoff for 12-Oct-26 has passed');
+      // Tomorrow is past its cutoff, so it starts selected with the message.
+      expect(message, findsOneWidget);
+      // Picking another day clears the message.
+      await tester.tap(find.text('13').first);
       await tester.pumpAndSettle();
+      expect(message, findsNothing);
+      // Picking the closed day shows it again, and it cannot be skipped.
+      await tester.tap(find.text('12').first);
+      await tester.pumpAndSettle();
+      expect(message, findsOneWidget);
       await tester.tap(find.text('Confirm skip'));
       await tester.pumpAndSettle();
-      expect(find.text('Pick a date to skip first.'), findsOneWidget);
+      expect(repo.calls, isEmpty);
     });
 
     testWidgets("the server's cutoff message is shown", (tester) async {

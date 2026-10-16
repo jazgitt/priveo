@@ -71,7 +71,7 @@ void main() {
       expect(find.text('Daily Premium'), findsOneWidget);
       final nextService = find.text('Planned before your cutoff time - 7:00 AM');
       expect(find.ancestor(of: nextService, matching: find.byType(Card)), findsWidgets);
-      final calendar = find.text('View service calendar');
+      final calendar = find.text('View Service Calendar');
       expect(calendar, findsOneWidget);
       expect(find.ancestor(of: calendar, matching: find.byType(Card)), findsNothing);
     });

@@ -127,7 +127,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickActions => 'Quick actions';
 
   @override
-  String get viewCalendar => 'View service calendar';
+  String get viewCalendar => 'View Service Calendar';
 
   @override
   String get nextService => 'Next service';
@@ -1042,10 +1042,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get money_pauseTab => 'Pause';
 
   @override
-  String get money_skipInstruction =>
-      'Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.';
-
-  @override
   String get money_skipConfirm => 'Confirm skip';
 
   @override
@@ -1059,9 +1055,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get money_undoSkip => 'Undo skip';
-
-  @override
-  String get money_upcoming => 'Upcoming schedule';
 
   @override
   String get money_pauseFrom => 'From';
@@ -1263,11 +1256,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get money_adminMarkRead => 'Mark read';
-
-  @override
-  String money_skipNote(String date) {
-    return 'No cleaning on $date. Your plan isn\'t charged for this visit.';
-  }
 
   @override
   String money_skipDone(String date) {

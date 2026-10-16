@@ -11,19 +11,15 @@ class MoneyStrings {
   static const skipTitle = 'Skip or pause';
   static const skipTab = 'Skip';
   static const pauseTab = 'Pause';
-  static const skipInstruction =
-      'Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.';
-  static String skipNote(String date) =>
-      "No cleaning on $date. Your plan isn't charged for this visit.";
   static const skipConfirm = 'Confirm skip';
   static const skipPickFirst = 'Pick a date to skip first.';
   static const skipped = 'Skipped';
+  static const completed = 'Completed';
   static const paused = 'Paused';
   static const undoSkip = 'Undo skip';
   static String skipDone(String date) => 'Skipped $date. The crew has been told.';
   static String unskipDone(String date) =>
       '$date is back on. The crew has been told.';
-  static const upcoming = 'Upcoming schedule';
   static const pauseFrom = 'From';
   static const pauseTo = 'To';
   static const pauseChoose = 'Choose the start and end dates first.';

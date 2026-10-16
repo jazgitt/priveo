@@ -57,6 +57,23 @@ def test_skip_twice_or_with_the_same_key_is_one_skip(money):
     assert len(skips) == 1
 
 
+def test_a_customer_skip_does_not_change_the_plan(money):
+    """A skipped day adds no day to the plan: the renewal date stays put and no
+    plan extension is recorded (only a pause or operations skip moves it)."""
+    from sqlalchemy import func, select
+
+    from app.changes.models import PlanExtension
+
+    m = money
+    before = m.client.get(f"{base(m)}/changes", headers=m.customer).json()["renewal_date"]
+    for day in ("2026-10-13", "2026-10-14", "2026-10-15"):
+        r = m.client.post(f"{base(m)}/skips", json={"date": day}, headers=m.customer)
+        assert r.status_code == 201, r.text
+    after = m.client.get(f"{base(m)}/changes", headers=m.customer).json()["renewal_date"]
+    assert after == before == "2026-10-31"
+    assert m.db.scalar(select(func.count()).select_from(PlanExtension)) == 0
+
+
 def test_unskip_follows_the_same_cutoff(money):
     m = money
     skip = m.client.post(f"{base(m)}/skips", json={"date": "2026-10-12"},

@@ -139,8 +139,13 @@ class ResendEmailSender:
     def send_welcome(self, to: str, first_name: str) -> None:
         self._send(to, welcome_message(first_name))
 
-    def send_alert(self, to: str, title: str, body: str, key: str) -> None:
-        self._send(to, (title, body, f"<p>{html.escape(body)}</p>"), key=key)
+    def send_alert(self, to: str, title: str, body: str, key: str, link: str | None = None) -> None:
+        text = f"{body}\n\nOpen in the admin portal: {link}" if link else body
+        paragraphs = html.escape(body).replace("\n", "<br>")
+        page = f"<p>{paragraphs}</p>"
+        if link:
+            page += f'<p><a href="{html.escape(link, quote=True)}">Open in the admin portal</a></p>'
+        self._send(to, (title, text, page), key=key)
 
 
 _fake = FakeEmailSender()

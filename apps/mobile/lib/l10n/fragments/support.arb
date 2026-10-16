@@ -33,7 +33,7 @@
   "support_issue_description": "Describe what happened",
   "support_issue_description_required": "Describe what happened.",
   "support_issue_send": "Send report",
-  "support_issue_sent": "Thank you. We will reply within 4 hours.",
+  "support_issue_sent": "Your Issue has been received. We will respond back asap",
   "support_complaints_title": "My complaints",
   "support_complaints_empty": "You have not raised any complaints.",
   "support_complaint_raised_on": "Raised {date}",

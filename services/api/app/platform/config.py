@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     email_from: str = "Priveo <no-reply@priveo.in>"
     # Dev/testing: when set, every email goes to this address instead.
     email_redirect_to: str = ""
+    # The public address of this deployment, for links in emails to admins
+    # (for example https://priveo-api.vercel.app). Empty: emails carry no link.
+    public_base_url: str = ""
     terms_url: str = "https://example.com/priveo/terms"
     privacy_url: str = "https://example.com/priveo/privacy"
 

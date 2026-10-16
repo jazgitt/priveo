@@ -319,7 +319,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewCalendar.
   ///
   /// In en, this message translates to:
-  /// **'View service calendar'**
+  /// **'View Service Calendar'**
   String get viewCalendar;
 
   /// No description provided for @nextService.
@@ -1966,12 +1966,6 @@ abstract class AppLocalizations {
   /// **'Pause'**
   String get money_pauseTab;
 
-  /// No description provided for @money_skipInstruction.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.'**
-  String get money_skipInstruction;
-
   /// No description provided for @money_skipConfirm.
   ///
   /// In en, this message translates to:
@@ -2001,12 +1995,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo skip'**
   String get money_undoSkip;
-
-  /// No description provided for @money_upcoming.
-  ///
-  /// In en, this message translates to:
-  /// **'Upcoming schedule'**
-  String get money_upcoming;
 
   /// No description provided for @money_pauseFrom.
   ///
@@ -2403,12 +2391,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark read'**
   String get money_adminMarkRead;
-
-  /// No description provided for @money_skipNote.
-  ///
-  /// In en, this message translates to:
-  /// **'No cleaning on {date}. Your plan isn\'t charged for this visit.'**
-  String money_skipNote(String date);
 
   /// No description provided for @money_skipDone.
   ///

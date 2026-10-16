@@ -51,7 +51,7 @@
   "loadFailed": "We could not load this screen.",
   "greeting": "Hello,",
   "quickActions": "Quick actions",
-  "viewCalendar": "View service calendar",
+  "viewCalendar": "View Service Calendar",
   "nextService": "Next service",
   "notScheduledYet": "Not scheduled yet",
   "dailyCleanBy": "Planned before your cutoff time - {time}",
@@ -305,7 +305,7 @@
   "support_issue_description": "Describe what happened",
   "support_issue_description_required": "Describe what happened.",
   "support_issue_send": "Send report",
-  "support_issue_sent": "Thank you. We will reply within 4 hours.",
+  "support_issue_sent": "Your Issue has been received. We will respond back asap",
   "support_complaints_title": "My complaints",
   "support_complaints_empty": "You have not raised any complaints.",
   "support_complaint_raised_on": "Raised {date}",
@@ -522,13 +522,11 @@
   "money_skipTitle": "Skip or pause",
   "money_skipTab": "Skip",
   "money_pauseTab": "Pause",
-  "money_skipInstruction": "Skip must be done by 9 PM the evening before. Requests after the cutoff are not accepted.",
   "money_skipConfirm": "Confirm skip",
   "money_skipPickFirst": "Pick a date to skip first.",
   "money_skipped": "Skipped",
   "money_paused": "Paused",
   "money_undoSkip": "Undo skip",
-  "money_upcoming": "Upcoming schedule",
   "money_pauseFrom": "From",
   "money_pauseTo": "To",
   "money_pauseChoose": "Choose the start and end dates first.",
@@ -595,14 +593,6 @@
   "money_adminAlertsTitle": "Alerts",
   "money_adminNoAlerts": "No alerts.",
   "money_adminMarkRead": "Mark read",
-  "money_skipNote": "No cleaning on {date}. Your plan isn't charged for this visit.",
-  "@money_skipNote": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
   "money_skipDone": "Skipped {date}. The crew has been told.",
   "@money_skipDone": {
     "placeholders": {

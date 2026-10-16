@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.16 (refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.18 (complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -224,12 +224,12 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 
 | ID | Requirement | Status |
 |---|---|---|
-| SKIP-01 | Horizontal date chips for upcoming service days, each showing weekday, day number and service type (Exterior, + Interior). | Defined |
-| SKIP-02 | Instruction text: skip must be done by 9 PM the evening before. Skip requests after the cutoff are not accepted. | Defined |
-| SKIP-03 | The user selects one date, sees a note ("No cleaning on <date>. Your plan isn't charged for this visit.") and taps "Confirm skip". | Defined |
+| SKIP-01 | Horizontal date chips for upcoming service days, each showing weekday, day number and service type (Exterior, + Interior). The text of a chip shows its status: Skipped in yellow, Paused in red, Completed in green. | Owner (status colours, 16 Oct 2026) |
+| SKIP-02 | There is no instruction text above the date chips. Skip requests after the 9 PM cutoff are not accepted. When the next day is already past the cutoff, it starts selected and the screen shows "The cutoff for <date> has passed (9 PM the evening before). Please call support for an emergency change." with a Call support button. Picking another day clears the message; picking the closed day shows it again, and it cannot be skipped. | Owner (16 Oct 2026) |
+| SKIP-03 | The user selects one date and taps "Confirm skip". No note about charges is shown. A skipped day does not change the plan: no day is added to it and the renewal date does not move (only a pause or a visit skipped by operations does, PAUSE-02, ADM-OPS-03). | Owner (16 Oct 2026) |
 | SKIP-04 | Confirming without a date shows "Pick a date to skip first." | Defined |
 | SKIP-05 | On confirm: the date is marked skipped in the upcoming list, calendar and chip; a confirmation says the crew has been told; the crew is notified automatically. | Defined |
-| SKIP-06 | An "Upcoming schedule" list below shows the next several dates with type and a Skipped state, plus a "View calendar" link. | Defined |
+| SKIP-06 | The screen has no upcoming-schedule list. A "View Service Calendar" button below opens the service calendar. This button has the same label and look everywhere it appears in the app. | Owner (16 Oct 2026) |
 | SKIP-07 | The customer can undo a skip (un-skip) until 9 PM the previous day (SCHED-01). The date returns to Scheduled, in the list and the calendar, and the crew is told. | Owner |
 | SKIP-08 | A date that falls inside a pause cannot be skipped separately. A skip is treated as a subset of a pause (PAUSE-06). | Owner |
 
@@ -372,7 +372,7 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ISS-03 | Description (free text, required). | Defined |
 | ISS-04 | Optional photo attachments; the user can add several. Format and size follow rule 17. | Defined |
 | ISS-05 | Submitting without a category shows "Choose what went wrong." | Defined |
-| ISS-06 | On submit, a complaint is created with a unique ID (format `#C-NNNN`) and a confirmation says a reply comes within 4 hours. The user lands on My complaints with the new item at the top. | Defined |
+| ISS-06 | On submit, a complaint is created with a unique ID (format `#C-NNNN`) and a confirmation says "Your Issue has been received. We will respond back asap" (no time is promised). The user lands on My complaints with the new item at the top. | Defined |
 
 ### 10.3 My complaints
 
@@ -461,7 +461,7 @@ These are behaviors a developer must implement, taken from the screens and owner
 7. A new subscription starts as Activating. The admin sets the first service date and makes it Active, whatever the payment status (ADM-SUB-01). Visits are scheduled only for Active subscriptions.
 8. Proof of service per visit: a timed checklist, photos, a video and the crew member's name. The crew takes photos after every completed service.
 9. Customer ratings (1 to 5) are tied to a visit and are general: they are not given to any crew member, and crew do not see them.
-10. Complaints are acknowledged with a reply within 4 hours.
+10. Complaints are acknowledged with a reply as soon as possible. No reply time is promised to the customer.
 11. Customers can change parking details, the vehicle photo, the service cutoff time and the interior day themselves; other vehicle details change only through support. A vehicle's society cannot be changed.
 12. Prices include GST
 13. A customer can own several vehicles. Each vehicle has its own subscription, bought and paid for separately.

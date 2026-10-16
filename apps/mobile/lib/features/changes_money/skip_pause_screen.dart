@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
 import '../customer/calendar/calendar_page.dart';
 import '../customer/calendar/calendar_strings.dart';
+import '../customer/home/home_schedule.dart' show ViewCalendarButton;
 import '../customer/calendar/day_card.dart' show CallSupportButton;
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
@@ -57,6 +59,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
       return;
     }
     final day = days.firstWhere((d) => d.date == picked);
+    if (!day.canChange) return; // Closed: the cutoff message explains.
     final repo = ref.read(moneyRepositoryProvider);
     await _run(() async {
       if (day.state == 'Skipped' && day.skipId != null) {
@@ -148,17 +151,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
             const SizedBox(height: 16),
             if (!_pauseTab) ..._skipSection(days) else ..._pauseSection(changes.value),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                const Expanded(child: SectionLabel(MoneyStrings.upcoming)),
-                TextButton(
-                  onPressed: () => openCalendarPage(context),
-                  child: const Text(CalStrings.viewCalendar),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            for (final d in days.take(7)) _UpcomingRow(d),
+            ViewCalendarButton(onCalendar: () => openCalendarPage(context)),
           ],
         ),
       ),
@@ -170,10 +163,15 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         ? null
         : days.where((d) => d.date == _picked).firstOrNull;
     final undo = selected?.state == 'Skipped';
-    return [
-      const Text(MoneyStrings.skipInstruction),
-      const SizedBox(height: 12),
-      SizedBox(
+    // When tomorrow is already past the cutoff it starts selected, with the
+    // cutoff message. Picking another day clears the message.
+    final first = days.isEmpty ? null : days.first;
+    final firstClosed =
+        first != null && !first.canChange && first.state != 'Paused' ? first : null;
+    final shown = selected ?? (_picked == null ? firstClosed : null);
+    final closedShown =
+        shown != null && !shown.canChange && shown.state != 'Paused' ? shown : null;
+    return [      SizedBox(
         height: 116,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -181,8 +179,8 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
           separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (context, i) => _DayChip(
             day: days[i],
-            selected: _picked == days[i].date,
-            onTap: days[i].state == 'Paused' || !days[i].canChange
+            selected: shown?.date == days[i].date,
+            onTap: days[i].state == 'Paused'
                 ? null
                 : () => setState(() {
                       _picked = days[i].date;
@@ -197,11 +195,6 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
           child: Text(_pickError!,
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
-      if (selected != null && !undo)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text(MoneyStrings.skipNote(formatDate(selected.date))),
-        ),
       const SizedBox(height: 16),
       PrimaryButton(
         label: undo ? MoneyStrings.undoSkip : MoneyStrings.skipConfirm,
@@ -209,9 +202,9 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         onPressed: () => _confirmSkip(days),
       ),
       // After the 9 PM cutoff the controls close: point to support (SCHED-02).
-      if (days.any((d) => !d.canChange && d.state != 'Paused')) ...[
+      if (closedShown != null) ...[
         const SizedBox(height: 16),
-        Text(CalStrings.closedMessage,
+        Text(CalStrings.closedMessageFor(formatDate(closedShown.date)),
             style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 8),
         const Align(
@@ -296,9 +289,21 @@ class _DayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final label = day.state == 'Scheduled'
-        ? (day.hasInterior ? 'Exterior + Interior' : 'Exterior')
-        : (day.state == 'Skipped' ? MoneyStrings.skipped : MoneyStrings.paused);
+    final label = switch (day.state) {
+      'Scheduled' => day.hasInterior ? 'Exterior + Interior' : 'Exterior',
+      'Skipped' => MoneyStrings.skipped,
+      'Completed' => MoneyStrings.completed,
+      _ => MoneyStrings.paused,
+    };
+    // Text colour shows the status: Skipped yellow, Paused red, Completed green.
+    final base = Theme.of(context).textTheme;
+    final statusColor = switch (day.state) {
+      'Skipped' => context.brand.warn,
+      'Paused' => scheme.error,
+      'Completed' => context.brand.ok,
+      _ => null,
+    };
+    TextStyle? styled(TextStyle? s) => s?.copyWith(color: statusColor);
     return Semantics(
       button: true,
       selected: selected,
@@ -319,20 +324,20 @@ class _DayChip extends StatelessWidget {
                   width: selected ? 2 : 1),
             ),
             child: Opacity(
-              opacity: onTap == null ? 0.5 : 1,
+              opacity: onTap == null || !day.canChange ? 0.5 : 1,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(DateFormat('EEE').format(day.date),
-                      style: Theme.of(context).textTheme.labelMedium),
+                      style: styled(base.labelMedium)),
                   Text(DateFormat('d').format(day.date),
-                      style: Theme.of(context).textTheme.titleLarge),
+                      style: styled(base.titleLarge)),
                   Flexible(
                     child: Text(label,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelSmall),
+                        style: styled(base.labelSmall)),
                   ),
                 ],
               ),
@@ -340,26 +345,6 @@ class _DayChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _UpcomingRow extends StatelessWidget {
-  const _UpcomingRow(this.day);
-
-  final UpcomingDayDto day;
-
-  @override
-  Widget build(BuildContext context) {
-    final type = day.hasInterior ? 'Exterior + Interior' : 'Exterior';
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text('${DateFormat('EEE').format(day.date)} ${formatDate(day.date)}'),
-      subtitle: Text(type),
-      trailing: day.state == 'Scheduled'
-          ? null
-          : StatusChip(day.state == 'Skipped' ? MoneyStrings.skipped : MoneyStrings.paused,
-              tone: ChipTone.neutral),
     );
   }
 }
