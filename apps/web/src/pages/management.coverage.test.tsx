@@ -115,7 +115,6 @@ it('edits customer details, credentials, notifications and signed-in sessions',a
   mount(<Routes><Route path='/customers/:id' element={<CustomerDetailPage/>}/></Routes>,'/customers/c1');
   await screen.findByLabelText('First name');await userEvent.clear(screen.getByLabelText('First name'));await userEvent.type(screen.getByLabelText('First name'),'Ash');
   await userEvent.click(screen.getByRole('button',{name:'Save customer'}));await sent('/v1/admin/customers/c1',{first_name:'Ash',last_name:'Rao',mobile:'9876543210',flat:'A1'},'PATCH');
-  await userEvent.click(screen.getByRole('button',{name:'Resend welcome email'}));await sent('/v1/admin/customers/c1/resend-welcome');
   await userEvent.click(screen.getByText('Email and password reset'));await userEvent.clear(screen.getByLabelText('Correct email'));await userEvent.type(screen.getByLabelText('Correct email'),'new@example.com');
   await userEvent.click(screen.getByRole('button',{name:'Correct email'}));await sent('/v1/admin/customers/c1/email',{email:'new@example.com'},'PATCH');
   await userEvent.click(screen.getByRole('button',{name:'Clear password'}));await sent('/v1/admin/customers/c1/reset-password');

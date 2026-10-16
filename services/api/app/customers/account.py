@@ -42,7 +42,7 @@ from app.platform.errors import ApiError
 router = APIRouter(tags=["customer"])
 customer_only = require_role("customer")
 
-CHANGE_CODE_LIFETIME = timedelta(minutes=10)  # same as AUTH-05
+CHANGE_CODE_LIFETIME = timedelta(minutes=30)  # same as AUTH-05
 MAX_WRONG_CHANGE_CODES = 5
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 

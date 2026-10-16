@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.9: owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.10 (welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -89,7 +89,7 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 |---|---|---|
 | ADM-CUS-08 | The admin can search the customer list by name, mobile number, registration number or society, and open a customer to see their vehicles, subscriptions, schedule settings and payment statuses. | Derived |
 | ADM-CUS-17 | In the customer view the admin sees whether the customer has verified their email, set a password and confirmed the onboarding review. | Derived |
-| ADM-CUS-18 | The admin can resend the welcome email. | Derived |
+| ADM-CUS-18 | Removed (owner, 16 Oct 2026): the admin cannot resend the welcome email. The welcome email is sent once, when the customer is created (ADM-CUS-04) or the email is corrected (ADM-CUS-19). | Owner |
 | ADM-CUS-19 | The admin can correct a customer's email. The customer's password is cleared, a new welcome email is sent, and the customer verifies the new email and sets a new password. The change is audited (ADM-CUS-16). | Owner |
 | ADM-CUS-20 | The admin can reset a customer's password by clearing it. The customer then gets an emailed code at the next sign-in, as for a first sign-in. The change is audited (ADM-CUS-16). | Derived |
 | ADM-CUS-21 | The admin can manage a customer's signed-in sessions. The admin sees each active session with its device name, platform, app version and last-active time, and can sign out one session or all of the customer's sessions. The customer is signed out at once and sees the sign-in screen the next time the app contacts the server. Each sign-out is recorded with the admin and the time (ADM-CUS-16). Changing a customer's email or clearing their password (ADM-CUS-19, ADM-CUS-20) also ends all their sessions. | Owner |

@@ -30,7 +30,7 @@ ADMIN_MOBILE_IDLE = timedelta(hours=24)  # ADM-ACC-13
 # working day. The server session behind it can still be ended at any time.
 WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
-CODE_LIFETIME = timedelta(minutes=10)  # AUTH-05
+CODE_LIFETIME = timedelta(minutes=30)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
 MAX_WRONG_CODES = 5  # AUTH-07
 MAX_CODES_AN_HOUR = 5  # AUTH-07

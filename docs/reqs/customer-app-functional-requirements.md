@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.11: wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.12 (30-minute code, 16 Oct 2026): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -60,7 +60,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | AUTH-02 | The user enters their email address. The email is checked for a valid format and is not case sensitive. The prototype shows a mobile number here. | Owner |
 | AUTH-03 | "Continue" checks the email against the customers the admin has created (AUTH-14). If the customer has not yet set a password, a 6-digit verification code is sent to the email and the code screen opens. If a password is set, the password screen opens. An invalid email format shows an error. | Owner |
 | AUTH-04 | Terms and Privacy Policy consent notice is shown on the email screen. The customer's acceptance is recorded with the date and time at first sign-in, including for customers the admin created. | Defined (record: Derived) |
-| AUTH-05 | The code screen shows the email the code was sent to, six single-digit boxes, a "Verify" button, and a 30-second resend countdown (00:28 in the prototype). A code is valid for 10 minutes. | Defined (email, 10 minutes: Owner) |
+| AUTH-05 | The code screen shows the email the code was sent to, six single-digit boxes, a "Verify" button, and a 30-second resend countdown (00:28 in the prototype). A code is valid for 30 minutes. | Defined (email, 30 minutes: Owner) |
 | AUTH-06 | The user can paste the code from the clipboard. The code does not auto-fill from an SMS, as the prototype shows. | Owner and Derived |
 | AUTH-07 | Resend becomes available when the countdown ends. A wrong code shows an error. After 5 wrong attempts the code is cancelled and the user must request a new one. At most 5 codes can be requested in an hour. | Derived (numbers: Owner) |
 | AUTH-08 | After a correct code, a customer with no password sets one (AUTH-12). Then, if the customer has not yet confirmed the onboarding review (ONB-25), the review opens. Otherwise Home opens. | Owner |

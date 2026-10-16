@@ -1845,63 +1845,6 @@
         }
       }
     },
-    "/v1/admin/customers/{customer_id}/resend-welcome": {
-      "post": {
-        "tags": [
-          "customer-administration"
-        ],
-        "summary": "Resend Welcome",
-        "operationId": "resend_welcome_v1_admin_customers__customer_id__resend_welcome_post",
-        "parameters": [
-          {
-            "name": "customer_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Customer Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/admin/customers/{customer_id}/sessions": {
       "get": {
         "tags": [

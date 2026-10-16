@@ -67,7 +67,7 @@ _SIGN_OFF = "The Priveo team"
 
 def code_message(code: str, purpose: str) -> tuple[str, str, str]:
     """(subject, text, html) for a verification or password reset code
-    (AUTH-03, AUTH-05, AUTH-16). The code is valid for 10 minutes."""
+    (AUTH-03, AUTH-05, AUTH-16). The code is valid for 30 minutes."""
     if purpose == "password_reset_code":
         subject = "Your Priveo password reset code"
         lead = "Use this code to set a new password for your Priveo account."
@@ -77,7 +77,7 @@ def code_message(code: str, purpose: str) -> tuple[str, str, str]:
     else:
         subject = "Your Priveo verification code"
         lead = "Use this code to verify your email and sign in to Priveo."
-    tail = ("The code is valid for 10 minutes. If you did not ask for it, "
+    tail = ("The code is valid for 30 minutes. If you did not ask for it, "
             "you can ignore this email.")
     text = f"{lead}\n\nYour code: {code}\n\n{tail}\n\n{_SIGN_OFF}\n"
     body = (f"<p>{lead}</p>"
@@ -105,13 +105,17 @@ class ResendEmailSender:
 
     URL = "https://api.resend.com/emails"
 
-    def __init__(self, api_key: str, sender: str, timeout: float = 10.0) -> None:
+    def __init__(self, api_key: str, sender: str, timeout: float = 10.0,
+                 redirect_to: str = "") -> None:
+        self._redirect = redirect_to.strip()
         self._key = api_key
         self._from = sender
         self._timeout = timeout
 
     def _send(self, to: str, message: tuple[str, str, str], *, key: str | None = None) -> None:
         subject, text, body = message
+        if self._redirect:
+            subject, to = f"[to {to}] {subject}", self._redirect
         payload = json.dumps({"from": self._from, "to": [to], "subject": subject,
                               "text": text, "html": body}).encode()
         request = urllib.request.Request(
@@ -153,7 +157,8 @@ def email_connected(settings: Settings | None) -> bool:
 def get_email_sender(settings: Settings | None = None) -> EmailSender:
     """Resend when `RESEND_API_KEY` is set, otherwise the fake sender."""
     if settings is not None and settings.resend_api_key.strip():
-        return ResendEmailSender(settings.resend_api_key.strip(), settings.email_from)
+        return ResendEmailSender(settings.resend_api_key.strip(), settings.email_from,
+                                 redirect_to=settings.email_redirect_to)
     return _fake_prod if settings is not None and settings.environment == "prod" else _fake
 
 

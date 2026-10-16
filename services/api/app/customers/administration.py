@@ -574,19 +574,6 @@ def reset_password(
     return {"reset": True}
 
 
-@admin.post("/customers/{customer_id}/resend-welcome")
-def resend_welcome(
-    customer_id: uuid.UUID,
-    user: User = Depends(require_role("admin")),
-    db: Session = Depends(get_db),
-):
-    c = get_customer(db, customer_id)
-    sent = send_welcome(db, c)
-    audit(db, user.id, "customer", c.id, "welcome", {"sent": sent})
-    db.commit()
-    return {"welcome_sent": sent}
-
-
 @admin.get("/customers/{customer_id}/sessions")
 def sessions(
     customer_id: uuid.UUID,

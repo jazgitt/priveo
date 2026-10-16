@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # out. Without one the logging fake is used. Never committed.
     resend_api_key: str = ""
     email_from: str = "Priveo <no-reply@priveo.in>"
+    # Dev/testing: when set, every email goes to this address instead.
+    email_redirect_to: str = ""
     terms_url: str = "https://example.com/priveo/terms"
     privacy_url: str = "https://example.com/priveo/privacy"
 

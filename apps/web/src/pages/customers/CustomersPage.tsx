@@ -95,7 +95,6 @@ export function CustomerDetailPage() {
       <form onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); action.mutate({ path: `/v1/admin/customers/${id}`, method: "PATCH", body: Object.fromEntries(f) }); }}>
         <TextField label="First name" name="first_name" defaultValue={c.first_name} /><TextField label="Last name" name="last_name" defaultValue={c.last_name} /><TextField label="Mobile" name="mobile" defaultValue={c.mobile} /><TextField label="Flat" name="flat" defaultValue={c.flat} /><Button type="submit" busy={action.isPending}>Save customer</Button>
       </form>
-      <Button variant="secondary" onClick={() => action.mutate({ path: `/v1/admin/customers/${id}/resend-welcome` })}>Resend welcome email</Button>
       <details><summary>Email and password reset</summary><p>These actions clear the password and sign the customer out. They verify their email and set a new password at next sign-in.</p>
         <form onSubmit={e => { e.preventDefault(); action.mutate({ path: `/v1/admin/customers/${id}/email`, method: "PATCH", body: { email: new FormData(e.currentTarget).get("email") } }); }}><TextField label="Correct email" name="email" defaultValue={c.email} type="email" /><Button type="submit">Correct email</Button></form>
         <Button onClick={() => action.mutate({ path: `/v1/admin/customers/${id}/reset-password` })}>Clear password</Button>

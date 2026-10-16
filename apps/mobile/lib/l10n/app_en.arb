@@ -17,7 +17,7 @@
   "changeEmail": "Change email",
   "forgotPassword": "Forgot password?",
   "codeTitle": "Enter the code",
-  "codeSentTo": "We sent a 6-digit code to {email}. It works for 10 minutes.",
+  "codeSentTo": "We sent a 6-digit code to {email}. It works for 30 minutes.",
   "@codeSentTo": {
     "placeholders": {
       "email": {

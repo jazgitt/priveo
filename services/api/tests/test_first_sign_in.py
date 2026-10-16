@@ -119,10 +119,10 @@ def test_five_wrong_codes_cancel_the_code(client, db, customer):
     assert verify(client).status_code == 200
 
 
-def test_a_code_expires_after_10_minutes(client, db, customer):
+def test_a_code_expires_after_30_minutes(client, db, customer):
     start(client)
     row = db.scalar(select(EmailCode))
-    assert timedelta(minutes=9) < row.expires_at - utcnow() <= timedelta(minutes=10)
+    assert timedelta(minutes=29) < row.expires_at - utcnow() <= timedelta(minutes=30)
     row.expires_at = utcnow() - timedelta(seconds=1)
     db.commit()
     r = verify(client)

@@ -24,7 +24,8 @@ def deliver_pending(db, *, now=None, sender=None, limit=50):
     now = now or utcnow()
     settings = get_settings()
     if sender is None and settings.resend_api_key.strip():
-        sender = ResendEmailSender(settings.resend_api_key.strip(), settings.email_from)
+        sender = ResendEmailSender(settings.resend_api_key.strip(), settings.email_from,
+                                   redirect_to=settings.email_redirect_to)
     sent = 0
     # Concurrent cron workers serialize rows; Resend also receives a stable key.
     rows = list(db.scalars(select(AdminAlertEmail).where(

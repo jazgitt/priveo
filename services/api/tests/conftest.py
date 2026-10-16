@@ -27,6 +27,7 @@ def settings(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "dev")
     # Never deliver real email when tests inherit a developer's provider config.
     monkeypatch.setenv("RESEND_API_KEY", "")
+    monkeypatch.setenv("EMAIL_REDIRECT_TO", "")
     monkeypatch.setenv("TOKEN_SECRET", "test-secret-that-is-long-enough-for-hs256")
     get_settings.cache_clear()
     yield get_settings()

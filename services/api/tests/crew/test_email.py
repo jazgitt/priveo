@@ -41,6 +41,7 @@ def test_a_sender_is_available():
 
 
 def test_templates_and_the_resend_sender(monkeypatch):
+    monkeypatch.setenv("EMAIL_REDIRECT_TO", "")
     import json
 
     from app.platform import email as mail

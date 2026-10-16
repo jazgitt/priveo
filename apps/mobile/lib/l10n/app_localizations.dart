@@ -199,7 +199,7 @@ abstract class AppLocalizations {
   /// No description provided for @codeSentTo.
   ///
   /// In en, this message translates to:
-  /// **'We sent a 6-digit code to {email}. It works for 10 minutes.'**
+  /// **'We sent a 6-digit code to {email}. It works for 30 minutes.'**
   String codeSentTo(String email);
 
   /// No description provided for @codeLabel.

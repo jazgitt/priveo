@@ -62,7 +62,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String codeSentTo(String email) {
-    return 'We sent a 6-digit code to $email. It works for 10 minutes.';
+    return 'We sent a 6-digit code to $email. It works for 30 minutes.';
   }
 
   @override
