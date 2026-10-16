@@ -356,9 +356,9 @@ void main() {
   });
 
   group('billing cycle', () {
-    testWidgets('days outside the plan cycle are greyed out and cannot be selected',
+    testWidgets('days with no subscription are greyed out and cannot be selected',
         (tester) async {
-      // Cycle 11-Nov-26 to 10-Dec-26. Today (10-Nov) is before it.
+      // Subscribed from 11-Nov-26 to 10-Dec-26. Today (10-Nov) is before it.
       final money = FakeMoneyRepository()
         ..sub = SubscriptionDto(
           vehicleId: 'v1',
@@ -371,6 +371,7 @@ void main() {
           paymentMethod: 'UPI',
           cutoffTime: '07:00',
           interiorDay: 'Friday',
+          startDate: DateTime(2026, 11, 11),
           cycleStart: DateTime(2026, 11, 11),
           renewalDate: DateTime(2026, 12, 11),
           cycleDays: 30,
@@ -388,6 +389,38 @@ void main() {
       expect(find.byType(DayCard), findsNothing);
       // A day inside it can.
       await tester.tap(find.text('15'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DayCard), findsOneWidget);
+    });
+  });
+
+  group('earlier months', () {
+    testWidgets('a month the customer was subscribed stays selectable', (tester) async {
+      // Subscribed since 01-Oct-26, so October is history, not greyed out.
+      final money = FakeMoneyRepository()
+        ..sub = SubscriptionDto(
+          vehicleId: 'v1',
+          planName: 'Premium Care',
+          vehicle: 'Hyundai Creta',
+          registration: 'HR 26 DK 8337',
+          society: 'DLF Meadows',
+          status: 'Active',
+          monthlyPriceRupees: 1299,
+          paymentMethod: 'UPI',
+          cutoffTime: '07:00',
+          interiorDay: 'Friday',
+          startDate: DateTime(2026, 10, 1),
+          cycleStart: DateTime(2026, 11, 1),
+          renewalDate: DateTime(2026, 12, 1),
+          cycleDays: 30,
+          daysLeft: 20,
+          latestPayment: null,
+          canPayNext: false,
+        );
+      await pumpWith(tester, calendar(), reads: _Reads(const []), money: money);
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5'));
       await tester.pumpAndSettle();
       expect(find.byType(DayCard), findsOneWidget);
     });

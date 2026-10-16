@@ -85,6 +85,8 @@ class _VehicleTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(vehicle.model),
+                      if ((vehicle.planName ?? '').isNotEmpty)
+                        Text(vehicle.planName!, style: theme.textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -162,6 +164,9 @@ class VehicleDetailScreen extends ConsumerWidget {
                     : Column(
                         children: [
                           _Row(_s.subscriptionStatus, v.subscriptionStatus!),
+                          if ((v.planName ?? '').isNotEmpty) _Row(_s.plan, v.planName!),
+                          if (v.expiresOn != null)
+                            _Row(_s.expiresOn, formatDate(v.expiresOn!)),
                           if (v.monthlyPriceRupees != null)
                             _Row(_s.monthlyAmount,
                                 formatRupees(v.monthlyPriceRupees!)),

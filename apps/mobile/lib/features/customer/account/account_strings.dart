@@ -33,6 +33,7 @@ class AccountStrings {
   static const memberSince = 'Member since';
   static const subscriptions = 'Subscriptions';
   static const renews = 'Renews';
+  static const expires = 'Expires on';
   static const perMonth = 'a month';
   static const menuCalendar = 'Service calendar';
   static const menuAddons = 'Add-ons';

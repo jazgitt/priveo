@@ -183,6 +183,10 @@ class SubscriptionDto {
     required this.paymentMethod,
     required this.cutoffTime,
     required this.interiorDay,
+    this.startDate,
+    this.planInclusions = const [],
+    this.planListPriceRupees,
+    this.planCode,
     required this.cycleStart,
     required this.renewalDate,
     this.expiresOn,
@@ -204,6 +208,11 @@ class SubscriptionDto {
   final String paymentMethod;
   final String? cutoffTime;
   final String? interiorDay;
+  /// The first day the subscription covers.
+  final DateTime? startDate;
+  final List<String> planInclusions;
+  final int? planListPriceRupees;
+  final String? planCode;
   final DateTime cycleStart;
   final DateTime renewalDate;
 
@@ -228,6 +237,10 @@ class SubscriptionDto {
     paymentMethod: j['payment_method'] as String,
     cutoffTime: j['cutoff_time'] as String?,
     interiorDay: j['interior_day'] as String?,
+    startDate: j['start_date'] == null ? null : _date(j['start_date']),
+    planInclusions: [for (final i in (j['plan_inclusions'] as List? ?? const [])) i as String],
+    planListPriceRupees: j['plan_list_price_rupees'] as int?,
+    planCode: j['plan_code'] as String?,
     cycleStart: _date(j['cycle_start']),
     renewalDate: _date(j['renewal_date']),
     expiresOn: j['expires_on'] == null ? null : _date(j['expires_on']),

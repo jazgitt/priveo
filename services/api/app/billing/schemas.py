@@ -42,6 +42,10 @@ class SubscriptionView(BaseModel):
     vehicle_id: str
     subscription_id: str
     plan_name: str | None
+    # The plan's ID, list price and inclusions, for the Subscription page.
+    plan_code: str | None = None
+    plan_list_price_rupees: int | None = None
+    plan_inclusions: list[str] = []
     vehicle: str
     registration: str
     society: str
@@ -50,6 +54,8 @@ class SubscriptionView(BaseModel):
     payment_method: str
     cutoff_time: str | None
     interior_day: str | None
+    # The first day the subscription covers (its first service date).
+    start_date: dt.date
     cycle_start: dt.date
     renewal_date: dt.date
     # The last day the plan covers; later than the cycle end once a renewal

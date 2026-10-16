@@ -104,19 +104,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
     final month = ref.watch(calendarMonthProvider(key));
     final text = Theme.of(context).textTheme;
-    // Only the plan's billing cycle is active: days outside it are greyed out,
-    // cannot be selected and carry no status marks. Without a subscription
-    // there is no cycle and nothing is greyed out.
+    // Days when the customer had no subscription are greyed out and cannot be
+    // selected. Every day the subscription has covered stays selectable with
+    // its status marks, including earlier months. Past dates allow no actions.
     final sub = vehicleId == null
         ? null
         : ref.watch(subscriptionProvider(vehicleId)).value;
+    final coveredFrom = sub?.startDate == null ? null : _dateOnly(sub!.startDate!);
+    final coveredTo = sub == null ? null : _dateOnly(sub.endDate);
     final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);
-    final cycleEnd = sub == null
-        ? null
-        : _dateOnly(sub.endDate);
-    bool inCycle(DateTime d) =>
-        cycleStart == null ||
-        (!d.isBefore(cycleStart) && !d.isAfter(cycleEnd!));
     return month.when(
       skipLoadingOnReload: true,
       skipError: true,
@@ -130,6 +126,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         for (final v in data.visits) {
           byDate.putIfAbsent(_dateOnly(v.date), () => []).add(v);
         }
+        // A day is active when the subscription covers it, or when a real
+        // visit is on record for it (earlier history).
+        bool inCycle(DateTime d) =>
+            sub == null ||
+            ((coveredFrom == null || !d.isBefore(coveredFrom)) &&
+                !d.isAfter(coveredTo!)) ||
+            (byDate[d]?.any((v) => !v.projected) ?? false);
         final dayVisits = byDate[_selected] ?? const <CalendarVisit>[];
         String? cutoff;
         if (home != null && dayVisits.isNotEmpty) {
@@ -153,7 +156,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               const SizedBox(height: 4),
               Text(
                 'Plan duration: ${formatDate(cycleStart)} to '
-                '${formatDate(cycleEnd!)} · ${sub!.status}',
+                '${formatDate(coveredTo!)} · ${sub!.status}',
                 style: text.bodyMedium?.copyWith(color: context.brand.mute),
               ),
             ],

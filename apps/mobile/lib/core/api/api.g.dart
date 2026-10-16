@@ -3219,6 +3219,7 @@ class DirectoryAddonCreate {
 class DirectoryAddonOut {
   const DirectoryAddonOut({
     required this.id,
+    required this.code,
     required this.name,
     required this.description,
     required this.service,
@@ -3230,6 +3231,7 @@ class DirectoryAddonOut {
   });
 
   final String id;
+  final String code;
   final String name;
   final String description;
   final String service;
@@ -3241,6 +3243,7 @@ class DirectoryAddonOut {
 
   factory DirectoryAddonOut.fromJson(Map<String, dynamic> j) => DirectoryAddonOut(
         id: j['id'] as String,
+        code: j['code'] as String,
         name: j['name'] as String,
         description: j['description'] as String,
         service: j['service'] as String,
@@ -3253,6 +3256,7 @@ class DirectoryAddonOut {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'code': code,
         'name': name,
         'description': description,
         'service': service,
@@ -3667,6 +3671,7 @@ class DirectoryPlanCreate {
 class DirectoryPlanOut {
   const DirectoryPlanOut({
     required this.id,
+    required this.code,
     required this.name,
     required this.monthlyPriceRupees,
     required this.listPriceRupees,
@@ -3679,6 +3684,7 @@ class DirectoryPlanOut {
   });
 
   final String id;
+  final String code;
   final String name;
   final int monthlyPriceRupees;
   final int? listPriceRupees;
@@ -3691,6 +3697,7 @@ class DirectoryPlanOut {
 
   factory DirectoryPlanOut.fromJson(Map<String, dynamic> j) => DirectoryPlanOut(
         id: j['id'] as String,
+        code: j['code'] as String,
         name: j['name'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] as int,
         listPriceRupees: j['list_price_rupees'] == null ? null : j['list_price_rupees'] as int,
@@ -3704,6 +3711,7 @@ class DirectoryPlanOut {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'code': code,
         'name': name,
         'monthly_price_rupees': monthlyPriceRupees,
         'list_price_rupees': listPriceRupees,
@@ -6329,6 +6337,9 @@ class SubscriptionView {
     required this.vehicleId,
     required this.subscriptionId,
     required this.planName,
+    required this.planCode,
+    required this.planListPriceRupees,
+    this.planInclusions,
     required this.vehicle,
     required this.registration,
     required this.society,
@@ -6337,6 +6348,7 @@ class SubscriptionView {
     required this.paymentMethod,
     required this.cutoffTime,
     required this.interiorDay,
+    required this.startDate,
     required this.cycleStart,
     required this.renewalDate,
     required this.expiresOn,
@@ -6349,6 +6361,9 @@ class SubscriptionView {
   final String vehicleId;
   final String subscriptionId;
   final String? planName;
+  final String? planCode;
+  final int? planListPriceRupees;
+  final List<String>? planInclusions;
   final String vehicle;
   final String registration;
   final String society;
@@ -6357,6 +6372,7 @@ class SubscriptionView {
   final String paymentMethod;
   final String? cutoffTime;
   final String? interiorDay;
+  final DateTime startDate;
   final DateTime cycleStart;
   final DateTime renewalDate;
   final DateTime expiresOn;
@@ -6369,6 +6385,9 @@ class SubscriptionView {
         vehicleId: j['vehicle_id'] as String,
         subscriptionId: j['subscription_id'] as String,
         planName: j['plan_name'] == null ? null : j['plan_name'] as String,
+        planCode: j['plan_code'] == null ? null : j['plan_code'] as String,
+        planListPriceRupees: j['plan_list_price_rupees'] == null ? null : j['plan_list_price_rupees'] as int,
+        planInclusions: j['plan_inclusions'] == null ? null : [for (final x in j['plan_inclusions'] as List) x as String],
         vehicle: j['vehicle'] as String,
         registration: j['registration'] as String,
         society: j['society'] as String,
@@ -6377,6 +6396,7 @@ class SubscriptionView {
         paymentMethod: j['payment_method'] as String,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        startDate: DateTime.parse(j['start_date'] as String),
         cycleStart: DateTime.parse(j['cycle_start'] as String),
         renewalDate: DateTime.parse(j['renewal_date'] as String),
         expiresOn: DateTime.parse(j['expires_on'] as String),
@@ -6390,6 +6410,9 @@ class SubscriptionView {
         'vehicle_id': vehicleId,
         'subscription_id': subscriptionId,
         'plan_name': planName,
+        'plan_code': planCode,
+        'plan_list_price_rupees': planListPriceRupees,
+        'plan_inclusions': planInclusions == null ? null : [for (final x in planInclusions!) x],
         'vehicle': vehicle,
         'registration': registration,
         'society': society,
@@ -6398,6 +6421,7 @@ class SubscriptionView {
         'payment_method': paymentMethod,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
+        'start_date': _date(startDate),
         'cycle_start': _date(cycleStart),
         'renewal_date': _date(renewalDate),
         'expires_on': _date(expiresOn),

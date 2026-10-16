@@ -141,7 +141,7 @@ class _SubscriptionCard extends ConsumerWidget {
               if (sub != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '${AccountStrings.renews} ${formatDate(sub.renewalDate)}'
+                  '${AccountStrings.expires} ${formatDate(sub.endDate)}'
                   ' · ${formatRupees(sub.monthlyPriceRupees)} '
                   '${AccountStrings.perMonth}',
                   style: text.bodyMedium,

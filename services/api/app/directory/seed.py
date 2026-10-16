@@ -67,12 +67,12 @@ def seed_defaults(db: Session) -> dict[str, int]:
                 row.value = configured  # Explicit seed replaces mock supplier configuration only.
 
     if db.scalar(select(Plan).where(Plan.name == defaults.PLAN["name"])) is None:
-        db.add(Plan(**defaults.PLAN))
+        db.add(Plan(code="PLN-0001", **defaults.PLAN))
         added["plans"] += 1
 
     if db.scalar(select(AddonCatalogueItem).where(
             AddonCatalogueItem.name == defaults.ADDON["name"])) is None:
-        db.add(AddonCatalogueItem(**defaults.ADDON))
+        db.add(AddonCatalogueItem(code="ADN-0001", **defaults.ADDON))
         added["addons"] += 1
 
     have = {(e.make.lower(), e.model.lower(), e.variant.lower())

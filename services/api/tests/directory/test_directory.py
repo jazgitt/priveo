@@ -203,6 +203,11 @@ def test_plans(client, admin, customer):
     assert r.status_code == 201, r.text
     plan = r.json()
     assert plan["active"] and plan["active_subscriptions"] == 0
+    assert plan["code"] == "PLN-0001"  # A unique plan ID, never reused.
+    second = client.post(f"{BASE}/plans", headers=admin, json={
+        "name": "Second", "monthly_price_rupees": 700}).json()
+    assert second["code"] == "PLN-0002"
+    client.post(f"{BASE}/plans/{second['id']}/deactivate", headers=admin)
 
     assert client.post(f"{BASE}/plans", headers=admin, json={
         "name": "basic", "monthly_price_rupees": 1}).status_code == 409
@@ -214,6 +219,7 @@ def test_plans(client, admin, customer):
 
     up = client.patch(f"{BASE}/plans/{plan['id']}", headers=admin,
                       json={"monthly_price_rupees": 649, "includes_interior": True})
+    assert up.json()["code"] == "PLN-0001"  # An edit keeps the ID.
     assert up.json()["monthly_price_rupees"] == 649 and up.json()["includes_interior"]
     clear = client.patch(f"{BASE}/plans/{plan['id']}", headers=admin,
                          json={"clear_list_price": True})
@@ -229,7 +235,7 @@ def test_plans(client, admin, customer):
     assert off.json()["active"] is False
     assert client.get("/v1/customer/directory/plans", headers=customer).json() == []
     assert len(client.get(f"{BASE}/plans?include_inactive=false", headers=admin).json()) == 0
-    assert len(client.get(f"{BASE}/plans", headers=admin).json()) == 1
+    assert len(client.get(f"{BASE}/plans", headers=admin).json()) == 2
 
 
 def test_plan_counts_subscriptions_on_it(client, admin, engine):
@@ -545,6 +551,7 @@ def test_addon_catalogue(client, admin, customer, db):
     assert r.status_code == 201, r.text
     addon = r.json()
     assert addon["duration_minutes"] == 120 and addon["active"]
+    assert addon["code"].startswith("ADN-")
     db.expire_all()
     assert lookup.addon_price(db) == (1800, 2200)
 

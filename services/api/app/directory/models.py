@@ -9,6 +9,12 @@ from app.platform.db import Base, UtcDateTime, utcnow
 DEFAULT_BASEMENTS = ["B1", "B2", "B3", "B4"]  # ONB-13
 
 
+def _fallback_code(prefix: str) -> str:
+    """A unique ID for a row saved without one. The admin screens give
+    sequential IDs (PLN-0002); this only covers rows made another way."""
+    return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+
+
 class Society(Base):
     """A housing society that Priveo serves (ADM-REF-01)."""
 
@@ -30,6 +36,9 @@ class Plan(Base):
     __tablename__ = "plans"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    # The plan ID the admin sees and quotes, like PLN-0001. Never changes.
+    code: Mapped[str] = mapped_column(
+        String(16), unique=True, default=lambda: _fallback_code("PLN"))
     name: Mapped[str] = mapped_column(String(80), unique=True)
     monthly_price_rupees: Mapped[int] = mapped_column(Integer)
     list_price_rupees: Mapped[int | None] = mapped_column(Integer)
@@ -130,6 +139,9 @@ class AddonCatalogueItem(Base):
     __tablename__ = "addon_catalogue"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    # The add-on ID the admin sees and quotes, like ADN-0001. Never changes.
+    code: Mapped[str] = mapped_column(
+        String(16), unique=True, default=lambda: _fallback_code("ADN"))
     name: Mapped[str] = mapped_column(String(80), unique=True)
     description: Mapped[str] = mapped_column(Text, default="")
     # The service whose job this add-on creates (a name in `directory_services`).

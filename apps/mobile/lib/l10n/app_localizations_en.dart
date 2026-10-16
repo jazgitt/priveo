@@ -1206,9 +1206,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The request is cancelled. You are not charged.';
 
   @override
-  String get money_standaloneTitle => 'Deep Spa without a subscription';
-
-  @override
   String get money_standaloneBody =>
       'Tell us when you would like it. Priveo will call you to agree the date, price and payment.';
 
@@ -1223,9 +1220,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get money_standaloneDone => 'Request sent. Priveo will call you.';
-
-  @override
-  String get money_standaloneLink => 'Deep Spa without a subscription';
 
   @override
   String get money_adminPaymentsTitle => 'Payments to confirm';

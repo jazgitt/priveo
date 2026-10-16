@@ -305,7 +305,9 @@ void main() {
     testWidgets('standalone Spa reuses the priced booking form and requires a date', (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, standalonePath('v1'), money: repo);
-      expect(find.text('Deep Spa without a subscription'), findsOneWidget);
+      // One Deep Spa landing page; the old "without a subscription" title is gone.
+      expect(find.text('Deep Spa'), findsWidgets);
+      expect(find.textContaining('without a subscription'), findsNothing);
       await tester.tap(find.text('Confirm & pay'));
       await tester.pumpAndSettle();
       expect(find.text('Choose a date'), findsOneWidget);

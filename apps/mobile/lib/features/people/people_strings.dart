@@ -20,5 +20,7 @@ class PeopleStrings {
   String get vehicleDetails => 'Vehicle details';
   String get subscriptionStatus => 'Subscription status';
   String get monthlyAmount => 'Monthly amount';
+  String get plan => 'Plan';
+  String get expiresOn => 'Expires on';
   String get vehicleNotFound => 'This vehicle is not on your account.';
 }

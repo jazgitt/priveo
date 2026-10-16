@@ -72,6 +72,7 @@ export function AddonsTab() {
       <QueryState query={list}>
         {(rows) => (
           <Table rows={rows} rowKey={(a) => a.id} empty="No add-ons yet." columns={[
+            { key: "code", header: "Add-on ID", render: (a) => a.code },
             { key: "name", header: "Add-on", render: (a) => a.name },
             { key: "svc", header: "Service", render: (a) => a.service },
             { key: "price", header: "Price", align: "right", render: (a) => rupees(a.price_rupees) },

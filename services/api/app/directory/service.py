@@ -173,10 +173,21 @@ def set_society_active(db: Session, admin_id, society_id: uuid.UUID, active: boo
 def plan_out(db: Session, p: Plan) -> dict:
     subs = db.scalar(select(func.count()).select_from(Subscription).where(
         Subscription.plan_id == p.id, Subscription.status != "Inactive")) or 0
-    return {"id": p.id, "name": p.name, "monthly_price_rupees": p.monthly_price_rupees,
+    return {"id": p.id, "code": p.code, "name": p.name,
+            "monthly_price_rupees": p.monthly_price_rupees,
             "list_price_rupees": p.list_price_rupees, "includes_interior": p.includes_interior,
             "inclusions": list(p.inclusions or []), "badge": p.badge,
             "sort_order": p.sort_order, "active": p.active, "active_subscriptions": subs}
+
+
+def next_code(db: Session, model, prefix: str) -> str:
+    """The next sequential ID for a plan (PLN-0002) or add-on (ADN-0002)."""
+    highest = 0
+    for code in db.scalars(select(model.code)):
+        found = re.fullmatch(rf"{prefix}-(\d+)", code or "")
+        if found:
+            highest = max(highest, int(found.group(1)))
+    return f"{prefix}-{highest + 1:04d}"
 
 
 def _clean_inclusions(values: list[str]) -> list[str]:
@@ -201,7 +212,8 @@ def create_plan(db: Session, admin_id, body) -> Plan:
     _plan_name_free(db, name)
     if body.list_price_rupees is not None and body.list_price_rupees < body.monthly_price_rupees:
         raise invalid("list_price_rupees", "The list price cannot be below the price.")
-    plan = Plan(name=name, monthly_price_rupees=body.monthly_price_rupees,
+    plan = Plan(code=next_code(db, Plan, "PLN"), name=name,
+                monthly_price_rupees=body.monthly_price_rupees,
                 list_price_rupees=body.list_price_rupees,
                 includes_interior=body.includes_interior,
                 inclusions=_clean_inclusions(body.inclusions), badge=body.badge.strip(),
@@ -656,6 +668,7 @@ def create_addon(db: Session, admin_id, body) -> AddonCatalogueItem:
     _addon_list_price(body.price_rupees, body.list_price_rupees)
     duration = body.duration_minutes or lookup.duration_minutes(db, body.service)
     item = AddonCatalogueItem(
+        code=next_code(db, AddonCatalogueItem, "ADN"),
         name=name, description=body.description.strip(), service=body.service,
         price_rupees=body.price_rupees, list_price_rupees=body.list_price_rupees,
         duration_minutes=duration, sort_order=body.sort_order, active=True)

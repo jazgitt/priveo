@@ -38,6 +38,13 @@ class MoneyStrings {
   static String daysLeft(int n) => n == 1 ? '1 day left' : '$n days left';
   static const cycle = 'Billing cycle';
   static const expiresOn = 'Expires on';
+  static const expiresOnLong = 'Your plan runs until';
+  static const perMonth = 'a month';
+  static const whatYouGet = 'What you get';
+  static const yourSchedule = 'Your service';
+  static const planDetails = 'Plan details';
+  static const planId = 'Plan ID';
+  static const yourAddons = 'Your add-ons';
   static const monthly = 'Monthly amount';
   static const paymentMethod = 'Payment method';
   static const upi = 'UPI';
@@ -95,6 +102,7 @@ class MoneyStrings {
 
   // Deep Spa (ADD-)
   static const addonTitle = 'Deep Spa';
+  static const whatsIncluded = "What's included";
   static const addonDate = 'Preferred date';
   static const addonFinishBy = 'Finish by';
   static const addonPickDate = 'Choose a date';
@@ -107,14 +115,12 @@ class MoneyStrings {
       '$date, finish by $time. Total $total, GST included.';
   static String addonDuration(int minutes) =>
       minutes % 60 == 0 ? '${minutes ~/ 60} hours' : '$minutes minutes';
-  static const standaloneTitle = 'Deep Spa without a subscription';
   static const standaloneBody =
       'Choose a date and finish-by time, then pay by UPI. Priveo schedules your service independently of payment.';
   static const contactMobile = 'Mobile number to call';
   static const notes = 'Notes (optional)';
   static const sendRequest = 'Send request';
   static const standaloneDone = 'Booking created. View payment, service status and proof in Deep Spa.';
-  static const standaloneLink = 'Deep Spa without a subscription';
 
   // Admin quick actions (ADM-ACC-07)
   static const adminPaymentsTitle = 'Payments to confirm';

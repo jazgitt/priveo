@@ -61,7 +61,17 @@ PLAN = {
 ADDON = {
     "name": "Deep Spa", "service": "Deep Spa", "price_rupees": 1500,
     "list_price_rupees": 2000, "duration_minutes": 120,
-    "description": "A full interior and exterior spa for your car.",
+    # The first line is the pitch; each further line is shown as something
+    # that is included. The admin can edit all of it (Add-on catalogue).
+    "description": (
+        "A two-hour restoration for your car, inside and out.\n"
+        "Foam wash and hand dry with paint-safe products\n"
+        "Full interior vacuum, seats, mats and boot\n"
+        "Dashboard, panels and door jambs cleaned and conditioned\n"
+        "Interior glass and mirrors polished\n"
+        "Tyre and wheel deep clean with dressing\n"
+        "Photo and video proof of the finished work"
+    ),
 }
 
 # DERIVED starter list for ADM-REF-03 so the onboarding dropdowns are not

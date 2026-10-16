@@ -2290,12 +2290,6 @@ abstract class AppLocalizations {
   /// **'The request is cancelled. You are not charged.'**
   String get money_addonCancelled;
 
-  /// No description provided for @money_standaloneTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Deep Spa without a subscription'**
-  String get money_standaloneTitle;
-
   /// No description provided for @money_standaloneBody.
   ///
   /// In en, this message translates to:
@@ -2325,12 +2319,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request sent. Priveo will call you.'**
   String get money_standaloneDone;
-
-  /// No description provided for @money_standaloneLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Deep Spa without a subscription'**
-  String get money_standaloneLink;
 
   /// No description provided for @money_adminPaymentsTitle.
   ///

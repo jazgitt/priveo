@@ -23,6 +23,8 @@ export interface Slot {
 
 export interface Plan {
   id: string;
+  /** The plan ID admins quote, like PLN-0001. */
+  code: string;
   name: string;
   monthly_price_rupees: number;
   list_price_rupees: number | null;
@@ -76,6 +78,8 @@ export interface Reason {
 
 export interface Addon {
   id: string;
+  /** The add-on ID admins quote, like ADN-0001. */
+  code: string;
   name: string;
   description: string;
   service: string;

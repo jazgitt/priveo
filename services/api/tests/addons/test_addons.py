@@ -61,6 +61,19 @@ def test_only_a_vehicle_with_an_active_subscription_can_buy_an_add_on(money):
         assert r.status_code == 409 and r.json()["code"] == "subscription_not_active"
 
 
+def test_a_pause_blocks_only_the_dates_it_covers(money):
+    m = money
+    r = m.client.post(f"{vehicle(m)}/pauses",
+                      json={"from_date": "2026-10-12", "to_date": "2026-10-14"},
+                      headers=m.customer)
+    assert r.status_code == 201, r.text
+    m.clock.now = at(14, 1, 0)  # 1 AM on the last day of the pause.
+    inside = request(m, date="2026-10-14")
+    assert inside.status_code == 409 and inside.json()["code"] == "inside_pause"
+    # A date after the pause can be booked even though today is still paused.
+    assert request(m, date="2026-10-16").status_code == 201
+
+
 def test_a_retry_with_the_same_key_is_one_request(money):
     m = money
     h = {**m.customer, "Idempotency-Key": "addon-1"}

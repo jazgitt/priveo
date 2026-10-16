@@ -83,6 +83,7 @@ export function PlansTab() {
       <QueryState query={list}>
         {(rows) => (
           <Table rows={rows} rowKey={(p) => p.id} empty="No plans yet." columns={[
+            { key: "code", header: "Plan ID", render: (p) => p.code },
             { key: "name", header: "Plan", render: (p) => (
               <>{p.name}{p.badge && <> <span className="muted">({p.badge})</span></>}</>) },
             { key: "price", header: "Monthly price", align: "right",

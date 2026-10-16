@@ -172,12 +172,20 @@ class AddonService:
             return self._out(again)
         now = self._now()
         today = today_of(now)
-        # ADD-01: for a vehicle whose subscription is Active, and not paused.
-        if sub is None or sub.status != "Active" or today in paused_days(self._db, vehicle.id):
+        # ADD-01: for a vehicle whose subscription is Active. A pause blocks only
+        # the dates it covers, so a spa can be booked for a date after it.
+        if sub is None or sub.status != "Active":
             raise ApiError(
                 "subscription_not_active",
                 "Add-ons are for a vehicle with an active subscription.",
                 409,
+            )
+        if day in paused_days(self._db, vehicle.id):
+            raise ApiError(
+                "inside_pause",
+                "The service is paused on that date. Choose a date after the pause ends.",
+                409,
+                {"date": "inside_pause"},
             )
         price = self._price(body_service)
         finish = _time(finish_by)

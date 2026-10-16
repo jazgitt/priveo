@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.22 (Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.23 (Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -177,7 +177,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 |---|---|---|
 | CAL-01 | Monthly calendar view (Monday-first) with month title. Previous/next arrows move between months. Past months show completed and skipped days; future months show the visits expected from the subscription. The admin schedules crew one period at a time (a week by default), so the crew assignment is not known further ahead. | Owner |
 | CAL-02 | Each date has a marker: Exterior done, Exterior + Interior, Full spa (a day with an add-on), Scheduled (upcoming), Skipped, Missed. Interior days show a filled marker when done and an outlined one when upcoming. | Defined |
-| CAL-03 | A legend explains the markers. Markers and the day card show only for days inside the plan's current billing cycle (for example 11 Nov to 10 Dec). Days outside the cycle are greyed out and cannot be selected. A vehicle with no subscription has no cycle, so nothing is greyed out. Under the "Service calendar" headline, a line shows the plan duration and status (for example "Plan duration: 11-Nov-26 to 10-Dec-26 · Active"). | Owner (17 Oct 2026) |
+| CAL-03 | A legend explains the markers. Days when the customer had no subscription (before it started or after it expired) are greyed out and cannot be selected. Every day the subscription has covered stays selectable with its status markers, including earlier months. No action is allowed on a past date. Under the "Service calendar" headline, a line shows the plan duration and status (for example "Plan duration: 11-Nov-26 to 10-Dec-26 · Active"). | Owner (18 Oct 2026) |
 | CAL-04 | Today is highlighted. The selected date is highlighted. | Defined |
 | CAL-05 | Selecting a date shows a day card: service type, a status chip (Completed, Scheduled, Skipped, Missed, No visit) and a one-line summary (finish time and checks, service cutoff time, "You skipped this date"). | Defined |
 | CAL-06 | Tapping the day card for a completed service opens Service Details. Tapping a scheduled day shows "Scheduled to be completed by <cutoff time>. Proof appears after the visit." and, once assigned, the crew member and assigned time (CAL-10). Tapping a skipped day shows "No visit on this day." | Defined |
@@ -305,6 +305,7 @@ Each vehicle has its own subscription. The screen opens for the selected vehicle
 | SUB-05 | Subscription states: **Active** (membership running), **Activating** (started, waiting for the admin to set the first service date and activate it), **Paused** (paused by customer), **Inactive** (stopped by the admin, or automatically when a plan payment has been Over due for 7 days). | Defined (Inactive: Owner) |
 | SUB-06 | Billing history ("View billing history") lists the subscription's payments, newest first, each with its amount, due date and status (PAY-09). | Derived |
 | SUB-12 | For a payment the admin has generated a GST invoice for (ADM-PAY-08), billing history shows an invoice that the customer can open and save. | Owner |
+| SUB-13 | My Subscription is a service landing page that shows what the customer pays for: a hero card with the plan name, status, price a month (with the list price struck through), days left and the date the plan runs until; "What you get" (the plan's inclusions); the vehicle, service cutoff time and interior day; the plan details with the plan ID; the latest payment; and "Your add-ons", the add-ons booked for this vehicle that the crew has not yet completed (Requested or Scheduled). | Owner (18 Oct 2026) |
 | SUB-08 | The customer can edit the default service cutoff time and the weekly interior day after signup. Each stays required where the plan has it. A change follows the cutoff rule (SCHED-01) and applies from the next date that is still before its 9 PM cutoff. A cutoff time for a single date is changed from the calendar (CAL-08). | Owner |
 
 ---
@@ -332,7 +333,7 @@ An add-on is an optional extra service the customer buys separately from the pla
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADD-01 | In the app, an add-on is bought for a vehicle whose subscription is Active. For a vehicle that is Activating, Paused or Inactive the add-on screens are hidden. Deep Spa is not part of any plan. Deep Spa without a subscription is the standalone service (ADD-14). | Owner and Derived |
+| ADD-01 | In the app, an add-on is bought for a vehicle whose subscription is Active. A pause blocks only the dates it covers: a Deep Spa can be booked for a date after the pause ends, even while the pause is running. For a vehicle that is Activating, Paused or Inactive the add-on screens are hidden. Deep Spa is not part of any plan. Deep Spa without a subscription is the standalone service (ADD-14). | Owner and Derived |
 | ADD-02 | The customer finds add-ons on the Home "Add-ons" card (HOME-09) and in an "Add-ons" item in the Account menu (ACC-03). The screen lists the add-ons offered, each with its name, description, price including GST and struck-through list price, loaded from the backend (ADM-ADD-01). It also lists the customer's earlier add-on requests with their status. | Owner |
 | ADD-03 | The customer can buy any number of add-ons. Each purchase is its own request, with its own payment. | Owner |
 | ADD-04 | To buy, the customer chooses the add-on, proposes **one preferred date** and a **finish-by time**, and confirms. The date must be tomorrow or later and still before its 9 PM cutoff (SCHED-01). The finish-by time is any time of day in 30-minute steps. A summary shows the vehicle, add-on, date, time and total. | Owner |
@@ -347,6 +348,7 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ADD-13 | No new notification event is added in MVP. "Service completed" applies when the add-on job is done (NOTIF-02). | Derived |
 | ADD-14 | Deep Spa is not only an add-on. A customer who has no subscription can take Deep Spa as a standalone service. | Owner |
 | ADD-15 | Admin creates the customer and vehicle without a subscription. The customer books, pays for and follows standalone Deep Spa using the same rules as subscriber add-on Spa (owner decision 13 Oct 2026). | Owner |
+| ADD-16 | The Deep Spa screen is one service landing page, titled "Deep Spa", for subscribers and for customers without a subscription. It shows the service name, a short pitch, the price (list price struck through), the duration, and "What's included". The first line of the add-on's description in the catalogue is the pitch; every further line is shown as an inclusion. The words "Deep Spa without a subscription" are not shown. | Owner (18 Oct 2026) |
 
 ---
 

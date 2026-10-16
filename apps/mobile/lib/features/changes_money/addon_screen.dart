@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/providers.dart';
 import '../support/widgets.dart' show linkOpenerProvider;
 import '../customer/home/customer_home_data.dart';
 
+import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
 import '../../core/util/format.dart';
 import 'data/money_models.dart';
@@ -162,7 +164,7 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
   Widget build(BuildContext context) {
     final addons = ref.watch(addonsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.standalone ? MoneyStrings.standaloneTitle : MoneyStrings.addonTitle)),
+      appBar: AppBar(title: const Text(MoneyStrings.addonTitle)),
       body: addons.when(
         skipLoadingOnReload: true,
         skipError: true,
@@ -181,38 +183,7 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      offer.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(offer.description),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          formatRupees(offer.priceRupees),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        if (offer.listPriceRupees != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            formatRupees(offer.listPriceRupees!),
-                            style: const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        Text(MoneyStrings.addonDuration(offer.durationMinutes)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _SpaHero(offer),
               const SizedBox(height: 16),
               OutlinedButton(
                 onPressed: () async {
@@ -281,11 +252,6 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
                   onChange: () => _change(r),
                   onSupport: _support,
                 ),
-              const SizedBox(height: 16),
-              if (!widget.standalone) TextButton(
-                onPressed: () => context.push(standalonePath()),
-                child: const Text(MoneyStrings.standaloneLink),
-              ),
             ],
           );
         },
@@ -382,7 +348,7 @@ class StandaloneDeepSpaScreen extends ConsumerWidget {
     if (vehicleId != null) return AddonScreen(vehicleId: vehicleId!, standalone: true);
     final home = ref.watch(customerHomeProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text(MoneyStrings.standaloneTitle)),
+      appBar: AppBar(title: const Text(MoneyStrings.addonTitle)),
       body: home.when(
         skipLoadingOnReload: true,
         skipError: true,
@@ -398,6 +364,104 @@ class StandaloneDeepSpaScreen extends ConsumerWidget {
           if (!h.vehicles.any((v) => v.subscriptionStatus == null))
             const ListTile(title: Text('Contact Priveo to add a standalone vehicle.')),
         ]),
+      ),
+    );
+  }
+}
+
+/// The Deep Spa landing card: what the service is, what it includes and what
+/// it costs. The first paragraph of the catalogue description is the pitch;
+/// every further line is shown as something that is included.
+class _SpaHero extends StatelessWidget {
+  const _SpaHero(this.offer);
+
+  final AddonOfferDto offer;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = context.brand;
+    final text = Theme.of(context).textTheme;
+    final lines = [
+      for (final l in offer.description.split('\n'))
+        if (l.trim().isNotEmpty) l.trim(),
+    ];
+    final pitch = lines.isEmpty ? '' : lines.first;
+    final included = lines.length > 1 ? lines.sublist(1) : const <String>[];
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [b.spa.withValues(alpha: 0.38), b.card2],
+        ),
+        border: Border.all(color: b.spa.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Symbols.star_rounded, color: b.spa, size: 34, fill: 1),
+              const SizedBox(width: 10),
+              Expanded(child: Text(offer.name, style: text.headlineMedium)),
+            ],
+          ),
+          if (pitch.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(pitch, style: text.bodyLarge),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(formatRupees(offer.priceRupees), style: text.displaySmall),
+              if (offer.listPriceRupees != null &&
+                  offer.listPriceRupees! > offer.priceRupees) ...[
+                const SizedBox(width: 10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    formatRupees(offer.listPriceRupees!),
+                    style: text.bodyMedium?.copyWith(
+                        color: b.mute, decoration: TextDecoration.lineThrough),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Icon(Symbols.schedule_rounded, size: 18, color: b.mute),
+                    const SizedBox(width: 4),
+                    Text(MoneyStrings.addonDuration(offer.durationMinutes),
+                        style: text.bodyMedium?.copyWith(color: b.mute)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (included.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Text(MoneyStrings.whatsIncluded, style: text.titleMedium),
+            const SizedBox(height: 8),
+            for (final i in included)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Symbols.check_circle_rounded,
+                        size: 20, color: b.ok, fill: 1),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(i)),
+                  ],
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

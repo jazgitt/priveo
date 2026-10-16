@@ -47,8 +47,10 @@ it('creates a plan with complete pricing and inclusions',async()=>{
   expect(await saved('/plans')).toEqual({name:'Premium',monthly_price_rupees:1600,list_price_rupees:1900,badge:'Launch',sort_order:2,includes_interior:true,inclusions:['Exterior','Interior']});
 });
 it('edits a plan and clears the old list price',async()=>{
-  responses['/v1/admin/directory/plans']=[{id:'p1',name:'Premium',monthly_price_rupees:1600,list_price_rupees:1900,badge:'Launch',sort_order:0,includes_interior:true,inclusions:['Exterior'],active:true,active_subscriptions:2}];
-  mount(<PlansTab/>); await userEvent.click(await screen.findByRole('button',{name:'Edit Premium'}));
+  responses['/v1/admin/directory/plans']=[{id:'p1',code:'PLN-0001',name:'Premium',monthly_price_rupees:1600,list_price_rupees:1900,badge:'Launch',sort_order:0,includes_interior:true,inclusions:['Exterior'],active:true,active_subscriptions:2}];
+  mount(<PlansTab/>);
+  expect(await screen.findByText('PLN-0001')).toBeTruthy(); // The plan ID is listed.
+  await userEvent.click(await screen.findByRole('button',{name:'Edit Premium'}));
   await field('List price (Rs, struck through)','');
   expect(await saved('/plans/p1','PATCH')).toMatchObject({clear_list_price:true});
   await userEvent.click(screen.getByRole('button',{name:'Deactivate Premium'}));

@@ -70,6 +70,8 @@ class DirectoryPlanUpdate(BaseModel):
 
 class DirectoryPlanOut(BaseModel):
     id: uuid.UUID
+    # The plan ID shown to admins, like PLN-0001.
+    code: str
     name: str
     monthly_price_rupees: int
     list_price_rupees: int | None
@@ -264,6 +266,8 @@ class DirectoryAddonUpdate(BaseModel):
 
 class DirectoryAddonOut(BaseModel):
     id: uuid.UUID
+    # The add-on ID shown to admins, like ADN-0001.
+    code: str
     name: str
     description: str
     service: str

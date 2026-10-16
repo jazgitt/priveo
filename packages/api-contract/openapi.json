@@ -19899,6 +19899,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -19942,6 +19946,7 @@
         "type": "object",
         "required": [
           "id",
+          "code",
           "name",
           "description",
           "service",
@@ -20487,6 +20492,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -20537,6 +20546,7 @@
         "type": "object",
         "required": [
           "id",
+          "code",
           "name",
           "monthly_price_rupees",
           "list_price_rupees",
@@ -24054,6 +24064,36 @@
             ],
             "title": "Plan Name"
           },
+          "plan_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Code"
+          },
+          "plan_list_price_rupees": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan List Price Rupees"
+          },
+          "plan_inclusions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Plan Inclusions",
+            "default": []
+          },
           "vehicle": {
             "type": "string",
             "title": "Vehicle"
@@ -24099,6 +24139,11 @@
               }
             ],
             "title": "Interior Day"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
           },
           "cycle_start": {
             "type": "string",
@@ -24151,6 +24196,7 @@
           "payment_method",
           "cutoff_time",
           "interior_day",
+          "start_date",
           "cycle_start",
           "renewal_date",
           "expires_on",
