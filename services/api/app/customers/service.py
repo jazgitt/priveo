@@ -152,6 +152,9 @@ class CustomerService:
         return plan.includes_interior if plan else subscription.interior_day is not None
 
     def home(self, login_id: uuid.UUID) -> CustomerHome:
+        from app.changes.cycle import plan_expires_on
+        from app.platform.clock import today_ist
+
         customer = self._customer(login_id)
         cards = []
         owned = self._vehicles(customer)
@@ -172,6 +175,7 @@ class CustomerService:
                     subscription_status=sub.status if sub else None,
                     monthly_price_rupees=sub.monthly_price_rupees if sub else None,
                     plan_name=plan.name if plan else None,
+                    expires_on=plan_expires_on(self._db, sub, today_ist()) if sub else None,
                     cutoff_time=show_time(sub.cutoff_time) if sub else None,
                     interior_day=sub.interior_day if sub else None,
                     # Filled in once visits are scheduled.

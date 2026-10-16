@@ -155,17 +155,21 @@ void main() {
       expect(find.textContaining('closed at 9 PM the evening before'), findsOneWidget);
     });
 
-    testWidgets('the skip screen has no pause; pause service opens its own screen',
+    testWidgets('Skip or pause opens on Skip; Pause service opens it on the Pause tab',
         (tester) async {
       await openAt(tester, skipPausePath(vehicle), money: FakeMoneyRepository());
       expect(find.text('Confirm skip'), findsOneWidget);
-      expect(find.text('Pause'), findsNothing);
       expect(find.text('Confirm pause'), findsNothing);
+      expect(find.text('Pause'), findsOneWidget); // The tab is still there.
       await openAt(tester, subscriptionPath(vehicle), money: FakeMoneyRepository());
       await tester.tap(find.text('Pause service'));
       await tester.pumpAndSettle();
       expect(find.text('Confirm pause'), findsOneWidget);
       expect(find.text('Confirm skip'), findsNothing);
+      // The Skip tab is one tap away.
+      await tester.tap(find.text('Skip').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm skip'), findsOneWidget);
     });
 
     testWidgets('pause needs both dates', (tester) async {
@@ -205,16 +209,21 @@ void main() {
       expect(find.text('Monthly amount: ₹1,299'), findsOneWidget);
       expect(find.text('Payment method: UPI'), findsOneWidget);
       expect(find.text('Received'), findsOneWidget);
-      expect(find.text('Pay for next month'), findsOneWidget);
+      expect(find.text('Renew subscription'), findsOneWidget);
     });
 
     testWidgets('pay for next month opens the UPI screen', (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, subscriptionPath(vehicle), money: repo);
-      await tester.tap(find.text('Pay for next month'));
+      await tester.tap(find.text('Renew subscription'));
       await tester.pumpAndSettle();
       expect(repo.calls, ['payNext']);
-      expect(find.text('Pay by UPI'), findsOneWidget);
+      expect(find.text('Renew subscription'), findsWidgets);
+      expect(find.text('UPI'), findsOneWidget);
+      expect(find.text('Credit card'), findsOneWidget);
+      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.textContaining('Copy the UPI ID'), findsOneWidget);
+      expect(find.textContaining("submit your confirmation"), findsOneWidget);
       expect(find.text('priveo-placeholder@upi'), findsOneWidget);
     });
 
@@ -228,7 +237,7 @@ void main() {
         canPayNext: false,
       );
       await openAt(tester, subscriptionPath(vehicle), money: repo);
-      expect(find.text('Pay for next month'), findsNothing);
+      expect(find.text('Renew subscription'), findsNothing);
       expect(find.text('Inactive'), findsOneWidget);
       expect(find.text('Over due'), findsOneWidget);
       expect(find.text('Pause service'), findsNothing);

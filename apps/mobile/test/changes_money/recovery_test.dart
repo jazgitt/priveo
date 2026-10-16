@@ -30,7 +30,7 @@ void main(){
   }
   testWidgets('failed next-payment and paid claims keep the original screen usable',(t)async{
     final r=RecoveryMoney();await openAt(t,subscriptionPath('v1'),money:r);r.failure=const ApiFailure(code:'conflict',message:'Payment is closed');
-    await t.tap(find.text('Pay for next month'));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);
+    await t.tap(find.text('Renew subscription'));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);
     r.failure=null;await openAt(t,payPath('p1'),money:r);r.failure=const ApiFailure(code:'conflict',message:'Payment is closed');
     await t.tap(find.text("I've paid"));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);expect(find.text('Pay by UPI'),findsOneWidget);
   });

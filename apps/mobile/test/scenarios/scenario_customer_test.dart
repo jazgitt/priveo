@@ -44,7 +44,7 @@ void main() {
       expect(find.textContaining('days left'), findsOneWidget);
       expect(find.textContaining('Billing cycle:'), findsOneWidget);
       expect(find.textContaining('Due by'), findsOneWidget);
-      expect(find.text('Pay for next month'), findsOneWidget);
+      expect(find.text('Renew subscription'), findsOneWidget);
       await letTimersFinish(tester);
     });
 

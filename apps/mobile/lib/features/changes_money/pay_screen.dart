@@ -44,7 +44,12 @@ class _PayScreenState extends ConsumerState<PayScreen> {
     if (submitted != null) return _Submitted(submitted);
     final detail = ref.watch(paymentDetailProvider(widget.paymentId));
     return Scaffold(
-      appBar: AppBar(title: const Text(MoneyStrings.payTitle)),
+      // A plan payment is a renewal; add-on and Deep Spa payments keep "Pay by UPI".
+      appBar: AppBar(
+        title: Text(detail.value?.payment.kind == 'Plan'
+            ? MoneyStrings.renewTitle
+            : MoneyStrings.payTitle),
+      ),
       body: detail.when(
         skipLoadingOnReload: true,
         skipError: true,
@@ -69,9 +74,21 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _QrBox(uri: d.instructions.upiUri),
-            const SizedBox(height: 12),
-            const Text(MoneyStrings.payHow),
+            const SectionLabel(MoneyStrings.payMethod),
+            const SizedBox(height: 8),
+            const _MethodTile(
+                label: MoneyStrings.methodUpi, selected: true, enabled: true),
+            const _MethodTile(
+                label: MoneyStrings.methodCard,
+                selected: false,
+                enabled: false,
+                note: MoneyStrings.methodCardSoon),
+            const SizedBox(height: 16),
+            const SectionLabel(MoneyStrings.payStepsTitle),
+            const SizedBox(height: 8),
+            const _Step(1, MoneyStrings.payStepCopy),
+            _Step(2, MoneyStrings.payStepPay(formatRupees(d.instructions.amountRupees))),
+            const _Step(3, MoneyStrings.payStepConfirm),
             const SizedBox(height: 12),
             SectionCard(
               child: Row(
@@ -100,6 +117,10 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            const Center(child: Text(MoneyStrings.orScan)),
+            const SizedBox(height: 8),
+            _QrBox(uri: d.instructions.upiUri),
             const SizedBox(height: 24),
             if (d.payment.status == 'Due' || d.payment.status == 'Over due')
               PrimaryButton(
@@ -109,6 +130,55 @@ class _PayScreenState extends ConsumerState<PayScreen> {
       ),
     );
   }
+}
+
+/// One payment method. UPI is the only one in use; the card is shown disabled.
+class _MethodTile extends StatelessWidget {
+  const _MethodTile({
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    this.note,
+  });
+
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        selected: selected,
+        enabled: enabled,
+        child: ListTile(
+          enabled: enabled,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+          title: Text(label),
+          subtitle: note == null ? null : Text(note!),
+        ),
+      );
+}
+
+/// A numbered instruction line.
+class _Step extends StatelessWidget {
+  const _Step(this.number, this.text);
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 24, child: Text('$number.')),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      );
 }
 
 class _QrBox extends StatelessWidget {

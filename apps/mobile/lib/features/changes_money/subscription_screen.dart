@@ -190,7 +190,8 @@ class _PlanCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(MoneyStrings.daysLeft(s.daysLeft)),
                 Text('${MoneyStrings.cycle}: ${formatDate(s.cycleStart)} to '
-                    '${formatDate(s.renewalDate.subtract(const Duration(days: 1)))}'),
+                    '${formatDate(s.endDate)}'),
+                Text('${MoneyStrings.expiresOn} ${formatDate(s.endDate)}'),
                 Text('${MoneyStrings.monthly}: ${formatRupees(s.monthlyPriceRupees)}'),
                 Text('${MoneyStrings.paymentMethod}: ${s.paymentMethod}'),
               ],

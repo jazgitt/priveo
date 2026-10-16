@@ -293,13 +293,15 @@ class CalendarView:
     def next_services(
         self, today: date, ids: Sequence[str], owned: dict[str, tuple[Vehicle, Subscription | None]]
     ) -> list[NextServiceItem]:
-        """The next visit that is not over, for each vehicle. When the
-        scheduler has not planned it yet, the next service day the
-        subscription implies (HOME-04)."""
+        """The next visit that is not over, for each vehicle. A visit stays
+        next until the crew marks it Completed or Missed, so today's service is
+        still next at 1 AM. When the scheduler has not planned it yet, the next
+        service day the subscription implies, starting with today (HOME-04)."""
         horizon = today + timedelta(NEXT_SERVICE_DAYS)
         visits = self._visits.visits_in_range(ids, today, horizon)
         jobs = self._jobs_by_visit(visits)
         now = self._now()
+        planned_days = {(v.vehicle_id, v.date) for v in visits}
         result: dict[str, NextServiceItem] = {}
         for v in visits:
             if v.status in TERMINAL_VISIT_STATUSES or v.vehicle_id in result:
@@ -326,10 +328,13 @@ class CalendarView:
                 continue
             ctx = self._ctx(vehicle, sub, today, horizon)
             have = result.get(vid)
-            day = today + timedelta(days=1)
+            day = today
             while day <= horizon and (have is None or day < have.date):
                 services = day_services(sub, day)
-                if services and day not in ctx.paused and day not in ctx.skips:
+                # A day with a planned visit was handled above: if it is over
+                # (Completed, Skipped or Missed) it is not next.
+                if ((vid, day) not in planned_days and services
+                        and day not in ctx.paused and day not in ctx.skips):
                     result[vid] = NextServiceItem(
                         vehicle_id=vid,
                         visit_id=None,

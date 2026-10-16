@@ -2089,7 +2089,7 @@ abstract class AppLocalizations {
   /// No description provided for @money_payNext.
   ///
   /// In en, this message translates to:
-  /// **'Pay for next month'**
+  /// **'Renew subscription'**
   String get money_payNext;
 
   /// No description provided for @money_pauseService.
@@ -2169,12 +2169,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The UPI QR code will be shown here.'**
   String get money_qrMissing;
-
-  /// No description provided for @money_payHow.
-  ///
-  /// In en, this message translates to:
-  /// **'Scan the QR code or pay to the UPI ID from any UPI app.'**
-  String get money_payHow;
 
   /// No description provided for @money_upiId.
   ///

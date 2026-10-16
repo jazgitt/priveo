@@ -113,7 +113,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);
     final cycleEnd = sub == null
         ? null
-        : _dateOnly(sub.renewalDate).subtract(const Duration(days: 1));
+        : _dateOnly(sub.endDate);
     bool inCycle(DateTime d) =>
         cycleStart == null ||
         (!d.isBefore(cycleStart) && !d.isAfter(cycleEnd!));
@@ -148,6 +148,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
           children: [
             Text(CustStrings.calendarTitle, style: text.displaySmall),
+            // The plan's duration and status, under the headline.
+            if (cycleStart != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Plan duration: ${formatDate(cycleStart)} to '
+                '${formatDate(cycleEnd!)} · ${sub!.status}',
+                style: text.bodyMedium?.copyWith(color: context.brand.mute),
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
@@ -170,12 +179,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ),
               ],
             ),
-            if (cycleStart != null)
-              Text(
-                'Billing cycle: ${formatDate(cycleStart)} to ${formatDate(cycleEnd!)}',
-                textAlign: TextAlign.center,
-                style: text.bodySmall?.copyWith(color: context.brand.mute),
-              ),
             const SizedBox(height: 8),
             _MonthGrid(
               month: _month,

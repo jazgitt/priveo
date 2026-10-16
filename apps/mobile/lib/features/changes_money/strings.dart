@@ -37,11 +37,12 @@ class MoneyStrings {
   static const subTitle = 'My subscription';
   static String daysLeft(int n) => n == 1 ? '1 day left' : '$n days left';
   static const cycle = 'Billing cycle';
+  static const expiresOn = 'Expires on';
   static const monthly = 'Monthly amount';
   static const paymentMethod = 'Payment method';
   static const upi = 'UPI';
   static const latestPayment = 'Latest payment';
-  static const payNext = 'Pay for next month';
+  static const payNext = 'Renew subscription';
   static const pauseService = 'Pause service';
   static const billingHistory = 'View billing history';
   static const addons = 'Add-ons';
@@ -58,9 +59,20 @@ class MoneyStrings {
 
   // Pay by UPI (PAY-05 to PAY-07)
   static const payTitle = 'Pay by UPI';
+  static const renewTitle = 'Renew subscription';
+  static const payMethod = 'Payment method';
+  static const methodUpi = 'UPI';
+  static const methodCard = 'Credit card';
+  static const methodCardSoon = 'Coming soon';
+  static const payStepsTitle = 'How to pay';
+  static const payStepCopy = 'Copy the UPI ID shown below.';
+  static String payStepPay(String amount) =>
+      'Open any UPI app and pay $amount to this UPI ID.';
+  static const payStepConfirm =
+      "After you pay, tap \"I've paid\" to submit your confirmation. Priveo will confirm your payment.";
+  static const orScan = 'Or scan this QR code from any UPI app.';
   static const payAmount = 'Amount to pay';
   static const qrMissing = 'The UPI QR code will be shown here.';
-  static const payHow = 'Scan the QR code or pay to the UPI ID from any UPI app.';
   static const upiId = 'UPI ID';
   static const copy = 'Copy UPI ID';
   static const copied = 'UPI ID copied';

@@ -84,6 +84,21 @@ def test_next_service_is_the_first_visit_not_over_for_each_vehicle(db, asha, rep
         "projected", "projected"]
 
 
+def test_todays_service_stays_next_until_the_crew_closes_it(db, asha, repo):
+    from app.customers.models import Customer
+
+    login = db.query(Customer).filter_by(email="asha@example.com").one().login_id
+    # 1 AM on 02-Dec-26: nothing is planned yet, so today's service (not
+    # tomorrow's) is the next one.
+    early = CustomerReads(db, repo, lambda: datetime(2026, 12, 2, 1, 0, tzinfo=IST))
+    assert [i.date for i in early.next_services(login, date(2026, 12, 2))] == [
+        date(2026, 12, 2), date(2026, 12, 2)]
+    # Once the crew has completed today's visit, the next one is tomorrow's.
+    repo.visit_rows.append(Visit("v-today", asha["vehicles"][0], date(2026, 12, 2), "Completed"))
+    items = early.next_services(login, date(2026, 12, 2))
+    assert [i.date for i in items] == [date(2026, 12, 3), date(2026, 12, 2)]
+
+
 def test_next_service_endpoint(api, asha):
     assert api.get("/v1/customer/next-service", headers=asha["headers"]).status_code == 200
 

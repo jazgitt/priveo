@@ -1103,7 +1103,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get money_latestPayment => 'Latest payment';
 
   @override
-  String get money_payNext => 'Pay for next month';
+  String get money_payNext => 'Renew subscription';
 
   @override
   String get money_pauseService => 'Pause service';
@@ -1143,10 +1143,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get money_qrMissing => 'The UPI QR code will be shown here.';
-
-  @override
-  String get money_payHow =>
-      'Scan the QR code or pay to the UPI ID from any UPI app.';
 
   @override
   String get money_upiId => 'UPI ID';

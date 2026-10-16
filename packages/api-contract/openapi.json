@@ -24110,6 +24110,11 @@
             "format": "date",
             "title": "Renewal Date"
           },
+          "expires_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Expires On"
+          },
           "cycle_days": {
             "type": "integer",
             "title": "Cycle Days"
@@ -24148,6 +24153,7 @@
           "interior_day",
           "cycle_start",
           "renewal_date",
+          "expires_on",
           "cycle_days",
           "days_left",
           "latest_payment",
@@ -24842,6 +24848,18 @@
               }
             ],
             "title": "Plan Name"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
           },
           "cutoff_time": {
             "anyOf": [

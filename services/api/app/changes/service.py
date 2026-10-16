@@ -359,7 +359,9 @@ class ChangesService:
             if actor.bound and not is_open(resume, now, self._hour):
                 resume += timedelta(days=1)
             if resume > pause.end_date:
-                raise ApiError("pause_ending", "That pause ends tomorrow already.", 409)
+                # Nothing is left to end: say when the pause really ends.
+                when = "today" if pause.end_date == today else "tomorrow"
+                raise ApiError("pause_ending", f"That pause ends {when} already.", 409)
             self._gateway.resume_range(vehicle.id, resume, pause.end_date)
             pause.end_date = resume - timedelta(days=1)
         from app.changes.payment_dates import shift_unpaid_renewals

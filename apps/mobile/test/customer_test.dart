@@ -56,6 +56,9 @@ void main() {
       await openAsCustomer(tester);
       expect(find.text('Hyundai Creta'), findsOneWidget);
       expect(find.text('MH 12 AB 1234'), findsOneWidget);
+      // Society and parking slot share one line, comma separated.
+      expect(find.text('Green Meadows, B2-14'), findsOneWidget);
+      expect(find.text('Expires on 06-Nov-26'), findsOneWidget);
       expect(find.text('₹1,299 a month'), findsOneWidget);
       expect(find.text('07-Nov-26'), findsOneWidget);
       expect(find.text('Planned before your cutoff time - 7:00 AM'), findsOneWidget);
@@ -87,7 +90,7 @@ void main() {
       expect(find.bySemanticsLabel('Vehicle 2 of 3'), findsOneWidget);
       // The gaps in the record are said plainly, and nothing is scheduled.
       expect(find.text('Number to be added'), findsOneWidget);
-      expect(find.text('Parking to be added'), findsOneWidget);
+      expect(find.textContaining('Parking to be added'), findsOneWidget);
       expect(find.text('Not scheduled yet'), findsOneWidget);
       expect(find.text('Planned before your cutoff time - 6:30 AM'), findsOneWidget);
       expect(find.text('07-Nov-26'), findsNothing);

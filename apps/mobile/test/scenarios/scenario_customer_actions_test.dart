@@ -47,7 +47,7 @@ void main() {
     ) async {
       await home(tester, 'C09');
       await tapFinder(tester, find.text('My subscription'));
-      await tapFinder(tester, find.text('Pay for next month'));
+      await tapFinder(tester, find.text('Renew subscription'));
       await tapFinder(tester, find.text("I've paid"));
 
       await untilFound(tester, find.text('Payment submitted'));

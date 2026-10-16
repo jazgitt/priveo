@@ -6339,6 +6339,7 @@ class SubscriptionView {
     required this.interiorDay,
     required this.cycleStart,
     required this.renewalDate,
+    required this.expiresOn,
     required this.cycleDays,
     required this.daysLeft,
     required this.latestPayment,
@@ -6358,6 +6359,7 @@ class SubscriptionView {
   final String? interiorDay;
   final DateTime cycleStart;
   final DateTime renewalDate;
+  final DateTime expiresOn;
   final int cycleDays;
   final int daysLeft;
   final PaymentOut? latestPayment;
@@ -6377,6 +6379,7 @@ class SubscriptionView {
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         cycleStart: DateTime.parse(j['cycle_start'] as String),
         renewalDate: DateTime.parse(j['renewal_date'] as String),
+        expiresOn: DateTime.parse(j['expires_on'] as String),
         cycleDays: j['cycle_days'] as int,
         daysLeft: j['days_left'] as int,
         latestPayment: j['latest_payment'] == null ? null : PaymentOut.fromJson(j['latest_payment'] as Map<String, dynamic>),
@@ -6397,6 +6400,7 @@ class SubscriptionView {
         'interior_day': interiorDay,
         'cycle_start': _date(cycleStart),
         'renewal_date': _date(renewalDate),
+        'expires_on': _date(expiresOn),
         'cycle_days': cycleDays,
         'days_left': daysLeft,
         'latest_payment': latestPayment?.toJson(),
@@ -6887,6 +6891,7 @@ class VehicleCard {
     required this.subscriptionStatus,
     required this.monthlyPriceRupees,
     required this.planName,
+    required this.expiresOn,
     required this.cutoffTime,
     required this.interiorDay,
     this.variant,
@@ -6903,6 +6908,7 @@ class VehicleCard {
   final String? subscriptionStatus;
   final int? monthlyPriceRupees;
   final String? planName;
+  final DateTime? expiresOn;
   final String? cutoffTime;
   final String? interiorDay;
   final String? variant;
@@ -6919,6 +6925,7 @@ class VehicleCard {
         subscriptionStatus: j['subscription_status'] == null ? null : j['subscription_status'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         planName: j['plan_name'] == null ? null : j['plan_name'] as String,
+        expiresOn: j['expires_on'] == null ? null : DateTime.parse(j['expires_on'] as String),
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         variant: j['variant'] == null ? null : j['variant'] as String,
@@ -6936,6 +6943,7 @@ class VehicleCard {
         'subscription_status': subscriptionStatus,
         'monthly_price_rupees': monthlyPriceRupees,
         'plan_name': planName,
+        'expires_on': expiresOn == null ? null : _date(expiresOn!),
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
         'variant': variant,

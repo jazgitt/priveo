@@ -65,3 +65,25 @@ def renewal_date(db: Session, vehicle_id: uuid.UUID, first_service_date: date,
                  today: date) -> date:
     return cycle_window(first_service_date, shift_days(db, vehicle_id), today,
                         lookup.setting(db, "billing.cycle_days"))[1]
+
+
+def plan_expires_on(db: Session, sub, today: date) -> date:
+    """The last day the plan covers (the date shown as "Expires on").
+
+    It is the end of the current cycle, or later when the customer has paid
+    ahead: a Received plan payment for a later cycle moves it to the end of
+    that cycle. So when the admin confirms a renewal payment, the expiry date
+    moves on at once, before the renewal date arrives.
+    """
+    from app.billing.models import Payment
+
+    cycle_days = lookup.setting(db, "billing.cycle_days")
+    _, renewal = cycle_window(sub.first_service_date, shift_days(db, sub.vehicle_id),
+                              today, cycle_days)
+    end = renewal - timedelta(days=1)
+    paid_to = db.scalar(select(func.max(Payment.cycle_end)).where(
+        Payment.subscription_id == sub.id, Payment.kind == "Plan",
+        Payment.status == "Received", Payment.voided_at.is_(None)))
+    if paid_to is not None:
+        end = max(end, paid_to - timedelta(days=1))
+    return end

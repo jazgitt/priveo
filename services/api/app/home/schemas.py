@@ -23,6 +23,8 @@ class VehicleCard(BaseModel):
     monthly_price_rupees: int | None
     # The subscription's plan name. None for a vehicle with no subscription.
     plan_name: str | None = None
+    # The last day the plan covers ("Expires on"). None with no subscription.
+    expires_on: date | None = None
     # "HH:MM", the time by which the daily clean is done (ONB-16).
     cutoff_time: str | None
     interior_day: str | None

@@ -637,12 +637,22 @@ class _VehicleCard extends StatelessWidget {
                     ],
                   ],
                 ),
+                // The date the plan expires; it moves on once a renewal is paid.
+                if (vehicle.expiresOn != null) ...[
+                  const SizedBox(height: 4),
+                  line(
+                    Symbols.event_rounded,
+                    'Expires on ${formatDate(vehicle.expiresOn!)}',
+                  ),
+                ],
                 const SizedBox(height: 8),
-                line(Symbols.location_on_rounded, vehicle.society),
-                const SizedBox(height: 4),
+                // Society and parking slot on one line, comma separated.
                 line(
-                  Symbols.local_parking_rounded,
-                  vehicle.parking.isEmpty ? l.noParking : vehicle.parking,
+                  Symbols.location_on_rounded,
+                  [
+                    vehicle.society,
+                    vehicle.parking.isEmpty ? l.noParking : vehicle.parking,
+                  ].where((p) => p.isNotEmpty).join(', '),
                 ),
                 // A vehicle with no subscription has no daily service.
                 if (status != null) ...[

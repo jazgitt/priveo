@@ -185,6 +185,7 @@ class SubscriptionDto {
     required this.interiorDay,
     required this.cycleStart,
     required this.renewalDate,
+    this.expiresOn,
     required this.cycleDays,
     required this.daysLeft,
     required this.latestPayment,
@@ -205,6 +206,12 @@ class SubscriptionDto {
   final String? interiorDay;
   final DateTime cycleStart;
   final DateTime renewalDate;
+
+  /// The last day the plan covers. Later than the cycle end once a renewal
+  /// payment is confirmed. Older replies without it end the day before renewal.
+  final DateTime? expiresOn;
+  DateTime get endDate =>
+      expiresOn ?? renewalDate.subtract(const Duration(days: 1));
   final int cycleDays;
   final int daysLeft;
   final PaymentDto? latestPayment;
@@ -223,6 +230,7 @@ class SubscriptionDto {
     interiorDay: j['interior_day'] as String?,
     cycleStart: _date(j['cycle_start']),
     renewalDate: _date(j['renewal_date']),
+    expiresOn: j['expires_on'] == null ? null : _date(j['expires_on']),
     cycleDays: j['cycle_days'] as int,
     daysLeft: j['days_left'] as int,
     latestPayment: j['latest_payment'] == null

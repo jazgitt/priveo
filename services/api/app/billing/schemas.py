@@ -52,6 +52,9 @@ class SubscriptionView(BaseModel):
     interior_day: str | None
     cycle_start: dt.date
     renewal_date: dt.date
+    # The last day the plan covers; later than the cycle end once a renewal
+    # payment has been confirmed (SUB-02).
+    expires_on: dt.date
     cycle_days: int
     days_left: int
     latest_payment: PaymentOut | None

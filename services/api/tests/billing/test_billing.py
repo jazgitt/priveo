@@ -33,6 +33,24 @@ def test_my_subscription_shows_the_cycle(money):
     assert s["latest_payment"] is None
 
 
+def test_a_confirmed_renewal_moves_the_expiry_date_on_at_once(money):
+    """Paying the next cycle early: until the admin confirms, the plan expires
+    on the end of the current cycle; once Received, on the end of the next."""
+    m = money
+    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
+    assert s["expires_on"] == "2026-10-30" and s["days_left"] == 20
+    p = admin_payment(m, cycle_start="2026-10-31")
+    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
+    assert s["expires_on"] == "2026-10-30"  # Due: not renewed yet.
+    m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
+    m.client.post(f"/v1/admin/payments/{p['id']}/confirm", headers=m.admin)
+    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
+    assert s["expires_on"] == "2026-11-29"  # 30 days more.
+    assert s["days_left"] == 50
+    home = m.client.get("/v1/customer/home", headers=m.customer).json()
+    assert [v["expires_on"] for v in home["vehicles"]] == ["2026-11-29"]
+
+
 def test_a_payment_runs_from_due_to_received(money):
     m = money
     p = admin_payment(m)

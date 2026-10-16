@@ -31,7 +31,7 @@ from app.billing.schemas import (
     SubscriptionView,
 )
 from app.changes.access import parse_id
-from app.changes.cycle import cycle_window, paused_days, shift_days
+from app.changes.cycle import cycle_window, paused_days, plan_expires_on, shift_days
 from app.changes.rules import Clock, show_date, today_of
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
@@ -194,6 +194,7 @@ class BillingService:
             .order_by(Payment.due_date.desc(), Payment.created_at.desc())
         )
         status = self.effective_status(sub, vehicle, today)
+        expires_on = plan_expires_on(self._db, sub, today)
         payable = sub.status in ("Active",) and (
             self._unpaid_plan_payment(sub) is not None
             or (
@@ -215,8 +216,9 @@ class BillingService:
             interior_day=sub.interior_day,
             cycle_start=start,
             renewal_date=renewal,
+            expires_on=expires_on,
             cycle_days=self._cycle_days,
-            days_left=max(0, (renewal - today).days),
+            days_left=max(0, (expires_on - today).days + 1),
             latest_payment=self._outs([latest])[0] if latest else None,
             can_pay_next=payable,
         )

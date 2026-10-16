@@ -379,7 +379,7 @@ void main() {
           canPayNext: false,
         );
       await pumpWith(tester, calendar(), reads: _Reads(const []), money: money);
-      expect(find.text('Billing cycle: 11-Nov-26 to 10-Dec-26'), findsOneWidget);
+      expect(find.text('Plan duration: 11-Nov-26 to 10-Dec-26 · Active'), findsOneWidget);
       // The selected day (today) is outside the cycle, so no day card shows.
       expect(find.byType(DayCard), findsNothing);
       // A day outside the cycle cannot be selected.

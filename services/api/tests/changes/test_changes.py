@@ -166,6 +166,28 @@ def test_ending_after_9pm_resumes_a_day_later(money):
     assert r.json()["end_date"] == "2026-10-15"
 
 
+def test_a_pause_ending_today_says_it_ends_today(money):
+    m = money
+    pause = m.client.post(f"{base(m)}/pauses",
+                          json={"from_date": "2026-10-12", "to_date": "2026-10-17"},
+                          headers=m.customer).json()
+    m.clock.now = at(17, 1, 0)  # 1 AM on the last day of the pause.
+    r = m.client.delete(f"{base(m)}/pauses/{pause['id']}", headers=m.customer)
+    assert r.status_code == 409 and r.json()["code"] == "pause_ending"
+    assert r.json()["message"] == "That pause ends today already."
+
+
+def test_a_pause_ending_tomorrow_says_it_ends_tomorrow(money):
+    m = money
+    pause = m.client.post(f"{base(m)}/pauses",
+                          json={"from_date": "2026-10-12", "to_date": "2026-10-18"},
+                          headers=m.customer).json()
+    m.clock.now = at(17, 21, 30)  # After 9 PM, so visits could only resume on the 19th.
+    r = m.client.delete(f"{base(m)}/pauses/{pause['id']}", headers=m.customer)
+    assert r.status_code == 409
+    assert r.json()["message"] == "That pause ends tomorrow already."
+
+
 def test_a_pause_that_has_not_started_is_cancelled(money):
     m = money
     pause = m.client.post(f"{base(m)}/pauses",
