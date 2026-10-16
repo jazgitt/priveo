@@ -232,8 +232,9 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
         role="customer",
         login_id=f"test.{scenario.lower()}@priveo.test",
         display_name=f"Test {scenario}",
-        password_hash=password_hash,
-        password_changed_at=now,
+        # C30 has no password yet: its first sign-in is by the emailed code.
+        password_hash=None if config.get("no_password") else password_hash,
+        password_changed_at=None if config.get("no_password") else now,
     )
     db.add_all([society, login])
     db.flush()
@@ -755,6 +756,7 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
         "as_of": day.isoformat(),
         "society_id": str(society.id),
         "customer_login": login.login_id,
+        "first_sign_in": bool(config.get("no_password")),
         "customer_id": str(customer.id),
         "vehicle_ids": vehicle_ids,
         "active_vehicle_ids": [] if config.get("vehicle_inactive") else vehicle_ids,

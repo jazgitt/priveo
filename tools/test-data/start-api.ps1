@@ -15,7 +15,9 @@ $mediaRoot = Join-Path (Split-Path -Parent $databasePath) 'media'
 $overrides = @{
     DATABASE_URL = $databaseUrl
     ENVIRONMENT = 'dev'
-    RESEND_API_KEY = ''
+    # A single space, not '': setting a variable to '' removes it, and then the
+    # key in services/api/.env would send real email. The app trims it to empty.
+    RESEND_API_KEY = ' '
     TOKEN_SECRET = 'local-fixture-only-secret-not-for-deployment'
     MOCK_EMAIL_CODE = '246810'
     MEDIA_ROOT = $mediaRoot

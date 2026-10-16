@@ -30,8 +30,10 @@ def sync_accounts(db, config, snapshot, password_hash):
         login = db.get(Login, key)
         if login is None or login.login_id != login_id or login.role != role:
             raise ValueError(f"Synthetic account identity mismatch: {scenario}.")
-        login.password_hash = password_hash
-        login.password_changed_at = now
+        # A first-sign-in account (no password yet) stays without one.
+        if not (config.get("no_password") and role == "customer"):
+            login.password_hash = password_hash
+            login.password_changed_at = now
         login.failed_attempts = 0
         login.blocked_until = None
         # Retain R04's deliberately locked sixth crew account for manual testing.

@@ -87,12 +87,14 @@ Future<Session> signInApi(
 
 /// The real app, signed in, with the real client. Only the plugins a test
 /// cannot have (push, connectivity, SQLite) are replaced.
-Future<void> openApp(WidgetTester tester, Session session) async {
+/// Opens the app. With a [session] it starts signed in; without one it starts
+/// on the welcome screen, as a phone with no saved session does.
+Future<void> openApp(WidgetTester tester, [Session? session]) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 2.5;
   addTearDown(tester.view.reset);
   final store = MemorySessionStore();
-  await store.write(session);
+  if (session != null) await store.write(session);
   final container = ProviderContainer(
     overrides: [
       readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),

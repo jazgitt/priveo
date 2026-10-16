@@ -27,7 +27,7 @@ def test_additive_seed_all_scenarios_preserves_admin_and_repeat_edits(client, en
         admin_id, admin_hash = admin.id, admin.password_hash
         before = db.scalar(select(func.count()).select_from(Customer))
     result = shared.seed_additive(engine, date(2026, 10, 13), "FixturePassword123!")
-    assert len(result["added"]) == len(shared.catalogue()) == 39
+    assert len(result["added"]) == len(shared.catalogue()) == 40
     with Session(engine) as db:
         login = db.get(Login, shared.identity("C01", "customer-login"))
         login.display_name = "Manual edit"
@@ -35,7 +35,7 @@ def test_additive_seed_all_scenarios_preserves_admin_and_repeat_edits(client, en
     repeated = shared.seed_additive(engine, date(2026, 10, 14), "DifferentPassword123!")
     assert repeated["added"] == []
     with Session(engine) as db:
-        assert db.scalar(select(func.count()).select_from(Customer)) == before + 39
+        assert db.scalar(select(func.count()).select_from(Customer)) == before + 40
         admin = db.get(Login, admin_id)
         assert admin.password_hash == admin_hash
         login = db.get(Login, shared.identity("C01", "customer-login"))
@@ -50,7 +50,7 @@ def test_additive_seed_all_scenarios_preserves_admin_and_repeat_edits(client, en
                                   sync_passwords=True)
     assert synced["added"] == []
     with Session(engine) as db:
-        assert db.scalar(select(func.count()).select_from(Customer)) == before + 39
+        assert db.scalar(select(func.count()).select_from(Customer)) == before + 40
         assert db.get(Login, admin_id).password_hash == admin_hash
         login = db.get(Login, shared.identity("C01", "customer-login"))
         assert login.display_name == "Manual edit"

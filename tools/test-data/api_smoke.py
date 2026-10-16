@@ -30,6 +30,12 @@ def run_suite(call, data, password, admin_password, selected=None):
     if not scenarios:
         raise AssertionError("Manifest contains none of the requested scenarios.")
     for row in scenarios:
+        if row.get("first_sign_in"):
+            # No password yet: the first step must ask for the emailed code.
+            body = request("/v1/auth/start", body={"login_id": row["customer_login"]})
+            assert body["next"] == "code", row["id"]
+            results.append({"scenario": row["id"], "status": "passed"})
+            continue
         token = login(row["customer_login"], password, "customer")
         request("/v1/customer/home", token=token)
         vehicles = request("/v1/customer/vehicles", token=token)

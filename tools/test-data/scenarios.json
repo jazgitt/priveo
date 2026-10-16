@@ -39,7 +39,8 @@
     {"id":"A01","name":"Admin payments, GST invoice and unread/read alerts","payment_states":["Initiated","Received"],"vehicles":2,"alerts":true},
     {"id":"A02","name":"Admin complaints and reports","complaints":true,"history":true,"ratings":true,"checkin":true},
     {"id":"A03","name":"Admin operations failures and rescheduling","crew_day":true,"unassigned":true,"vehicles":5},
-    {"id":"A04","name":"Admin customer with no subscription","subscribed":false,"onboarding":false}
+    {"id":"A04","name":"Admin customer with no subscription","subscribed":false,"onboarding":false},
+    {"id":"C30","name":"First sign-in: emailed code, no password yet","subscribed":false,"onboarding":false,"no_password":true}
   ],
   "action_only_cases": [
     "Wrong password, password reset, OTP expiry/resend and logout-all",
