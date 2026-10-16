@@ -150,3 +150,32 @@ Future<void> letTimersFinish(WidgetTester tester) async {
     await tester.pump(const Duration(seconds: 10));
   }
 }
+
+/// Types into the last text field on screen, scrolling to it first when a
+/// list has not built it yet.
+Future<void> typeIntoLastField(WidgetTester tester, String text) async {
+  final fields = find.byType(TextField);
+  if (fields.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      fields,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(fields.last);
+  await tester.enterText(fields.last, text);
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+/// Scrolls the first scrollable until [finder] is built and on screen.
+Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder.first);
+  await tester.pump(const Duration(milliseconds: 200));
+}
