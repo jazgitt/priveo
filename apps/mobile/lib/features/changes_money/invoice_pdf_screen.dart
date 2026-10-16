@@ -24,6 +24,8 @@ class InvoicePdfScreen extends ConsumerWidget {
     void retry() => ref.invalidate(invoicePdfProvider(paymentId));
     return Scaffold(appBar: AppBar(title: Text('${l.invoicePdfTitle} $number')),
       body: ref.watch(invoicePdfProvider(paymentId)).when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(message: failureText(error), onRetry: retry),
         data: (bytes) => ref.watch(invoicePdfViewerProvider)(bytes, retry),

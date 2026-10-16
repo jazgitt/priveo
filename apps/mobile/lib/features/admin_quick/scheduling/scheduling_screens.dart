@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../routes_paths.dart';
@@ -24,13 +25,15 @@ class AdminNeedsSchedulingScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(q('adminq_needs_title'))),
       body: jobs.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(context, e),
           onRetry: () => ref.invalidate(needsSchedulingProvider),
         ),
         data: (rows) => RefreshIndicator(
-          onRefresh: () => ref.refresh(needsSchedulingProvider.future),
+          onRefresh: () => refreshAll(ref, () => ref.read(needsSchedulingProvider.future)),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -156,6 +159,8 @@ class _AdminDayScheduleScreenState
             child: Text(AppLocalizations.of(context).adminOperationsForDay),
           ),
           day.when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
@@ -278,6 +283,8 @@ class _AdminCapacityScreenState extends ConsumerState<AdminCapacityScreen> {
             Text(q('adminq_capacity_empty'))
           else
             days.when(
+              skipLoadingOnReload: true,
+              skipError: true,
               loading: () => const Padding(
                 padding: EdgeInsets.all(24),
                 child: Center(child: CircularProgressIndicator()),

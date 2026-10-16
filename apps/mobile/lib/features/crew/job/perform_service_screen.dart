@@ -110,6 +110,8 @@ class _PerformState extends ConsumerState<PerformServiceScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(CrewText.performTitle)),
       body: detail.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

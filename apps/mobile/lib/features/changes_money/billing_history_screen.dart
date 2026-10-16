@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
@@ -30,6 +31,8 @@ class BillingHistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.historyTitle)),
       body: history.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),
@@ -37,7 +40,10 @@ class BillingHistoryScreen extends ConsumerWidget {
         ),
         data: (rows) => rows.isEmpty
             ? const Center(child: Text(MoneyStrings.historyEmpty))
-            : ListView.separated(
+            : RefreshIndicator(
+          onRefresh: () => refreshAll(ref, () => ref.read(billingHistoryProvider(vehicleId).future)),
+          child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 itemCount: rows.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -79,6 +85,7 @@ class BillingHistoryScreen extends ConsumerWidget {
                   );
                 },
               ),
+        ),
       ),
     );
   }

@@ -29,6 +29,8 @@ class AsyncBody<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => value.when(
+    skipLoadingOnReload: true,
+    skipError: true,
     loading: () => const Center(child: CircularProgressIndicator()),
     error: (e, _) => ErrorView(
       message: e is ApiFailure ? e.message : null,

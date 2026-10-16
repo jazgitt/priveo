@@ -94,6 +94,8 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(CrewText.couldNotComplete)),
       body: reasons.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

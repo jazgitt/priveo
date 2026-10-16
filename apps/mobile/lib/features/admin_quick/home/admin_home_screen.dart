@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
@@ -24,11 +25,13 @@ class AdminHomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l.appName), actions: const [SignOutButton()]),
       body: home.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             ErrorView(onRetry: () => ref.invalidate(adminHomeProvider)),
         data: (h) => RefreshIndicator(
-          onRefresh: () => ref.refresh(adminHomeProvider.future),
+          onRefresh: () => refreshAll(ref, () => ref.read(adminHomeProvider.future)),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [

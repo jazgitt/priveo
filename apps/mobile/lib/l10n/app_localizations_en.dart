@@ -137,7 +137,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dailyCleanBy(String time) {
-    return 'Daily clean by $time';
+    return 'Planned before your cutoff time - $time';
   }
 
   @override

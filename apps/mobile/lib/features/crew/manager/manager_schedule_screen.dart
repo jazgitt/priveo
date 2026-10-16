@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/widgets.dart';
@@ -82,13 +83,15 @@ class _State extends ConsumerState<ManagerScheduleScreen> {
           ),
           Expanded(
             child: schedule.when(
+              skipLoadingOnReload: true,
+              skipError: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => ErrorView(
                 message: failureText(e),
                 onRetry: () => ref.invalidate(managerScheduleProvider(key)),
               ),
               data: (s) => RefreshIndicator(
-                onRefresh: () => ref.refresh(managerScheduleProvider(key).future),
+                onRefresh: () => refreshAll(ref, () => ref.refresh(managerScheduleProvider(key).future)),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [

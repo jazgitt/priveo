@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import read_cutoff, show_registration
-from app.directory.models import Society
+from app.directory.models import Plan, Society
 from app.identity.models import Login
 from app.identity.service import hash_password
 from app.media.models import MediaUpload
@@ -155,13 +155,26 @@ def test_home_shows_the_customers_own_vehicles(client, asha):
         "id": creta["id"], "registration": "HR 26 DK 8337", "model": "Hyundai Creta",
         "society": "DLF Meadows", "parking": "B1-223", "subscription_status": "Active",
         "monthly_price_rupees": 1299, "cutoff_time": "06:30", "interior_day": "Friday",
-        "next_service": None, "make": "", "variant": "", "photo_url": creta["photo_url"],
+        "plan_name": None, "next_service": None, "make": "", "variant": "", "photo_url": creta["photo_url"],
     }
     assert creta["photo_url"].startswith("/v1/media/local/")
     assert (swift["registration"], swift["parking"], swift["cutoff_time"]) == ("", "", None)
     # The car with no subscription comes last and has no plan details (ADD-14).
     assert (punch["model"], punch["parking"], punch["subscription_status"],
             punch["monthly_price_rupees"]) == ("Tata Punch", "B2", None, None)
+
+
+def test_home_shows_the_plan_name_of_each_subscription(client, db, asha):
+    plan = Plan(name="Daily Premium", monthly_price_rupees=1299)
+    db.add(plan)
+    db.flush()
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.source_ref == "master:1"))
+    sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
+    sub.plan_id = plan.id
+    db.commit()
+    creta, swift, punch = client.get("/v1/customer/home", headers=asha).json()["vehicles"]
+    assert creta["plan_name"] == "Daily Premium"
+    assert swift["plan_name"] is None and punch["plan_name"] is None
 
 
 def test_a_customer_sees_only_their_own_record(client, asha):

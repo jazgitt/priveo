@@ -6886,6 +6886,7 @@ class VehicleCard {
     required this.parking,
     required this.subscriptionStatus,
     required this.monthlyPriceRupees,
+    required this.planName,
     required this.cutoffTime,
     required this.interiorDay,
     this.variant,
@@ -6901,6 +6902,7 @@ class VehicleCard {
   final String parking;
   final String? subscriptionStatus;
   final int? monthlyPriceRupees;
+  final String? planName;
   final String? cutoffTime;
   final String? interiorDay;
   final String? variant;
@@ -6916,6 +6918,7 @@ class VehicleCard {
         parking: j['parking'] as String,
         subscriptionStatus: j['subscription_status'] == null ? null : j['subscription_status'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
+        planName: j['plan_name'] == null ? null : j['plan_name'] as String,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         variant: j['variant'] == null ? null : j['variant'] as String,
@@ -6932,6 +6935,7 @@ class VehicleCard {
         'parking': parking,
         'subscription_status': subscriptionStatus,
         'monthly_price_rupees': monthlyPriceRupees,
+        'plan_name': planName,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
         'variant': variant,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/widgets.dart';
@@ -57,14 +58,18 @@ class _AdminComplaintsScreenState extends ConsumerState<AdminComplaintsScreen> {
           ),
           Expanded(
             child: list.when(
+              skipLoadingOnReload: true,
+              skipError: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => ErrorView(
                 message: failureText(context, e),
                 onRetry: () => ref.invalidate(complaintsProvider(_status)),
               ),
               data: (rows) => RefreshIndicator(
-                onRefresh: () =>
-                    ref.refresh(complaintsProvider(_status).future),
+                onRefresh: () => refreshAll(
+                  ref,
+                  () => ref.read(complaintsProvider(_status).future),
+                ),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -155,6 +160,8 @@ class _AdminComplaintScreenState extends ConsumerState<AdminComplaintScreen> {
         title: Text(detail.value?.displayId ?? q('adminq_complaints_title')),
       ),
       body: detail.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(context, e),
@@ -331,6 +338,8 @@ class _AdminFeedbackScreenState extends ConsumerState<AdminFeedbackScreen> {
           ),
           const SizedBox(height: 4),
           ratings.when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const LinearProgressIndicator(),
             error: (e, _) => Text(failureText(context, e)),
             data: (r) => Text(
@@ -360,6 +369,8 @@ class _AdminFeedbackScreenState extends ConsumerState<AdminFeedbackScreen> {
           ),
           const SizedBox(height: 12),
           list.when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => ErrorView(
               message: failureText(context, e),

@@ -26,6 +26,8 @@ class CrewProfileScreen extends ConsumerWidget {
         actions: const [SignOutButton()],
       ),
       body: profile.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: e is ApiFailure && e.code == 'no_crew_record'

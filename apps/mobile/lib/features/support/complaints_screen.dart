@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
@@ -26,12 +27,14 @@ class ComplaintsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(t('support_complaints_title'))),
       body: list.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
             message: failureText(context, e),
             onRetry: () => ref.invalidate(complaintsProvider)),
         data: (items) => RefreshIndicator(
-          onRefresh: () => ref.refresh(complaintsProvider.future),
+          onRefresh: () => refreshAll(ref, () => ref.read(complaintsProvider.future)),
           child: items.isEmpty
               ? ListView(children: [
                   Padding(
@@ -149,6 +152,8 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(detail.value?.displayId ?? '')),
       body: detail.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
             message: failureText(context, e),

@@ -157,6 +157,7 @@ class CustomerService:
         owned = self._vehicles(customer)
         photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
         for vehicle, sub in owned:
+            plan = self._plan(sub)
             parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
             cards.append(
                 VehicleCard(
@@ -170,6 +171,7 @@ class CustomerService:
                     parking=parking,
                     subscription_status=sub.status if sub else None,
                     monthly_price_rupees=sub.monthly_price_rupees if sub else None,
+                    plan_name=plan.name if plan else None,
                     cutoff_time=show_time(sub.cutoff_time) if sub else None,
                     interior_day=sub.interior_day if sub else None,
                     # Filled in once visits are scheduled.

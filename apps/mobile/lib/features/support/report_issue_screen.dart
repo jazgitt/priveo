@@ -86,6 +86,8 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(t('support_report_title'))),
       body: options.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
             message: failureText(context, e),

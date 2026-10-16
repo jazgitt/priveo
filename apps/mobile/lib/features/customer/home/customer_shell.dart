@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -22,7 +23,8 @@ import '../../support/feedback_sheet.dart';
 import '../../support/routes.dart' show SupportRoutes;
 import '../../support/help_screen.dart';
 import '../account/account_screen.dart';
-import '../account/photo_widgets.dart' show VehiclePhotoThumb;
+import '../../../core/ui/media_image.dart';
+import 'car_illustration.dart';
 import '../calendar/calendar_screen.dart';
 import '../data/proof_reads_repository.dart' show todayCleansProvider;
 import '../visit/visit_details_screen.dart' show openVisitDetails;
@@ -45,7 +47,14 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
   static const _accountTab = 2;
   int _index = 0;
 
-  void _go(int index) => setState(() => _index = index);
+  /// Tabs opened so far. Each stays built (hidden) once opened, so its data
+  /// stays loaded and coming back to it never shows a loading spinner.
+  final Set<int> _opened = {0};
+
+  void _go(int index) => setState(() {
+    _index = index;
+    _opened.add(index);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -64,12 +73,23 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
             children: [
               _TopBar(onAvatar: () => _go(_accountTab)),
               Expanded(
-                child: switch (_index) {
-                  0 => CustomerHomeScreen(onCalendar: () => _go(_calendarTab)),
-                  _calendarTab => const CalendarScreen(),
-                  _accountTab => const AccountScreen(),
-                  _ => const HelpScreen(),
-                },
+                child: IndexedStack(
+                  index: _index,
+                  children: [
+                    for (var i = 0; i < 4; i++)
+                      if (_opened.contains(i))
+                        switch (i) {
+                          0 => CustomerHomeScreen(
+                            onCalendar: () => _go(_calendarTab),
+                          ),
+                          _calendarTab => const CalendarScreen(),
+                          _accountTab => const AccountScreen(),
+                          _ => const HelpScreen(),
+                        }
+                      else
+                        const SizedBox.shrink(),
+                  ],
+                ),
               ),
             ],
           ),
@@ -232,6 +252,8 @@ class CustomerHomeScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final home = ref.watch(customerHomeProvider);
     return home.when(
+      skipLoadingOnReload: true,
+      skipError: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => ErrorView(
         message: e is ApiFailure ? e.message : null,
@@ -244,7 +266,7 @@ class CustomerHomeScreen extends ConsumerWidget {
         );
         final vehicle = h.vehicles.isEmpty ? null : h.vehicles[selected];
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(customerHomeProvider.future),
+          onRefresh: () => refreshAll(ref, () => ref.read(customerHomeProvider.future)),
           child: ListView(
             // Leaves room for the tab bar, which floats over the list.
             padding: const EdgeInsets.only(top: 14, bottom: 110),
@@ -272,10 +294,10 @@ class CustomerHomeScreen extends ConsumerWidget {
                 ),
               // A vehicle with no subscription has no daily service.
               if (vehicle != null && vehicle.subscriptionStatus != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Padding(
                   padding: _side,
-                  child: NextServiceCard(vehicle, onCalendar: onCalendar),
+                  child: ViewCalendarButton(onCalendar: onCalendar),
                 ),
               ],
               const SizedBox(height: 14),
@@ -350,6 +372,15 @@ class _VehicleCarouselState extends State<_VehicleCarousel> {
     viewportFraction: 0.86,
   );
 
+  /// The natural height of each card, once measured. Until then a guess.
+  final _heights = <int, double>{};
+  double get _height => _heights.values.fold(420.0, (m, h) => h > m ? h : m);
+
+  void _reportHeight(int index, double height) {
+    if ((_heights[index] ?? 0) == height || !mounted) return;
+    setState(() => _heights[index] = height);
+  }
+
   @override
   void didUpdateWidget(_VehicleCarousel old) {
     super.didUpdateWidget(old);
@@ -378,14 +409,16 @@ class _VehicleCarouselState extends State<_VehicleCarousel> {
     final l = AppLocalizations.of(context);
     final b = context.brand;
     final flat = MediaQuery.disableAnimationsOf(context);
-    // The card's content is a fixed number of text lines, so its height
-    // follows the text size setting.
-    final height = 90 + 82 * MediaQuery.textScalerOf(context).scale(1);
     return Column(
       children: [
+        // The row is as tall as the tallest card, measured below, so nothing
+        // overflows whatever the text size or the card's content.
         SizedBox(
-          height: height,
-          child: PageView.builder(
+          height: _height,
+          child: Stack(
+          children: [
+            Positioned.fill(
+              child: PageView.builder(
             controller: _controller,
             itemCount: widget.vehicles.length,
             onPageChanged: widget.onSelected,
@@ -406,11 +439,17 @@ class _VehicleCarouselState extends State<_VehicleCarousel> {
                   ),
                 );
               },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: _VehicleCard(widget.vehicles[i]),
+              child: _MeasuredPage(
+                onHeight: (h) => _reportHeight(i, h),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: _VehicleCard(widget.vehicles[i]),
+                ),
               ),
             ),
+          ),
+            ),
+          ],
           ),
         ),
         const SizedBox(height: 10),
@@ -434,6 +473,36 @@ class _VehicleCarouselState extends State<_VehicleCarousel> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lays its child out at its natural height inside a page of fixed height
+/// and reports that height, so the carousel can size itself to the tallest.
+class _MeasuredPage extends StatefulWidget {
+  const _MeasuredPage({required this.child, required this.onHeight});
+
+  final Widget child;
+  final ValueChanged<double> onHeight;
+
+  @override
+  State<_MeasuredPage> createState() => _MeasuredPageState();
+}
+
+class _MeasuredPageState extends State<_MeasuredPage> {
+  final _key = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = (_key.currentContext?.size?.height);
+      if (h != null && mounted) widget.onHeight(h);
+    });
+    return OverflowBox(
+      minHeight: 0,
+      maxHeight: double.infinity,
+      alignment: Alignment.topCenter,
+      child: KeyedSubtree(key: _key, child: widget.child),
     );
   }
 }
@@ -466,82 +535,124 @@ class _VehicleCard extends StatelessWidget {
         ),
       ],
     );
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
+    final photo = vehicle.photoUrl;
+    return Card(
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: vehicle.registration.isEmpty
-                          ? b.line
-                          : DarkTokens.text,
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: Text(
-                      vehicle.registration.isEmpty
-                          ? l.noRegistration
-                          : vehicle.registration,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.labelMedium?.copyWith(
-                        color: vehicle.registration.isEmpty
-                            ? b.mute
-                            : const Color(0xFF111111),
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+          // The vehicle photo from onboarding (HOME-02), or a car illustration.
+          SizedBox(
+            height: 130,
+            width: double.infinity,
+            child: photo == null || photo.isEmpty
+                ? const CarIllustration()
+                : MediaImage(photo, fallback: const CarIllustration()),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: vehicle.registration.isEmpty
+                                ? b.line
+                                : DarkTokens.text,
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            vehicle.registration.isEmpty
+                                ? l.noRegistration
+                                : vehicle.registration,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.labelMedium?.copyWith(
+                              color: vehicle.registration.isEmpty
+                                  ? b.mute
+                                  : const Color(0xFF111111),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: l.subscription,
+                      child: StatusChip(
+                        status ?? l.noSubscription,
+                        tone: status == null
+                            ? ChipTone.neutral
+                            : StatusChip.toneFor(status),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Semantics(
-                label: l.subscription,
-                child: StatusChip(
-                  status ?? l.noSubscription,
-                  tone: status == null
-                      ? ChipTone.neutral
-                      : StatusChip.toneFor(status),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              VehiclePhotoThumb(vehicle.id), // HOME-02
-              Expanded(
-                child: Text(
-                  [vehicle.make, vehicle.model, vehicle.variant].whereType<String>().where((s) => s.isNotEmpty).join(' '),
+                const SizedBox(height: 10),
+                Text(
+                  [vehicle.make, vehicle.model, vehicle.variant]
+                      .whereType<String>()
+                      .where((s) => s.isNotEmpty)
+                      .join(' '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.titleLarge,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          line(Symbols.location_on_rounded, vehicle.society),
-          const SizedBox(height: 4),
-          line(
-            Symbols.local_parking_rounded,
-            vehicle.parking.isEmpty ? l.noParking : vehicle.parking,
-          ),
-          const SizedBox(height: 4),
-          line(
-            Symbols.workspace_premium_rounded,
-            price == null ? l.noPlan : l.pricePerMonth(formatRupees(price)),
+                const SizedBox(height: 8),
+                // The plan name, with its price on the right.
+                Row(
+                  children: [
+                    Icon(Symbols.workspace_premium_rounded, size: 15, color: b.gold),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        (vehicle.planName ?? '').isNotEmpty
+                            ? vehicle.planName!
+                            : (price == null ? l.noPlan : ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleSmall,
+                      ),
+                    ),
+                    if (price != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        l.pricePerMonth(formatRupees(price)),
+                        style: text.bodySmall?.copyWith(color: b.mute),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                line(Symbols.location_on_rounded, vehicle.society),
+                const SizedBox(height: 4),
+                line(
+                  Symbols.local_parking_rounded,
+                  vehicle.parking.isEmpty ? l.noParking : vehicle.parking,
+                ),
+                // A vehicle with no subscription has no daily service.
+                if (status != null) ...[
+                  const SizedBox(height: 14),
+                  Divider(height: 1, color: b.line),
+                  const SizedBox(height: 14),
+                  NextServiceDetails(vehicle),
+                ],
+              ],
+            ),
           ),
         ],
       ),

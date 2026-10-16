@@ -24832,6 +24832,17 @@
             ],
             "title": "Monthly Price Rupees"
           },
+          "plan_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Name"
+          },
           "cutoff_time": {
             "anyOf": [
               {

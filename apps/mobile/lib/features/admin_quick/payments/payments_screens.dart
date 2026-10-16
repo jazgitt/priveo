@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
@@ -48,13 +49,15 @@ class _PaymentsState extends ConsumerState<PaymentsToConfirmScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.adminPaymentsTitle)),
       body: payments.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),
           onRetry: () => ref.invalidate(paymentsToConfirmProvider),
         ),
         data: (rows) => RefreshIndicator(
-          onRefresh: () => ref.refresh(paymentsToConfirmProvider.future),
+          onRefresh: () => refreshAll(ref, () => ref.read(paymentsToConfirmProvider.future)),
           child: rows.isEmpty
               ? ListView(
                   children: const [
@@ -132,6 +135,8 @@ class AdminAlertsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.adminAlertsTitle)),
       body: alerts.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

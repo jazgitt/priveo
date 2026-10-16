@@ -234,6 +234,8 @@ class _State extends ConsumerState<AddVehicleScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l.addVehicleTitle)),
       body: directory.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: e.toString(),

@@ -1,6 +1,7 @@
 // WP8: the FAQ (SUP-01, SUP-05), the feedback side tab (FDBK-01) and the
 // invoice page (SUB-12).
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -88,7 +89,7 @@ void main() {
           const [],
         ),
       );
-      final tab = find.text('Feedback');
+      final tab = find.byIcon(Symbols.feedback_rounded);
       expect(tab, findsOneWidget);
       final before = tester.getCenter(tab);
       await tester.drag(tab, const Offset(0, -120));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -75,7 +76,7 @@ class NotificationsScreen extends ConsumerWidget {
               return const Center(child: Text(CustStrings.notificationsEmpty));
             }
             return RefreshIndicator(
-              onRefresh: () => ref.refresh(inboxProvider.future),
+              onRefresh: () => refreshAll(ref, () => ref.read(inboxProvider.future)),
               child: ListView.separated(
                 padding: const EdgeInsets.all(20),
                 itemCount: data.items.length,

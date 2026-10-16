@@ -129,6 +129,8 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.skipTitle)),
       body: upcoming.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
             message: failureText(e), onRetry: _refresh),

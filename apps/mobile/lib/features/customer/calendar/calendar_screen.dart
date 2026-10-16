@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -103,6 +104,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final month = ref.watch(calendarMonthProvider(key));
     final text = Theme.of(context).textTheme;
     return month.when(
+      skipLoadingOnReload: true,
+      skipError: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => ErrorView(
         message: e is ApiFailure ? e.message : null,
@@ -124,7 +127,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             .where((r) => _dateOnly(r.date) == _selected)
             .firstOrNull
             ?.date;
-        return ListView(
+        return RefreshIndicator(
+          onRefresh: () => refreshAll(ref, () => ref.read(calendarMonthProvider(key).future)),
+          child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
           children: [
             Text(CustStrings.calendarTitle, style: text.displaySmall),
@@ -169,6 +175,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               renewal: renewal,
             ),
           ],
+        ),
         );
       },
     );

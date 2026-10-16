@@ -62,6 +62,8 @@ class OnboardingReviewScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: details.when(
+          skipLoadingOnReload: true,
+          skipError: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ErrorView(
             message: e is ApiFailure ? e.message : null,

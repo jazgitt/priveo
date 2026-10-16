@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/widgets.dart';
@@ -131,6 +132,8 @@ class _State extends ConsumerState<ManagerAttendanceScreen> {
           ),
           Expanded(
             child: attendance.when(
+              skipLoadingOnReload: true,
+              skipError: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => ErrorView(
                 message: failureText(e),
@@ -139,8 +142,10 @@ class _State extends ConsumerState<ManagerAttendanceScreen> {
               data: (a) => a.crew.isEmpty
                   ? Center(child: Text(CrewText.noCrew))
                   : RefreshIndicator(
-                      onRefresh: () =>
-                          ref.refresh(managerAttendanceProvider(key).future),
+                      onRefresh: () => refreshAll(
+                        ref,
+                        () => ref.refresh(managerAttendanceProvider(key).future),
+                      ),
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [

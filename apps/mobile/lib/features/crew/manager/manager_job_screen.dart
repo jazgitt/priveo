@@ -66,6 +66,8 @@ class _State extends ConsumerState<ManagerJobScreen> {
           final options =
               ref.watch(managerReassignOptionsProvider(widget.jobId));
           return options.when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const SizedBox(
                 height: 160,
                 child: Center(child: CircularProgressIndicator())),
@@ -113,6 +115,8 @@ class _State extends ConsumerState<ManagerJobScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(CrewText.jobTitle)),
       body: detail.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

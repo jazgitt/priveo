@@ -18,6 +18,8 @@ class ManagerHoursScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(CrewText.workingHours)),
       body: hours.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

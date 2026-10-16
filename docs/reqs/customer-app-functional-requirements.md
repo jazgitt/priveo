@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.12 (30-minute code, 16 Oct 2026): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.15 (one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -160,13 +160,14 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | ID | Requirement | Status |
 |---|---|---|
 | HOME-01 | Header with Priveo mark and a profile avatar (initials) that opens My Account. Greeting by time of day with the customer's first name. | Defined |
-| HOME-02 | Vehicle card: the customer's own vehicle photo from signup (always this photo, not the crew's service photos), registration plate, make and model, variant, society, parking location. | Defined (photo source: Owner) |
+| HOME-02 | One vehicle card holds the vehicle and its service details, with no separate service card below it. From the top: the customer's own vehicle photo from signup (always this photo, not the crew's service photos) as a picture across the card, or a default illustrated car if there is no photo; the registration plate with the subscription status (Active, Paused and so on) at the top right; make, model and variant; the subscription plan name with its monthly price; society and parking location; then the next service (HOME-04). A vehicle with no subscription shows "No subscription" and no next service. | Owner (16 Oct 2026) |
 | HOME-03 | "Today's clean is done" banner when today's service is complete: completion time, checks completed (for example 5 of 5), number of photos, and a "View proof" action that opens Service Details. | Defined |
-| HOME-04 | "Next service" card: status (for example Scheduled), date (for example "Tomorrow, Wed 07-Oct-26"), service type, the service cutoff time, and a "View service calendar" button. Once the visit is assigned, the card also shows the crew member's name and the assigned time (CAL-10). | Defined (assignment: Owner) |
+| HOME-04 | "Next service" section inside the vehicle card (HOME-02): status (for example Scheduled), date (for example "Tomorrow, Wed 07-Oct-26"), service type, and the cutoff time as "Planned before your cutoff time - 7:00 AM". Once the visit is assigned, it also shows the crew member's name and the assigned time (CAL-10). A "View service calendar" button sits below the vehicle card, outside it. | Owner (16 Oct 2026; assignment: Owner) |
 | HOME-05 | Quick actions: Skip or pause, Service history, Rate today's clean (opens Service Details), Report an issue. | Defined |
 | HOME-07 | A customer with more than one vehicle can switch the selected vehicle from Home. The selection carries over to the calendar, history, skip/pause and subscription screens. A customer with one vehicle sees no switcher. | Owner |
 | HOME-08 | A "Monthly check-in" card appears on Home from 4 days before the renewal date until the customer completes that cycle's check-in (CHK-08). Tapping it opens the check-in. | Owner |
 | HOME-09 | An "Add-ons" card on Home opens the add-on list (ADD-02). It is shown only for a vehicle with an Active subscription. | Owner |
+| HOME-10 | The app does not refresh screens on a timer. Data is read when a screen opens and once when the app returns to the foreground. A refresh never shows a loading state or flash: the current data stays on screen until the new data arrives. A loading indicator shows only on the first load of a screen. A bottom tab that has been opened stays loaded, so going back to it shows its data at once. | Owner |
 
 ---
 
@@ -386,7 +387,7 @@ An add-on is an optional extra service the customer buys separately from the pla
 
 | ID | Requirement | Status |
 |---|---|---|
-| FDBK-01 | A "side flick" feedback tab sits on the right edge of the screen. It is shown to every customer on every screen, but only after onboarding is completed, never during onboarding. Crew and admins do not see it. The customer can move the tab along the edge but cannot hide it. | Owner |
+| FDBK-01 | A "side flick" feedback tab sits on the right edge of the screen. It is a small icon only, with no visible text ("Feedback" is its screen-reader label). It is shown to every customer on every screen, but only after onboarding is completed, never during onboarding. Crew and admins do not see it. The customer can move the tab along the edge but cannot hide it. | Owner |
 | FDBK-02 | Tapping the tab (or "Give feedback" in Support) opens a feedback modal with three inputs: a category chosen from the list in FDBK-06, a star rating from 1 to 5, and comments (free text). | Owner |
 | FDBK-03 | Submitting shows a confirmation and sends the feedback to the Priveo team. The modal can be closed without submitting. | Owner |
 | FDBK-04 | The modal should be well designed and quick to use, with the star rating as a single tap. | Owner |

@@ -64,14 +64,13 @@ class GreetingLine extends ConsumerWidget {
   );
 }
 
-/// The next visit for the selected vehicle (HOME-04). Without a visit it
-/// shows the customer's service time and interior care day. Once the visit
-/// is assigned it adds the crew member and time (CAL-10).
-class NextServiceCard extends ConsumerWidget {
-  const NextServiceCard(this.vehicle, {super.key, required this.onCalendar});
+/// The next visit for a vehicle (HOME-04), shown inside the vehicle card.
+/// Without a visit it shows the customer's service time and interior care
+/// day. Once the visit is assigned it adds the crew member and time (CAL-10).
+class NextServiceDetails extends ConsumerWidget {
+  const NextServiceDetails(this.vehicle, {super.key});
 
   final VehicleCard vehicle;
-  final VoidCallback onCalendar;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -108,9 +107,7 @@ class NextServiceCard extends ConsumerWidget {
     );
     final crew = fromVisits?.crewName;
     final start = fromVisits?.startTime;
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -151,19 +148,26 @@ class NextServiceCard extends ConsumerWidget {
           if (cutoff != null)
             detail('Cleaning-External', l.dailyCleanBy(formatClock(cutoff))),
           if (day != null) detail('Cleaning-Internal', l.interiorCareOn(day)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onCalendar,
-              icon: const Icon(Symbols.calendar_month_rounded, size: 18),
-              label: Text(l.viewCalendar),
-            ),
-          ),
         ],
-      ),
     );
   }
+}
+
+/// "View service calendar", below the vehicle card and outside it.
+class ViewCalendarButton extends StatelessWidget {
+  const ViewCalendarButton({super.key, required this.onCalendar});
+
+  final VoidCallback onCalendar;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      onPressed: onCalendar,
+      icon: const Icon(Symbols.calendar_month_rounded, size: 18),
+      label: Text(AppLocalizations.of(context).viewCalendar),
+    ),
+  );
 }
 
 /// The prototype's service markers: a green dot for exterior, a blue square

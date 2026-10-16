@@ -157,6 +157,7 @@ const customerJson = {
       'parking': 'B2-14',
       'subscription_status': 'Active',
       'monthly_price_rupees': 1299,
+      'plan_name': 'Daily Premium',
       'cutoff_time': '07:00',
       'interior_day': 'Friday',
       'next_service': {

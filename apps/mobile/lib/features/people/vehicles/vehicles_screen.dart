@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -24,6 +25,8 @@ class VehiclesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(_s.vehiclesTitle)),
       body: home.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             ErrorView(onRetry: () => ref.invalidate(customerHomeProvider)),
@@ -35,7 +38,7 @@ class VehiclesScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () => ref.refresh(customerHomeProvider.future),
+                onRefresh: () => refreshAll(ref, () => ref.read(customerHomeProvider.future)),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -121,6 +124,8 @@ class VehicleDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(_s.vehicleDetails)),
       body: home.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             ErrorView(onRetry: () => ref.invalidate(customerHomeProvider)),

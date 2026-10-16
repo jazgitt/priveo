@@ -71,6 +71,8 @@ class _State extends ConsumerState<CrewProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(CrewText.profile)),
       body: profile.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

@@ -164,6 +164,8 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.standalone ? MoneyStrings.standaloneTitle : MoneyStrings.addonTitle)),
       body: addons.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),
@@ -382,6 +384,8 @@ class StandaloneDeepSpaScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.standaloneTitle)),
       body: home.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => ErrorView(onRetry: () => ref.invalidate(customerHomeProvider)),
         data: (h) => ListView(children: [

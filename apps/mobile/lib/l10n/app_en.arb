@@ -54,7 +54,7 @@
   "viewCalendar": "View service calendar",
   "nextService": "Next service",
   "notScheduledYet": "Not scheduled yet",
-  "dailyCleanBy": "Daily clean by {time}",
+  "dailyCleanBy": "Planned before your cutoff time - {time}",
   "@dailyCleanBy": {
     "placeholders": {
       "time": {

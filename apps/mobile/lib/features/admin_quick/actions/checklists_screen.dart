@@ -14,6 +14,8 @@ class AdminChecklistsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(title: const Text('Cleaning checklists')),
     body: ref.watch(adminChecklistsProvider).when(
+      skipLoadingOnReload: true,
+      skipError: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, _) => ErrorView(onRetry: () => ref.invalidate(adminChecklistsProvider)),
       data: (lists) => ListView(children: [

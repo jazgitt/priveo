@@ -36,6 +36,8 @@ class InvoiceScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.invoiceTitle)),
       body: invoice.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),

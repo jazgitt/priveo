@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'feedback_sheet.dart';
 import 'support_strings.dart';
 
 /// The "side flick" feedback tab on the right edge (FDBK-01). The customer
 /// can drag it up and down the edge. There is no way to hide it. Tapping it
-/// opens the feedback sheet. Put it over the customer's screens only after
+/// opens the feedback sheet. It shows only a small icon; the word "Feedback"
+/// is its screen-reader label. (No Tooltip: this sits above the Navigator, so
+/// there is no Overlay.) Put it over the customer's screens only after
 /// onboarding.
 class FeedbackSideTab extends StatefulWidget {
   const FeedbackSideTab({super.key, required this.child, this.onOpen});
@@ -20,8 +23,8 @@ class FeedbackSideTab extends StatefulWidget {
 }
 
 class _FeedbackSideTabState extends State<FeedbackSideTab> {
-  static const _height = 112.0;
-  static const _width = 40.0;
+  static const _height = 44.0;
+  static const _width = 34.0;
   static const _radius = BorderRadius.horizontal(left: Radius.circular(14));
 
   /// The tab's top as a share of the free height, so a resize keeps it in
@@ -58,16 +61,10 @@ class _FeedbackSideTabState extends State<FeedbackSideTab> {
                         width: _width,
                         height: _height,
                         child: Center(
-                          child: RotatedBox(
-                            quarterTurns: 3,
-                            child: Text(
-                              t('support_feedback_tab'),
-                              style: TextStyle(
-                                color: scheme.onPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
+                          child: Icon(
+                            Symbols.feedback_rounded,
+                            size: 20,
+                            color: scheme.onPrimary,
                           ),
                         ),
                       ),

@@ -28,7 +28,7 @@ void main() {
     await ticks.close();
   });
 
-  testWidgets('refresh pauses in background and emits on resume', (tester) async {
+  testWidgets('refresh emits once on resume and never on a timer', (tester) async {
     final container = ProviderContainer();
     final pulses = <int>[];
     final sub = container.listen(readRefreshProvider, (_, value) {
@@ -41,8 +41,9 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(pulses.length, 1);
-    await tester.pump(const Duration(seconds: 30));
-    expect(pulses.length, 2);
+    // There is no polling: time passing in the foreground emits nothing.
+    await tester.pump(const Duration(seconds: 90));
+    expect(pulses.length, 1);
     sub.close();
     container.dispose();
   });

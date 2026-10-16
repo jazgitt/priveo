@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/auth/session.dart';
+import 'package:priveo/features/customer/home/car_illustration.dart';
 import 'package:priveo/features/customer/home/customer_home_data.dart';
 import 'package:priveo/features/customer/onboarding/onboarding_review_screen.dart';
 import 'package:priveo/core/routing/router.dart';
@@ -57,9 +58,22 @@ void main() {
       expect(find.text('MH 12 AB 1234'), findsOneWidget);
       expect(find.text('₹1,299 a month'), findsOneWidget);
       expect(find.text('07-Nov-26'), findsOneWidget);
-      expect(find.text('Daily clean by 7:00 AM'), findsOneWidget);
+      expect(find.text('Planned before your cutoff time - 7:00 AM'), findsOneWidget);
       expect(find.text('Interior care on Friday'), findsOneWidget);
       expect(find.bySemanticsLabel('Vehicle 1 of 3'), findsOneWidget);
+    });
+
+    testWidgets('one card holds image, plan name and next service; the calendar button is outside it',
+        (tester) async {
+      await openAsCustomer(tester);
+      // No vehicle photo: the default car illustration shows.
+      expect(find.byType(CarIllustration), findsWidgets);
+      expect(find.text('Daily Premium'), findsOneWidget);
+      final nextService = find.text('Planned before your cutoff time - 7:00 AM');
+      expect(find.ancestor(of: nextService, matching: find.byType(Card)), findsWidgets);
+      final calendar = find.text('View service calendar');
+      expect(calendar, findsOneWidget);
+      expect(find.ancestor(of: calendar, matching: find.byType(Card)), findsNothing);
     });
 
     testWidgets('swiping selects the next vehicle', (tester) async {
@@ -75,7 +89,7 @@ void main() {
       expect(find.text('Number to be added'), findsOneWidget);
       expect(find.text('Parking to be added'), findsOneWidget);
       expect(find.text('Not scheduled yet'), findsOneWidget);
-      expect(find.text('Daily clean by 6:30 AM'), findsOneWidget);
+      expect(find.text('Planned before your cutoff time - 6:30 AM'), findsOneWidget);
       expect(find.text('07-Nov-26'), findsNothing);
 
       // A vehicle with no subscription has no service card.

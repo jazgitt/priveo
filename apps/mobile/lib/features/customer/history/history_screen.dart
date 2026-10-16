@@ -124,6 +124,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       body: Column(
         children: [
           ref.watch(importedHistoryProvider).when(
+            skipLoadingOnReload: true,
+            skipError: true,
             loading: () => const SizedBox.shrink(),
             error: (_, _) => TextButton(onPressed: () => ref.invalidate(importedHistoryProvider),
                 child: const Text('Retry imported service history')),
@@ -191,7 +193,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     if (_items.isEmpty) {
       return Center(child: Text(VisitStrings.historyMonthEmpty));
     }
-    return ListView.separated(
+    return RefreshIndicator(
+          onRefresh: () => refreshAll(ref),
+          child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       itemCount: _items.length + (_more ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -254,6 +259,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         );
       },
-    );
+    ),
+        );
   }
 }

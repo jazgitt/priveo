@@ -3,23 +3,33 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Active read providers refresh every 30 seconds and immediately on resume.
-/// Forms retain their local edits; only watched queries issue network reads.
-final readRefreshProvider = StreamProvider<int>((ref) {
-  final pulse = _ReadPulse();
+/// Active read providers refresh once when the app returns to the foreground.
+/// There is no timer and no polling. Forms retain their local edits; only
+/// watched queries issue network reads. Screens keep their data on screen
+/// while a refresh runs (see `skipLoadingOnReload` on their `.when` calls).
+final readPulseProvider = Provider<ReadPulse>((ref) {
+  final pulse = ReadPulse();
   ref.onDispose(pulse.dispose);
-  return pulse.stream;
+  return pulse;
 });
 
-class _ReadPulse with WidgetsBindingObserver {
-  _ReadPulse() {
+final readRefreshProvider =
+    StreamProvider<int>((ref) => ref.watch(readPulseProvider).stream);
+
+/// Pull to refresh on any screen: refreshes the data of every open screen at
+/// once, not only the one pulled. [read] reads this screen's own data so the
+/// pull spinner ends when it has arrived.
+Future<void> refreshAll(WidgetRef ref, [Future<Object?> Function()? read]) async {
+  ref.read(readPulseProvider).refresh();
+  await Future<void>.delayed(Duration.zero); // lets the pulse reach the providers
+  if (read != null) await read();
+}
+
+class ReadPulse with WidgetsBindingObserver {
+  ReadPulse() {
     WidgetsBinding.instance.addObserver(this);
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (_active) _controller.add(++_revision);
-    });
   }
   final _controller = StreamController<int>();
-  late final Timer _timer;
   int _revision = 0;
   bool _active = WidgetsBinding.instance.lifecycleState == null ||
       WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
@@ -31,8 +41,12 @@ class _ReadPulse with WidgetsBindingObserver {
     if (_active) _controller.add(++_revision);
   }
 
+  /// Tells every watching read to load again.
+  void refresh() {
+    if (!_controller.isClosed) _controller.add(++_revision);
+  }
+
   void dispose() {
-    _timer.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller.close();
   }

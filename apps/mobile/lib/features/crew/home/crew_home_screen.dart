@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/widgets.dart';
@@ -59,16 +60,18 @@ class CrewHomeScreen extends ConsumerWidget {
         ],
       ),
       body: visits.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),
           onRetry: () => ref.invalidate(crewVisitsProvider(key)),
         ),
         data: (v) => RefreshIndicator(
-          onRefresh: () {
+          onRefresh: () => refreshAll(ref, () {
             ref.invalidate(crewProfileProvider);
             return ref.refresh(crewVisitsProvider(key).future);
-          },
+          }),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [

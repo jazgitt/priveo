@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../../core/network/read_refresh.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -140,6 +141,8 @@ class CrewNotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: inbox.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
           message: failureText(e),
@@ -150,7 +153,7 @@ class CrewNotificationsScreen extends ConsumerWidget {
             return const Center(child: Text(CrewNotificationText.empty));
           }
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(crewInboxProvider.future),
+            onRefresh: () => refreshAll(ref, () => ref.refresh(crewInboxProvider.future)),
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: data.items.length,

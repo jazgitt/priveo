@@ -6,6 +6,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/ui/widgets.dart';
 import 'package:priveo/features/customer/home/home_schedule.dart';
@@ -132,7 +133,7 @@ void main() {
 
     testWidgets('C09 sends feedback from the side tab', (tester) async {
       await home(tester, 'C09');
-      await tapFinder(tester, find.text('Feedback'));
+      await tapFinder(tester, find.byIcon(Symbols.feedback_rounded));
       await untilFound(tester, find.text('Your rating'));
       await until(
         tester,

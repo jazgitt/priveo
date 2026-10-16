@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/network/read_refresh.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/ui/widgets.dart';
@@ -45,11 +46,16 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.subTitle)),
       body: sub.when(
+        skipLoadingOnReload: true,
+        skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
             message: failureText(e),
             onRetry: () => ref.invalidate(subscriptionProvider(widget.vehicleId))),
-        data: (s) => ListView(
+        data: (s) => RefreshIndicator(
+          onRefresh: () => refreshAll(ref, () => ref.read(subscriptionProvider(widget.vehicleId).future)),
+          child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             _PlanCard(s),
@@ -121,6 +127,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 child: const Text(MoneyStrings.addons),
               ),
           ],
+        ),
         ),
       ),
     );

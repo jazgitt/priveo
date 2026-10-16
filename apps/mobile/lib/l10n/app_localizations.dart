@@ -337,7 +337,7 @@ abstract class AppLocalizations {
   /// No description provided for @dailyCleanBy.
   ///
   /// In en, this message translates to:
-  /// **'Daily clean by {time}'**
+  /// **'Planned before your cutoff time - {time}'**
   String dailyCleanBy(String time);
 
   /// No description provided for @interiorCareOn.
