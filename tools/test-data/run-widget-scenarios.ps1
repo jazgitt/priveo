@@ -13,7 +13,9 @@
 param(
     [int]$Port = 8011,
     # Pass a test name fragment to run a subset, for example "C20".
-    [string]$Name = ''
+    [string]$Name = '',
+    # A test file or folder under apps/mobile, for example test/scenarios/scenario_crew_test.dart.
+    [string]$Path = 'test/scenarios'
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -57,7 +59,7 @@ try {
     Push-Location (Join-Path $repoRoot 'apps/mobile')
     try {
         $args = @(
-            'test', 'test/scenarios',
+            'test', $Path,
             "--dart-define=SCENARIO_API_URL=http://127.0.0.1:$Port",
             "--dart-define=SCENARIO_MANIFEST_FILE=$manifest",
             "--dart-define=SCENARIO_PASSWORD=$customerPassword",

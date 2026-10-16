@@ -48,6 +48,8 @@ jobs:
       - name: Free disk space for the emulator
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/share/swift
+          sudo rm -rf /usr/local/.ghcup /usr/share/miniconda /usr/lib/google-cloud-sdk /opt/az /opt/hostedtoolcache/go /opt/hostedtoolcache/Ruby /opt/hostedtoolcache/PyPy
+          sudo docker system prune -af > /dev/null 2>&1 || true
           df -h /
 
       - uses: actions/setup-java@v4
@@ -82,7 +84,12 @@ jobs:
       # starves the emulator of CPU and it stops responding.
       - name: Pre-build the app
         working-directory: apps/mobile
-        run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
+        run: |
+          flutter build apk --debug --flavor dev -t lib/main_dev.dart
+          # Free the daemon's memory and the build output the emulator run does not reuse.
+          (cd android && ./gradlew --stop) || true
+          rm -rf build/app/outputs
+          df -h /
 
       - name: Sign in as each role on an emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -91,7 +98,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          disk-size: 4096M
+          disk-size: 2048M
           working-directory: apps/mobile
           script: flutter test integration_test/logins_test.dart --dart-define=API_BASE_URL="$API_DEV_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
 
@@ -109,6 +116,8 @@ jobs:
       - name: Free disk space for the emulator
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/share/swift
+          sudo rm -rf /usr/local/.ghcup /usr/share/miniconda /usr/lib/google-cloud-sdk /opt/az /opt/hostedtoolcache/go /opt/hostedtoolcache/Ruby /opt/hostedtoolcache/PyPy
+          sudo docker system prune -af > /dev/null 2>&1 || true
           df -h /
 
       - uses: actions/setup-python@v5
@@ -183,7 +192,12 @@ jobs:
       # starves the emulator of CPU and it stops responding.
       - name: Pre-build the app
         working-directory: apps/mobile
-        run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
+        run: |
+          flutter build apk --debug --flavor dev -t lib/main_dev.dart
+          # Free the daemon's memory and the build output the emulator run does not reuse.
+          (cd android && ./gradlew --stop) || true
+          rm -rf build/app/outputs
+          df -h /
 
       - name: Check manifest scenarios on an emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -192,7 +206,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          disk-size: 4096M
+          disk-size: 2048M
           working-directory: apps/mobile
           # 10.0.2.2 is the emulator's name for the runner.
           script: flutter test integration_test/scenarios_test.dart --dart-define=API_BASE_URL="http://10.0.2.2:$FIXTURE_PORT" --dart-define=SCENARIO_MANIFEST="$(cat $RUNNER_TEMP/fixture/manifest.compact.json)" --dart-define=SCENARIO_PASSWORD="$SCENARIO_PASSWORD" --dart-define=SCENARIO_ADMIN_PASSWORD="$SCENARIO_ADMIN_PASSWORD"
