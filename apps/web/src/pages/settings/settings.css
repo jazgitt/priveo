@@ -1,4 +1,0 @@
-.set-stack { display: flex; flex-direction: column; gap: 1rem; }
-.set-row { padding: 0.5rem 0 0.75rem; border-bottom: 1px solid var(--c-line); }
-.set-row:last-child { border-bottom: 0; }
-.set-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: -0.5rem; }

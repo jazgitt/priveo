@@ -100,7 +100,12 @@ def test_onboard_without_import_and_duplicate_email_opens_existing(client, direc
     repeat = client.post("/v1/admin/customers", headers=admin, json=body).json()
     assert repeat["existing"] and repeat["id"] == c["id"]
     assert len(list(db.scalars(select(Customer).where(Customer.email == body["email"])))) == 1
-    assert client.get("/v1/admin/customers?q=asha%20rao", headers=admin).status_code == 200
+    listed = client.get("/v1/admin/customers?q=asha%20rao", headers=admin)
+    assert listed.status_code == 200
+    row = next(r for r in listed.json() if r["id"] == c["id"])
+    assert row["flat"] == "A-12" and not row["password_set"] and not row["email_verified"]
+    assert row["vehicles"] == [{"id": v["id"], "registration": v["registration"],
+                                "status": "Activating"}]
 
 
 def test_customer_adds_vehicle_in_another_society_and_cannot_confirm_payment(client, directory, db):

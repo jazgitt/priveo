@@ -367,15 +367,38 @@ def list_customers(
         )
     if society_id:
         query = query.where(Society.id == society_id)
+    found = list(db.scalars(query.distinct().order_by(
+        Customer.first_name, Customer.last_name, Customer.id).limit(limit).offset(offset)))
+    # Each row also carries its vehicles and onboarding state, so the portal list
+    # shows them without opening every customer (one query each, not per row).
+    ids = [c.id for c in found]
+    vehicles: dict[uuid.UUID, list[dict]] = {i: [] for i in ids}
+    for v, status in db.execute(
+        select(Vehicle, Subscription.status)
+        .outerjoin(Subscription, Subscription.vehicle_id == Vehicle.id)
+        .where(Vehicle.customer_id.in_(ids), Vehicle.active.is_(True))
+        .order_by(Vehicle.created_at)
+    ) if ids else []:
+        vehicles[v.customer_id].append(
+            {"id": str(v.id), "registration": show_registration(v.registration), "status": status}
+        )
+    password_set = dict(db.execute(
+        select(Login.id, Login.password_hash.is_not(None))
+        .where(Login.id.in_([c.login_id for c in found]))
+    ).all()) if ids else {}
     return [
         {
             "id": str(c.id),
             "name": f"{c.first_name} {c.last_name}",
             "email": c.email,
             "mobile": c.mobile,
+            "flat": c.flat,
+            "email_verified": c.email_verified_at is not None,
+            "password_set": bool(password_set.get(c.login_id)),
+            "onboarding_confirmed": c.onboarding_confirmed_at is not None,
+            "vehicles": vehicles[c.id],
         }
-        for c in db.scalars(query.distinct().order_by(
-            Customer.first_name, Customer.last_name, Customer.id).limit(limit).offset(offset))
+        for c in found
     ]
 
 

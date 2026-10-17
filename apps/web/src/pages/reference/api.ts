@@ -1,15 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError } from "../../api/client";
+import { useAppMutation } from "../../blocks/mutation";
 
 export const BASE = "/v1/admin/directory";
 
-/** Every directory read shares the "directory" key, so one save refreshes them all. */
+/**
+ * Every directory read shares the "directory" key, so one save refreshes them all.
+ * While a new search or filter loads, the rows already shown stay on screen
+ * instead of flashing to a loading state.
+ */
 export function useDirectory<T>(path: string, enabled = true) {
   return useQuery({
     queryKey: ["directory", path],
     queryFn: () => api<T>(`${BASE}${path}`),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -25,6 +31,15 @@ export function useDirMutation<T = unknown>() {
     mutationFn: (c: DirCall) =>
       api<T>(`${BASE}${c.path}`, { method: c.method ?? "POST", body: c.body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["directory"] }),
+  });
+}
+
+/** A directory change with the Saving / Saved toast; every directory read refreshes after it. */
+export function useDirSave() {
+  return useAppMutation<DirCall & { done: string }>({
+    mutationFn: (c) => api(`${BASE}${c.path}`, { method: c.method ?? "POST", body: c.body }),
+    success: (_d, c) => c.done,
+    invalidate: [["directory"]],
   });
 }
 

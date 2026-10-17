@@ -1,15 +1,12 @@
-import { Card } from "../components";
+import { EmptyState, PageHeader } from "../blocks/layout";
 import type { NavItem } from "../nav";
 
 /** An area whose screens are not built yet. */
 export function Placeholder({ item }: { item: NavItem }) {
   return (
     <>
-      <h1 className="page-title">{item.label}</h1>
-      <Card>
-        <p>{item.about}</p>
-        <p className="muted">This area is not built yet.</p>
-      </Card>
+      <PageHeader title={item.label} description={item.about} />
+      <EmptyState title="Not built yet">This area is not built yet.</EmptyState>
     </>
   );
 }

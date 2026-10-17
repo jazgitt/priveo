@@ -1,17 +1,24 @@
-import { useState, type CSSProperties } from "react";
+import { LockOpen, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
 
-import { ApiError } from "../../api/client";
-import { ApiErrorNote } from "../../components/ApiErrorNote";
-import { showDate } from "../../components/format";
-import { Button, Card, Dialog, SelectField, TextField, useToast } from "../../components";
+import { ApiError } from "@/api/client";
+import { useConfirm } from "@/blocks/confirm";
+import { Field, SelectBox } from "@/blocks/fields";
+import { BusyButton, FormDialog } from "@/blocks/FormDialog";
+import { DetailList, ErrorState, Panel } from "@/blocks/layout";
+import { errorMessage, useAppMutation } from "@/blocks/mutation";
+import { StatusBadge } from "@/blocks/status";
+import { showDate, showDateTime } from "@/components/format";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Skeleton } from "@/ui/skeleton";
+
 import {
   EXCEPTION_KINDS, ROLES, useCrewActions, useCrewList, useDefaultHours, useSessions,
   type Crew, type CrewException, type CrewPassword, type DayHours, type ReleasedJob,
 } from "./api";
 import { HoursEditor } from "./HoursEditor";
 import { PasswordDialog, ReleasedJobs } from "./shared";
-
-const row: CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" };
 
 function useMembers(crew: Crew) {
   const list = useCrewList(crew.society_id);
@@ -22,130 +29,144 @@ function fieldsOf(e: unknown): Record<string, string> {
   return e instanceof ApiError ? e.fields : {};
 }
 
+/** Runs one crew action with the Saving / Saved toast, and keeps the jobs it released. */
+function useCrewRun(setReleased?: (j: ReleasedJob[]) => void) {
+  return useAppMutation<{ go: () => Promise<unknown>; done: string }, unknown>({
+    mutationFn: (v) => v.go(),
+    success: (_d, v) => v.done,
+    onSuccess: (r) => {
+      const jobs = (r as { released_jobs?: ReleasedJob[] } | undefined)?.released_jobs;
+      if (jobs && setReleased) setReleased(jobs);
+    },
+  });
+}
+
+const kindChoices = EXCEPTION_KINDS.map((k) => ({ value: k, label: k }));
+
 /** ADM-CRW-02: name and mobile. The society is changed in the Society panel (ADM-CRW-22). */
 export function DetailsPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const { edit, unlock } = useCrewActions(crew.id);
+  const run = useCrewRun();
   const [name, setName] = useState(crew.name);
   const [mobile, setMobile] = useState(crew.mobile);
   const changed = name.trim() !== crew.name || mobile.trim() !== crew.mobile;
+  const mobileChanged = mobile.trim() !== crew.mobile;
   const fe = fieldsOf(edit.error);
+  const save = async () => {
+    if (mobileChanged && !await confirm({
+      title: "Change the mobile number?",
+      description: `${mobile.trim()} becomes ${crew.name}'s login ID, and they are signed out on every phone.`,
+      confirmLabel: "Save details",
+    })) return;
+    run.mutate({ go: () => edit.mutateAsync({ name: name.trim(), mobile: mobile.trim() }), done: "Details saved." });
+  };
   return (
-    <Card title="Details">
-      <p className="muted">Society: {crew.society}. To move to another society, open the Society tab.</p>
-      <div style={row}>
-        <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} error={fe.name} />
-        <TextField label="Mobile number" value={mobile} onChange={(e) => setMobile(e.target.value)}
-                   error={fe.mobile}
-                   hint="A new number is the new login ID and signs the crew member out." />
-        <Button disabled={!changed} busy={edit.isPending} onClick={() => edit.mutate(
-          { name: name.trim(), mobile: mobile.trim() },
-          { onSuccess: () => toast.show("Details saved.", "ok") })}>Save details</Button>
-      </div>
-      <ApiErrorNote error={edit.error} />
+    <div className="flex flex-col gap-6">
+      <Panel title="Details" description={`Society: ${crew.society}. To move to another society, open the Society tab.`}>
+        <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              onSubmit={(e) => { e.preventDefault(); if (changed) void save(); }}>
+          <Field label="Name" error={fe.name}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
+          <Field label="Mobile number" error={fe.mobile} hint="A new number is the new login ID and signs the crew member out.">
+            {(p) => <Input {...p} inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} />}
+          </Field>
+          <BusyButton type="submit" className="sm:mb-5" disabled={!changed} busy={run.isPending}>Save details</BusyButton>
+        </form>
+      </Panel>
       {crew.locked && (
-        <p>
-          This login is locked after wrong attempts.{" "}
-          <Button variant="secondary" busy={unlock.isPending}
-                  onClick={() => unlock.mutate(undefined, { onSuccess: () => toast.show("Unlocked.", "ok") })}>
-            Unlock
-          </Button>
-        </p>
+        <Panel title="Locked login" description="This login is locked after wrong password attempts.">
+          <BusyButton variant="outline" busy={run.isPending} onClick={async () => {
+            if (await confirm({ title: `Unlock ${crew.name}?`, description: "They can sign in again with their password.", confirmLabel: "Unlock" })) {
+              run.mutate({ go: () => unlock.mutateAsync(), done: "Unlocked." });
+            }
+          }}><LockOpen aria-hidden /> Unlock</BusyButton>
+        </Panel>
       )}
-      <ApiErrorNote error={unlock.error} />
-    </Card>
+    </div>
   );
 }
 
 /** ADM-CRW-03, -16, -19: role change and Trainee pairing. */
 export function RolePanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const { role: setRole, pair } = useCrewActions(crew.id);
   const members = useMembers(crew);
   const [role, setRoleValue] = useState(crew.role);
   const [mate, setMate] = useState(crew.paired_member_id ?? "");
   const [released, setReleased] = useState<ReleasedJob[]>([]);
+  const run = useCrewRun(setReleased);
   const needsMate = role === "Trainee";
   const roleChanged = role !== crew.role;
   const fe = fieldsOf(setRole.error ?? pair.error);
+  const mateName = members.find((m) => m.id === mate)?.name;
+
+  const changeRole = async () => {
+    if (await confirm({
+      title: `Make ${crew.name} a ${role}?`,
+      description: role === "Trainee"
+        ? `A Trainee adds no capacity and gets ${mateName ?? "the paired Member"}'s jobs. ${crew.name}'s own jobs go to Needs scheduling.`
+        : "Jobs that no longer fit go to Needs scheduling.",
+      confirmLabel: "Change role",
+    })) run.mutate({ go: () => setRole.mutateAsync({ role, paired_member_id: needsMate ? mate : null }), done: `Role is now ${role}.` });
+  };
 
   return (
-    <Card title="Role and pairing">
-      <p>Role now: <strong>{crew.role}</strong>
-        {crew.role === "Trainee" && crew.paired_member ? `, paired with ${crew.paired_member}` : ""}.
-      </p>
-      <p className="muted">A Trainee adds no capacity and gets the jobs of the paired Member.</p>
-      <div style={row}>
-        <SelectField label="Role" value={role} onChange={(e) => setRoleValue(e.target.value)} error={fe.role}>
-          {ROLES.map((r) => <option key={r}>{r}</option>)}
-        </SelectField>
-        {needsMate && (
-          <SelectField label="Paired Member" value={mate} onChange={(e) => setMate(e.target.value)}
-                       error={fe.paired_member_id}>
-            <option value="">Choose</option>
-            {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </SelectField>
-        )}
+    <Panel title="Role and pairing" description="A Trainee adds no capacity and gets the jobs of the paired Member.">
+      <DetailList columns={2} className="mb-5" items={[
+        { label: "Role now", value: crew.role },
+        { label: "Paired with", value: crew.role === "Trainee" ? crew.paired_member : "Not a Trainee" },
+      ]} />
+      <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,16rem)_auto]">
+        <Field label="Role" error={fe.role}>
+          {(p) => <SelectBox {...p} value={role} onChange={setRoleValue} choices={ROLES.map((r) => ({ value: r, label: r }))} />}
+        </Field>
+        {needsMate ? (
+          <Field label="Paired Member" error={fe.paired_member_id} hint={members.length === 0 ? "No active Member in this society." : undefined}>
+            {(p) => <SelectBox {...p} value={mate} onChange={setMate} choices={members.map((m) => ({ value: m.id, label: m.name }))} />}
+          </Field>
+        ) : <span />}
         {roleChanged && (
-          <Button busy={setRole.isPending} disabled={needsMate && mate === ""}
-                  onClick={() => setRole.mutate(
-                    { role, paired_member_id: needsMate ? mate : null },
-                    { onSuccess: (r) => {
-                      setReleased(r.released_jobs);
-                      toast.show(`Role is now ${r.crew.role}.`, "ok");
-                    } })}>
-            Change role
-          </Button>
+          <BusyButton busy={run.isPending} disabled={needsMate && mate === ""} onClick={() => void changeRole()}>Change role</BusyButton>
         )}
         {!roleChanged && crew.role === "Trainee" && (
-          <Button busy={pair.isPending} disabled={mate === "" || mate === crew.paired_member_id}
-                  onClick={() => pair.mutate({ paired_member_id: mate },
-                    { onSuccess: () => toast.show("Pairing saved.", "ok") })}>
+          <BusyButton busy={run.isPending} disabled={mate === "" || mate === crew.paired_member_id}
+                      onClick={() => run.mutate({ go: () => pair.mutateAsync({ paired_member_id: mate }), done: "Pairing saved." })}>
             Change pairing
-          </Button>
+          </BusyButton>
         )}
       </div>
-      <ApiErrorNote error={setRole.error ?? pair.error} />
       <ReleasedJobs jobs={released} />
-    </Card>
+    </Panel>
   );
 }
 
 /** ADM-CRW-04, -05: hours for each weekday, applied from today on. */
 export function HoursPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
   const { hours: save } = useCrewActions(crew.id);
   const [hours, setHours] = useState<DayHours[]>(crew.working_hours);
   const [released, setReleased] = useState<ReleasedJob[]>([]);
+  const run = useCrewRun(setReleased);
   const defaults = useDefaultHours(crew.society_id);
   return (
-    <Card title="Working hours">
-      <p className="muted">
-        A day can have several slots, for example 05:00 to 13:00 and 17:00 to 19:00. Use
-        "+ Add slot" on a day.
-      </p>
+    <Panel title="Working hours"
+           description="A day can have several slots, for example 05:00 to 13:00 and 17:00 to 19:00. A change applies from today on; jobs that no longer fit go to Needs scheduling."
+           actions={<Button size="sm" variant="outline" disabled={!defaults.data} onClick={() => defaults.data && setHours(defaults.data)}>
+             Use {crew.society} working slots
+           </Button>}>
       <HoursEditor value={hours} onChange={setHours} error={fieldsOf(save.error).working_hours} />
-      <p>
-        <Button variant="secondary" disabled={!defaults.data}
-                onClick={() => defaults.data && setHours(defaults.data)}>
-          Use {crew.society} working slots
-        </Button>
-      </p>
-      <p className="muted">A change applies from today on. Jobs that no longer fit go to Needs scheduling.</p>
-      <Button busy={save.isPending} onClick={() => save.mutate(hours, {
-        onSuccess: (r) => {
-          setReleased(r.released_jobs);
-          toast.show("Working hours saved.", "ok");
-        } })}>Save working hours</Button>
-      <ApiErrorNote error={save.error} />
+      <div className="mt-4 flex justify-end">
+        <BusyButton busy={run.isPending} onClick={() => run.mutate({ go: () => save.mutateAsync(hours), done: "Working hours saved." })}>
+          Save working hours
+        </BusyButton>
+      </div>
       <ReleasedJobs jobs={released} />
-    </Card>
+    </Panel>
   );
 }
 
 /** ADM-CRW-08 to -12: Sick, Leave and Late start, one date or a range. */
 export function ExceptionsPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const act = useCrewActions(crew.id);
   const [kind, setKind] = useState<string>("Sick");
   const [from, setFrom] = useState("");
@@ -153,201 +174,172 @@ export function ExceptionsPanel({ crew }: { crew: Crew }) {
   const [start, setStart] = useState("");
   const [released, setReleased] = useState<ReleasedJob[]>([]);
   const [editing, setEditing] = useState<CrewException | null>(null);
-  const [eKind, setEKind] = useState("Sick");
-  const [eStart, setEStart] = useState("");
+  const run = useCrewRun(setReleased);
   const fe = fieldsOf(act.addException.error);
-  const after = (m: string) => ({
-    onSuccess: (r: { released_jobs: ReleasedJob[] }) => {
-      setReleased(r.released_jobs);
-      toast.show(m, "ok");
+  const order = from && to && to < from ? "The last day must be on or after the first." : undefined;
+  const label = (x: CrewException) => `${x.kind}${x.kind === "Late start" ? ` from ${x.start}` : ""}`;
+
+  const add = () => run.mutate({
+    go: async () => {
+      const r = await act.addException.mutateAsync({ kind, from_date: from, to_date: to || null, start: kind === "Late start" ? start : "" });
+      setFrom(""); setTo("");
+      return r;
     },
+    done: "Exception saved.",
   });
-  const upcoming = crew.exceptions;
 
   return (
-    <Card title="Exceptions">
-      {upcoming.length === 0 ? <p className="muted">No upcoming exceptions.</p> : (
-        <ul>
-          {upcoming.map((x) => (
-            <li key={x.id}>
-              {showDate(x.date)}: {x.kind}{x.kind === "Late start" ? ` from ${x.start}` : ""}{" "}
-              <Button variant="ghost" aria-label={`Edit ${x.date}`}
-                      onClick={() => { setEditing(x); setEKind(x.kind); setEStart(x.start); }}>
-                Edit
-              </Button>
-              <Button variant="ghost" aria-label={`Remove ${x.date}`}
-                      onClick={() => act.removeException.mutate(x.id, after("Exception removed."))}>
-                Remove
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h3>Add an exception</h3>
-      <div style={row}>
-        <SelectField label="Type" value={kind} onChange={(e) => setKind(e.target.value)} error={fe.kind}>
-          {EXCEPTION_KINDS.map((k) => <option key={k}>{k}</option>)}
-        </SelectField>
-        <TextField label="From date" type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-                   error={fe.from_date} />
-        <TextField label="To date" type="date" value={to} onChange={(e) => setTo(e.target.value)}
-                   error={fe.to_date} hint="Leave empty for one day." />
-        {kind === "Late start" && (
-          <TextField label="Can start at" type="time" value={start}
-                     onChange={(e) => setStart(e.target.value)} error={fe.start} />
+    <div className="flex flex-col gap-6">
+      <Panel title="Upcoming exceptions" bodyClassName="p-0">
+        {crew.exceptions.length === 0 ? <p className="m-0 px-5 py-4 text-sm text-muted-foreground">No upcoming exceptions.</p> : (
+          <ul className="m-0 list-none divide-y p-0">
+            {crew.exceptions.map((x) => (
+              <li key={x.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+                <span className="flex items-center gap-3"><span className="w-24">{showDate(x.date)}</span>
+                  <StatusBadge status={label(x)} tone={x.kind === "Late start" ? "warn" : "neutral"} /></span>
+                <span className="flex gap-1">
+                  <Button size="sm" variant="ghost" aria-label={`Edit ${x.date}`} onClick={() => setEditing(x)}><Pencil aria-hidden /> Edit</Button>
+                  <Button size="sm" variant="ghost" className="text-destructive" aria-label={`Remove ${x.date}`} onClick={async () => {
+                    if (await confirm({ title: `Remove the exception on ${showDate(x.date)}?`, description: `${crew.name} counts as working that day again.`, confirmLabel: "Remove", tone: "danger" })) {
+                      run.mutate({ go: () => act.removeException.mutateAsync(x.id), done: "Exception removed." });
+                    }
+                  }}><Trash2 aria-hidden /> Remove</Button>
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
-        <Button busy={act.addException.isPending} disabled={!from || (kind === "Late start" && !start)}
-                onClick={() => act.addException.mutate(
-                  { kind, from_date: from, to_date: to || null, start: kind === "Late start" ? start : "" },
-                  { onSuccess: (r) => {
-                    setReleased(r.released_jobs);
-                    setFrom("");
-                    setTo("");
-                    toast.show("Exception saved.", "ok");
-                  } })}>
-          Add exception
-        </Button>
-      </div>
-      <ApiErrorNote error={act.addException.error ?? act.removeException.error} />
-      <ReleasedJobs jobs={released} />
+      </Panel>
 
-      {editing && (
-        <Dialog open title={`Edit exception on ${showDate(editing.date)}`}
-                onClose={() => setEditing(null)}
-                footer={<>
-                  <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
-                  <Button busy={act.editException.isPending}
-                          disabled={eKind === "Late start" && !eStart}
-                          onClick={() => act.editException.mutate(
-                            { exId: editing.id, kind: eKind, start: eKind === "Late start" ? eStart : "" },
-                            { onSuccess: (r) => {
-                              setReleased(r.released_jobs);
-                              setEditing(null);
-                              toast.show("Exception saved.", "ok");
-                            } })}>Save</Button>
-                </>}>
-          <SelectField label="Edit type" value={eKind} onChange={(e) => setEKind(e.target.value)}>
-            {EXCEPTION_KINDS.map((k) => <option key={k}>{k}</option>)}
-          </SelectField>
-          {eKind === "Late start" && (
-            <TextField label="Edit start time" type="time" value={eStart}
-                       onChange={(e) => setEStart(e.target.value)} />
-          )}
-          <ApiErrorNote error={act.editException.error} />
-        </Dialog>
-      )}
-    </Card>
+      <Panel title="Add an exception" description="Jobs the crew member can no longer do go to Needs scheduling.">
+        <form className="grid grid-cols-2 items-end gap-4 lg:grid-cols-[10rem_10rem_10rem_8rem_auto]" onSubmit={(e) => { e.preventDefault(); add(); }}>
+          <Field label="Type" error={fe.kind}>{(p) => <SelectBox {...p} value={kind} onChange={setKind} choices={kindChoices} />}</Field>
+          <Field label="From date" error={fe.from_date}>{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
+          <Field label="To date" error={fe.to_date ?? order} hint="Empty for one day.">{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
+          {kind === "Late start"
+            ? <Field label="Can start at" error={fe.start}>{(p) => <Input {...p} type="time" value={start} onChange={(e) => setStart(e.target.value)} />}</Field>
+            : <span />}
+          <BusyButton type="submit" className="lg:mb-5" busy={run.isPending} disabled={!from || Boolean(order) || (kind === "Late start" && !start)}>Add exception</BusyButton>
+        </form>
+        <ReleasedJobs jobs={released} />
+      </Panel>
+
+      {editing && <ExceptionDialog key={editing.id} x={editing} onClose={() => setEditing(null)}
+        onSave={(k, s) => run.mutate({
+          go: async () => { const r = await act.editException.mutateAsync({ exId: editing.id, kind: k, start: k === "Late start" ? s : "" }); setEditing(null); return r; },
+          done: "Exception saved.",
+        })} busy={run.isPending} />}
+    </div>
+  );
+}
+
+function ExceptionDialog({ x, onClose, onSave, busy }: { x: CrewException; onClose: () => void; onSave: (kind: string, start: string) => void; busy: boolean }) {
+  const [kind, setKind] = useState(x.kind);
+  const [start, setStart] = useState(x.start);
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Edit exception on ${showDate(x.date)}`} size="sm"
+                submitLabel="Save" busy={busy} disabled={kind === "Late start" && !start} onSubmit={() => onSave(kind, start)}>
+      <Field label="Edit type">{(p) => <SelectBox {...p} value={kind} onChange={setKind} choices={kindChoices} />}</Field>
+      {kind === "Late start" && <Field label="Edit start time">{(p) => <Input {...p} type="time" value={start} onChange={(e) => setStart(e.target.value)} />}</Field>}
+    </FormDialog>
   );
 }
 
 /** ADM-CRW-15, -18: deactivate, reactivate and reset the password. */
 export function AccountPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const act = useCrewActions(crew.id);
   const [released, setReleased] = useState<ReleasedJob[]>([]);
   const [issued, setIssued] = useState<CrewPassword | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
   const [needsRelease, setNeedsRelease] = useState("");
-  const done = (r: { released_jobs: ReleasedJob[] }) => {
-    setReleased(r.released_jobs);
-    setNeedsRelease("");
-    toast.show("Crew member deactivated.", "ok");
-  };
-  const deactivate = (release_jobs: boolean) => act.deactivate.mutate({ release_jobs }, {
-    onSuccess: done,
-    onError: (e) => {
-      if (e instanceof ApiError && e.status === 409 && e.code === "has_open_jobs") {
-        setNeedsRelease(e.message);
-      }
-    },
+  const deactivate = useAppMutation<boolean, { released_jobs: ReleasedJob[] }>({
+    mutationFn: (release_jobs) => act.deactivate.mutateAsync({ release_jobs }),
+    pending: "Deactivating…", success: "Crew member deactivated.",
+    onSuccess: (r) => { setReleased(r.released_jobs); setNeedsRelease(""); },
+    onError: (e) => { if (e instanceof ApiError && e.status === 409 && e.code === "has_open_jobs") setNeedsRelease(e.message); },
   });
-  const blocking = act.deactivate.error instanceof ApiError
-    && act.deactivate.error.code === "has_open_jobs";
+  const run = useCrewRun();
+  const reset = useAppMutation<void, CrewPassword>({
+    mutationFn: () => act.resetPassword.mutateAsync(), pending: "Resetting the password…",
+    success: "New password made. Note it now.", onSuccess: setIssued,
+  });
 
   return (
-    <Card title="Account">
-      <div style={row}>
+    <Panel title="Account" bodyClassName="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="m-0 text-sm font-medium">{crew.active ? "Deactivate" : "Reactivate"}</p>
+          <p className="m-0 text-sm text-muted-foreground">{crew.active
+            ? "The crew member can no longer sign in or be scheduled."
+            : "The crew member can sign in and be scheduled again."}</p>
+        </div>
         {crew.active ? (
-          <Button variant="danger" busy={act.deactivate.isPending} onClick={() => deactivate(false)}>
-            Deactivate
-          </Button>
+          <BusyButton variant="destructive" busy={deactivate.isPending} onClick={async () => {
+            if (await confirm({ title: `Deactivate ${crew.name}?`, description: "They are signed out and no longer scheduled.", confirmLabel: "Deactivate", tone: "danger" })) deactivate.mutate(false);
+          }}>Deactivate</BusyButton>
         ) : (
-          <Button busy={act.reactivate.isPending}
-                  onClick={() => act.reactivate.mutate(undefined,
-                    { onSuccess: () => toast.show("Crew member reactivated.", "ok") })}>
-            Reactivate
-          </Button>
+          <BusyButton busy={run.isPending} onClick={async () => {
+            if (await confirm({ title: `Reactivate ${crew.name}?`, description: "They can sign in and be scheduled again.", confirmLabel: "Reactivate" })) {
+              run.mutate({ go: () => act.reactivate.mutateAsync(), done: "Crew member reactivated." });
+            }
+          }}>Reactivate</BusyButton>
         )}
-        <Button variant="secondary" onClick={() => setConfirmReset(true)}>Reset password</Button>
       </div>
-      {!blocking && <ApiErrorNote error={act.deactivate.error} />}
-      <ApiErrorNote error={act.reactivate.error ?? act.resetPassword.error} />
+      <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="m-0 text-sm font-medium">Reset password</p>
+          <p className="m-0 text-sm text-muted-foreground">A new password is shown once. Hand it over yourself.</p>
+        </div>
+        <BusyButton variant="outline" busy={reset.isPending} onClick={async () => {
+          if (await confirm({ title: "Reset password", description: "The old password stops working at once and every signed-in phone is signed out.", confirmLabel: "Reset password" })) reset.mutate();
+        }}>Reset password</BusyButton>
+      </div>
       <ReleasedJobs jobs={released} />
 
       {needsRelease && (
-        <Dialog open title="Open jobs need to be released" onClose={() => setNeedsRelease("")}
-                footer={<>
-                  <Button variant="secondary" onClick={() => setNeedsRelease("")}>Cancel</Button>
-                  <Button variant="danger" busy={act.deactivate.isPending}
-                          onClick={() => deactivate(true)}>
-                    Send jobs to Needs scheduling and deactivate
-                  </Button>
-                </>}>
-          <p>{needsRelease}</p>
-        </Dialog>
-      )}
-
-      {confirmReset && (
-        <Dialog open title="Reset password" onClose={() => setConfirmReset(false)}
-                footer={<>
-                  <Button variant="secondary" onClick={() => setConfirmReset(false)}>Cancel</Button>
-                  <Button busy={act.resetPassword.isPending}
-                          onClick={() => act.resetPassword.mutate(undefined, {
-                            onSuccess: (r) => { setConfirmReset(false); setIssued(r); },
-                          })}>
-                    Reset password
-                  </Button>
-                </>}>
-          <p>The old password stops working at once and every signed-in phone is signed out.</p>
-        </Dialog>
+        <FormDialog open onOpenChange={(o) => !o && setNeedsRelease("")} title="Open jobs need to be released" danger
+                    submitLabel="Send jobs to Needs scheduling and deactivate" busy={deactivate.isPending}
+                    onSubmit={() => deactivate.mutate(true)}>
+          <p className="m-0 text-sm">{needsRelease}</p>
+        </FormDialog>
       )}
       {issued && <PasswordDialog issued={issued} onDone={() => setIssued(null)} />}
-    </Card>
+    </Panel>
   );
 }
 
 /** ADM-CRW-21: signed-in devices. */
 export function SessionsPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const sessions = useSessions(crew.id);
   const act = useCrewActions(crew.id);
-  const when = (iso: string) => `${showDate(iso)} ${iso.slice(11, 16)}`;
+  const run = useCrewRun();
   return (
-    <Card title="Signed-in devices"
-          actions={<Button variant="secondary" disabled={!sessions.data?.length}
-                           busy={act.endAll.isPending}
-                           onClick={() => act.endAll.mutate(undefined,
-                             { onSuccess: (r) => toast.show(`Signed out ${r.ended}.`, "ok") })}>
-            Sign out all
-          </Button>}>
-      {sessions.isPending && <p className="loading">Loading...</p>}
-      {sessions.isError && <ApiErrorNote error={sessions.error} />}
-      {sessions.data && (sessions.data.length === 0
-        ? <p className="muted">No signed-in devices.</p>
-        : <ul>{sessions.data.map((s) => (
-            <li key={s.id}>
-              <strong>{s.device_name || "Unknown device"}</strong> {s.platform || "Unknown platform"} · App {s.app_version || "Unknown version"}<br />
-              {s.channel === "web" ? "Web" : "Mobile app"}, signed in {when(s.signed_in_at)},
-              last active {when(s.last_active_at)}{" "}
-              <Button variant="ghost" busy={act.endSession.isPending}
-                      onClick={() => act.endSession.mutate(s.id,
-                        { onSuccess: () => toast.show("Signed out.", "ok") })}>
-                Sign out
-              </Button>
-            </li>))}
-          </ul>)}
-      <ApiErrorNote error={act.endSession.error ?? act.endAll.error} />
-    </Card>
+    <Panel title="Signed-in devices" bodyClassName="p-0"
+           actions={<BusyButton size="sm" variant="outline" disabled={!sessions.data?.length} busy={act.endAll.isPending} onClick={async () => {
+             if (await confirm({ title: `Sign ${crew.name} out everywhere?`, description: "Every phone is signed out now.", confirmLabel: "Sign out all", tone: "danger" })) {
+               run.mutate({ go: () => act.endAll.mutateAsync(), done: "Signed out of every device." });
+             }
+           }}>Sign out all</BusyButton>}>
+      {sessions.isPending && <div className="p-5"><Skeleton className="h-12" /></div>}
+      {sessions.isError && <div className="p-5"><ErrorState message={errorMessage(sessions.error)} /></div>}
+      {sessions.data?.length === 0 && <p className="m-0 px-5 py-4 text-sm text-muted-foreground">No signed-in devices.</p>}
+      <ul className="m-0 list-none divide-y p-0">
+        {sessions.data?.map((s) => (
+          <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-3">
+            <div className="min-w-0 text-sm">
+              <p className="m-0 font-medium">{s.device_name || "Unknown device"}</p>
+              <p className="m-0 text-muted-foreground">{s.platform || "Unknown platform"} · App {s.app_version || "Unknown version"} · {s.channel === "web" ? "Web" : "Mobile app"}</p>
+              <p className="m-0 text-xs text-muted-foreground">Signed in {showDateTime(s.signed_in_at)} · last active {showDateTime(s.last_active_at)}</p>
+            </div>
+            <Button size="sm" variant="outline" disabled={run.isPending} onClick={async () => {
+              if (await confirm({ title: "Sign out this device?", description: `${s.device_name || "The device"} is signed out now.`, confirmLabel: "Sign out", tone: "danger" })) {
+                run.mutate({ go: () => act.endSession.mutateAsync(s.id), done: "Signed out." });
+              }
+            }}>Sign out</Button>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }

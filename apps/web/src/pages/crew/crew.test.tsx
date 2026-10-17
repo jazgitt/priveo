@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { withSite } from "../../site/testSite";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../components";
+import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { CrewDetailPage } from "./CrewDetailPage";
 import { CrewListPage } from "./CrewListPage";
 import { hoursBody, defaultHours } from "./api";
@@ -33,12 +34,12 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <MemoryRouter initialEntries={[path]}>
+        <MemoryRouter initialEntries={[path]}><PortalProviders>
           <Routes>
             <Route path="/crew" element={withSite(<CrewListPage />)} />
             <Route path="/crew/:id" element={<CrewDetailPage />} />
           </Routes>
-        </MemoryRouter>
+        </PortalProviders></MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -63,9 +64,9 @@ describe("crew list", () => {
     renderAt("/crew");
     expect(await screen.findByText("Raj Kumar")).toBeInTheDocument();
     expect(screen.getByText("Asha Devi")).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Role"), "Trainee");
+    await choose("Role", "Trainee");
     expect(screen.queryByText("Raj Kumar")).not.toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Role"), "");
+    await choose("Role", "All");
     await userEvent.type(screen.getByLabelText("Search"), "9000000001");
     expect(screen.queryByText("Asha Devi")).not.toBeInTheDocument();
     await waitFor(() => expect(fetchMock.mock.calls.some(
@@ -75,6 +76,7 @@ describe("crew list", () => {
   it("onboards a Trainee with a paired Member and shows the password once", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) => {
       if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p.startsWith("/v1/admin/crew/default-hours")) return json(200, defaultHours());
       if (p === "/v1/admin/crew" && init?.method === "POST") {
         return json(201, { crew: { ...asha, name: "Sam Lee" }, login_id: "9000000009", password: "Sam4821$" });
       }
@@ -86,11 +88,11 @@ describe("crew list", () => {
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(within(dialog).getByLabelText("Name"), "Sam Lee");
     await userEvent.type(within(dialog).getByLabelText("Mobile number"), "9000000009");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Society"), "s1");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Role"), "Trainee");
+    await choose("Society", "Lake View");
+    await choose("Role", "Trainee");
     const save = within(dialog).getByRole("button", { name: "Onboard" });
     expect(save).toBeDisabled();
-    await userEvent.selectOptions(await within(dialog).findByLabelText("Paired Member"), "c1");
+    await choose("Paired Member", "Raj Kumar");
     await userEvent.click(save);
     expect(await screen.findByTestId("issued-password")).toHaveTextContent("Sam4821$");
     expect(screen.getByText(/shown once/)).toBeInTheDocument();
@@ -136,6 +138,7 @@ describe("crew detail", () => {
     renderAt("/crew/c1");
     await openTab("Account");
     await userEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+    await confirmWith("Deactivate");
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/holds 2 frozen jobs/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: /Send jobs to Needs scheduling/ }));
@@ -154,10 +157,11 @@ describe("crew detail", () => {
     });
     renderAt("/crew/c1");
     await openTab("Exceptions");
-    await userEvent.selectOptions(await screen.findByLabelText("Type"), "Late start");
-    await userEvent.type(screen.getByLabelText("From date"), "2026-10-20");
-    await userEvent.type(screen.getByLabelText("To date"), "2026-10-22");
-    await userEvent.type(screen.getByLabelText("Can start at"), "09:30");
+    await screen.findByRole("combobox", { name: "Type" });
+    await choose("Type", "Late start");
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-10-20" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-10-22" } });
+    fireEvent.change(screen.getByLabelText("Can start at"), { target: { value: "09:30" } });
     await userEvent.click(screen.getByRole("button", { name: "Add exception" }));
     await waitFor(() => {
       const post = fetchMock.mock.calls.find((c) => c[1]?.method === "POST")!;
@@ -179,14 +183,14 @@ describe("crew detail", () => {
     renderAt("/crew/c1");
     await openTab("Account");
     await userEvent.click(await screen.findByRole("button", { name: "Reset password" }));
-    const confirm = await screen.findByRole("dialog");
-    await userEvent.click(within(confirm).getByRole("button", { name: "Reset password" }));
+    await confirmWith("Reset password");
     expect(await screen.findByTestId("issued-password")).toHaveTextContent("Raj1111$");
     await userEvent.click(screen.getByRole("button", { name: "I have noted it" }));
     await openTab("Sessions");
     expect(await screen.findByText("Crew Pixel")).toBeInTheDocument();
     expect(screen.getByText(/App 1.2.3/)).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    await confirmWith("Sign out");
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew/c1/sessions/x1/logout")).toBe(true));
   });
@@ -206,11 +210,13 @@ describe("crew detail", () => {
     });
     renderAt("/crew/c3");
     await openTab("Role and pairing");
-    await userEvent.selectOptions(await screen.findByLabelText("Role"), "Trainee");
+    await screen.findByRole("combobox", { name: "Role" });
+    await choose("Role", "Trainee");
     const change = screen.getByRole("button", { name: "Change role" });
     expect(change).toBeDisabled();
-    await userEvent.selectOptions(screen.getByLabelText("Paired Member"), "c1");
+    await choose("Paired Member", "Raj Kumar");
     await userEvent.click(change);
+    await confirmWith("Change role");
     expect(await screen.findByText(/KA09ZZ0001/)).toBeInTheDocument();
     const put = fetchMock.mock.calls.find((c) => c[1]?.method === "PUT")!;
     expect(JSON.parse(put[1].body)).toEqual({ role: "Trainee", paired_member_id: "c1" });
@@ -221,7 +227,7 @@ describe("hours helper", () => {
   it("clears start and end on a day off", () => {
     const h = defaultHours();
     h[6] = { ...h[6], working: false };
-    expect(hoursBody(h)[6]).toEqual({ day: "Sunday", working: false, start: "", end: "" });
+    expect(hoursBody(h)[6]).toEqual({ day: "Sunday", working: false, start: "", end: "", extra_slots: [] });
   });
 });
 
@@ -245,11 +251,11 @@ describe("crew society over time", () => {
     expect(await screen.findByText("now")).toBeInTheDocument(); // The current stay has no end.
     // A Member is told that their Trainees move with them.
     expect(screen.getByRole("note")).toHaveTextContent("their society is updated too");
-    await userEvent.selectOptions(await screen.findByLabelText("Move to society"), "s2");
-    const date = screen.getByLabelText("Starts on") as HTMLInputElement;
-    await userEvent.clear(date);
-    await userEvent.type(date, "2099-01-15");
+    await screen.findByRole("combobox", { name: "Move to society" });
+    await choose("Move to society", "Park");
+    fireEvent.change(screen.getByLabelText("Starts on"), { target: { value: "2099-01-15" } });
     await userEvent.click(screen.getByRole("button", { name: "Move crew member" }));
+    await confirmWith("Move crew member");
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew/c1/society" && c[1]?.method === "POST")).toBe(true));
     const post = fetchMock.mock.calls.find((c) => c[0] === "/v1/admin/crew/c1/society")!;
@@ -273,6 +279,7 @@ describe("crew society over time", () => {
     renderAt("/crew/c1?tab=society");
     expect(await screen.findByText("Starts later")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel the move to Park" }));
+    await confirmWith("Cancel move");
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew/c1/society-moves/a2" && c[1]?.method === "DELETE")).toBe(true));
   });

@@ -1,18 +1,24 @@
+import { Pencil, Plus, Search } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-import { ApiErrorNote } from "../../components/ApiErrorNote";
-import {
-  Button, Card, SelectField, StatusChip, Table, TextField, type Column,
-} from "../../components";
-import { ROLES, useCrewList, type Crew } from "./api";
-import "./crew.css";
+import { DataTable } from "@/blocks/DataTable";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { errorMessage } from "@/blocks/mutation";
+import { StatusBadge } from "@/blocks/status";
+import { useSite } from "@/site/SiteContext";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+
+import { ROLES, useCrewList } from "./api";
 import { OnboardDialog } from "./OnboardDialog";
 import { WorkingDaysCell } from "./WorkingDaysCell";
-import { useSite } from "../../site/SiteContext";
 
+/** The site's crew: roles, this week's working days and exceptions (ADM-CRW-*). */
 export function CrewListPage() {
   const site = useSite();
+  const navigate = useNavigate();
   const [role, setRole] = useState("");
   const [active, setActive] = useState("");
   const [search, setSearch] = useState("");
@@ -20,54 +26,55 @@ export function CrewListPage() {
   const list = useCrewList(site.id);
 
   const q = search.trim().toLowerCase();
-  const rows = (list.data ?? []).filter((c) =>
+  const rows = list.data?.filter((c) =>
     (role === "" || c.role === role)
     && (active === "" || c.active === (active === "yes"))
     && (q === "" || c.name.toLowerCase().includes(q) || c.mobile.includes(q)));
 
-  const columns: Column<Crew>[] = [
-    { key: "name", header: "Name", render: (c) => <Link className="sp-link" to={`/crew/${c.id}`}>{c.name}</Link> },
-    { key: "mobile", header: "Mobile", render: (c) => c.mobile },
-    { key: "society", header: "Society", render: (c) => c.society },
-    { key: "role", header: "Role", render: (c) => c.paired_member
-      ? `${c.role} (with ${c.paired_member})` : c.role },
-    { key: "hours", header: "Working days/hrs", render: (c) => <WorkingDaysCell crew={c} /> },
-    { key: "ex", header: "Exceptions", render: (c) => String(c.exceptions.length) },
-    { key: "status", header: "Status", render: (c) => (
-      <>
-        <StatusChip tone={c.active ? "ok" : "neutral"}>{c.active ? "Active" : "Inactive"}</StatusChip>
-        {c.locked && <> <StatusChip tone="warn">Locked</StatusChip></>}
-      </>) },
-    { key: "edit", header: "Edit", render: (c) => (
-      <Link className="icon-link" to={`/crew/${c.id}`} aria-label={`Edit ${c.name}`} title="Edit">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-          <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-        </svg>
-      </Link>) },
-  ];
-
   return (
     <>
-      <h1 className="page-title">Crew{site.name ? `, ${site.name}` : ""}</h1>
-      <Card title="Crew members" actions={<Button onClick={() => setOnboarding(true)}>Onboard crew</Button>}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" }}>
-          <TextField label="Search" value={search} placeholder="Name or mobile"
-                     onChange={(e) => setSearch(e.target.value)} />
-          <SelectField label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="">All</option>
-            {ROLES.map((r) => <option key={r}>{r}</option>)}
-          </SelectField>
-          <SelectField label="Active" value={active} onChange={(e) => setActive(e.target.value)}>
-            <option value="">All</option>
-            <option value="yes">Active</option>
-            <option value="no">Inactive</option>
-          </SelectField>
-        </div>
-        {list.isPending && <p className="loading">Loading...</p>}
-        {list.isError && <ApiErrorNote error={list.error} />}
-        {list.data && <Table columns={columns} rows={rows} rowKey={(c) => c.id}
-                             empty="No crew members match." />}
-      </Card>
+      <PageHeader title="Crew" site={site.name || undefined}
+                  description="Members, Managers and Trainees, their hours this week and their exceptions."
+                  actions={<Button onClick={() => setOnboarding(true)}><Plus aria-hidden /> Onboard crew</Button>} />
+      {list.isError && <div className="mb-4"><ErrorState message={errorMessage(list.error)} onRetry={() => void list.refetch()} /></div>}
+      <DataTable
+        rows={rows}
+        loading={list.isPending}
+        rowKey={(c) => c.id}
+        onRowClick={(c) => navigate(`/crew/${c.id}`)}
+        toolbar={(
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="relative w-full max-w-xs">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input aria-label="Search" placeholder="Name or mobile" className="bg-card pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <Field label="Role" className="w-40">
+              {(p) => <SelectBox {...p} value={role || NONE} onChange={(v) => setRole(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...ROLES.map((r) => ({ value: r, label: r }))]} />}
+            </Field>
+            <Field label="Active" className="w-40">
+              {(p) => <SelectBox {...p} value={active || NONE} onChange={(v) => setActive(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, { value: "yes", label: "Active" }, { value: "no", label: "Inactive" }]} />}
+            </Field>
+          </div>
+        )}
+        empty={<EmptyState title="No crew members match" action={<Button variant="outline" onClick={() => setOnboarding(true)}>Onboard crew</Button>}>Change the filters, or onboard a crew member.</EmptyState>}
+        columns={[
+          { key: "name", header: "Name", width: "20%", cell: (c) => <Link to={`/crew/${c.id}`} className="font-medium text-foreground">{c.name}</Link> },
+          { key: "mobile", header: "Mobile", width: "9rem", cell: (c) => <span className="tabular-nums">{c.mobile}</span> },
+          { key: "role", header: "Role", wrap: true, cell: (c) => (c.paired_member
+            ? <span>{c.role} <span className="text-muted-foreground">(with {c.paired_member})</span></span> : c.role) },
+          { key: "hours", header: "Working days/hrs", width: "11rem", cell: (c) => <WorkingDaysCell crew={c} /> },
+          { key: "ex", header: "Exceptions", width: "7rem", align: "right", cell: (c) => String(c.exceptions.length) },
+          { key: "status", header: "Status", width: "9rem", cell: (c) => (
+            <span className="flex gap-1.5"><StatusBadge status={c.active ? "Active" : "Inactive"} tone={c.active ? "ok" : "neutral"} />
+              {c.locked && <StatusBadge status="Locked" tone="warn" />}</span>) },
+          { key: "edit", header: "", width: "3.5rem", align: "right", cell: (c) => (
+            <Button asChild size="icon-sm" variant="ghost">
+              <Link to={`/crew/${c.id}`} aria-label={`Edit ${c.name}`} title="Edit"><Pencil /></Link>
+            </Button>) },
+        ]}
+      />
       {onboarding && <OnboardDialog onClose={() => setOnboarding(false)} />}
     </>
   );

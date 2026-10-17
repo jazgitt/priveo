@@ -3,7 +3,9 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Button, TextField } from "../components";
+import { Field } from "../blocks/fields";
+import { BusyButton } from "../blocks/FormDialog";
+import { Input } from "../ui/input";
 
 export function SignIn() {
   const { status, signIn } = useAuth();
@@ -32,16 +34,22 @@ export function SignIn() {
   }
 
   return (
-    <main className="signin">
-      <form className="card signin-card" onSubmit={submit}>
-        <h1 className="brand-title">Priveo</h1>
-        <p className="muted">Admin sign-in</p>
-        <TextField label="User ID" autoComplete="username" autoCapitalize="none"
-                   value={loginId} onChange={(e) => setLoginId(e.target.value)} required />
-        <TextField label="Password" type="password" autoComplete="current-password"
-                   value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error && <p className="form-error" role="alert">{error}</p>}
-        <Button type="submit" busy={busy}>Sign in</Button>
+    <main className="grid min-h-screen place-items-center bg-background px-4">
+      <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-5 rounded-2xl border bg-card p-8 shadow-sm">
+        <div>
+          <h1 className="m-0 font-display text-4xl font-bold text-gold-text">Priveo</h1>
+          <p className="m-0 mt-1 text-sm text-muted-foreground">Admin sign-in</p>
+        </div>
+        <Field label="User ID">
+          {(p) => <Input {...p} autoComplete="username" autoCapitalize="none" required autoFocus
+                         value={loginId} onChange={(e) => setLoginId(e.target.value)} />}
+        </Field>
+        <Field label="Password">
+          {(p) => <Input {...p} type="password" autoComplete="current-password" required
+                         value={password} onChange={(e) => setPassword(e.target.value)} />}
+        </Field>
+        {error && <p role="alert" className="m-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+        <BusyButton type="submit" busy={busy} className="w-full">Sign in</BusyButton>
       </form>
     </main>
   );

@@ -13,7 +13,7 @@ it('starts disabled, requires a time to enable and saves the IST setting', async
   }));
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={qc}><AutomaticPlanningSettings /></QueryClientProvider>);
-  const toggle = await screen.findByRole('checkbox');
+  const toggle = await screen.findByRole('switch');
   expect(toggle).not.toBeChecked();
   fireEvent.click(toggle);
   expect(screen.getByText('Save automatic planning')).toBeDisabled();

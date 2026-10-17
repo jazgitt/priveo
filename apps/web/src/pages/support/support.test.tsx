@@ -10,6 +10,7 @@ import { routes as alertRoutes } from "../alerts";
 import { routes as complaintRoutes } from "../complaints";
 import { routes as dashboardRoutes } from "../dashboard";
 import { routes as feedbackRoutes } from "../feedback";
+import { choose, confirmWith, PortalProviders } from "../../test/portal";
 
 type Handler = (method: string, body: unknown) => unknown;
 let handlers: Record<string, Handler> = {};
@@ -32,13 +33,13 @@ function renderAt(path: string, extra?: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createMemoryRouter(
     [...dashboardRoutes, ...alertRoutes, ...complaintRoutes, ...feedbackRoutes]
-      .map((r) => r),
+      .map((r) => ({ ...r, element: <PortalProviders>{r.element}</PortalProviders> })),
     { initialEntries: [path] },
   );
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        {extra ? <MemoryRouter>{extra}</MemoryRouter> : <RouterProvider router={router} />}
+        {extra ? <MemoryRouter><PortalProviders>{extra}</PortalProviders></MemoryRouter> : <RouterProvider router={router} />}
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -127,7 +128,9 @@ describe("dashboard", () => {
     handlers["/v1/admin/payments"] = () => [];
     handlers["/v1/admin/complaints"] = () => [complaint];
     renderAt("/");
-    expect(await screen.findByText("12-Oct-26 - MH12AB1234 - Cleaning-External")).toBeInTheDocument();
+    expect(await screen.findByText("MH12AB1234")).toBeInTheDocument();
+    expect(screen.getByText("12-Oct-26")).toBeInTheDocument();
+    expect(screen.getByText("No payment is waiting for confirmation.")).toBeInTheDocument();
     expect(await screen.findByText("#C-0001")).toBeInTheDocument();
     expect(screen.getByLabelText("Unread alerts count")).toHaveTextContent("2");
     expect(screen.getByLabelText("Needs scheduling count")).toHaveTextContent("1");
@@ -141,7 +144,7 @@ describe("complaints", () => {
     handlers["/v1/admin/complaints"] = () => [complaint];
     renderAt("/complaints");
     expect(await screen.findByText("Overdue")).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "Resolved");
+    await choose("Status", "Resolved");
     await waitFor(() => expect(calls.some((c) =>
       c.url === "/v1/admin/complaints?status=Resolved")).toBe(true));
   });
@@ -159,8 +162,9 @@ describe("complaints", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add note" }));
     await waitFor(() => expect(calls.some((c) =>
       c.url.endsWith("/notes") && (c.body as { note: string }).note === "Supervisor booked")).toBe(true));
-    await userEvent.selectOptions(screen.getByLabelText("Set status"), "In progress");
+    await choose("Set status", "In progress");
     await userEvent.click(screen.getByRole("button", { name: "Change status" }));
+    await confirmWith("Change status");
     await waitFor(() => expect(calls.some((c) =>
       c.url.endsWith("/status") && (c.body as { status: string }).status === "In progress")).toBe(true));
   });
@@ -187,9 +191,9 @@ describe("feedback", () => {
     });
     renderAt("/feedback");
     await userEvent.click(await screen.findByRole("tab", { name: "Ratings" }));
-    expect(await screen.findByText("Polite: 2")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Polite: 2")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Check-ins" }));
-    expect(await screen.findByText("Cleanliness: 4.00")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Cleanliness: 4.00")).toBeInTheDocument();
   });
 
   it("adds and deactivates a category", async () => {
@@ -202,6 +206,7 @@ describe("feedback", () => {
     await userEvent.click(await screen.findByRole("tab", { name: "Categories and tags" }));
     expect(await screen.findByText("Timing")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+    await confirmWith("Deactivate");
     await waitFor(() => expect(calls.some((c) =>
       c.method === "PATCH" && (c.body as { active: boolean }).active === false)).toBe(true));
     await userEvent.type(screen.getByLabelText("New name"), "Safety");

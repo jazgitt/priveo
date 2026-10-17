@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
@@ -15,7 +18,8 @@ const api = process.env.VITE_API_TARGET ?? "http://localhost:8000";
 export default defineConfig({
   // The portal lives under /portal/ on the API's origin.
   base: "/portal/",
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     port: 5173,
     proxy: {
@@ -39,6 +43,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Tests that open several Radix dropdowns and dialogs take seconds under
+    // jsdom when every file runs in parallel.
+    testTimeout: 20000,
     css: false,
     // Playwright specs live in e2e/ and run with `npm run e2e`.
     exclude: ["node_modules/**", "dist/**", "e2e/**"],

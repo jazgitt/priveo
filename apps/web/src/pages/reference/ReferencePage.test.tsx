@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../components";
+import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { AuditPage } from "../audit/AuditPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { ReferencePage } from "./ReferencePage";
@@ -27,7 +29,7 @@ let handlers: Record<string, (init?: RequestInit) => Response> = {};
 function renderUi(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={qc}><ToastProvider>{ui}</ToastProvider></QueryClientProvider>,
+    <QueryClientProvider client={qc}><MemoryRouter><ToastProvider><PortalProviders>{ui}</PortalProviders></ToastProvider></MemoryRouter></QueryClientProvider>,
   );
 }
 
@@ -56,6 +58,7 @@ describe("reference data", () => {
     renderUi(<ReferencePage />);
     expect(await screen.findByText("Lake View")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Deactivate Lake View" }));
+    await confirmWith("Deactivate");
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Deactivate those first.");
     expect(alert).toHaveTextContent("Active subscriptions: 3. Active crew: 1.");
@@ -138,7 +141,7 @@ describe("audit", () => {
     renderUi(<AuditPage />);
     expect(await screen.findByText("1500")).toBeInTheDocument();
     expect(screen.getByText("1800")).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Entity"), "plan");
+    await choose("Entity", "plan");
     await waitFor(() => {
       const last = String(fetchMock.mock.calls.at(-1)![0]);
       expect(last).toContain("entity=plan");

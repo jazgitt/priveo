@@ -1,23 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
-import { useSite } from "../../site/SiteContext";
-import { useState } from "react";
+import { Star } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
-import { api } from "../../api/client";
-import { Card, SelectField, StatusChip, Table, TextField } from "../../components";
-import { dayOf, formatDate, stars } from "../support/format";
-import type {
-  CheckInItem, CheckInsReport, FeedbackItem, OptionAdmin, RatingItem, RatingsReport,
-} from "../support/types";
-import "../support/support.css";
+import { api } from "@/api/client";
+import { DataTable } from "@/blocks/DataTable";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { StatusBadge } from "@/blocks/status";
+import { Tabs } from "@/components";
+import { useSite } from "@/site/SiteContext";
+import { Input } from "@/ui/input";
+
+import { dayOf, formatDate } from "../support/format";
+import type { CheckInItem, CheckInsReport, FeedbackItem, OptionAdmin, RatingItem, RatingsReport } from "../support/types";
 import { OptionsManager } from "./OptionsManager";
 
-type Tab = "feedback" | "ratings" | "checkins" | "categories";
-const TABS: { id: Tab; label: string }[] = [
+const TABS = [
   { id: "feedback", label: "Feedback" },
   { id: "ratings", label: "Ratings" },
   { id: "checkins", label: "Check-ins" },
   { id: "categories", label: "Categories and tags" },
-];
+] as const;
 
 interface Range { society: string; from: string; to: string }
 
@@ -26,13 +29,11 @@ function inRange(r: Range, society: string, created: string): boolean {
   return (!r.society || society === r.society) && (!r.from || d >= r.from) && (!r.to || d <= r.to);
 }
 
-function Filters({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
+function DateFilters({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
   return (
     <>
-      <TextField label="From" type="date" value={value.from}
-                 onChange={(e) => onChange({ ...value, from: e.target.value })} />
-      <TextField label="To" type="date" value={value.to}
-                 onChange={(e) => onChange({ ...value, to: e.target.value })} />
+      <Field label="From" className="w-44">{(p) => <Input {...p} type="date" value={value.from} onChange={(e) => onChange({ ...value, from: e.target.value })} />}</Field>
+      <Field label="To" className="w-44">{(p) => <Input {...p} type="date" value={value.to} onChange={(e) => onChange({ ...value, to: e.target.value })} />}</Field>
     </>
   );
 }
@@ -44,6 +45,26 @@ function useRange(): [Range, (r: Range) => void] {
   return [{ ...r, society: site.name }, (next) => set({ ...next, society: "" })];
 }
 
+function Stars({ n }: { n: number | null }) {
+  if (n === null) return <span className="text-muted-foreground">-</span>;
+  return (
+    <span className="inline-flex items-center gap-1 tabular-nums" aria-label={`${n} / 5`}>
+      <Star className="size-3.5 fill-gold text-gold" aria-hidden />{n}<span className="text-muted-foreground">/5</span>
+    </span>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-xl border bg-card px-5 py-4 shadow-xs">
+      <p className="m-0 text-sm text-muted-foreground">{label}</p>
+      <p className="m-0 mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+const quote = (ok: boolean) => (ok ? <StatusBadge status="May quote" tone="ok" /> : <span className="text-muted-foreground">No</span>);
+
 function FeedbackTab() {
   const [category, setCategory] = useState("");
   const [rating, setRating] = useState("");
@@ -52,110 +73,98 @@ function FeedbackTab() {
   if (category) qs.set("category", category);
   if (rating) qs.set("rating", rating);
   const q = qs.toString();
-  const list = useQuery({
-    queryKey: ["admin", "feedback", q],
-    queryFn: () => api<FeedbackItem[]>(`/v1/admin/feedback${q ? `?${q}` : ""}`),
-  });
-  const options = useQuery({
-    queryKey: ["admin", "support-options"],
-    queryFn: () => api<OptionAdmin[]>("/v1/admin/support/options"),
-  });
-  const rows = (list.data ?? []).filter((f) => inRange(range, f.society, f.created_at));
+  const list = useQuery({ queryKey: ["admin", "feedback", q], queryFn: () => api<FeedbackItem[]>(`/v1/admin/feedback${q ? `?${q}` : ""}`) });
+  const options = useQuery({ queryKey: ["admin", "support-options"], queryFn: () => api<OptionAdmin[]>("/v1/admin/support/options") });
+  const rows = list.data?.filter((f) => inRange(range, f.society, f.created_at));
   const cats = (options.data ?? []).filter((o) => o.kind === "feedback_category");
 
   return (
-    <Card>
-      <div className="sp-filters">
-        <SelectField label="Category" value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All</option>
-          {cats.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
-        </SelectField>
-        <SelectField label="Rating" value={rating} onChange={(e) => setRating(e.target.value)}>
-          <option value="">All</option>
-          {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars</option>)}
-        </SelectField>
-        <Filters value={range} onChange={setRange} />
-      </div>
-      {list.isLoading && <p className="muted">Loading...</p>}
-      {list.isError && <p role="alert">Could not load the feedback.</p>}
-      {list.data && (
-        <Table<FeedbackItem> rows={rows} rowKey={(f) => f.id} empty="No feedback matches."
-          columns={[
-            { key: "date", header: "Date", render: (f) => formatDate(f.created_at) },
-            { key: "customer", header: "Customer", render: (f) => `${f.customer_name}, ${f.society}` },
-            { key: "category", header: "Category", render: (f) => f.category ?? "-" },
-            { key: "rating", header: "Rating", render: (f) => stars(f.rating) },
-            { key: "comment", header: "Comment", render: (f) => f.comment || "-" },
-            { key: "testimonial", header: "Testimonial", render: (f) => f.testimonial_permission
-              ? <StatusChip tone="ok">May quote</StatusChip> : "No" },
-          ]} />
-      )}
-    </Card>
+    <>
+      {list.isError && <div className="mb-4"><ErrorState message="Could not load the feedback." /></div>}
+      <DataTable<FeedbackItem>
+        rows={rows}
+        loading={list.isLoading}
+        rowKey={(f) => f.id}
+        toolbar={(
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Category" className="w-52">
+              {(p) => <SelectBox {...p} value={category || NONE} onChange={(v) => setCategory(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...cats.map((o) => ({ value: o.name, label: o.name }))]} />}
+            </Field>
+            <Field label="Rating" className="w-36">
+              {(p) => <SelectBox {...p} value={rating || NONE} onChange={(v) => setRating(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} stars` }))]} />}
+            </Field>
+            <DateFilters value={range} onChange={setRange} />
+          </div>
+        )}
+        empty={<EmptyState title="No feedback matches" />}
+        columns={[
+          { key: "date", header: "Date", width: "7rem", cell: (f) => formatDate(f.created_at) },
+          { key: "customer", header: "Customer", width: "16%", cell: (f) => f.customer_name },
+          { key: "category", header: "Category", width: "11rem", cell: (f) => f.category ?? "-" },
+          { key: "rating", header: "Rating", width: "6rem", cell: (f) => <Stars n={f.rating} /> },
+          { key: "comment", header: "Comment", wrap: true, cell: (f) => f.comment || <span className="text-muted-foreground">-</span> },
+          { key: "testimonial", header: "Testimonial", width: "8rem", cell: (f) => quote(f.testimonial_permission) },
+        ]}
+      />
+    </>
   );
 }
 
 function RatingsTab() {
   const [range, setRange] = useRange();
-  const report = useQuery({
-    queryKey: ["admin", "ratings"],
-    queryFn: () => api<RatingsReport>("/v1/admin/ratings"),
-  });
+  const report = useQuery({ queryKey: ["admin", "ratings"], queryFn: () => api<RatingsReport>("/v1/admin/ratings") });
   const items = (report.data?.items ?? []).filter((r) => inRange(range, r.society, r.created_at));
   const tagCounts: Record<string, number> = {};
   for (const r of items) for (const t of r.tags) tagCounts[t] = (tagCounts[t] ?? 0) + 1;
   const avg = items.length ? items.reduce((s, r) => s + r.rating, 0) / items.length : null;
+  const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="sp-stack">
-      <Card>
-        <div className="sp-filters">
-          <Filters value={range} onChange={setRange} />
-        </div>
-        {report.isLoading && <p className="muted">Loading...</p>}
-        {report.isError && <p role="alert">Could not load the ratings.</p>}
-        {report.data && (
-          <p>
-            <strong>{items.length}</strong> ratings, average{" "}
-            <strong>{avg === null ? "-" : avg.toFixed(2)}</strong>
-          </p>
-        )}
-      </Card>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end gap-3"><DateFilters value={range} onChange={setRange} /></div>
+      {report.isError && <ErrorState message="Could not load the ratings." />}
       {report.data && (
         <>
-          <Card title="Tags">
-            <ul className="sp-list">
-              {Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).map(([tag, n]) => (
-                <li key={tag}>{tag}: {n}</li>
-              ))}
-              {Object.keys(tagCounts).length === 0 && <li className="muted">No tags yet.</li>}
-            </ul>
-          </Card>
-          <Card title="Visit ratings">
-            <Table<RatingItem> rows={items} rowKey={(r) => `${r.visit_id}-${r.created_at}`}
-              empty="No ratings match."
-              columns={[
-                { key: "date", header: "Date", render: (r) => formatDate(r.created_at) },
-                { key: "society", header: "Society", render: (r) => r.society },
-                { key: "visit", header: "Visit", render: (r) => r.visit_id },
-                { key: "rating", header: "Rating", render: (r) => stars(r.rating) },
-                { key: "tags", header: "Tags", render: (r) => r.tags.join(", ") || "-" },
-                { key: "comment", header: "Comment", render: (r) => r.comment || "-" },
-                { key: "testimonial", header: "Testimonial", render: (r) =>
-                  r.testimonial_permission ? <StatusChip tone="ok">May quote</StatusChip> : "No" },
-              ]} />
-          </Card>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Stat label="Ratings" value={items.length} />
+            <Stat label="Average" value={avg === null ? "-" : avg.toFixed(2)} />
+            <Stat label="May be quoted" value={items.filter((r) => r.testimonial_permission).length} />
+          </div>
+          <Panel title="Tags" description="How often customers chose each tag. Ratings are for the visit, not a crew member.">
+            {tags.length === 0 ? <p className="m-0 text-sm text-muted-foreground">No tags yet.</p> : (
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {tags.map(([tag, n]) => (
+                  <li key={tag} className="inline-flex items-center gap-2 rounded-full border bg-muted/50 py-1 pr-1 pl-3 text-sm">
+                    <span>{tag}</span><span className="rounded-full bg-card px-2 text-xs font-semibold tabular-nums" aria-label={`${tag}: ${n}`}>{n}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </>
       )}
+      <DataTable<RatingItem>
+        rows={report.data ? items : undefined}
+        loading={report.isLoading}
+        rowKey={(r) => `${r.visit_id}-${r.created_at}`}
+        empty={<EmptyState title="No ratings match" />}
+        columns={[
+          { key: "date", header: "Date", width: "7rem", cell: (r) => formatDate(r.created_at) },
+          { key: "rating", header: "Rating", width: "6rem", cell: (r) => <Stars n={r.rating} /> },
+          { key: "tags", header: "Tags", width: "22%", wrap: true, cell: (r) => r.tags.join(", ") || "-" },
+          { key: "comment", header: "Comment", wrap: true, cell: (r) => r.comment || <span className="text-muted-foreground">-</span> },
+          { key: "testimonial", header: "Testimonial", width: "8rem", cell: (r) => quote(r.testimonial_permission) },
+        ]}
+      />
     </div>
   );
 }
 
 function CheckInsTab() {
   const [range, setRange] = useRange();
-  const report = useQuery({
-    queryKey: ["admin", "checkins"],
-    queryFn: () => api<CheckInsReport>("/v1/admin/checkins"),
-  });
+  const report = useQuery({ queryKey: ["admin", "checkins"], queryFn: () => api<CheckInsReport>("/v1/admin/checkins") });
   const items = (report.data?.items ?? []).filter((c) => inRange(range, c.society, c.created_at));
   const sums: Record<string, { total: number; n: number }> = {};
   for (const c of items) {
@@ -167,60 +176,47 @@ function CheckInsTab() {
   }
 
   return (
-    <div className="sp-stack">
-      <Card>
-        <div className="sp-filters">
-          <Filters value={range} onChange={setRange} />
-        </div>
-        {report.isLoading && <p className="muted">Loading...</p>}
-        {report.isError && <p role="alert">Could not load the check-ins.</p>}
-      </Card>
-      {report.data && (
-        <>
-          <Card title="Average by category">
-            <ul className="sp-list">
-              {Object.entries(sums).map(([cat, s]) => (
-                <li key={cat}>{cat}: {(s.total / s.n).toFixed(2)}</li>
-              ))}
-              {Object.keys(sums).length === 0 && <li className="muted">No check-ins yet.</li>}
-            </ul>
-          </Card>
-          <Card title="Check-ins">
-            <Table<CheckInItem> rows={items} rowKey={(c) => c.id} empty="No check-ins match."
-              columns={[
-                { key: "date", header: "Date", render: (c) => formatDate(c.created_at) },
-                { key: "customer", header: "Customer", render: (c) => `${c.customer_name}, ${c.society}` },
-                { key: "vehicle", header: "Vehicle", render: (c) => c.vehicle_label },
-                { key: "cycle", header: "Cycle from", render: (c) => formatDate(c.cycle_start) },
-                { key: "answers", header: "Ratings", render: (c) =>
-                  c.answers.map((a) => `${a.category} ${a.rating}`).join(", ") },
-                { key: "comment", header: "Comment", render: (c) => c.comment || "-" },
-              ]} />
-          </Card>
-        </>
-      )}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end gap-3"><DateFilters value={range} onChange={setRange} /></div>
+      {report.isError && <ErrorState message="Could not load the check-ins." />}
+      {report.data && (Object.keys(sums).length === 0
+        ? <p className="m-0 text-sm text-muted-foreground">No check-ins yet.</p>
+        : (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {Object.entries(sums).map(([cat, s]) => <Stat key={cat} label={cat} value={<span aria-label={`${cat}: ${(s.total / s.n).toFixed(2)}`}>{(s.total / s.n).toFixed(2)}</span>} />)}
+          </div>
+        ))}
+      <DataTable<CheckInItem>
+        rows={report.data ? items : undefined}
+        loading={report.isLoading}
+        rowKey={(c) => c.id}
+        empty={<EmptyState title="No check-ins match" />}
+        columns={[
+          { key: "date", header: "Date", width: "7rem", cell: (c) => formatDate(c.created_at) },
+          { key: "customer", header: "Customer", width: "15%", cell: (c) => c.customer_name },
+          { key: "vehicle", header: "Vehicle", width: "12%", cell: (c) => c.vehicle_label },
+          { key: "cycle", header: "Cycle from", width: "7rem", cell: (c) => formatDate(c.cycle_start) },
+          { key: "answers", header: "Ratings", width: "26%", wrap: true, cell: (c) => c.answers.map((a) => `${a.category} ${a.rating}`).join(", ") },
+          { key: "comment", header: "Comment", wrap: true, cell: (c) => c.comment || <span className="text-muted-foreground">-</span> },
+        ]}
+      />
     </div>
   );
 }
 
 /** Feedback, ratings and check-ins (ADM-FDB-01 to -07). */
 export function FeedbackPage() {
-  const [tab, setTab] = useState<Tab>("feedback");
+  const site = useSite();
+  const [tab, setTab] = useState<string>("feedback");
   return (
     <>
-      <h1 className="page-title">Feedback</h1>
-      <div className="sp-tabs" role="tablist" aria-label="Feedback views">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" className="sp-tab"
-                  aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {tab === "feedback" && <FeedbackTab />}
-      {tab === "ratings" && <RatingsTab />}
-      {tab === "checkins" && <CheckInsTab />}
-      {tab === "categories" && <OptionsManager />}
+      <PageHeader title="Feedback" site={site.name || undefined} description="What customers say: feedback, visit ratings and monthly check-ins." />
+      <Tabs tabs={TABS} active={tab} label="Feedback views" onChange={setTab}>
+        {tab === "feedback" && <FeedbackTab />}
+        {tab === "ratings" && <RatingsTab />}
+        {tab === "checkins" && <CheckInsTab />}
+        {tab === "categories" && <OptionsManager />}
+      </Tabs>
     </>
   );
 }

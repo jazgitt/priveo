@@ -1,6 +1,10 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 
-import { HoverTip, StatusChip } from "../../components";
+import { Button } from "@/ui/button";
+
+import { StatusBadge } from "@/blocks/status";
+
+import { HoverTip } from "../../components";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
 /** Pixels for one minute along the time ruler. A 20 minute job is 80 px wide. */
@@ -30,18 +34,18 @@ function isSpa(job: AdminJob): boolean {
 
 export function JobLabel({ job }: { job: AdminJob }) {
   return (
-    <>
-      <strong>{job.registration}</strong>
-      <span>{job.service}</span>
-    </>
+    <span className="flex min-w-0 flex-col">
+      <strong className="truncate reg text-[0.8125rem]">{job.registration}</strong>
+      <span className="truncate text-xs text-muted-foreground">{job.service}{job.parking ? ` · ${job.parking}` : ""}</span>
+    </span>
   );
 }
 
 export function JobFlags({ job }: { job: AdminJob }) {
   return (
     <>
-      {job.late && <StatusChip tone="error">Late</StatusChip>}
-      {job.manual && <StatusChip tone="info">Changed by hand</StatusChip>}
+      {job.late && <StatusBadge status="Late" tone="error" />}
+      {job.manual && <StatusBadge status="Changed by hand" tone="info" />}
     </>
   );
 }
@@ -118,11 +122,19 @@ export function DayLanes({ crew, jobs, availability = [], onMove, onOpen }: {
   onOpen: (job: AdminJob) => void;
 }) {
   const dragging = useRef<AdminJob | null>(null);
+  const chart = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState<string | null>(null);
   const [blocked, setBlocked] = useState("");
+  // Open the chart a little before the day's first job, not at 05:00.
+  const firstJob = Math.min(...jobs.map((j) => j.start_minute ?? Infinity));
+  useEffect(() => {
+    if (chart.current && Number.isFinite(firstJob)) {
+      chart.current.scrollLeft = Math.max(0, (firstJob - DAY_START - 30) * PX_PER_MIN);
+    }
+  }, [firstJob]);
 
   if (crew.length === 0) {
-    return <p className="table-empty">No crew is set up for this society.</p>;
+    return <p className="text-sm text-muted-foreground">No crew is set up for this society.</p>;
   }
   // 05:00 to 22:00, wider only when a crew member or a job lies outside it.
   const edges = [...crew.flatMap((c) => [c.start_minute, c.end_minute]),
@@ -168,7 +180,7 @@ export function DayLanes({ crew, jobs, availability = [], onMove, onOpen }: {
 
   return (
     <div>
-      <div className="sch-gantt" role="group" aria-label="Day plan">
+      <div className="sch-gantt" role="group" aria-label="Day plan" ref={chart}>
         <div className="sch-g-row sch-g-head">
           <div className="sch-g-name">Crew</div>
           <div className="sch-g-track sch-g-ruler" style={{ width }} aria-hidden="true">
@@ -240,7 +252,7 @@ export function DayLanes({ crew, jobs, availability = [], onMove, onOpen }: {
           );
         })}
       </div>
-      {blocked && <p className="form-error" role="alert">{blocked}</p>}
+      {blocked && <p className="mt-2 mb-0 text-sm text-destructive" role="alert">{blocked}</p>}
       <UnscheduledList jobs={jobs.filter((j) => j.crew_id === null)} onOpen={onOpen}
                        startDrag={startDrag} />
     </div>
@@ -253,25 +265,29 @@ function UnscheduledList({ jobs, onOpen, startDrag }: {
   startDrag: (job: AdminJob) => (e: DragEvent) => void;
 }) {
   return (
-    <section aria-label="Unscheduled on this day" style={{ marginTop: "1rem" }}>
-      <h3 style={{ fontSize: "var(--fs-4)" }}>Unscheduled on this day ({jobs.length})</h3>
+    <section aria-label="Unscheduled on this day" className="mt-5">
+      <h3 className="mt-0 mb-2 text-sm font-semibold">Unscheduled on this day ({jobs.length})</h3>
       {jobs.length === 0 ? (
-        <p className="table-empty">Every job of this day has a crew member.</p>
+        <p className="text-sm text-muted-foreground">Every job of this day has a crew member.</p>
       ) : (
-        <ul className="sch-list">
-          {jobs.map((job) => (
-            <li key={job.id} className="sch-item" draggable onDragStart={startDrag(job)}>
-              <JobLabel job={job} />
-              <span>{job.customer_name}</span>
-              {job.finish_by && <span>Finish by {job.finish_by}</span>}
-              <StatusChip tone="warn">Unscheduled</StatusChip>
-              <button className="btn btn-ghost" onClick={() => onOpen(job)}>
-                Place {job.registration}
-              </button>
-              {job.reason && <p>{job.reason}</p>}
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="mt-0 mb-2 text-xs text-muted-foreground">Drag a job onto a crew row, or press Place.</p>
+          <ul className="m-0 flex list-none flex-col divide-y rounded-lg border bg-card p-0">
+            {jobs.map((job) => (
+              <li key={job.id} draggable onDragStart={startDrag(job)}
+                  className="grid cursor-grab grid-cols-1 items-start gap-x-4 gap-y-1 border-l-4 border-l-warn px-4 py-2.5 sm:grid-cols-[13rem_10rem_7rem_minmax(0,1fr)_auto]">
+                <JobLabel job={job} />
+                <span className="truncate text-sm">{job.customer_name}</span>
+                <span className="text-sm text-muted-foreground">{job.finish_by ? `Finish by ${job.finish_by}` : "-"}</span>
+                <span className="text-sm text-muted-foreground">{job.reason}</span>
+                <span className="flex items-center gap-2 sm:justify-end">
+                  <StatusBadge status="Unscheduled" tone="warn" />
+                  <Button size="sm" variant="outline" onClick={() => onOpen(job)}>Place {job.registration}</Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

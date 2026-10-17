@@ -1,13 +1,18 @@
 import { useState } from "react";
 
-import { ApiError } from "../../api/client";
-import { ApiErrorNote } from "../../components/ApiErrorNote";
-import { showDate } from "../../components/format";
-import { Button, Card, SelectField, StatusChip, Table, TextField, useToast } from "../../components";
-import {
-  useCrewActions, useCrewList, useSocieties, useSocietyHistory,
-  type Crew, type ReleasedJob,
-} from "./api";
+import { ApiError } from "@/api/client";
+import { useConfirm } from "@/blocks/confirm";
+import { DataTable } from "@/blocks/DataTable";
+import { Field, SelectBox } from "@/blocks/fields";
+import { BusyButton } from "@/blocks/FormDialog";
+import { Panel } from "@/blocks/layout";
+import { useAppMutation } from "@/blocks/mutation";
+import { StatusBadge } from "@/blocks/status";
+import { showDate } from "@/components/format";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+
+import { useCrewActions, useCrewList, useSocieties, useSocietyHistory, type Crew, type ReleasedJob } from "./api";
 import { ReleasedJobs } from "./shared";
 
 function fieldsOf(e: unknown): Record<string, string> {
@@ -22,7 +27,7 @@ const today = () => new Date().toISOString().slice(0, 10);
  * they were. A move that has not happened yet can be cancelled.
  */
 export function SocietyPanel({ crew }: { crew: Crew }) {
-  const toast = useToast();
+  const confirm = useConfirm();
   const { moveSociety, cancelMove } = useCrewActions(crew.id);
   const history = useSocietyHistory(crew.id);
   const societies = useSocieties();
@@ -41,79 +46,79 @@ export function SocietyPanel({ crew }: { crew: Crew }) {
     : [];
   const pending = stays.find((s) => s.pending);
   const needsMate = crew.role === "Trainee";
+  const targetName = societies.data?.find((s) => s.id === target)?.name ?? "";
+
+  const move = useAppMutation<void, { released_jobs: ReleasedJob[] }>({
+    mutationFn: () => moveSociety.mutateAsync({ society_id: target, effective_from: from, paired_member_id: needsMate ? mate : null }),
+    pending: "Moving…", success: from === today() ? "Moved." : "The move is set.",
+    onSuccess: (r) => { setReleased(r.released_jobs); setTarget(""); },
+  });
+  const cancel = useAppMutation<string>({
+    mutationFn: (id) => cancelMove.mutateAsync(id), pending: "Cancelling the move…", success: "The move is cancelled.",
+  });
 
   return (
-    <Card title="Society">
-      <p>Society now: <strong>{crew.society}</strong>.</p>
-      <p className="muted">
-        A move starts on the date you choose and earlier stays are never changed. From that
-        date the crew member's open jobs in the old society go to Needs scheduling.
-      </p>
-      {crew.role === "Member" && (
-        <p className="muted" role="note">
-          If Trainees are assigned to this Member, their society is updated too: they move to
-          the new society on the same date and stay paired with this Member.
-          {trainees.length > 0 && <> Trainees who will move: {trainees.map((t) => t.name).join(", ")}.</>}
-        </p>
-      )}
-      <Table rows={stays} rowKey={(s) => s.id} empty="No history yet." columns={[
-        { key: "society", header: "Society", render: (s) => s.society },
-        { key: "from", header: "From", render: (s) => showDate(s.effective_from) },
-        { key: "to", header: "To", render: (s) => (s.effective_to ? showDate(s.effective_to) : "now") },
-        { key: "st", header: "", render: (s) => (s.pending
-          ? (
-            <>
-              <StatusChip tone="warn">Starts later</StatusChip>{" "}
-              <Button variant="ghost" busy={cancelMove.isPending}
-                      aria-label={`Cancel the move to ${s.society}`}
-                      onClick={() => cancelMove.mutate(s.id, {
-                        onSuccess: () => toast.show("The move is cancelled.", "ok"),
-                      })}>
-                Cancel move
-              </Button>
-            </>
-          )
-          : null) },
-      ]} />
-      <ApiErrorNote error={cancelMove.error} />
-      {pending ? (
-        <p className="muted">
-          A move to {pending.society} starts on {showDate(pending.effective_from)}. Cancel it to
-          set a different one.
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" }}>
-          <SelectField label="Move to society" value={target} error={fe.society_id}
-                       onChange={(e) => { setTarget(e.target.value); setMate(""); }}>
-            <option value="">Choose</option>
-            {(societies.data ?? [])
-              .filter((s) => s.active && s.id !== crew.society_id)
-              .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </SelectField>
-          <TextField label="Starts on" type="date" value={from} min={today()}
-                     onChange={(e) => setFrom(e.target.value)} error={fe.effective_from} />
-          {needsMate && target !== "" && (
-            <SelectField label="Paired Member in the new society" value={mate}
-                         error={fe.paired_member_id} onChange={(e) => setMate(e.target.value)}>
-              <option value="">Choose</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </SelectField>
-          )}
-          <Button busy={moveSociety.isPending}
-                  disabled={target === "" || from === "" || (needsMate && mate === "")}
-                  onClick={() => moveSociety.mutate(
-                    { society_id: target, effective_from: from, paired_member_id: needsMate ? mate : null },
-                    { onSuccess: (r) => {
-                      setReleased(r.released_jobs);
-                      setTarget("");
-                      toast.show(from === today() ? "Moved." : "The move is set.", "ok");
-                    } })}>
-            Move crew member
-          </Button>
-        </div>
-      )}
-      <ApiErrorNote error={moveSociety.error} />
-      <ReleasedJobs jobs={released} />
-    </Card>
+    <div className="flex flex-col gap-6">
+      <Panel title="Society over time" bodyClassName="p-0"
+             description={`Now in ${crew.society}. A move starts on the date you choose and earlier stays are never changed.`}>
+        <DataTable
+          className="[&>div]:rounded-none [&>div]:border-0"
+          rows={stays}
+          loading={history.isPending}
+          rowKey={(s) => s.id}
+          empty={<p className="text-sm text-muted-foreground">No history yet.</p>}
+          columns={[
+            { key: "society", header: "Society", cell: (s) => s.society },
+            { key: "from", header: "From", width: "9rem", cell: (s) => showDate(s.effective_from) },
+            { key: "to", header: "To", width: "9rem", cell: (s) => (s.effective_to ? showDate(s.effective_to) : "now") },
+            { key: "st", header: "", width: "16rem", align: "right", cell: (s) => (s.pending ? (
+              <span className="flex items-center justify-end gap-2">
+                <StatusBadge status="Starts later" tone="warn" />
+                <Button size="sm" variant="ghost" className="text-destructive" disabled={cancel.isPending} aria-label={`Cancel the move to ${s.society}`}
+                        onClick={async () => {
+                          if (await confirm({ title: `Cancel the move to ${s.society}?`, description: `${crew.name} stays in ${crew.society}.`, confirmLabel: "Cancel move", tone: "danger" })) cancel.mutate(s.id);
+                        }}>Cancel move</Button>
+              </span>) : null) },
+          ]}
+        />
+      </Panel>
+
+      <Panel title="Move to another society" description="From the start date the crew member's open jobs in the old society go to Needs scheduling.">
+        {crew.role === "Member" && (
+          <p role="note" className="mt-0 mb-4 rounded-md bg-muted px-3 py-2 text-sm">
+            If Trainees are assigned to this Member, their society is updated too: they move to the new society on the same date and stay paired with this Member.
+            {trainees.length > 0 && <> Trainees who will move: {trainees.map((t) => t.name).join(", ")}.</>}
+          </p>
+        )}
+        {pending ? (
+          <p className="m-0 text-sm text-muted-foreground">A move to {pending.society} starts on {showDate(pending.effective_from)}. Cancel it to set a different one.</p>
+        ) : (
+          <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,14rem)_11rem_minmax(0,14rem)_auto]"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (await confirm({
+                    title: `Move ${crew.name} to ${targetName}?`,
+                    description: `From ${showDate(from)}. Open jobs in ${crew.society} from that date go to Needs scheduling.`,
+                    confirmLabel: "Move crew member",
+                  })) move.mutate();
+                }}>
+            <Field label="Move to society" error={fe.society_id}>
+              {(p) => <SelectBox {...p} value={target} onChange={(v) => { setTarget(v); setMate(""); }}
+                                 choices={(societies.data ?? []).filter((s) => s.active && s.id !== crew.society_id).map((s) => ({ value: s.id, label: s.name }))} />}
+            </Field>
+            <Field label="Starts on" error={fe.effective_from}>
+              {(p) => <Input {...p} type="date" value={from} min={today()} onChange={(e) => setFrom(e.target.value)} />}
+            </Field>
+            {needsMate && target !== "" ? (
+              <Field label="Paired Member in the new society" error={fe.paired_member_id}>
+                {(p) => <SelectBox {...p} value={mate} onChange={setMate} choices={members.map((m) => ({ value: m.id, label: m.name }))} />}
+              </Field>
+            ) : <span />}
+            <BusyButton type="submit" busy={move.isPending} disabled={target === "" || from === "" || (needsMate && mate === "")}>Move crew member</BusyButton>
+          </form>
+        )}
+        <ReleasedJobs jobs={released} />
+      </Panel>
+    </div>
   );
 }

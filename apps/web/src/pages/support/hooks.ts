@@ -32,6 +32,12 @@ export function usePaymentAlerts() {
   });
 }
 
+/** "payment_initiated" -> "Payment initiated": a payment alert's kind as a title. */
+export function humanise(kind: string): string {
+  const t = kind.replaceAll("_", " ").trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+}
+
 /** Both alert sources as one list, newest first, with the unread count. */
 export function useMergedAlerts() {
   const support = useSupportAlerts();
@@ -43,7 +49,7 @@ export function useMergedAlerts() {
       link: a.ref_type === "complaint" && a.ref_id ? `/complaints/${a.ref_id}` : a.ref_type === "job" ? "/operations" : a.ref_type === "schedule" ? "/schedule" : null,
     })),
     ...(money.data ?? []).map((a): MergedAlert => ({
-      key: `payment:${a.id}`, source: "payment", id: a.id, kind: a.kind, title: a.kind,
+      key: `payment:${a.id}`, source: "payment", id: a.id, kind: a.kind, title: humanise(a.kind),
       body: a.message, created_at: a.created_at, read: a.read, link: "/payments",
     })),
   ].sort((a, b) => b.created_at.localeCompare(a.created_at));

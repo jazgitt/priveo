@@ -1,3 +1,8 @@
+// The style sheets load first, so ui.css fixes the order of the CSS layers
+// before any page's own style sheet names one.
+import "./theme/tokens.g.css";
+import "./ui.css";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -7,8 +12,6 @@ import { AppRoutes } from "./App";
 import { sharedReadOptions } from "./api/queryDefaults";
 import { AuthProvider } from "./auth/AuthContext";
 import { ToastProvider } from "./components";
-import "./theme/tokens.g.css";
-import "./styles.css";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: sharedReadOptions },

@@ -1,0 +1,284 @@
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+
+import { api } from "@/api/client";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { FormDialog } from "@/blocks/FormDialog";
+import { useAppMutation } from "@/blocks/mutation";
+import { inr, showDate } from "@/components/format";
+import { Input } from "@/ui/input";
+import { Switch } from "@/ui/switch";
+import { Textarea } from "@/ui/textarea";
+
+import {
+  times, uploadCustomerAsset, weekdays,
+  type Catalogue, type Customer, type Plan, type Society, type Subscription, type Vehicle,
+} from "./api";
+
+type Call = { path: string; method?: string; body?: unknown };
+const call = (r: Call) => api<unknown>(r.path, { method: r.method ?? "POST", body: r.body });
+
+/** Saves a change to a customer and refreshes their page and the list. */
+function useCustomerSave(customerId: string, success: string, onDone: () => void) {
+  return useAppMutation<Call>({
+    mutationFn: call, success, onSuccess: onDone,
+    invalidate: [["customer", customerId], ["customers"]],
+  });
+}
+
+export const usePlans = () => useQuery({ queryKey: ["customer-plans"], queryFn: () => api<Plan[]>("/v1/admin/directory/plans") });
+export const useCatalogue = () => useQuery({ queryKey: ["customer-catalogue"], queryFn: () => api<Catalogue[]>("/v1/admin/directory/vehicle-catalogue") });
+export const useSocietyList = () => useQuery({ queryKey: ["customer-societies"], queryFn: () => api<Society[]>("/v1/admin/directory/societies") });
+
+const timeChoices = times.map((t) => ({ value: t, label: t }));
+
+// ---- customer ------------------------------------------------------------
+
+export function CustomerDialog({ customer: c, open, onClose }: { customer: Customer; open: boolean; onClose: () => void }) {
+  return open ? <CustomerForm c={c} onClose={onClose} /> : null;
+}
+
+function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
+  const [v, setV] = useState({ first_name: c.first_name, last_name: c.last_name, mobile: c.mobile, flat: c.flat ?? "" });
+  const save = useCustomerSave(c.id, "Customer details saved.", onClose);
+  const mobileOk = /^\d{10}$/.test(v.mobile);
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Edit customer details"
+                description="The customer is not notified. The change is recorded in the audit log."
+                submitLabel="Save customer" busy={save.isPending}
+                disabled={!v.first_name.trim() || !v.last_name.trim() || !mobileOk}
+                onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}`, method: "PATCH", body: v })}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="First name">{(p) => <Input {...p} value={v.first_name} onChange={set("first_name")} />}</Field>
+        <Field label="Last name">{(p) => <Input {...p} value={v.last_name} onChange={set("last_name")} />}</Field>
+        <Field label="Mobile" hint="10 digits" error={v.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
+          {(p) => <Input {...p} inputMode="numeric" value={v.mobile} onChange={set("mobile")} />}
+        </Field>
+        <Field label="Flat" optional>{(p) => <Input {...p} value={v.flat} onChange={set("flat")} />}</Field>
+      </div>
+    </FormDialog>
+  );
+}
+
+export function EmailDialog({ customer: c, open, onClose }: { customer: Customer; open: boolean; onClose: () => void }) {
+  return open ? <EmailForm c={c} onClose={onClose} /> : null;
+}
+
+function EmailForm({ c, onClose }: { c: Customer; onClose: () => void }) {
+  const [email, setEmail] = useState(c.email);
+  const save = useCustomerSave(c.id, "Email corrected. A new welcome email is on its way.", onClose);
+  const ok = /^\S+@\S+\.\S+$/.test(email) && email.trim().toLowerCase() !== c.email.toLowerCase();
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Correct the email" danger
+                description="The customer's password is cleared and they are signed out everywhere. A new welcome email goes to the new address; they verify it and set a new password (ADM-CUS-19)."
+                submitLabel="Correct email" busy={save.isPending} disabled={!ok}
+                onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}/email`, method: "PATCH", body: { email: email.trim() } })}>
+      <Field label="Correct email" hint={`Now ${c.email}`}>
+        {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
+      </Field>
+    </FormDialog>
+  );
+}
+
+// ---- vehicle --------------------------------------------------------------
+
+export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: string; onClose: () => void }) {
+  const catalogue = useCatalogue();
+  const societies = useSocietyList();
+  const basements = societies.data?.find((s) => s.id === v.society_id || s.name === v.society)?.parking_basements ?? [];
+  const [reg, setReg] = useState(v.registration.replaceAll(" ", ""));
+  const [catalogueId, setCatalogueId] = useState(NONE);
+  const [basement, setBasement] = useState(v.parking_basement);
+  const [parking, setParking] = useState(v.parking_number);
+  const [uploading, setUploading] = useState<"vehicle" | "rc" | null>(null);
+  const save = useCustomerSave(customerId, "Car details saved.", onClose);
+  const instant = useCustomerSave(customerId, "Saved.", () => {});
+  const upload = async (file: File | undefined, purpose: "vehicle" | "rc") => {
+    if (!file) return;
+    setUploading(purpose);
+    try {
+      await instant.mutateAsync({
+        path: `/v1/admin/vehicles/${v.id}`, method: "PATCH",
+        body: { [purpose === "vehicle" ? "photo_upload_id" : "rc_upload_id"]: (await uploadCustomerAsset(file, purpose)).id },
+      });
+    } catch {
+      // The toast from the save says what went wrong.
+    } finally { setUploading(null); }
+  };
+  const valid = reg.trim() !== "" && basement && /^\d{1,5}$/.test(parking);
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Edit car and parking, ${v.registration}`} size="lg"
+                submitLabel="Save car details" busy={save.isPending} disabled={!valid}
+                onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}`, method: "PATCH", body: {
+                  registration: reg, parking_basement: basement, parking_number: parking,
+                  ...(catalogueId !== NONE ? { catalogue_id: catalogueId } : {}),
+                } })}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Registration" hint="For example HR26EC4321">
+          {(p) => <Input {...p} className="reg uppercase" value={reg} onChange={(e) => setReg(e.target.value.toUpperCase().replaceAll(" ", ""))} />}
+        </Field>
+        <Field label="Make, model and variant" hint={`Now ${v.make} ${v.model} ${v.variant}`.trim()}>
+          {(p) => (
+            <SelectBox {...p} value={catalogueId} onChange={setCatalogueId} choices={[
+              { value: NONE, label: "Keep current vehicle" },
+              ...(catalogue.data ?? []).filter((c) => c.active).map((c) => ({
+                value: c.id, label: `${c.make} ${c.model} ${c.variant} · ${c.category}`,
+              })),
+            ]} />
+          )}
+        </Field>
+        <Field label="Basement">
+          {(p) => basements.length > 0
+            ? <SelectBox {...p} value={basement} onChange={setBasement}
+                         choices={[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))} />
+            : <Input {...p} value={basement} onChange={(e) => setBasement(e.target.value)} />}
+        </Field>
+        <Field label="Parking number" error={parking && !/^\d{1,5}$/.test(parking) ? "Up to 5 digits." : undefined}>
+          {(p) => <Input {...p} inputMode="numeric" value={parking} onChange={(e) => setParking(e.target.value)} />}
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/40 p-4 sm:grid-cols-2">
+        <Field label="Replace vehicle photo" hint={uploading === "vehicle" ? "Uploading…" : "Saved as soon as it is uploaded."}>
+          {(p) => <Input {...p} type="file" accept="image/*" disabled={uploading !== null} onChange={(e) => void upload(e.target.files?.[0], "vehicle")} />}
+        </Field>
+        <Field label="Upload RC document" hint={uploading === "rc" ? "Uploading…" : "JPG, PNG or PDF up to 5 MB."}>
+          {(p) => <Input {...p} type="file" accept="image/jpeg,image/png,application/pdf" disabled={uploading !== null} onChange={(e) => void upload(e.target.files?.[0], "rc")} />}
+        </Field>
+        {v.rc_url && (
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <a href={v.rc_url} target="_blank" rel="noreferrer">Open RC</a>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch aria-label="RC verified" checked={v.rc_verified} disabled={instant.isPending}
+                      onCheckedChange={(on) => instant.mutate({ path: `/v1/admin/vehicles/${v.id}`, method: "PATCH", body: { rc_verified: on } })} />
+              RC verified
+            </label>
+          </div>
+        )}
+      </div>
+    </FormDialog>
+  );
+}
+
+/** Cutoff, interior care day and plan at next renewal (ADM-CUS-09, ADM-CUS-15). */
+export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription; customerId: string; onClose: () => void }) {
+  const plans = usePlans();
+  const [planId, setPlanId] = useState(NONE);
+  const [cutoff, setCutoff] = useState(sub.cutoff_time || "09:00");
+  const [interior, setInterior] = useState(sub.interior_day ?? "");
+  const save = useCustomerSave(customerId, "Schedule settings saved.", onClose);
+  const current = plans.data?.find((p) => p.id === sub.plan_id);
+  const next = planId !== NONE ? plans.data?.find((p) => p.id === planId) : undefined;
+  const interiorPlan = next ?? current;
+  const needsInterior = Boolean(interiorPlan?.includes_interior);
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Schedule settings"
+                description="The 9 PM deadline does not apply to the admin. The customer is not notified."
+                submitLabel="Save settings" busy={save.isPending} disabled={needsInterior && !interior}
+                onSubmit={() => save.mutate({ path: `/v1/admin/subscriptions/${sub.id}`, method: "PATCH", body: {
+                  cutoff_time: cutoff,
+                  ...(needsInterior && interior ? { interior_day: interior } : {}),
+                  ...(planId !== NONE ? { plan_id: planId } : {}),
+                } })}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Service cutoff" hint="Visits finish by this time.">
+          {(p) => <SelectBox {...p} value={cutoff} onChange={setCutoff} choices={timeChoices} />}
+        </Field>
+        {needsInterior ? (
+          <Field label="Interior care day">
+            {(p) => <SelectBox {...p} value={interior} onChange={setInterior} choices={weekdays.map((d) => ({ value: d, label: d }))} />}
+          </Field>
+        ) : (
+          <Field label="Interior care day" hint="The plan does not include interior care.">
+            {(p) => <Input {...p} disabled value="Not in this plan" />}
+          </Field>
+        )}
+        <Field label="Plan at next renewal" className="sm:col-span-2"
+               hint={sub.pending_from ? `A change already starts on ${showDate(sub.pending_from)}.` : "The new plan and price start on the next renewal date (ADM-CUS-15)."}>
+          {(p) => (
+            <SelectBox {...p} value={planId} onChange={setPlanId} choices={[
+              { value: NONE, label: `Keep current plan${current ? ` (${current.name})` : ""}` },
+              ...(plans.data ?? []).filter((x) => x.active && x.id !== sub.plan_id).map((x) => ({
+                value: x.id, label: `${x.name} · ${inr(x.monthly_price_rupees)}/month`,
+              })),
+            ]} />
+          )}
+        </Field>
+      </div>
+    </FormDialog>
+  );
+}
+
+export function SkipDialog({ v, customerId, onClose }: { v: Vehicle; customerId: string; onClose: () => void }) {
+  const [date, setDate] = useState("");
+  const save = useCustomerSave(customerId, "Date skipped.", onClose);
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Skip a date, ${v.registration}`} size="sm"
+                description="On the customer's behalf. If the schedule is frozen, the visit is removed from it."
+                submitLabel="Skip date" busy={save.isPending} disabled={!date}
+                onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}/skips`, body: { date } })}>
+      <Field label="Service date">{(p) => <Input {...p} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+    </FormDialog>
+  );
+}
+
+export function PauseDialog({ v, customerId, onClose }: { v: Vehicle; customerId: string; onClose: () => void }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const save = useCustomerSave(customerId, "Pause saved.", onClose);
+  const order = from && to && to < from ? "The pause must end on or after its first day." : undefined;
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Pause, ${v.registration}`} size="sm"
+                description="No visits from the first day to the last day, inclusive."
+                submitLabel="Pause" busy={save.isPending} disabled={!from || !to || Boolean(order)}
+                onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}/pauses`, body: { from_date: from, to_date: to } })}>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="First day">{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
+        <Field label="Last day" error={order}>{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
+      </div>
+    </FormDialog>
+  );
+}
+
+/**
+ * The subscription status change that is valid now (ADM-SUB-01, -02, -04):
+ * Activate needs the first service date, Make inactive needs a reason.
+ */
+export function StatusDialog({ sub, to, registration, customerId, onClose }: {
+  sub: Subscription; to: "Active" | "Inactive" | "Activating"; registration: string; customerId: string; onClose: () => void;
+}) {
+  const [date, setDate] = useState(sub.first_service_date ?? "");
+  const [reason, setReason] = useState("");
+  const done = { Active: "Subscription is now Active.", Inactive: "Subscription is now Inactive.", Activating: "Subscription reactivated. Set the first service date to activate it." }[to];
+  const save = useCustomerSave(customerId, done, onClose);
+  const send = () => save.mutate({ path: `/v1/admin/subscriptions/${sub.id}/status`, method: "PUT", body: {
+    status: to, reason: reason.trim(), ...(to === "Active" && date ? { first_service_date: date } : {}),
+  } });
+  if (to === "Active") {
+    return (
+      <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Activate ${registration}`} size="sm"
+                  description="Visits are scheduled from the first service date, and the 30-day billing cycle starts on it."
+                  submitLabel="Activate" busy={save.isPending} disabled={!date} onSubmit={send}>
+        <Field label="First service date">{(p) => <Input {...p} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+      </FormDialog>
+    );
+  }
+  if (to === "Inactive") {
+    return (
+      <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Make ${registration} inactive?`} size="sm" danger
+                  description="Its future visits are removed from schedules and it no longer counts in capacity. The customer sees Inactive."
+                  submitLabel="Make inactive" busy={save.isPending} disabled={!reason.trim()} onSubmit={send}>
+        <Field label="Reason" hint="Recorded in the audit log.">
+          {(p) => <Textarea {...p} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />}
+        </Field>
+      </FormDialog>
+    );
+  }
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Reactivate ${registration}?`} size="sm"
+                description="The subscription returns to Activating. You then set the new first service date and activate it; a new billing cycle starts from that date."
+                submitLabel="Reactivate" busy={save.isPending} onSubmit={send}>
+      <Field label="Reason" optional>{(p) => <Textarea {...p} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />}</Field>
+    </FormDialog>
+  );
+}

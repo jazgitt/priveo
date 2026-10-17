@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../components";
+import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { PaymentsPage } from "./PaymentsPage";
 
 const fetchMock = vi.fn();
@@ -19,28 +20,39 @@ const pay = (over: Record<string, unknown> = {}) => ({
   received_on: null, invoice_number: null, customer_name: "Asha Rao", flat: "B-12",
   society: "Lake View", vehicle: "Swift KA01", initiated_at: null, ...over,
 });
+const customerDetail = { id: "c1", first_name: "Asha", last_name: "Rao", email: "a@x.com", mobile: "9876543210", flat: "B-12",
+  email_verified: true, password_set: true, onboarding_confirmed: true,
+  vehicles: [{ id: "v9", society: "Lake View", registration: "KA01AB1234", make: "Maruti", model: "Swift", variant: "", category: "",
+    parking_basement: "B1", parking_number: "1", photo_url: null, rc_url: null, rc_verified: false, subscription: null, payments: [] }] };
 
 let payments: ReturnType<typeof pay>[] = [];
 
 function route(path: string, init?: RequestInit) {
   const method = init?.method ?? "GET";
   if (path.startsWith("/v1/admin/payment-alerts")) return json(200, []);
-  if (path.startsWith("/v1/admin/directory/societies")) return json(200, [{ name: "Lake View" }]);
+  if (path.startsWith("/v1/admin/customers?")) return json(200, [{ id: "c1", name: "Asha Rao", email: "a@x.com", mobile: "9876543210", vehicles: [] }]);
+  if (path === "/v1/admin/customers/c1") return json(200, customerDetail);
   if (path.startsWith("/v1/admin/payments") && method === "GET") return json(200, payments);
   return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
 }
 
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter><ToastProvider><PaymentsPage /></ToastProvider></MemoryRouter>
+      <MemoryRouter><ToastProvider><PortalProviders><PaymentsPage /></PortalProviders></ToastProvider></MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-const calls = (needle: string) =>
-  fetchMock.mock.calls.filter((c) => String(c[0]).includes(needle));
+const calls = (needle: string) => fetchMock.mock.calls.filter((c) => String(c[0]).includes(needle));
+const lastList = () => String(fetchMock.mock.calls.filter((c) => String(c[0]).startsWith("/v1/admin/payments?")).at(-1)![0]);
+
+/** Picks Asha Rao in a customer search box. */
+async function pickCustomer(scope: HTMLElement = document.body) {
+  await userEvent.type(within(scope).getByRole("combobox", { name: "Customer" }), "Asha");
+  await userEvent.click(await within(scope).findByRole("option", { name: /Asha Rao/ }));
+}
 
 beforeEach(() => {
   payments = [pay()];
@@ -53,7 +65,7 @@ afterEach(() => {
 });
 
 describe("payments page", () => {
-  it("pages payments and resets the page on filter application", async () => {
+  it("pages payments and goes back to the first page when a filter changes", async () => {
     fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
       if (path.startsWith("/v1/admin/payments?")) {
         const offset = new URL(path, "https://test").searchParams.get("offset");
@@ -63,41 +75,48 @@ describe("payments page", () => {
       return route(path, init);
     });
     renderPage();
-    await screen.findByText("First 0, B-12");
+    await screen.findByText("First 0");
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Second page, B-12")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
-    await waitFor(() => expect(screen.getByText("First 0, B-12")).toBeInTheDocument());
+    expect(await screen.findByText("Second page")).toBeInTheDocument();
+    await choose("Status", "Due");
+    await waitFor(() => expect(lastList()).toContain("offset=0"));
     expect(calls("offset=50").length).toBeGreaterThan(0);
   });
-  it("lists payments and sends the filters", async () => {
+
+  it("lists payments and sends the filters, the customer and vehicle by search", async () => {
     renderPage();
-    expect(await screen.findByText("Asha Rao, B-12")).toBeInTheDocument();
-    expect(screen.getByText("07-Nov-26")).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "Over due");
-    await userEvent.selectOptions(screen.getByLabelText("Type"), "Add-on");
-    await userEvent.type(screen.getByLabelText("Vehicle ID"), "v9");
-    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(await screen.findByText("Asha Rao")).toBeInTheDocument();
+    expect(screen.getByText("₹1,500")).toBeInTheDocument();
+    await choose("Status", "Over due");
+    await choose("Type", "Add-on");
+    await pickCustomer();
+    await choose("Vehicle", /KA01AB1234/);
+    fireEvent.change(screen.getByLabelText("Due after"), { target: { value: "2026-11-01" } });
     await waitFor(() => {
-      const last = String(fetchMock.mock.calls.filter((c) => String(c[0]).startsWith("/v1/admin/payments?")).at(-1)![0]);
+      const last = lastList();
       expect(last).toContain("status=Over+due");
       expect(last).toContain("kind=Add-on");
+      expect(last).toContain("customer_id=c1");
       expect(last).toContain("vehicle_id=v9");
+      expect(last).toContain("due_after=2026-11-01");
     });
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    await waitFor(() => expect(lastList()).not.toContain("status="));
   });
 
-  it("confirms an Initiated payment", async () => {
+  it("confirms an Initiated payment after asking", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
-      p.endsWith("/confirm") ? json(200, pay({ status: "Received", received_on: "2026-11-08" }))
-        : route(p, init));
+      p.endsWith("/confirm") ? json(200, pay({ status: "Received", received_on: "2026-11-08" })) : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
     await userEvent.click(screen.getByRole("button", { name: "Confirm received" }));
+    expect(calls("/confirm")).toHaveLength(0);
+    await confirmWith("Confirm received");
     expect(await screen.findByRole("button", { name: "Issue invoice" })).toBeInTheDocument();
     expect(calls("/v1/admin/payments/p1/confirm")[0][1].method).toBe("POST");
   });
 
-  it("offers reject only for Initiated or Received and no confirm for Received", async () => {
+  it("offers reject only for Initiated or Received", async () => {
     payments = [pay({ status: "Due" })];
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
@@ -105,14 +124,14 @@ describe("payments page", () => {
     expect(screen.queryByRole("button", { name: /Reject/ })).toBeNull();
   });
 
-  it("sets a status with the chosen value", async () => {
+  it("sets a status with the chosen value after asking", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
       p.endsWith("/status") ? json(200, pay({ status: "Over due" })) : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
-    const dialog = screen.getByRole("dialog");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Set status"), "Over due");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save status" }));
+    await choose("Set status", "Over due");
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save status" }));
+    await confirmWith("Save status");
     await waitFor(() => expect(calls("/status")).toHaveLength(1));
     const [, init] = calls("/status")[0];
     expect(init.method).toBe("PUT");
@@ -127,42 +146,43 @@ describe("payments page", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
     await userEvent.click(screen.getByRole("button", { name: /Reject/ }));
+    await confirmWith("Reject");
     expect(await screen.findByText("Already moved.")).toBeInTheDocument();
   });
 
-  it("issues an invoice for a Received payment", async () => {
+  it("issues an invoice for a Received payment after asking", async () => {
     payments = [pay({ status: "Received", received_on: "2026-11-08" })];
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
       p.endsWith("/invoice")
         ? json(200, { number: "PRV10264321", issued_on: "2026-11-08", amount_rupees: 1500,
                       description: "Monthly plan", customer_name: "Asha Rao", vehicle: "Swift",
-                      gst_included: true, seller_name: "Priveo", seller_address: "Pune",
-                      seller_gstin: "G1" })
+                      gst_included: true, seller_name: "Priveo", seller_address: "Pune", seller_gstin: "G1" })
         : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
     await userEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
+    await confirmWith("Issue invoice");
     expect(await screen.findByText("Invoice PRV10264321")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open invoice PDF" })).toHaveAttribute(
-      "href", `/v1/admin/payments/${payments[0].id}/invoice.pdf`);
+    expect(screen.getByRole("link", { name: "Open invoice PDF" })).toHaveAttribute("href", `/v1/admin/payments/${payments[0].id}/invoice.pdf`);
     expect(screen.getByRole("link", { name: "Open invoice PDF" })).toHaveAttribute("target", "_blank");
   });
 
-  it("records a payment and shows field errors", async () => {
+  it("records a payment for a vehicle found by customer search", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
       p === "/v1/admin/payments" && init?.method === "POST"
-        ? json(404, { code: "not_found", message: "That vehicle was not found.",
-                      fields: { vehicle_id: "unknown" }, request_id: "" })
+        ? json(404, { code: "not_found", message: "That vehicle was not found.", fields: { vehicle_id: "unknown" }, request_id: "" })
         : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Record a payment" }));
     const dialog = screen.getByRole("dialog");
-    await userEvent.type(within(dialog).getByLabelText("Vehicle ID"), "zz");
-    await userEvent.type(within(dialog).getByLabelText("Amount (Rs, GST included)"), "1500");
-    await userEvent.type(within(dialog).getByLabelText("Due date"), "2026-11-07");
+    expect(within(dialog).getByRole("button", { name: "Record" })).toBeDisabled();
+    await pickCustomer(dialog);
+    await choose("Vehicle", /KA01AB1234/);
+    await userEvent.type(within(dialog).getByLabelText("Amount (₹, GST included)"), "1500");
+    fireEvent.change(within(dialog).getByLabelText("Due date"), { target: { value: "2026-11-07" } });
     await userEvent.click(within(dialog).getByRole("button", { name: "Record" }));
-    expect((await screen.findAllByText("That vehicle was not found.")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/That vehicle was not found/)).length).toBeGreaterThan(0);
     const post = calls("/v1/admin/payments").find((c) => c[1]?.method === "POST")!;
-    expect(JSON.parse(post[1].body)).toMatchObject({ vehicle_id: "zz", amount_rupees: 1500 });
+    expect(JSON.parse(post[1].body)).toMatchObject({ vehicle_id: "v9", amount_rupees: 1500, due_date: "2026-11-07" });
   });
 });

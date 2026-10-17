@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../../api/client";
-import { Card, SelectField, Table, TextField } from "../../components";
-import "../reference/reference.css";
+import { api } from "@/api/client";
+import { DataTable } from "@/blocks/DataTable";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { showDateTime } from "@/components/format";
+import { Input } from "@/ui/input";
 
 export interface AuditEntry {
   id: string;
@@ -27,22 +30,20 @@ function show(v: unknown): string {
 /** A change detail: `{field: [old, new]}` is a diff, anything else is listed as is. */
 export function Diff({ detail }: { detail: Record<string, unknown> }) {
   const entries = Object.entries(detail);
-  if (entries.length === 0) return <span className="muted">-</span>;
+  if (entries.length === 0) return <span className="text-muted-foreground">-</span>;
   return (
-    <ul className="ref-diff">
+    <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
       {entries.map(([field, v]) => (
-        <li key={field}>
-          <strong>{field}</strong>:{" "}
-          {Array.isArray(v) && v.length === 2 ? (
-            <>
-              <span className="ref-old">{show(v[0])}</span>
-              {" to "}
-              <span className="ref-new">{show(v[1])}</span>
-            </>
-          ) : show(v)}
-        </li>
+        <div key={field} className="contents">
+          <dt className="text-muted-foreground">{field.replaceAll("_", " ")}</dt>
+          <dd className="m-0 break-words">
+            {Array.isArray(v) && v.length === 2 ? (
+              <><del className="text-muted-foreground">{show(v[0])}</del>{" → "}<span className="font-medium">{show(v[1])}</span></>
+            ) : show(v)}
+          </dd>
+        </div>
       ))}
-    </ul>
+    </dl>
   );
 }
 
@@ -50,11 +51,15 @@ export function Diff({ detail }: { detail: Record<string, unknown> }) {
 export function AuditPage() {
   const [entity, setEntity] = useState("");
   const [limit, setLimit] = useState(100);
-  const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [actor, setActor] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [actor, setActor] = useState("");
   const q = new URLSearchParams();
   if (entity) q.set("entity", entity);
   q.set("limit", String(limit));
-  if (from) q.set("date_from", from); if (to) q.set("date_to", to); if (actor) q.set("actor_id", actor);
+  if (from) q.set("date_from", from);
+  if (to) q.set("date_to", to);
+  if (actor) q.set("actor_id", actor);
   const list = useQuery({
     queryKey: ["admin-audit", entity, limit, from, to, actor],
     queryFn: () => api<AuditEntry[]>(`/v1/admin/directory/audit?${q.toString()}`),
@@ -62,34 +67,36 @@ export function AuditPage() {
 
   return (
     <>
-      <h1 className="page-title">Audit</h1>
-      <Card>
-        <div className="ref-toolbar">
-          <TextField label="From date" type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          <TextField label="To date" type="date" value={to} onChange={e => setTo(e.target.value)} />
-          <TextField label="Actor ID" value={actor} onChange={e => setActor(e.target.value)} />
-          <SelectField label="Entity" value={entity} onChange={(e) => setEntity(e.target.value)}>
-            <option value="">All</option>
-            {ENTITIES.map((x) => <option key={x}>{x}</option>)}
-          </SelectField>
-          <SelectField label="Show" value={String(limit)}
-                       onChange={(e) => setLimit(Number(e.target.value))}>
-            {LIMITS.map((n) => <option key={n} value={n}>{n} entries</option>)}
-          </SelectField>
-        </div>
-        {list.isLoading && <p className="muted">Loading...</p>}
-        {list.isError && <p role="alert" className="form-error">Could not load the audit.</p>}
-        {list.data && (
-          <Table rows={list.data} rowKey={(a) => a.id} empty="No changes recorded." columns={[
-            { key: "at", header: "When", render: (a) => new Date(a.at).toLocaleString("en-IN") },
-            { key: "entity", header: "Entity", render: (a) => a.entity },
-            { key: "action", header: "Action", render: (a) => a.action },
-            { key: "id", header: "Record", render: (a) => a.entity_id },
-            { key: "by", header: "By", render: (a) => a.admin_login_id ?? "system" },
-            { key: "detail", header: "Change", render: (a) => <Diff detail={a.detail} /> },
-          ]} />
+      <PageHeader title="Audit" description="Who changed what, newest first." />
+      {list.isError && <div className="mb-4"><ErrorState message="Could not load the audit." onRetry={() => void list.refetch()} /></div>}
+      <DataTable
+        rows={list.data}
+        loading={list.isLoading}
+        rowKey={(a) => a.id}
+        toolbar={(
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="From date" className="w-44">{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
+            <Field label="To date" className="w-44">{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
+            <Field label="Entity" className="w-48">
+              {(p) => <SelectBox {...p} value={entity || NONE} onChange={(v) => setEntity(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...ENTITIES.map((x) => ({ value: x, label: x.replaceAll("_", " ") }))]} />}
+            </Field>
+            <Field label="Actor ID" optional className="w-64">{(p) => <Input {...p} value={actor} onChange={(e) => setActor(e.target.value)} />}</Field>
+            <Field label="Show" className="w-36">
+              {(p) => <SelectBox {...p} value={String(limit)} onChange={(v) => setLimit(Number(v))} choices={LIMITS.map((n) => ({ value: String(n), label: `${n} entries` }))} />}
+            </Field>
+          </div>
         )}
-      </Card>
+        empty={<EmptyState title="No changes recorded" />}
+        columns={[
+          { key: "at", header: "When", width: "9.5rem", cell: (a) => showDateTime(a.at) },
+          { key: "entity", header: "Entity", width: "9rem", cell: (a) => a.entity.replaceAll("_", " ") },
+          { key: "action", header: "Action", width: "8rem", cell: (a) => a.action },
+          { key: "by", header: "By", width: "9rem", cell: (a) => a.admin_login_id ?? "system" },
+          { key: "detail", header: "Change", wrap: true, cell: (a) => <Diff detail={a.detail} /> },
+          { key: "id", header: "Record", width: "8rem", cell: (a) => <span className="text-xs text-muted-foreground" title={a.entity_id}>{a.entity_id.slice(0, 8)}</span> },
+        ]}
+      />
     </>
   );
 }

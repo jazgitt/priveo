@@ -136,12 +136,16 @@ export function useBoard(societyId: string, startDate: string) {
   });
 }
 
+/** An add-on waiting for a scheduling period to be run. */
+export interface PendingAddon { id: string; registration: string; date: string; finish_by: string }
+
 export function useNeedsScheduling(societyId: string) {
   return useQuery({
     queryKey: ["needs-scheduling", societyId],
     queryFn: async () => {
       const q = societyId ? `?society_id=${encodeURIComponent(societyId)}` : "";
-      return (await api<{ jobs: AdminJob[] }>(`/v1/admin/scheduling/needs-scheduling${q}`)).jobs;
+      const r = await api<{ jobs?: AdminJob[]; pending_addons?: PendingAddon[] }>(`/v1/admin/scheduling/needs-scheduling${q}`);
+      return { jobs: r.jobs ?? [], pending_addons: r.pending_addons ?? [] };
     },
   });
 }

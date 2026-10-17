@@ -1,26 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-import { api } from "../../api/client";
-import { Card, SelectField, StatusChip, Table, type ChipTone } from "../../components";
+import { api } from "@/api/client";
+import { DataTable } from "@/blocks/DataTable";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { StatusBadge, type Tone } from "@/blocks/status";
+import { useSite } from "@/site/SiteContext";
+
 import { formatDate } from "../support/format";
 import { KEYS } from "../support/hooks";
 import type { ComplaintSummary } from "../support/types";
-import "../support/support.css";
 
 export const STATUSES = ["Raised", "In progress", "Resolved"] as const;
 
-export function statusTone(status: string): ChipTone {
+export function statusTone(status: string): Tone {
   return status === "Resolved" ? "ok" : status === "In progress" ? "info" : "warn";
 }
 
-/** The complaints list with filters. Overdue ones (Raised for over 4 hours) are marked. */
+/** The complaints list with filters. Overdue ones (Raised for over 4 hours) are marked (ADM-CMP-*). */
 export function ComplaintsPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
-  const society = useSite().name;
+  const site = useSite();
 
   const params = new URLSearchParams();
   if (status) params.set("status", status);
@@ -32,53 +36,48 @@ export function ComplaintsPage() {
     queryFn: () => api<ComplaintSummary[]>(`/v1/admin/complaints${qs ? `?${qs}` : ""}`),
   });
   // Category choices come from the rows seen so far.
-  const all = useQuery({
-    queryKey: [...KEYS.complaints, ""],
-    queryFn: () => api<ComplaintSummary[]>("/v1/admin/complaints"),
-  });
+  const all = useQuery({ queryKey: [...KEYS.complaints, ""], queryFn: () => api<ComplaintSummary[]>("/v1/admin/complaints") });
   const categories = [...new Set((all.data ?? []).map((c) => c.category))].sort();
-  const rows = (list.data ?? []).filter((c) => !society || c.society === society);
+  const rows = list.data?.filter((c) => !site.name || c.society === site.name);
+  const overdue = rows?.filter((c) => c.overdue).length ?? 0;
 
   return (
     <>
-      <h1 className="page-title">Complaints</h1>
-      <Card>
-        <div className="sp-filters">
-          <SelectField label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">All</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </SelectField>
-          <SelectField label="Category" value={category}
-                       onChange={(e) => setCategory(e.target.value)}>
-            <option value="">All</option>
-            {categories.map((s) => <option key={s} value={s}>{s}</option>)}
-          </SelectField>
-        </div>
-        {list.isLoading && <p className="muted">Loading...</p>}
-        {list.isError && <p role="alert">Could not load the complaints.</p>}
-        {list.data && (
-          <Table<ComplaintSummary>
-            rows={rows}
-            rowKey={(c) => c.id}
-            empty="No complaints match."
-            columns={[
-              { key: "id", header: "ID", render: (c) => (
-                <Link className="sp-link" to={`/complaints/${c.id}`}>{c.display_id}</Link>) },
-              { key: "customer", header: "Customer", render: (c) => `${c.customer_name}, ${c.flat}` },
-              { key: "society", header: "Society", render: (c) => c.society },
-              { key: "category", header: "Category", render: (c) => c.category },
-              { key: "visit", header: "Visit", render: (c) => c.visit_id ?? "-" },
-              { key: "status", header: "Status", render: (c) => (
-                <>
-                  <StatusChip tone={statusTone(c.status)}>{c.status}</StatusChip>
-                  {c.overdue && <span className="sp-overdue"> Overdue</span>}
-                </>) },
-              { key: "vehicle", header: "Vehicle", render: (c) => c.vehicle || "Not linked" },
-              { key: "raised", header: "Raised", render: (c) => formatDate(c.created_at) },
-            ]}
-          />
+      <PageHeader title="Complaints" site={site.name || undefined}
+                  description={overdue > 0 ? `${overdue} overdue: raised more than 4 hours ago with no reply.` : "Customer complaints, newest first."} />
+      {list.isError && <div className="mb-4"><ErrorState message="Could not load the complaints." onRetry={() => void list.refetch()} /></div>}
+      <DataTable
+        rows={rows}
+        loading={list.isLoading}
+        rowKey={(c) => c.id}
+        onRowClick={(c) => navigate(`/complaints/${c.id}`)}
+        toolbar={(
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Status" className="w-44">
+              {(p) => <SelectBox {...p} value={status || NONE} onChange={(v) => setStatus(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...STATUSES.map((s) => ({ value: s, label: s }))]} />}
+            </Field>
+            <Field label="Category" className="w-56">
+              {(p) => <SelectBox {...p} value={category || NONE} onChange={(v) => setCategory(v === NONE ? "" : v)}
+                                 choices={[{ value: NONE, label: "All" }, ...categories.map((s) => ({ value: s, label: s }))]} />}
+            </Field>
+          </div>
         )}
-      </Card>
+        empty={<EmptyState title="No complaints match" />}
+        columns={[
+          { key: "id", header: "ID", width: "7rem", cell: (c) => <Link to={`/complaints/${c.id}`} className="font-medium">{c.display_id}</Link> },
+          { key: "customer", header: "Customer", width: "18%", cell: (c) => (
+            <div className="min-w-0"><span className="block truncate">{c.customer_name}</span>
+              <span className="block truncate text-xs text-muted-foreground">Flat {c.flat}</span></div>) },
+          { key: "category", header: "Category", width: "13rem", cell: (c) => c.category },
+          { key: "what", header: "Complaint", cell: (c) => <span className="text-muted-foreground">{c.description}</span> },
+          { key: "vehicle", header: "Vehicle", width: "11rem", cell: (c) => c.vehicle || "Not linked" },
+          { key: "raised", header: "Raised", width: "7rem", cell: (c) => formatDate(c.created_at) },
+          { key: "status", header: "Status", width: "10rem", wrap: true, cell: (c) => (
+            <span className="flex flex-wrap gap-1.5"><StatusBadge status={c.status} tone={statusTone(c.status)} />
+              {c.overdue && <StatusBadge status="Overdue" tone="error" />}</span>) },
+        ]}
+      />
     </>
   );
 }

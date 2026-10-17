@@ -3,9 +3,11 @@ import { withSite } from "../../site/testSite";
 import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../components";
+import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { CapacityPage } from "../capacity/CapacityPage";
 import { SchedulePage } from "./SchedulePage";
 
@@ -16,10 +18,12 @@ function json(status: number, body?: unknown) {
 }
 const err = (code: string, message: string) => ({ code, message, fields: {}, request_id: "" });
 
-function wrap(ui: ReactNode) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function wrap(ui: ReactNode, path = "/schedule") {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
-    <QueryClientProvider client={qc}><ToastProvider>{withSite(ui, "s1", "Palm Grove")}</ToastProvider></QueryClientProvider>,
+    <QueryClientProvider client={qc}><MemoryRouter initialEntries={[path]}><ToastProvider><PortalProviders>
+      {withSite(ui, "s1", "Palm Grove")}
+    </PortalProviders></ToastProvider></MemoryRouter></QueryClientProvider>,
   );
 }
 
@@ -107,9 +111,9 @@ function callsTo(suffix: string) {
   return fetchMock.mock.calls.filter((c) => String(c[0]).endsWith(suffix));
 }
 
+/** The page for the week from 08-Nov-26, as a finished run links to it. */
 async function openBoard() {
-  wrap(<SchedulePage />);
-  fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-11-08" } });
+  wrap(<SchedulePage />, "/schedule?start=2026-11-08");
 }
 
 beforeEach(() => vi.stubGlobal("fetch", fetchMock));
@@ -162,9 +166,8 @@ describe("schedule board", () => {
     server();
     await openBoard();
     await userEvent.click(await within(await screen.findByTestId("lane-c1")).findByRole("button"));
-    await userEvent.selectOptions(screen.getByLabelText("Crew member"), "c2");
-    await userEvent.clear(screen.getByLabelText("Start time"));
-    await userEvent.type(screen.getByLabelText("Start time"), "09:40");
+    await choose("Crew member", /Ravi/);
+    fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "09:40" } });
     await userEvent.click(screen.getByRole("button", { name: "Move here" }));
     await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
     expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 580 });
@@ -188,7 +191,8 @@ describe("schedule board", () => {
     server();
     await openBoard();
     await userEvent.click(await screen.findByRole("button", { name: "Freeze" }));
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Freeze" }));
+    expect(callsTo("/freeze")).toHaveLength(0);
+    await confirmWith("Freeze");
     await waitFor(() => expect(callsTo("/freeze")).toHaveLength(1));
     expect(callsTo("/freeze")[0][0]).toBe("/v1/admin/scheduling/schedules/sch1/freeze");
   });
@@ -308,7 +312,7 @@ describe("capacity page", () => {
   it("gives the breakup of crew hours and demand in a tooltip", async () => {
     server();
     wrap(<CapacityPage />);
-    const crew = await screen.findByLabelText(/^Crew available 8 h/);
+    const [crew] = await screen.findAllByLabelText(/^Crew available 8 h/);
     const tip = within(crew).getByRole("tooltip");
     expect(tip).toHaveTextContent("Asha Rao (Member)");
     expect(tip).toHaveTextContent("05:00-13:00");
@@ -318,5 +322,112 @@ describe("capacity page", () => {
     expect(lines).toHaveTextContent("24 jobs");
     expect(lines).toHaveTextContent("Deep Spa (add-on)");
     expect(lines).toHaveTextContent("1 job");
+  });
+});
+
+/** server(), plus replies for the given paths. */
+function serverWith(extra: Record<string, (init?: RequestInit) => Response>, o: Opts = {}) {
+  server(o);
+  const base = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
+    const hit = Object.keys(extra).find((k) => String(path).startsWith(k));
+    return hit ? extra[hit](init) : base(path, init);
+  });
+}
+
+describe("long runs, confirmations and the action tabs", () => {
+  it("shows that the scheduler is running, then reports the result with a link to the board", async () => {
+    let finish: (r: Response) => void = () => {};
+    serverWith({ "/v1/admin/scheduling/run": () => new Promise<Response>((res) => { finish = res; }) as unknown as Response },
+      { boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
+    await openBoard();
+    await userEvent.click(await screen.findByRole("button", { name: "Run scheduler" }));
+    expect(await screen.findByRole("button", { name: "Running…" })).toBeDisabled();
+    expect(screen.getByText(/You can leave this page/)).toBeInTheDocument();
+    expect(screen.getAllByRole("status").some((s) => s.textContent?.includes("The scheduler is placing the jobs"))).toBe(true);
+    finish(json(200, { schedules: [{ schedule_id: "sch1", society_id: SOC, status: "Draft", placed: 3, unscheduled: 1, late: 0 }] }));
+    expect((await screen.findAllByText("3 placed, 1 unscheduled, 0 late.")).length).toBeGreaterThan(0);
+  });
+
+  it("does not change the default period unless asked", async () => {
+    server();
+    await openBoard();
+    await userEvent.click(await screen.findByRole("tab", { name: "Run" }));
+    await choose("Period", "Daily");
+    expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Make daily the default" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(true));
+  });
+
+  it("confirms before taking a job off its crew member", async () => {
+    server();
+    await openBoard();
+    await userEvent.click(await within(await screen.findByTestId("lane-c1")).findByRole("button"));
+    await userEvent.click(screen.getByRole("button", { name: "Take off crew member" }));
+    expect(callsTo("/move")).toHaveLength(0);
+    await confirmWith("Take off crew member");
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
+  });
+
+  it("applies or rejects a cutoff request after a confirmation", async () => {
+    serverWith({
+      "/v1/admin/scheduling/cutoff-requests/r1/handle": () => json(200, {}),
+      "/v1/admin/scheduling/cutoff-requests": () => json(200, [{ id: "r1", registration: "HR01", customer_name: "Asha", date: "2026-11-09",
+        cutoff_time: "08:00", old_cutoff: "10:00", crew_name: "Raj", start_time: "07:00" }]),
+    });
+    await openBoard();
+    await userEvent.click(await screen.findByRole("tab", { name: "Cutoff requests" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Apply and schedule" }));
+    await confirmWith("Apply and schedule");
+    await waitFor(() => expect(callsTo("/r1/handle")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/r1/handle")[0][1].body)).toEqual({ apply: true });
+    await userEvent.click(screen.getByRole("button", { name: "Reject" }));
+    await confirmWith("Reject");
+    await waitFor(() => expect(callsTo("/r1/handle")).toHaveLength(2));
+    expect(JSON.parse(callsTo("/r1/handle")[1][1].body)).toEqual({ apply: false });
+  });
+
+  it("swaps two jobs and applies the chosen improvements with the preview fingerprint", async () => {
+    serverWith({
+      "/v1/admin/scheduling/jobs/swap": () => json(200, {}),
+      "/v1/admin/scheduling/schedules/sch1/suggestions/apply": () => json(200, {}),
+      "/v1/admin/scheduling/schedules/sch1/suggestions": () => json(200, { fingerprint: "version1",
+        items: [{ job_id: "j1", crew_id: "c2", start_minute: 425, date: "2026-11-08", service: "Cleaning-External" }] }),
+    }, { jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi" })] });
+    await openBoard();
+    await userEvent.click(await screen.findByRole("tab", { name: "Draft improvements" }));
+    await choose("First job", /KA01AB1234/);
+    await choose("Second job", /KA02ZZ0001/);
+    await userEvent.click(screen.getByRole("button", { name: "Swap crew and times" }));
+    await confirmWith("Swap crew and times");
+    await waitFor(() => expect(callsTo("/jobs/swap")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/jobs/swap")[0][1].body)).toEqual({ first_job_id: "j1", second_job_id: "j2" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Preview improvements" }));
+    const choice = await screen.findByRole("checkbox", { name: "Apply for KA01AB1234" });
+    expect(screen.getByRole("button", { name: "Apply selected improvements" })).toBeDisabled();
+    await userEvent.click(choice);
+    await userEvent.click(screen.getByRole("button", { name: "Apply selected improvements" }));
+    await confirmWith("Apply selected improvements");
+    await waitFor(() => expect(callsTo("/suggestions/apply")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/suggestions/apply")[0][1].body)).toEqual({ fingerprint: "version1", job_ids: ["j1"] });
+  });
+
+  it("disables the draft actions on a frozen schedule", async () => {
+    server({ status: "Frozen" });
+    await openBoard();
+    await userEvent.click(await screen.findByRole("tab", { name: "Draft improvements" }));
+    expect(await screen.findByText("Unfreeze this schedule to swap work or apply improvements.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview improvements" })).toBeDisabled();
+  });
+
+  it("lists add-ons waiting for a scheduling period under Needs scheduling", async () => {
+    serverWith({ "/v1/admin/scheduling/needs-scheduling": () => json(200, { jobs: [],
+      pending_addons: [{ id: "b1", registration: "HR03", date: "2026-11-21", finish_by: "12:00" }] }) });
+    await openBoard();
+    await userEvent.click(await screen.findByRole("tab", { name: /^Needs scheduling/ }));
+    expect(await screen.findByText("Add-ons awaiting a scheduling period")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage booking" })).toHaveAttribute("href", "/addons");
   });
 });

@@ -1,11 +1,14 @@
+import { ChevronLeft } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { ApiErrorNote } from "../../components/ApiErrorNote";
-import { StatusChip, Tabs } from "../../components";
+import { ErrorState, PageHeader } from "@/blocks/layout";
+import { errorMessage } from "@/blocks/mutation";
+import { StatusBadge } from "@/blocks/status";
+import { Tabs } from "@/components";
+import { Skeleton } from "@/ui/skeleton";
+
 import { useCrew, type Crew } from "./api";
-import {
-  AccountPanel, DetailsPanel, ExceptionsPanel, HoursPanel, RolePanel, SessionsPanel,
-} from "./panels";
+import { AccountPanel, DetailsPanel, ExceptionsPanel, HoursPanel, RolePanel, SessionsPanel } from "./panels";
 import { SocietyPanel } from "./SocietyPanel";
 
 /** The sections of a crew member's page, one tab each. */
@@ -37,27 +40,23 @@ export function CrewDetailPage() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const q = useCrew(id);
-  if (q.isPending) return <p className="loading">Loading...</p>;
+  const back = <Link to="/crew" className="inline-flex items-center gap-1 text-muted-foreground"><ChevronLeft className="size-4" aria-hidden />Back to crew</Link>;
+  if (q.isPending) return <><PageHeader title="Crew member" back={back} /><Skeleton className="h-64 w-full" /></>;
   if (q.isError) {
-    return (
-      <>
-        <p><Link className="sp-link" to="/crew">Back to crew</Link></p>
-        <ApiErrorNote error={q.error} />
-      </>
-    );
+    return <><PageHeader title="Crew member" back={back} /><ErrorState message={errorMessage(q.error)} onRetry={() => void q.refetch()} /></>;
   }
   const c = q.data;
   const wanted = params.get("tab") ?? "details";
   const tab = CREW_TABS.some((t) => t.id === wanted) ? wanted : "details";
   return (
     <>
-      <p><Link className="sp-link" to="/crew">Back to crew</Link></p>
-      <h1 className="page-title">{c.name}</h1>
-      <p>
-        <StatusChip tone={c.active ? "ok" : "neutral"}>{c.active ? "Active" : "Inactive"}</StatusChip>{" "}
-        {c.locked && <StatusChip tone="warn">Locked</StatusChip>}{" "}
-        {c.role}, {c.society}, {c.mobile}
-      </p>
+      <PageHeader
+        back={back}
+        title={<span className="flex flex-wrap items-center gap-3">{c.name}
+          <StatusBadge status={c.active ? "Active" : "Inactive"} tone={c.active ? "ok" : "neutral"} />
+          {c.locked && <StatusBadge status="Locked" tone="warn" />}</span>}
+        description={<>{c.role}{c.paired_member ? ` with ${c.paired_member}` : ""} · {c.society} · {c.mobile}</>}
+      />
       <Tabs tabs={CREW_TABS} active={tab} label="Crew member sections"
             onChange={(next) => setParams(next === "details" ? {} : { tab: next }, { replace: true })}>
         <Section tab={tab} crew={c} />

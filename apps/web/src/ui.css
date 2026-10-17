@@ -1,0 +1,117 @@
+/* The portal's design system: Tailwind and the shadcn/ui theme, built from the
+   brand tokens in theme/tokens.g.css (docs/brand/tokens.json). Admin density:
+   36 px controls, 14 px table text. See docs/design/admin-portal-ui-review.md. */
+/* "legacy" holds the older screens' styles (styles.css), below the components. */
+@layer theme, base, legacy, components, utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "Manrope";
+  src: url("./assets/fonts/Manrope.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("./assets/fonts/CormorantGaramond.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --radius: 10px;
+  --background: var(--c-app);
+  --foreground: var(--c-text);
+  --card: var(--c-card);
+  --card-foreground: var(--c-text);
+  --popover: var(--c-card);
+  --popover-foreground: var(--c-text);
+  --primary: #1f1d22;
+  --primary-foreground: #fffdf8;
+  --secondary: #efe9de;
+  --secondary-foreground: var(--c-text);
+  --muted: #f1ece3;
+  --muted-foreground: var(--c-mute);
+  --accent: #f3ecdf;
+  --accent-foreground: var(--c-text);
+  --destructive: var(--c-error);
+  --destructive-foreground: #fff;
+  --border: var(--c-line);
+  --input: #d9d1c2;
+  --ring: var(--c-gold);
+  --gold: var(--c-gold);
+  --gold-text: var(--c-gold-text);
+  --ok: var(--c-ok);
+  --warn: var(--c-warn);
+  --info: var(--c-info);
+  --spa: var(--c-spa);
+  --sidebar: var(--c-card);
+}
+
+@theme inline {
+  --font-sans: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-text: var(--gold-text);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-spa: var(--spa);
+  --color-sidebar: var(--sidebar);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* A vehicle registration: the body font, figures of equal width, a little spaced. */
+@utility reg {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { font-size: 16px; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4 { font-weight: 650; letter-spacing: -0.01em; }
+  /* Screens not rebuilt yet still use these elements without classes. */
+  h3 { font-size: 1rem; margin: 1rem 0 0.5rem; }
+  ul, ol { padding-left: 1.25rem; }
+  ul { list-style: disc; }
+  ol { list-style: decimal; }
+  a { color: var(--c-gold-text); }
+  a:hover { text-decoration: underline; }
+  p { margin: 0.25rem 0; }
+  details > summary { cursor: pointer; font-weight: 600; padding: 0.4rem 0; }
+}

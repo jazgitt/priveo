@@ -1,70 +1,57 @@
-import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { describe, expect, it } from "vitest";
 
-import { Button, Dialog, StatusChip, Table, TextField, ToastProvider, useToast } from ".";
+import { HoverTip, Tabs, TipRows, ToastProvider, useToast } from ".";
 
 describe("components", () => {
-  it("Button is disabled while busy", () => {
-    render(<Button busy>Save</Button>);
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-  });
-
-  it("TextField links its label and error", () => {
-    render(<TextField label="Mobile" error="Use 10 digits." />);
-    const input = screen.getByLabelText("Mobile");
-    expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent("Use 10 digits.");
-  });
-
-  it("Table renders rows and an empty message", () => {
-    const columns = [{ key: "n", header: "Name", render: (r: { n: string }) => r.n }];
-    const { rerender } = render(<Table columns={columns} rows={[{ n: "Asha" }]} rowKey={(r) => r.n} />);
-    expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
-    expect(screen.getByText("Asha")).toBeInTheDocument();
-    rerender(<Table columns={columns} rows={[]} rowKey={(r) => r.n} empty="No crew." />);
-    expect(screen.getByText("No crew.")).toBeInTheDocument();
-  });
-
-  it("StatusChip shows its label", () => {
-    render(<StatusChip tone="warn">Over due</StatusChip>);
-    expect(screen.getByText("Over due")).toHaveClass("chip-warn");
-  });
-
-  it("Dialog closes on Escape", async () => {
-    const onClose = vi.fn();
-    render(<Dialog open title="Confirm" onClose={onClose}>Sure?</Dialog>);
-    expect(screen.getByRole("dialog", { name: "Confirm" })).toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("Dialog keeps focus on the field being typed in when the parent re-renders", async () => {
+  it("Tabs show one panel and move with the arrow keys", async () => {
     function Host() {
-      const [v, setV] = useState("");
-      // A new onClose function on every render.
+      const [tab, setTab] = useState("a");
       return (
-        <Dialog open title="Edit" onClose={() => setV("")}>
-          <TextField label="Name" value={v} onChange={(e) => setV(e.target.value)} />
-        </Dialog>
+        <Tabs tabs={[{ id: "a", label: "First" }, { id: "b", label: "Second" }]} active={tab} label="Parts" onChange={setTab}>
+          <p>Panel {tab}</p>
+        </Tabs>
       );
     }
     render(<Host />);
-    const input = screen.getByLabelText("Name");
-    await userEvent.click(input);
-    await userEvent.keyboard("abc");
-    expect(input).toHaveValue("abc");
-    expect(input).toHaveFocus();
+    expect(screen.getByText("Panel a")).toBeInTheDocument();
+    screen.getByRole("tab", { name: "First" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Second" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Panel b")).toBeInTheDocument();
+    await userEvent.keyboard("{End}{Home}");
+    expect(screen.getByRole("tab", { name: "First" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("HoverTip lists its rows", () => {
+    render(
+      <HoverTip label="8 h" ariaLabel="Crew 8 h">
+        <TipRows title="Crew" empty="None" rows={[{ key: "a", left: "Asha", right: "8 h", note: "05:00-13:00", tone: "warn" }]} />
+      </HoverTip>,
+    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Asha");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("05:00-13:00");
   });
 
   it("Toast shows a message", async () => {
     function Trigger() {
       const toast = useToast();
-      return <button onClick={() => toast.show("Saved", "ok")}>go</button>;
+      return (
+        <>
+          <button type="button" onClick={() => toast.show("Saved", "ok")}>ok</button>
+          <button type="button" onClick={() => toast.show("Failed", "error")}>bad</button>
+          <button type="button" onClick={() => toast.show("Note")}>info</button>
+        </>
+      );
     }
     render(<ToastProvider><Trigger /></ToastProvider>);
-    await userEvent.click(screen.getByText("go"));
-    expect(screen.getByText("Saved")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("ok"));
+    await userEvent.click(screen.getByText("bad"));
+    await userEvent.click(screen.getByText("info"));
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(await screen.findByText("Failed")).toBeInTheDocument();
+    expect(await screen.findByText("Note")).toBeInTheDocument();
   });
 });

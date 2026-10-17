@@ -18,7 +18,7 @@ it("saves email opt-out and retains unsaved edits during external refresh", asyn
   fireEvent.change(input, { target: { value: "edited@example.com" } });
   qc.setQueryData(["alert-email-preferences"], { email: "external@example.com", enabled: true });
   expect(input).toHaveValue("edited@example.com");
-  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("switch"));
   fireEvent.click(screen.getByText("Save alert email preferences"));
   await screen.findByText("Alert email preferences saved.");
   expect(saved).toEqual({ email: "edited@example.com", enabled: false });

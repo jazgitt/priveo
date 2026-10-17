@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -70,11 +70,11 @@ describe("portal shell", () => {
     });
     localStorage.removeItem("priveo.site");
     renderAt("/payments");
-    const site = await screen.findByLabelText("Site");
-    await screen.findByRole("option", { name: "Park" });
-    expect(site).toHaveValue("s1");
-    await userEvent.selectOptions(site, "s2");
-    expect(localStorage.getItem("priveo.site")).toBe("s2");
+    const site = await screen.findByRole("combobox", { name: "Site" });
+    await waitFor(() => expect(site).toHaveTextContent("Lake View"));
+    await userEvent.click(site);
+    await userEvent.click(await screen.findByRole("option", { name: "Park" }));
+    await waitFor(() => expect(localStorage.getItem("priveo.site")).toBe("s2"));
     const nav = screen.getByRole("navigation", { name: "Admin areas" });
     expect(within(nav).getByText("This site")).toBeInTheDocument();
     expect(within(nav).getByText("All sites")).toBeInTheDocument();

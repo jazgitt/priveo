@@ -2,7 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../../components';
+import { withSite } from '../../site/testSite';
+import { choose, confirmWith, PortalProviders } from '../../test/portal';
 import { PlansTab } from './PlansTab';
 import { AddonsTab } from './AddonsTab';
 import { VehiclesTab } from './VehiclesTab';
@@ -13,14 +16,15 @@ import { ChecklistsTab } from './ChecklistsTab';
 const fetchMock = vi.fn();
 let responses: Record<string, unknown>;
 let clients: QueryClient[];
-function mount(ui: React.ReactElement) {
+function mount(ui: React.ReactElement, site = 's1') {
   const client = new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
   clients.push(client);
-  render(<QueryClientProvider client={client}><ToastProvider>{ui}</ToastProvider></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><MemoryRouter><ToastProvider><PortalProviders>{withSite(ui, site, site ? 'Lake' : '')}</PortalProviders></ToastProvider></MemoryRouter></QueryClientProvider>);
 }
 const calls = (path:string, method:string) => fetchMock.mock.calls.filter(([url,init])=>String(url)==='/v1/admin/directory'+path && (init?.method ?? 'GET')===method);
 async function field(label:string,value:string) {
-  const input=within(screen.getByRole('dialog')).getByLabelText(label);
+  // Wait for the dialog: a confirmation that just closed can still be leaving.
+  const input=within(await screen.findByRole('dialog')).getByLabelText(label);
   await userEvent.clear(input); if(value) await userEvent.type(input,value);
 }
 async function saved(path:string, method='POST') {
@@ -53,7 +57,7 @@ it('edits a plan and clears the old list price',async()=>{
   await userEvent.click(await screen.findByRole('button',{name:'Edit Premium'}));
   await field('List price (Rs, struck through)','');
   expect(await saved('/plans/p1','PATCH')).toMatchObject({clear_list_price:true});
-  await userEvent.click(screen.getByRole('button',{name:'Deactivate Premium'}));
+  await userEvent.click(screen.getByRole('button',{name:'Deactivate Premium'}));await confirmWith('Deactivate');
   await waitFor(()=>expect(calls('/plans/p1/deactivate','POST')).toHaveLength(1));
 });
 it('reactivates a plan and cancels a new draft',async()=>{
@@ -77,7 +81,7 @@ it('edits and deactivates a Spa catalogue item',async()=>{
   mount(<AddonsTab/>); await userEvent.click(await screen.findByRole('button',{name:'Edit Spa'}));
   await field('List price (Rs, struck through)',''); await field('Duration (minutes)','');
   expect(await saved('/addons/a1','PATCH')).toMatchObject({clear_list_price:true});
-  await userEvent.click(screen.getByRole('button',{name:'Deactivate Spa'}));
+  await userEvent.click(screen.getByRole('button',{name:'Deactivate Spa'}));await confirmWith('Deactivate');
   await waitFor(()=>expect(calls('/addons/a1/deactivate','POST')).toHaveLength(1));
 });
 it('reactivates a catalogue item and cancels its draft',async()=>{
@@ -94,12 +98,12 @@ it('creates, filters, searches and edits vehicle catalogue details',async()=>{
   responses['/v1/admin/directory/vehicle-catalogue/categories']=['SUV','Hatch'];
   responses['/v1/admin/directory/vehicle-catalogue?q=Creta']=vehicles.slice(0,1);
   mount(<VehiclesTab/>); await screen.findByText('Hyundai');
-  await userEvent.selectOptions(screen.getByLabelText('Category'),'SUV'); expect(screen.queryByText('Tata')).not.toBeInTheDocument();
+  await choose('Category','SUV'); expect(screen.queryByText('Tata')).not.toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('Search make or model'),'Creta'); await screen.findByText('Hyundai');
   await userEvent.click(screen.getByRole('button',{name:'Edit Hyundai Creta SX'}));
   await field('Make','Hyundai'); await field('Model','Creta'); await field('Variant','EX'); await field('Category','SUV');
   expect(await saved('/vehicle-catalogue/v1','PATCH')).toEqual({make:'Hyundai',model:'Creta',variant:'EX',category:'SUV'});
-  await userEvent.click(screen.getByRole('button',{name:'Deactivate Hyundai Creta SX'}));
+  await userEvent.click(screen.getByRole('button',{name:'Deactivate Hyundai Creta SX'}));await confirmWith('Deactivate');
   await waitFor(()=>expect(calls('/vehicle-catalogue/v1/deactivate','POST')).toHaveLength(1));
   await userEvent.click(screen.getByRole('button',{name:'Add a vehicle'}));
   await field('Make','Kia');await field('Model','Seltos');await field('Category','SUV');
@@ -114,26 +118,26 @@ it('reactivates a vehicle and cancels an edit',async()=>{
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Cancel'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
-it('creates, edits and deletes working slots with ordered weekdays',async()=>{
-  responses['/v1/admin/directory/societies?include_inactive=false']=[{id:'s1',name:'Lake'},{id:'s2',name:'Park'}];
+it('creates, edits and deletes working slots of the chosen site with ordered weekdays',async()=>{
   const slot={id:'t1',service:'Cleaning-External',start:'05:00',end:'11:00',days:['Monday','Tuesday']};
   responses['/v1/admin/directory/societies/s1/slots?service=Cleaning-External']=[slot];
-  responses['/v1/admin/directory/societies/s2/slots?service=Cleaning-External']=[slot];
   mount(<SlotsTab/>); await screen.findByText('05:00 to 11:00');
-  await userEvent.selectOptions(screen.getByLabelText('Society'),'s2');
   await userEvent.click(screen.getByRole('button',{name:'Add a slot'}));
-  await userEvent.selectOptions(within(screen.getByRole('dialog')).getByLabelText('Service'),'Cleaning-Internal');
+  await choose('Service','Cleaning-Internal');
   await field('Start (HH:MM)','06:00'); await field('End (HH:MM, 24:00 for midnight)','12:00');
-  await userEvent.click(screen.getByLabelText('Sunday')); await userEvent.click(screen.getByLabelText('Sunday'));
-  expect(await saved('/societies/s2/slots')).toMatchObject({service:'Cleaning-Internal',start:'06:00',end:'12:00'});
+  await userEvent.click(screen.getByLabelText('Sunday'));
+  expect(within(screen.getByRole('dialog')).getByRole('button',{name:'Save'})).toBeEnabled();
+  expect(await saved('/societies/s1/slots')).toEqual({service:'Cleaning-Internal',start:'06:00',end:'12:00',days:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']});
   await userEvent.click(screen.getByRole('button',{name:'Edit'}));
   await userEvent.click(screen.getByLabelText('Tuesday'));
   expect(await saved('/slots/t1','PATCH')).toMatchObject({days:['Monday']});
   await userEvent.click(screen.getByRole('button',{name:'Delete'}));
+  expect(calls('/slots/t1','DELETE')).toHaveLength(0);
+  await confirmWith('Delete');
   await waitFor(()=>expect(calls('/slots/t1','DELETE')).toHaveLength(1));
 });
 it('disables slot creation without a society',async()=>{
-  responses['/v1/admin/directory/societies?include_inactive=false']=[]; mount(<SlotsTab/>);
+  mount(<SlotsTab/>,'');
   expect(await screen.findByText('Add a society first.')).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Add a slot'})).toBeDisabled();
 });
@@ -145,7 +149,7 @@ it('renames, reorders, activates and adds checklist rows',async()=>{
   await waitFor(()=>expect(calls('/steps/r1','PATCH')).toHaveLength(1));
   expect(JSON.parse(calls('/steps/r1','PATCH')[0][1].body)).toEqual({label:'Vacuum seats'});
   await userEvent.click(screen.getByRole('button',{name:'Rename Vacuum'})); await userEvent.click(screen.getByRole('button',{name:'Cancel'}));
-  await userEvent.click(screen.getByRole('button',{name:'Deactivate Vacuum'})); await userEvent.click(screen.getByRole('button',{name:'Reactivate Polish'}));
+  await userEvent.click(screen.getByRole('button',{name:'Deactivate Vacuum'}));await confirmWith('Deactivate'); await userEvent.click(screen.getByRole('button',{name:'Reactivate Polish'}));
   await userEvent.click(screen.getByRole('button',{name:'Move Polish up'}));
   await waitFor(()=>expect(calls('/steps/order','PUT')).toHaveLength(1));
   expect(JSON.parse(calls('/steps/order','PUT')[0][1].body)).toEqual({ids:['r2','r1']});

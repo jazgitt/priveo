@@ -1,12 +1,14 @@
 import { useState } from "react";
 
+import { PageHeader } from "@/blocks/layout";
+import { Tabs } from "@/components";
+
 import { AddonsTab } from "./AddonsTab";
 import { ChecklistsTab, ReasonsTab } from "./ChecklistsTab";
 import { PlansTab } from "./PlansTab";
 import { ServicesTab } from "./ServicesTab";
 import { SocietiesTab } from "./SocietiesTab";
 import { VehiclesTab } from "./VehiclesTab";
-import "./reference.css";
 
 const TABS = [
   { id: "societies", label: "Societies", view: SocietiesTab },
@@ -24,16 +26,10 @@ export function ReferencePage() {
   const View = (TABS.find((t) => t.id === tab) ?? TABS[0]).view;
   return (
     <>
-      <h1 className="page-title">Reference data</h1>
-      <div className="ref-tabs" role="tablist" aria-label="Reference data">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" className="ref-tab"
-                  aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <View />
+      <PageHeader title="Master data" description="Lists every site uses. Changes are recorded in the Audit log." />
+      <Tabs tabs={TABS} active={tab} label="Reference data" onChange={setTab}>
+        <View />
+      </Tabs>
     </>
   );
 }

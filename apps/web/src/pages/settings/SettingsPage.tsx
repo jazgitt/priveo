@@ -1,8 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, ApiError } from "../../api/client";
-import { Button, Card, StatusChip, TextField, useToast } from "../../components";
+import { api, ApiError } from "@/api/client";
+import { BusyButton } from "@/blocks/FormDialog";
+import { ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { useAppMutation } from "@/blocks/mutation";
+import { StatusBadge } from "@/blocks/status";
+import { showDateTime } from "@/components/format";
+import { Input } from "@/ui/input";
+import { Skeleton } from "@/ui/skeleton";
+
 import { AlertEmailSettings } from "./AlertEmailSettings";
 import { AutomaticPlanningSettings } from "./AutomaticPlanningSettings";
 
@@ -36,55 +43,47 @@ const HINTS: Record<string, string> = {
   time: "24-hour time as HH:MM.",
 };
 
-/** Date and time in the admin's locale, for the updated-at line. */
-function when(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("en-IN");
-}
-
 function SettingRow({ setting }: { setting: Setting }) {
   const qc = useQueryClient();
-  const toast = useToast();
   const [draft, setValue] = useState<string>();
   const value = draft ?? String(setting.value ?? "");
-  const save = useMutation({
-    mutationFn: () => api<Setting>(`${PATH}/${setting.key}`, {
-      method: "PUT",
-      body: { value: setting.kind === "int" ? Number(value) : value },
-    }),
-    onSuccess: () => {
-      setValue(undefined);
-      toast.show(`${setting.label} saved.`, "ok");
-      void qc.invalidateQueries({ queryKey: ["admin-settings"] });
-    },
+  const save = useAppMutation<void>({
+    mutationFn: () => api(`${PATH}/${setting.key}`, { method: "PUT", body: { value: setting.kind === "int" ? Number(value) : value } }),
+    success: `${setting.label} saved.`,
+    onSuccess: () => { setValue(undefined); void qc.invalidateQueries({ queryKey: ["admin-settings"] }); },
   });
-  const err = save.error instanceof ApiError
-    ? (save.error.fields.value ?? save.error.message)
+  const err = save.error instanceof ApiError ? (save.error.fields.value ?? save.error.message)
     : save.error ? "Could not save. Please try again." : undefined;
   const changed = value !== String(setting.value ?? "");
+  const id = `setting-${setting.key}`;
 
   if (setting.group === "invoice") {
-    return <div className="set-row"><p><strong>{setting.label}</strong>: {String(setting.value ?? "")}</p><p className="muted">Seeded from environment configuration.</p></div>;
+    return (
+      <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-4">
+        <span className="text-sm font-medium">{setting.label}</span>
+        <span className="text-sm">{String(setting.value ?? "") || "-"} <span className="block text-xs text-muted-foreground">Seeded from environment configuration.</span></span>
+      </div>
+    );
   }
 
   return (
-    <div className="set-row">
-      <TextField label={setting.label} value={value} error={err}
-                 type={setting.kind === "int" ? "number" : "text"}
-                 hint={HINTS[setting.kind]} onChange={(e) => setValue(e.target.value)} />
-      <div className="set-meta">
-        {setting.is_default
-          ? <StatusChip tone="neutral">Default</StatusChip>
-          : <StatusChip tone="ok">Set</StatusChip>}
-        {setting.updated_at && (
-          <span className="muted">
-            Updated {when(setting.updated_at)}{setting.updated_by ? ` by ${setting.updated_by}` : ""}
-          </span>
-        )}
-        <Button busy={save.isPending} disabled={!changed}
-                aria-label={`Save ${setting.label}`} onClick={() => save.mutate()}>Save</Button>
+    <form className="grid grid-cols-1 items-start gap-2 py-3 sm:grid-cols-[14rem_minmax(0,1fr)_auto] sm:gap-4"
+          onSubmit={(e) => { e.preventDefault(); if (changed) save.mutate(); }}>
+      <label htmlFor={id} className="pt-2 text-sm font-medium">{setting.label}</label>
+      <div className="flex min-w-0 flex-col gap-1">
+        <Input id={id} type={setting.kind === "int" ? "number" : "text"} value={value} aria-invalid={err ? true : undefined}
+               onChange={(e) => setValue(e.target.value)} className="max-w-md" />
+        {err ? <p role="alert" className="m-0 text-xs text-destructive">{err}</p>
+          : <p className="m-0 text-xs text-muted-foreground">
+              {HINTS[setting.kind] ? `${HINTS[setting.kind]} ` : ""}
+              {setting.updated_at ? `Updated ${showDateTime(setting.updated_at)}${setting.updated_by ? ` by ${setting.updated_by}` : ""}.` : ""}
+            </p>}
       </div>
-    </div>
+      <div className="flex items-center gap-2 sm:pt-1">
+        <StatusBadge status={setting.is_default ? "Default" : "Set"} tone={setting.is_default ? "neutral" : "ok"} />
+        <BusyButton type="submit" size="sm" variant={changed ? "default" : "outline"} busy={save.isPending} disabled={!changed} aria-label={`Save ${setting.label}`}>Save</BusyButton>
+      </div>
+    </form>
   );
 }
 
@@ -93,24 +92,26 @@ export function SettingsPage() {
   const list = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<Setting[]>(PATH) });
   return (
     <>
-      <h1 className="page-title">Settings</h1>
-      <AlertEmailSettings />
-      <AutomaticPlanningSettings />
-      {list.isLoading && <p className="muted">Loading...</p>}
-      {list.isError && <p role="alert" className="form-error">Could not load the settings.</p>}
-      <div className="set-stack">
-        {Object.entries(GROUPS).map(([group, title]) => {
-          const rows = (list.data ?? []).filter((s) => s.group === group);
-          if (rows.length === 0) return null;
-          return (
-            <Card key={group} title={title}>
-              {rows.map((s) => (
-                // Keep drafts while another client changes the server value.
-                <SettingRow key={s.key} setting={s} />
-              ))}
-            </Card>
-          );
-        })}
+      <PageHeader title="Settings" description="Portal-wide settings. Each one is saved on its own and recorded in the Audit log." />
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {list.isLoading && <Skeleton className="h-64" />}
+          {list.isError && <ErrorState message="Could not load the settings." onRetry={() => void list.refetch()} />}
+          {Object.entries(GROUPS).map(([group, title]) => {
+            const rows = (list.data ?? []).filter((s) => s.group === group);
+            if (rows.length === 0) return null;
+            return (
+              <Panel key={group} title={title} bodyClassName="divide-y py-1">
+                {/* Keep drafts while another client changes the server value. */}
+                {rows.map((s) => <SettingRow key={s.key} setting={s} />)}
+              </Panel>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-6">
+          <AlertEmailSettings />
+          <AutomaticPlanningSettings />
+        </div>
       </div>
     </>
   );
