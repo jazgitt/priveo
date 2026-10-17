@@ -7,6 +7,7 @@ import '../../core/util/format.dart';
 import '../customer/account/account_strings.dart';
 import '../customer/account/photo_widgets.dart' show ComplaintPhotosField;
 import '../customer/data/customer_reads_repository.dart';
+import '../customer/home/vehicle_header.dart';
 import 'data/support_repository.dart';
 import 'routes.dart';
 import 'support_strings.dart';
@@ -31,6 +32,10 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
   String? _failure;
   bool _busy = false;
   String? _visitId;
+
+  /// Set once the customer picks a linked visit themselves (even "none"), so
+  /// the default is not applied over their choice.
+  bool _visitChosen = false;
   List<String> _photoKeys = const [];
 
   @override
@@ -83,6 +88,25 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
   @override
   Widget build(BuildContext context) {
     final options = ref.watch(supportOptionsProvider);
+    // The report is about one vehicle: the one the visit belongs to when the
+    // customer came from a visit, otherwise the vehicle selected on Home. The
+    // linked visit starts as that vehicle's latest visit (ISS-02).
+    final visits = ref.watch(_recentVisitsProvider).value ?? const <HistoryItemDto>[];
+    final from = widget.visitId == null
+        ? null
+        : visits.where((v) => v.visitId == widget.visitId).firstOrNull;
+    final vehicleId = from?.vehicleId ?? selectedVehicleIdOf(ref);
+    final ofVehicle = [
+      for (final v in visits)
+        if (vehicleId == null || v.vehicleId == vehicleId) v,
+    ];
+    if (!_visitChosen && _visitId == null && ofVehicle.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_visitChosen && _visitId == null) {
+          setState(() => _visitId = ofVehicle.first.visitId);
+        }
+      });
+    }
     return Scaffold(
       appBar: AppBar(title: Text(t('support_report_title'))),
       body: options.when(
@@ -95,6 +119,7 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
         data: (o) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            VehicleHeader(vehicleId),
             Text(t('support_issue_category'),
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -116,7 +141,11 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
             const SizedBox(height: 16),
             _VisitSelector(
               selected: _visitId,
-              onChanged: (v) => setState(() => _visitId = v),
+              visits: ofVehicle,
+              onChanged: (v) => setState(() {
+                _visitId = v;
+                _visitChosen = true;
+              }),
             ), // ISS-02
             const SizedBox(height: 16),
             TextField(
@@ -150,14 +179,18 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
 /// Which visit the report is about (ISS-02). It starts on the visit the
 /// customer came from. The list is the customer's recent visits that are over.
 class _VisitSelector extends ConsumerWidget {
-  const _VisitSelector({required this.selected, required this.onChanged});
+  const _VisitSelector({
+    required this.selected,
+    required this.visits,
+    required this.onChanged,
+  });
 
   final String? selected;
+  final List<HistoryItemDto> visits;
   final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visits = ref.watch(_recentVisitsProvider).value ?? const [];
     // The visit the customer came from stays on the list even when it is not
     // in the recent ones.
     final ids = {for (final v in visits) v.visitId};

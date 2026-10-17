@@ -520,7 +520,6 @@ class _VehicleCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final b = context.brand;
     final status = vehicle.subscriptionStatus;
-    final price = vehicle.monthlyPriceRupees;
     Widget line(IconData icon, String value) => Row(
       children: [
         Icon(icon, size: 15, color: b.mute),
@@ -613,7 +612,7 @@ class _VehicleCard extends StatelessWidget {
                   style: text.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                // The plan name, with its price on the right.
+                // The plan name only: the price is not shown on Home.
                 Row(
                   children: [
                     Icon(Symbols.workspace_premium_rounded, size: 15, color: b.gold),
@@ -622,19 +621,12 @@ class _VehicleCard extends StatelessWidget {
                       child: Text(
                         (vehicle.planName ?? '').isNotEmpty
                             ? vehicle.planName!
-                            : (price == null ? l.noPlan : ''),
+                            : (status == null ? l.noPlan : ''),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: text.titleSmall,
                       ),
                     ),
-                    if (price != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        l.pricePerMonth(formatRupees(price)),
-                        style: text.bodySmall?.copyWith(color: b.mute),
-                      ),
-                    ],
                   ],
                 ),
                 // The date the plan expires; it moves on once a renewal is paid.

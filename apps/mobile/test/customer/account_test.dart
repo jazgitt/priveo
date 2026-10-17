@@ -3,8 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:priveo/core/providers.dart';
 import 'package:priveo/core/ui/theme.dart';
 import 'package:priveo/features/crew/capture/media_capture.dart';
 import 'package:priveo/features/crew/crew_providers.dart'
@@ -13,11 +15,14 @@ import 'package:priveo/features/customer/account/account_data.dart';
 import 'package:priveo/features/customer/account/photo_widgets.dart';
 import 'package:priveo/features/customer/account/profile_screens.dart';
 import 'package:priveo/features/customer/data/customer_reads_repository.dart';
+import 'package:priveo/features/customer/home/vehicle_header.dart';
 import 'package:priveo/features/support/data/support_repository.dart';
 import 'package:priveo/features/support/report_issue_screen.dart';
 import 'package:priveo/l10n/app_localizations.dart';
 
+import '../support/fakes.dart' show FakePriveoApi;
 import '../support/support_fakes.dart';
+import 'customer_slice_test.dart' show FakeReads;
 
 class FakeAccount implements AccountRepository {
   ProfileDto current = const ProfileDto(
@@ -125,12 +130,14 @@ Widget _app(
   _Capture? capture,
   SupportRepository? support,
   GoRouter? router,
+  List<Override> extra = const [],
 }) {
   final overrides = [
     accountRepositoryProvider.overrideWithValue(account),
     mediaCaptureProvider.overrideWithValue(capture ?? _Capture()),
     customerReadsProvider.overrideWithValue(_NoReads()),
     if (support != null) supportRepositoryProvider.overrideWithValue(support),
+    ...extra,
   ];
   const delegates = [
     AppLocalizations.delegate,
@@ -139,6 +146,7 @@ Widget _app(
     GlobalCupertinoLocalizations.delegate,
   ];
   return ProviderScope(
+    retry: (_, _) => null,
     overrides: overrides,
     child: router != null
         ? MaterialApp.router(
@@ -258,6 +266,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('This file format is not accepted.'), findsOneWidget);
     expect(account.uploads, isEmpty);
+  });
+
+  testWidgets('report an issue names the vehicle and links its latest visit', (
+    tester,
+  ) async {
+    _tall(tester);
+    await tester.pumpWidget(
+      _app(
+        const ReportIssueScreen(),
+        FakeAccount(),
+        support: FakeSupportRepository(),
+        extra: [
+          apiProvider.overrideWithValue(FakePriveoApi()),
+          customerReadsProvider.overrideWithValue(FakeReads()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    // The header names the selected vehicle.
+    expect(
+      find.descendant(
+        of: find.byType(VehicleHeader),
+        matching: find.text('MH 12 AB 1234'),
+      ),
+      findsOneWidget,
+    );
+    // The linked visit starts as that vehicle's latest visit (03-Nov-26).
+    expect(find.textContaining('03-Nov-26'), findsOneWidget);
   });
 
   testWidgets('report an issue sends the attached photos and the visit', (

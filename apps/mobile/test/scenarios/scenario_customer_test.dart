@@ -42,7 +42,7 @@ void main() {
       expect(find.text('Monthly amount: ₹999'), findsOneWidget);
       expect(find.text('Payment method: UPI'), findsOneWidget);
       expect(find.textContaining('days left'), findsOneWidget);
-      expect(find.textContaining('Billing cycle:'), findsOneWidget);
+      expect(find.textContaining('Expires on'), findsOneWidget);
       expect(find.textContaining('Due by'), findsOneWidget);
       expect(find.text('Renew subscription'), findsOneWidget);
       await letTimersFinish(tester);

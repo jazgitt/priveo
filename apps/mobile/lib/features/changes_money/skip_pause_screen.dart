@@ -12,6 +12,7 @@ import '../customer/calendar/day_card.dart' show CallSupportButton;
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
+import '../customer/home/vehicle_header.dart';
 import 'schedule_refresh.dart';
 import 'strings.dart';
 
@@ -141,6 +142,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         data: (days) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            VehicleHeader(widget.vehicleId),
             SegmentedButton<bool>(
               segments: const [
                 ButtonSegment(value: false, label: Text(MoneyStrings.skipTab)),

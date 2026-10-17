@@ -13,6 +13,7 @@ import '../../core/util/format.dart';
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
+import '../customer/home/vehicle_header.dart';
 import 'routes.dart';
 import 'strings.dart';
 
@@ -183,6 +184,7 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              VehicleHeader(widget.vehicleId),
               _SpaHero(offer),
               const SizedBox(height: 16),
               OutlinedButton(

@@ -9,6 +9,7 @@ import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'invoice_screen.dart';
 import 'money_widgets.dart';
+import '../customer/home/vehicle_header.dart';
 import 'strings.dart';
 import 'routes.dart';
 
@@ -30,7 +31,13 @@ class BillingHistoryScreen extends ConsumerWidget {
     final history = ref.watch(billingHistoryProvider(vehicleId));
     return Scaffold(
       appBar: AppBar(title: const Text(MoneyStrings.historyTitle)),
-      body: history.when(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: VehicleHeader(vehicleId),
+          ),
+          Expanded(child: history.when(
         skipLoadingOnReload: true,
         skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -86,6 +93,8 @@ class BillingHistoryScreen extends ConsumerWidget {
                 },
               ),
         ),
+      )),
+        ],
       ),
     );
   }

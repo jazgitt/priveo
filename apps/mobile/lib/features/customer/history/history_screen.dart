@@ -14,6 +14,7 @@ import '../cust_ui.dart';
 import '../data/customer_reads_repository.dart';
 import '../data/proof_reads_repository.dart';
 import '../home/customer_home_data.dart';
+import '../home/vehicle_header.dart';
 import '../visit/visit_details_screen.dart';
 import '../visit/visit_strings.dart';
 
@@ -123,6 +124,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       title: CustStrings.historyTitle,
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: VehicleHeader(_vehicleId),
+          ),
           ref.watch(importedHistoryProvider).when(
             skipLoadingOnReload: true,
             skipError: true,

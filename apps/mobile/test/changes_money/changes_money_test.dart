@@ -4,11 +4,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/ui/theme.dart';
+import 'package:priveo/features/customer/home/vehicle_header.dart';
 import 'package:priveo/features/changes_money/data/money_models.dart';
 import 'package:priveo/features/changes_money/money_widgets.dart';
 import 'package:priveo/features/changes_money/routes.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../support/fakes.dart' show FakePriveoApi;
 import 'fakes.dart';
 
 void main() {
@@ -72,6 +74,32 @@ void main() {
       expect(payPath('p1'), '/customer/pay/p1');
       expect(standalonePath('v1'), '/customer/deep-spa?vehicle=v1');
       expect(routes.length, 6);
+    });
+  });
+
+  group('vehicle header', () {
+    testWidgets('every quick-action landing screen says which vehicle it is for',
+        (tester) async {
+      for (final path in [
+        skipPausePath(vehicle),
+        subscriptionPath(vehicle),
+        addonsPath(vehicle),
+        billingPath(vehicle),
+      ]) {
+        await openAt(tester, path, api: FakePriveoApi());
+        expect(
+          find.descendant(
+              of: find.byType(VehicleHeader), matching: find.text('Hyundai Creta')),
+          findsOneWidget,
+          reason: path,
+        );
+        expect(
+          find.descendant(
+              of: find.byType(VehicleHeader), matching: find.text('MH 12 AB 1234')),
+          findsOneWidget,
+          reason: path,
+        );
+      }
     });
   });
 

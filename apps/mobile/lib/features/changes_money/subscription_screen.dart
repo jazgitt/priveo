@@ -12,6 +12,7 @@ import '../customer/calendar/defaults_sheet.dart';
 import 'data/money_models.dart';
 import 'data/money_repository.dart';
 import 'money_widgets.dart';
+import '../customer/home/vehicle_header.dart';
 import 'routes.dart';
 import 'strings.dart';
 
@@ -71,6 +72,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
+              VehicleHeader(widget.vehicleId),
               _PlanHero(s),
               const SizedBox(height: 16),
               if (s.canPayNext) ...[
@@ -112,8 +114,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${MoneyStrings.cycle}: ${formatDate(s.cycleStart)} to '
-                        '${formatDate(s.endDate)}'),
                     Text('${MoneyStrings.expiresOn} ${formatDate(s.endDate)}'),
                     Text('${MoneyStrings.monthly}: ${formatRupees(s.monthlyPriceRupees)}'),
                     Text('${MoneyStrings.paymentMethod}: ${s.paymentMethod}'),
