@@ -554,7 +554,7 @@ class CrewService:
 
     # ---- society over time (ADM-CRW-13, ADM-CRW-22) -----------------------
 
-    def society_history(self, crew_id: uuid.UUID) -> list[CrewSocietyStay]:
+    def society_history(self, crew_id: uuid.UUID) -> "list[CrewSocietyStay]":
         crew, _login = self._get(crew_id)
         society_moves.ensure_first_assignment(self._db, crew)
         rows = society_moves.history(self._db, crew.id)
