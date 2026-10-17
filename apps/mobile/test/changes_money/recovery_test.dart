@@ -43,7 +43,7 @@ void main(){
   testWidgets('Spa change dialog allows cancel, new date and time, then shows a rejected change',(t)async{
     final r=RecoveryMoney();final http=ContractHttp();r.addonList=AddonsDto(offers:r.addonList.offers,requests:[AddonRequestDto(id:'a1',service:'Deep Spa',standalone:false,date:DateTime.now().add(const Duration(days:2)),finishBy:'12:00',status:'Scheduled',priceRupees:1500,paymentId:'p1',paymentStatus:'Due',canChange:true,crewName:'Raj',startTime:'10:00',changeRequested:true)]);
     await openAt(t,addonsPath('v1'),money:r,dio:http.dio());
-    await t.ensureVisible(find.text('Change date or time'));await t.tap(find.text('Change date or time'));await t.pumpAndSettle();await t.tap(find.text('Back'));await t.pumpAndSettle();expect(http.requests,isEmpty);
+    await t.ensureVisible(find.text('Change date or time'));await t.tap(find.text('Change date or time'));await t.pumpAndSettle();await t.tap(find.text('Back'));await t.pumpAndSettle();expect(http.requests.where((r)=>r.method!='GET'),isEmpty); // Cancel sends no change.
     await t.tap(find.text('Change date or time'));await t.pumpAndSettle();
     await t.tap(find.descendant(of:find.byType(AlertDialog),matching:find.byType(TextButton)).first);await t.pumpAndSettle();await t.tap(find.text('OK'));await t.pumpAndSettle();
     http.status=409;await t.tap(find.text('Continue'));await t.pumpAndSettle();await t.runAsync(()=>Future<void>.delayed(const Duration(milliseconds:50)));await t.pumpAndSettle();

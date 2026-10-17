@@ -131,11 +131,12 @@ Widget _app(
   SupportRepository? support,
   GoRouter? router,
   List<Override> extra = const [],
+  CustomerReadsRepository? reads,
 }) {
   final overrides = [
     accountRepositoryProvider.overrideWithValue(account),
     mediaCaptureProvider.overrideWithValue(capture ?? _Capture()),
-    customerReadsProvider.overrideWithValue(_NoReads()),
+    customerReadsProvider.overrideWithValue(reads ?? _NoReads()),
     if (support != null) supportRepositoryProvider.overrideWithValue(support),
     ...extra,
   ];
@@ -277,10 +278,8 @@ void main() {
         const ReportIssueScreen(),
         FakeAccount(),
         support: FakeSupportRepository(),
-        extra: [
-          apiProvider.overrideWithValue(FakePriveoApi()),
-          customerReadsProvider.overrideWithValue(FakeReads()),
-        ],
+        reads: FakeReads(),
+        extra: [apiProvider.overrideWithValue(FakePriveoApi())],
       ),
     );
     await tester.pumpAndSettle();
