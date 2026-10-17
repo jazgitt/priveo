@@ -1,0 +1,8 @@
+.tabs { display: flex; gap: 0.25rem; margin: 0.5rem 0 1rem; flex-wrap: wrap;
+  border-bottom: 1px solid var(--c-line); }
+.tab { border: 0; background: transparent; padding: 0.55rem 0.95rem; cursor: pointer;
+  font: inherit; color: var(--c-text); border-radius: var(--r-input) var(--r-input) 0 0; }
+.tab:hover { background: var(--c-card); }
+.tab[aria-selected="true"] { background: var(--c-card); color: var(--c-gold-text); font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--c-gold); }
+.tab:focus-visible { outline: 2px solid var(--c-gold); outline-offset: -2px; }

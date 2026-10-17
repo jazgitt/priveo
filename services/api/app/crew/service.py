@@ -596,13 +596,23 @@ class CrewService:
             )
         society_moves.ensure_first_assignment(self._db, crew)
         sc = self._sync(crew, login)
-        if crew.role == "Member" and self._trainees_of(sc):
-            raise ApiError(
-                "trainees_paired",
-                "Pair this Member's Trainees with another Member first.",
-                409,
-                {"society_id": "Trainees are paired with this Member."},
-            )
+        # A Member's Trainees move with them, on the same date (ADM-CRW-23).
+        trainees: list[CrewMember] = []
+        if crew.role == "Member":
+            for t_sc in self._db.scalars(select(SchedulingCrew).where(
+                    SchedulingCrew.paired_member_id == sc.id, SchedulingCrew.role == "Trainee")):
+                t = self._db.scalar(select(CrewMember).where(CrewMember.login_id == t_sc.login_id))
+                if t is None:
+                    continue
+                if society_moves.pending_move(self._db, t.id, today) is not None:
+                    raise ApiError(
+                        "trainee_move_pending",
+                        f"{t.name}, a Trainee paired with this Member, already has a move to "
+                        "another society waiting. Cancel it first.",
+                        409,
+                        {"society_id": "A paired Trainee has a move waiting."},
+                    )
+                trainees.append(t)
         mate_id = None
         if crew.role == "Trainee":
             if body.paired_member_id is None:
@@ -612,25 +622,37 @@ class CrewService:
                 )
             self._member_to_pair(body.paired_member_id, society.id)
             mate_id = body.paired_member_id
-        # A stay that began today has not lasted a day yet, so a move for today
-        # replaces it instead of adding a second row for the same date.
-        row = self._db.scalar(select(CrewSocietyAssignment).where(
-            CrewSocietyAssignment.crew_id == crew.id,
-            CrewSocietyAssignment.effective_from == body.effective_from))
-        if row is not None:
-            row.society_id, row.paired_member_id = society.id, mate_id
-        else:
-            row = CrewSocietyAssignment(
-                crew_id=crew.id, society_id=society.id, effective_from=body.effective_from,
-                paired_member_id=mate_id, created_by=self._actor_id)
-            self._db.add(row)
-        self._db.flush()
+        row = self._set_stay(crew, society.id, body.effective_from, mate_id)
+        trainee_rows = [
+            (t, self._set_stay(t, society.id, body.effective_from, crew.id)) for t in trainees]
         released: list[dict] = []
         if body.effective_from == today:
             released = society_moves.apply_one(self._db, crew, row, today)
+            for t, t_row in trainee_rows:
+                released += society_moves.apply_one(self._db, t, t_row, today)
         self._db.add(AuthEvent(login_id=login.id, kind="crew_society_move"))
         self._commit()
         return CrewChange(crew=self._out_of(crew, login), released_jobs=_released(released))
+
+    def _set_stay(
+        self, crew: CrewMember, society_id: uuid.UUID, on: date, mate_id: uuid.UUID | None
+    ) -> CrewSocietyAssignment:
+        """Adds the stay that starts `on`. A stay that began that same day has not
+        lasted a day yet, so it is replaced instead of adding a second row for
+        the same date."""
+        society_moves.ensure_first_assignment(self._db, crew)
+        row = self._db.scalar(select(CrewSocietyAssignment).where(
+            CrewSocietyAssignment.crew_id == crew.id,
+            CrewSocietyAssignment.effective_from == on))
+        if row is not None:
+            row.society_id, row.paired_member_id = society_id, mate_id
+        else:
+            row = CrewSocietyAssignment(
+                crew_id=crew.id, society_id=society_id, effective_from=on,
+                paired_member_id=mate_id, created_by=self._actor_id)
+            self._db.add(row)
+        self._db.flush()
+        return row
 
     def cancel_society_move(self, crew_id: uuid.UUID, assignment_id: uuid.UUID) -> CrewOut:
         """Cancels a move that has not happened yet."""
@@ -640,6 +662,14 @@ class CrewService:
             raise ApiError("not_found", "This move was not found.", 404)
         if row.effective_from <= today_ist():
             raise ApiError("move_done", "That move has already happened.", 409)
+        if crew.role == "Member":
+            # The Trainees that were moving with this Member stay where they are.
+            for moving in self._db.scalars(select(CrewSocietyAssignment).where(
+                    CrewSocietyAssignment.paired_member_id == crew.id,
+                    CrewSocietyAssignment.crew_id != crew.id,
+                    CrewSocietyAssignment.society_id == row.society_id,
+                    CrewSocietyAssignment.effective_from == row.effective_from)):
+                self._db.delete(moving)
         self._db.delete(row)
         self._db.add(AuthEvent(login_id=login.id, kind="crew_society_move_cancelled"))
         self._commit()

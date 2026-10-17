@@ -130,10 +130,46 @@ def test_a_trainee_needs_a_member_of_the_new_society(client, society, other):
     assert ok.status_code == 200, ok.text
 
 
-def test_a_member_with_trainees_cannot_move_until_they_are_paired_elsewhere(
-        client, society, other):
+def test_a_members_trainees_move_with_them_on_the_same_date(client, db, society, other):
     member = create(client, society, mobile="9000000611", name="Asha Rao").json()["crew"]
-    create(client, society, mobile="9000000612", name="Ravi Kumar", role="Trainee",
-           paired_member_id=member["id"])
-    r = move(client, member["id"], other, today_ist() + timedelta(days=4))
-    assert r.status_code == 409 and r.json()["code"] == "trainees_paired"
+    trainee = create(client, society, mobile="9000000612", name="Ravi Kumar", role="Trainee",
+                     paired_member_id=member["id"]).json()["crew"]
+    day = today_ist() + timedelta(days=4)
+    r = move(client, member["id"], other, day)
+    assert r.status_code == 200, r.text
+    # The Trainee has the same move waiting.
+    assert [(s["society"], s["effective_from"], s["pending"])
+            for s in history(client, trainee["id"])][1:] == [("Palm Court", day.isoformat(), True)]
+    # On the date both are in the new society and the pairing is kept.
+    assert apply_due_moves(db, day) == 2
+    rows = {c.name: c for c in db.scalars(select(CrewMember))}
+    assert rows["Asha Rao"].society_id == other.id and rows["Ravi Kumar"].society_id == other.id
+    t_sc = db.scalar(select(SchedulingCrew).where(
+        SchedulingCrew.login_id == rows["Ravi Kumar"].login_id))
+    m_sc = db.scalar(select(SchedulingCrew).where(
+        SchedulingCrew.login_id == rows["Asha Rao"].login_id))
+    assert t_sc.society_id == other.id and t_sc.paired_member_id == m_sc.id
+
+
+def test_cancelling_a_members_move_cancels_their_trainees_move(client, society, other):
+    member = create(client, society, mobile="9000000621", name="Asha Rao").json()["crew"]
+    trainee = create(client, society, mobile="9000000622", name="Ravi Kumar", role="Trainee",
+                     paired_member_id=member["id"]).json()["crew"]
+    move(client, member["id"], other, today_ist() + timedelta(days=4))
+    pending = history(client, member["id"])[1]
+    r = client.delete(f"/v1/admin/crew/{member['id']}/society-moves/{pending['id']}",
+                      headers=admin(client))
+    assert r.status_code == 200, r.text
+    assert [s["society"] for s in history(client, trainee["id"])] == ["Green Meadows"]
+
+
+def test_a_trainee_with_their_own_move_waiting_blocks_the_members_move(client, society, other):
+    member = create(client, society, mobile="9000000631", name="Asha Rao").json()["crew"]
+    trainee = create(client, society, mobile="9000000632", name="Ravi Kumar", role="Trainee",
+                     paired_member_id=member["id"]).json()["crew"]
+    new_member = create(client, other, mobile="9000000633", name="Dev Anand").json()["crew"]
+    day = today_ist() + timedelta(days=4)
+    assert move(client, trainee["id"], other, day,
+                paired_member_id=new_member["id"]).status_code == 200
+    r = move(client, member["id"], other, day)
+    assert r.status_code == 409 and r.json()["code"] == "trainee_move_pending"

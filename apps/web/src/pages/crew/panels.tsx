@@ -32,7 +32,7 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
   const fe = fieldsOf(edit.error);
   return (
     <Card title="Details">
-      <p className="muted">Society: {crew.society}. To move to another society, use the Society panel below.</p>
+      <p className="muted">Society: {crew.society}. To move to another society, open the Society tab.</p>
       <div style={row}>
         <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} error={fe.name} />
         <TextField label="Mobile number" value={mobile} onChange={(e) => setMobile(e.target.value)}

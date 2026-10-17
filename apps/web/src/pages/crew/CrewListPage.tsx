@@ -6,6 +6,7 @@ import {
   Button, Card, SelectField, StatusChip, Table, TextField, type Column,
 } from "../../components";
 import { ROLES, useCrewList, useSocieties, type Crew } from "./api";
+import "./crew.css";
 import { OnboardDialog } from "./OnboardDialog";
 
 /** "Mon 06:00-12:00, ..." for the days that work. */
@@ -43,6 +44,12 @@ export function CrewListPage() {
         <StatusChip tone={c.active ? "ok" : "neutral"}>{c.active ? "Active" : "Inactive"}</StatusChip>
         {c.locked && <> <StatusChip tone="warn">Locked</StatusChip></>}
       </>) },
+    { key: "edit", header: "Edit", render: (c) => (
+      <Link className="icon-link" to={`/crew/${c.id}`} aria-label={`Edit ${c.name}`} title="Edit">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+        </svg>
+      </Link>) },
   ];
 
   return (

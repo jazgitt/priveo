@@ -34,6 +34,11 @@ export function SocietyPanel({ crew }: { crew: Crew }) {
   const members = (newSociety.data ?? []).filter((m) => m.role === "Member" && m.active);
   const fe = fieldsOf(moveSociety.error);
   const stays = history.data ?? [];
+  // The Trainees paired with this Member move to the new society with them.
+  const mates = useCrewList(crew.society_id);
+  const trainees = crew.role === "Member"
+    ? (mates.data ?? []).filter((m) => m.role === "Trainee" && m.paired_member_id === crew.id)
+    : [];
   const pending = stays.find((s) => s.pending);
   const needsMate = crew.role === "Trainee";
 
@@ -44,6 +49,13 @@ export function SocietyPanel({ crew }: { crew: Crew }) {
         A move starts on the date you choose and earlier stays are never changed. From that
         date the crew member's open jobs in the old society go to Needs scheduling.
       </p>
+      {crew.role === "Member" && (
+        <p className="muted" role="note">
+          If Trainees are assigned to this Member, their society is updated too: they move to
+          the new society on the same date and stay paired with this Member.
+          {trainees.length > 0 && <> Trainees who will move: {trainees.map((t) => t.name).join(", ")}.</>}
+        </p>
+      )}
       <Table rows={stays} rowKey={(s) => s.id} empty="No history yet." columns={[
         { key: "society", header: "Society", render: (s) => s.society },
         { key: "from", header: "From", render: (s) => showDate(s.effective_from) },

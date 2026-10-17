@@ -1,0 +1,4 @@
+.icon-link { display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: var(--r-input); color: var(--c-gold-text); }
+.icon-link:hover { background: var(--c-card); }
+.icon-link:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }

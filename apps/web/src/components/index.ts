@@ -4,4 +4,5 @@ export { Dialog } from "./Dialog";
 export { SelectField, TextField } from "./Field";
 export { StatusChip, type ChipTone } from "./StatusChip";
 export { Table, type Column } from "./Table";
+export { Tabs, type TabDef } from "./Tabs";
 export { ToastProvider, useToast } from "./Toast";
