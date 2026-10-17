@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,20 +14,40 @@ import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 
 import { serviceCode } from "./Board";
-import { hhmm, weekday, type Board, type PendingAddon } from "./api";
+import { hhmm, useCutoffRequests, weekday, type Board, type CutoffRequest, type PendingAddon } from "./api";
 
-interface CutoffRequest {
-  id: string; registration: string; customer_name: string; date: string; cutoff_time: string;
-  old_cutoff: string | null; crew_name: string | null; start_time: string | null;
-}
 interface Suggestions { fingerprint: string; items: { job_id: string; crew_id: string; start_minute: number; date: string; service: string }[] }
 
 const dayText = (iso: string) => `${weekday(iso)} ${showDate(iso)}`;
 
-/** Cutoff changes customers made after the freeze (ADM-SCH-22, -23). */
-export function CutoffRequests({ refresh }: { refresh: () => unknown }) {
+/**
+ * "More on other days" with a link to each of those days, so a tab that shows
+ * one day still says where else something waits (ADM-SCH-35).
+ */
+export function OtherDays({ dates, date, onDate, what }: {
+  dates: string[]; date: string; onDate: (date: string) => void; what: string;
+}) {
+  const counts = new Map<string, number>();
+  for (const d of dates) if (d !== date) counts.set(d, (counts.get(d) ?? 0) + 1);
+  if (counts.size === 0) return null;
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-5 py-3 text-sm text-muted-foreground">
+      <span>{total} more {total === 1 ? what : `${what}s`} on other days:</span>
+      {[...counts].sort(([a], [b]) => a.localeCompare(b)).map(([d, n]) => (
+        <Button key={d} size="sm" variant="link" className="h-auto p-0" onClick={() => onDate(d)}>
+          {dayText(d)} ({n})
+        </Button>
+      ))}
+    </p>
+  );
+}
+
+/** Cutoff changes customers made after the freeze, for the chosen day (ADM-SCH-22, -23). */
+export function CutoffRequests({ date, onDate, refresh }: { date: string; onDate: (date: string) => void; refresh: () => unknown }) {
   const confirm = useConfirm();
-  const requests = useQuery({ queryKey: ["cutoff-requests"], queryFn: () => api<CutoffRequest[]>("/v1/admin/scheduling/cutoff-requests") });
+  const requests = useCutoffRequests();
+  const rows = requests.data?.filter((r) => r.date === date);
   const handle = useAppMutation<{ r: CutoffRequest; apply: boolean }>({
     mutationFn: ({ r, apply }) => api(`/v1/admin/scheduling/cutoff-requests/${r.id}/handle`, { method: "POST", body: { apply } }),
     pending: (v) => (v.apply ? "Applying the new cutoff…" : "Rejecting the request…"),
@@ -49,20 +68,19 @@ export function CutoffRequests({ refresh }: { refresh: () => unknown }) {
   };
 
   return (
-    <Panel title="Cutoff change requests"
-           description="Unfreeze the schedule before applying a request, review the result, then freeze again."
+    <Panel title={`Cutoff change requests for ${dayText(date)}`}
+           description="Customers changed their cutoff after the freeze. Unfreeze this day's schedule before applying a request, check the board, then freeze again."
            bodyClassName="p-0">
       {requests.error ? <div className="p-4"><ErrorState message={errorMessage(requests.error)} /></div> : (
         <DataTable
           className="[&>div]:rounded-none [&>div]:border-0"
-          rows={requests.data}
+          rows={rows}
           loading={requests.isPending}
           rowKey={(r) => r.id}
-          empty={<p className="text-sm text-muted-foreground">No pending cutoff requests.</p>}
+          empty={<p className="text-sm text-muted-foreground">No pending cutoff requests for this day.</p>}
           columns={[
             { key: "c", header: "Customer", width: "13rem", cell: (r) => r.customer_name },
             { key: "v", header: "Vehicle", width: "9rem", cell: (r) => <span className="reg text-[0.8125rem]">{r.registration}</span> },
-            { key: "d", header: "Date", width: "9rem", cell: (r) => dayText(r.date) },
             { key: "t", header: "Cutoff", width: "9rem", cell: (r) => <>{r.old_cutoff ?? "-"} <span aria-hidden>→</span><span className="sr-only">to</span> <strong>{r.cutoff_time}</strong></> },
             { key: "a", header: "Assigned now", cell: (r) => (r.crew_name ? `${r.crew_name} at ${r.start_time}` : "Not assigned") },
             { key: "x", header: "", width: "15rem", align: "right", cell: (r) => (
@@ -74,6 +92,7 @@ export function CutoffRequests({ refresh }: { refresh: () => unknown }) {
           ]}
         />
       )}
+      <OtherDays dates={(requests.data ?? []).map((r) => r.date)} date={date} onDate={onDate} what="request" />
     </Panel>
   );
 }
@@ -82,7 +101,7 @@ export function CutoffRequests({ refresh }: { refresh: () => unknown }) {
 export function PendingAddons({ addons }: { addons: PendingAddon[] }) {
   if (addons.length === 0) return null;
   return (
-    <Panel title="Add-ons awaiting a scheduling period" description="They are placed when the scheduler runs for their date." bodyClassName="p-0">
+    <Panel title="Add-ons awaiting a scheduling period" description="This day has no schedule yet. They are placed when the scheduler runs for this day." bodyClassName="p-0">
       <DataTable
         className="[&>div]:rounded-none [&>div]:border-0"
         rows={addons}
@@ -90,7 +109,6 @@ export function PendingAddons({ addons }: { addons: PendingAddon[] }) {
         empty={null}
         columns={[
           { key: "v", header: "Vehicle", width: "12rem", cell: (b) => <span className="reg text-[0.8125rem]">{b.registration}</span> },
-          { key: "d", header: "Date", width: "10rem", cell: (b) => dayText(b.date) },
           { key: "f", header: "Finish by", cell: (b) => b.finish_by },
           { key: "a", header: "", width: "10rem", align: "right", cell: () => <Button size="sm" variant="link" asChild><Link to="/addons">Manage booking</Link></Button> },
         ]}
@@ -99,8 +117,8 @@ export function PendingAddons({ addons }: { addons: PendingAddon[] }) {
   );
 }
 
-/** Swap two jobs, or apply the scheduler's suggested improvements, in a draft (ADM-SCH-13, -15). */
-export function DraftImprovements({ board, refresh }: { board: Board | null; refresh: () => unknown }) {
+/** Swap two jobs of the chosen day, or apply the scheduler's suggested improvements for it, in a draft (ADM-SCH-13, -15). */
+export function DraftImprovements({ board, date, refresh }: { board: Board | null; date: string; refresh: () => unknown }) {
   const confirm = useConfirm();
   const [first, setFirst] = useState("");
   const [second, setSecond] = useState("");
@@ -126,12 +144,14 @@ export function DraftImprovements({ board, refresh }: { board: Board | null; ref
   });
 
   if (!board) {
-    return <EmptyState title="No draft yet">Run the scheduler to make a draft first.</EmptyState>;
+    return <EmptyState title="No schedule for this day">Run the scheduler for this day to make a draft first.</EmptyState>;
   }
   const editable = board.schedule.status === "Draft";
-  const jobs = board.jobs.filter((j) => j.status === "Scheduled" && j.crew_id);
+  const jobs = board.jobs.filter((j) => j.date === date && j.status === "Scheduled" && j.crew_id)
+    .sort((a, b) => (a.start_minute ?? 0) - (b.start_minute ?? 0));
+  const items = preview?.items.filter((i) => i.date === date) ?? [];
   const jobChoice = (j: (typeof jobs)[number]) => ({
-    value: j.id, label: `${dayText(j.date)} · ${j.start_time ?? ""} · ${serviceCode(j.service)} ${j.registration} · ${j.crew_name ?? ""}`,
+    value: j.id, label: `${j.start_time ?? ""} · ${serviceCode(j.service)} ${j.registration} · ${j.crew_name ?? ""}`,
   });
   const name = (id: string) => board.jobs.find((j) => j.id === id)?.registration ?? "";
 
@@ -153,9 +173,9 @@ export function DraftImprovements({ board, refresh }: { board: Board | null; ref
   return (
     <div className="flex flex-col gap-6">
       {!editable && (
-        <p className="rounded-lg border bg-muted/50 px-4 py-3 text-sm">Unfreeze this schedule to swap work or apply improvements.</p>
+        <p className="rounded-lg border bg-muted/50 px-4 py-3 text-sm">This day's schedule is frozen. Unfreeze it to swap work or apply improvements.</p>
       )}
-      <Panel title="Swap two jobs" description="The two jobs exchange crew members and start times.">
+      <Panel title={`Swap two jobs on ${dayText(date)}`} description="The two jobs exchange crew members and start times.">
         <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           <Field label="First job">
             {(p) => <SelectBox {...p} value={first} disabled={!editable} onChange={setFirst} choices={jobs.map(jobChoice)} />}
@@ -170,19 +190,19 @@ export function DraftImprovements({ board, refresh }: { board: Board | null; ref
         </div>
       </Panel>
 
-      <Panel title="Suggested improvements" description="Moves that make better use of crew time. Nothing changes until you apply it."
+      <Panel title={`Suggested improvements for ${dayText(date)}`} description="Moves that make better use of crew time on this day. Nothing changes until you apply it."
              actions={<BusyButton variant="outline" size="sm" busy={suggest.isPending} disabled={!editable} onClick={() => suggest.mutate()}>
                <Sparkles aria-hidden /> Preview improvements
              </BusyButton>}
-             bodyClassName={preview && preview.items.length > 0 ? "p-0" : undefined}>
+             bodyClassName={items.length > 0 ? "p-0" : undefined}>
         {suggest.error ? <ErrorState message={errorMessage(suggest.error)} /> : null}
-        {!preview && <p className="text-sm text-muted-foreground">Press Preview improvements to see what could be better.</p>}
-        {preview && preview.items.length === 0 && <p className="text-sm text-muted-foreground">No improvements suggested.</p>}
-        {preview && preview.items.length > 0 && (
+        {!preview && <p className="text-sm text-muted-foreground">Press Preview improvements to see what could be better on this day.</p>}
+        {preview && items.length === 0 && <p className="text-sm text-muted-foreground">No improvements suggested for this day.</p>}
+        {items.length > 0 && (
           <>
             <DataTable
               className="[&>div]:rounded-none [&>div]:border-0"
-              rows={preview.items}
+              rows={items}
               rowKey={(i) => i.job_id}
               empty={null}
               onRowClick={(i) => setSelected((s) => (s.includes(i.job_id) ? s.filter((x) => x !== i.job_id) : [...s, i.job_id]))}
@@ -193,7 +213,6 @@ export function DraftImprovements({ board, refresh }: { board: Board | null; ref
                 ) },
                 { key: "v", header: "Vehicle", width: "10rem", cell: (i) => <span className="reg text-[0.8125rem]">{name(i.job_id)}</span> },
                 { key: "sv", header: "Service", width: "11rem", cell: (i) => i.service },
-                { key: "d", header: "Date", width: "9rem", cell: (i) => dayText(i.date) },
                 { key: "to", header: "Move to", cell: (i) => `${board.crew.find((c) => c.id === i.crew_id)?.name ?? "-"} at ${hhmm(i.start_minute)}` },
               ]}
             />

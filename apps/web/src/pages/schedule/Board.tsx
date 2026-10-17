@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState, type DragEvent } from "react";
-
-import { Button } from "@/ui/button";
-
 import { StatusBadge } from "@/blocks/status";
 
-import { HoverTip } from "../../components";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
-/** Pixels for one minute along the time ruler. A 20 minute job is 80 px wide. */
-export const PX_PER_MIN = 4;
-const SNAP = 5;
-/** The chart shows 05:00 to 22:00 unless the day needs more. */
-const DAY_START = 5 * 60;
-const DAY_END = 22 * 60;
+/** Moves and the timeline snap start times to 5 minutes. */
+export const SNAP = 5;
 
 const CODES: Record<string, string> = {
   "Cleaning-External": "EXT", "Cleaning-Internal": "INT", "Deep Spa": "SPA",
@@ -28,7 +19,7 @@ export function jobLabel(job: AdminJob): string {
   return `${serviceCode(job.service)},${job.registration},${job.parking || "-"}`;
 }
 
-function isSpa(job: AdminJob): boolean {
+export function isSpa(job: AdminJob): boolean {
   return job.service.toLowerCase().includes("spa");
 }
 
@@ -45,16 +36,25 @@ export function isUnplaced(job: AdminJob): boolean {
 /** The job statuses in the order the work moves through them. */
 export const JOB_STATUSES = ["Scheduled", "In progress", "Completed", "Skipped", "Could not complete"] as const;
 
-/** The fill of a job on the chart: green when completed, red when it could not be done (ADM-SCH-34). */
-function statusClass(job: AdminJob): string {
-  if (job.status === "Completed") return " done";
-  if (job.status === "Could not complete") return " failed";
+/** The CSS class for a job's status: green when completed, red when it could not be done (ADM-SCH-34). */
+export function statusClass(job: AdminJob): string {
+  if (job.status === "Completed") return "done";
+  if (job.status === "Could not complete") return "failed";
+  if (job.status === "In progress") return "active";
   return "";
+}
+
+/** Whether a job stays bright for the chosen status and vehicle search. */
+export function matches(job: AdminJob, focus: string, search: string): boolean {
+  if (focus && job.status !== focus) return false;
+  const q = search.replace(/\s/g, "").toUpperCase();
+  return !q || job.registration.replace(/\s/g, "").toUpperCase().includes(q)
+    || (job.parking ?? "").toUpperCase().includes(q);
 }
 
 /**
  * How many of the day's jobs are in each status. Pressing a status keeps only
- * its jobs bright on the chart; pressing it again shows all (ADM-SCH-34).
+ * its jobs bright on the board; pressing it again shows all (ADM-SCH-34).
  */
 export function StatusSummary({ jobs, focus, onFocus }: {
   jobs: AdminJob[];
@@ -98,15 +98,15 @@ export function JobFlags({ job }: { job: AdminJob }) {
   );
 }
 
-interface Win { start: number; end: number }
+export interface Win { start: number; end: number }
 
 /** The windows a member can take work in on the day shown. */
-function windowsOf(member: SchedulingCrew, avail: CrewDayAvailability | undefined): Win[] {
+export function windowsOf(member: SchedulingCrew, avail: CrewDayAvailability | undefined): Win[] {
   return avail ? avail.windows : [{ start: member.start_minute, end: member.end_minute }];
 }
 
 /** The stretches of [first, last) that lie outside every window. */
-function gaps(wins: Win[], first: number, last: number): Win[] {
+export function gaps(wins: Win[], first: number, last: number): Win[] {
   const out: Win[] = [];
   let at = first;
   for (const w of [...wins].sort((a, b) => a.start - b.start)) {
@@ -117,12 +117,67 @@ function gaps(wins: Win[], first: number, last: number): Win[] {
   return out;
 }
 
-/** Why the jobs of a lane are where they are: hours, load and the scheduler notes. */
-function Reasoning({ member, avail, jobs }: {
+/** Minutes a member can work on the day. */
+export function minutesOf(wins: Win[]): number {
+  return wins.reduce((n, w) => n + (w.end - w.start), 0);
+}
+
+/** "3 h 20 min", "45 min" or "6 h". */
+export function hm(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+const spans = (jobs: AdminJob[]) => jobs.filter((j) => j.start_minute !== null)
+  .map((j) => ({ start: j.start_minute!, end: j.start_minute! + j.duration_minutes }))
+  .sort((a, b) => a.start - b.start);
+
+/** Whether a job of `duration` can start at `start`: inside a slot and over no other job. */
+export function fitsAt(wins: Win[], others: AdminJob[], start: number, duration: number): boolean {
+  return wins.some((w) => start >= w.start && start + duration <= w.end)
+    && spans(others).every((b) => start + duration <= b.start || start >= b.end);
+}
+
+/** The free stretches of a member's slots: the time no job takes (ADM-SCH-33). */
+export function freeSlots(wins: Win[], jobs: AdminJob[]): Win[] {
+  const busy = spans(jobs);
+  const out: Win[] = [];
+  for (const w of [...wins].sort((a, b) => a.start - b.start)) {
+    let at = w.start;
+    for (const b of busy) {
+      if (b.end <= at || b.start >= w.end) continue;
+      if (b.start > at) out.push({ start: at, end: b.start });
+      at = Math.max(at, b.end);
+    }
+    if (at < w.end) out.push({ start: at, end: w.end });
+  }
+  return out.filter((g) => g.end - g.start >= SNAP);
+}
+
+/**
+ * The start time for a job dropped into a crew member's column at `index`
+ * (0 is the top). It is the earliest free time after the job above it, inside
+ * a slot the member works, that overlaps no other job. When nothing is free
+ * after that job, the earliest free time of the day is used. Null when the job
+ * fits nowhere (ADM-SCH-33).
+ */
+export function freeStart(wins: Win[], others: AdminJob[], index: number, duration: number): number | null {
+  const busy = spans(others);
+  const fits = (s: number) => fitsAt(wins, others, s, duration);
+  const tries = [...wins.map((w) => w.start), ...busy.map((b) => b.end)]
+    .map((m) => Math.ceil(m / SNAP) * SNAP).sort((a, b) => a - b);
+  const after = index > 0 && busy[index - 1] ? busy[index - 1].end : -Infinity;
+  return tries.find((s) => s >= after && fits(s)) ?? tries.find(fits) ?? null;
+}
+
+/** Why the jobs of a crew member are where they are: hours, load and the scheduler notes. */
+export function Reasoning({ member, avail, jobs }: {
   member: SchedulingCrew; avail: CrewDayAvailability | undefined; jobs: AdminJob[];
 }) {
   const wins = windowsOf(member, avail);
-  const available = wins.reduce((n, w) => n + (w.end - w.start), 0);
+  const available = minutesOf(wins);
   const booked = jobs.reduce((n, j) => n + j.duration_minutes, 0);
   const byService = new Map<string, number>();
   for (const j of jobs) byService.set(j.service, (byService.get(j.service) ?? 0) + 1);
@@ -149,196 +204,5 @@ function Reasoning({ member, avail, jobs }: {
         <small key={j.id} className="cap-tip-why">{j.start_time} {j.registration}: {j.reason}</small>
       ))}
     </>
-  );
-}
-
-/**
- * The day as a Gantt chart: the time ruler on top (05:00 to 22:00, a tick every
- * 30 minutes), then one row for each crew member with that member's jobs placed
- * on the ruler. A job is dragged onto a row, and the drop point gives the start
- * time, snapped to 5 minutes. The unscheduled jobs of the day are dragged from
- * the list below the chart. Clicking a job opens its dialog, which does the same
- * without a mouse. Time a crew member cannot work (day off, exception, between
- * slots) is greyed out and takes no job. Hovering a name gives the reasoning
- * (ADM-SCH-32, ADM-SCH-33).
- */
-export function DayLanes({ crew, jobs, availability = [], focus = "", onMove, onOpen }: {
-  crew: SchedulingCrew[];
-  jobs: AdminJob[];
-  availability?: CrewDayAvailability[];
-  /** A job status to pick out; jobs in other statuses are dimmed. Empty shows all. */
-  focus?: string;
-  onMove: (job: AdminJob, crewId: string, startMinute: number) => void;
-  onOpen: (job: AdminJob) => void;
-}) {
-  const dragging = useRef<AdminJob | null>(null);
-  const chart = useRef<HTMLDivElement>(null);
-  const [over, setOver] = useState<string | null>(null);
-  const [blocked, setBlocked] = useState("");
-  // Open the chart a little before the day's first job, not at 05:00.
-  const firstJob = Math.min(...jobs.map((j) => j.start_minute ?? Infinity));
-  useEffect(() => {
-    if (chart.current && Number.isFinite(firstJob)) {
-      chart.current.scrollLeft = Math.max(0, (firstJob - DAY_START - 30) * PX_PER_MIN);
-    }
-  }, [firstJob]);
-
-  if (crew.length === 0) {
-    return <p className="text-sm text-muted-foreground">No crew is set up for this society.</p>;
-  }
-  // 05:00 to 22:00, wider only when a crew member or a job lies outside it.
-  const edges = [...crew.flatMap((c) => [c.start_minute, c.end_minute]),
-    ...jobs.flatMap((j) => (j.start_minute === null ? [] : [j.start_minute, j.start_minute + j.duration_minutes]))];
-  const first = Math.floor(Math.min(DAY_START, ...edges) / 30) * 30;
-  const last = Math.ceil(Math.max(DAY_END, ...edges) / 30) * 30;
-  const width = (last - first) * PX_PER_MIN;
-  const ticks: number[] = [];
-  for (let m = first; m <= last; m += 30) ticks.push(m);
-
-  const startDrag = (job: AdminJob) => (e: DragEvent) => {
-    dragging.current = job;
-    e.dataTransfer?.setData("text/plain", job.id);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-  };
-
-  const drop = (member: SchedulingCrew) => (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setOver(null);
-    const job = dragging.current;
-    dragging.current = null;
-    if (!job) return;
-    const avail = availability.find((a) => a.crew_id === member.id);
-    const x = (e.clientX || 0) - e.currentTarget.getBoundingClientRect().left;
-    const raw = first + Math.max(0, x) / PX_PER_MIN;
-    // Only a slot the member works can take the job.
-    const win = windowsOf(member, avail).find((w) => raw >= w.start && raw < w.end);
-    if (!win || win.end - win.start < job.duration_minutes) {
-      setBlocked(`${member.name} cannot take work there. ${avail?.reason ?? ""}`.trim());
-      return;
-    }
-    setBlocked("");
-    let start = Math.round(raw / SNAP) * SNAP;
-    // Keep the whole job inside that slot.
-    start = Math.min(Math.max(start, win.start), win.end - job.duration_minutes);
-    onMove(job, member.id, start);
-  };
-
-  const grid = {
-    backgroundSize: `${30 * PX_PER_MIN}px 100%`,
-    backgroundImage: "linear-gradient(to right, var(--c-line) 1px, transparent 1px)",
-  };
-
-  return (
-    <div>
-      <div className="sch-gantt" role="group" aria-label="Day plan" ref={chart}>
-        <div className="sch-g-row sch-g-head">
-          <div className="sch-g-name">Crew</div>
-          <div className="sch-g-track sch-g-ruler" style={{ width }} aria-hidden="true">
-            {ticks.map((m) => (
-              <span key={m} className={m % 60 === 0 ? "hour" : "half"}
-                    style={{ left: (m - first) * PX_PER_MIN }}>
-                {m % 60 === 0 ? hhmm(m) : ""}
-              </span>
-            ))}
-          </div>
-        </div>
-        {crew.map((member) => {
-          const mine = jobs.filter((j) => j.crew_id === member.id && j.start_minute !== null);
-          const avail = availability.find((a) => a.crew_id === member.id);
-          const closed = avail?.status === "Off";
-          return (
-            <div className={`sch-g-row sch-lane${closed ? " closed" : ""}`} key={member.id}
-                 data-testid={`lane-${member.id}`}>
-              <div className="sch-g-name">
-                <HoverTip label={<>{member.name} <small>{member.role}</small></>}
-                          ariaLabel={`${member.name}, ${member.role}. Hover for how jobs are allocated.`}>
-                  <Reasoning member={member} avail={avail} jobs={mine} />
-                </HoverTip>
-              </div>
-              <div
-                className="sch-g-track sch-track"
-                style={{
-                  width, ...grid,
-                  outline: over === member.id ? "2px dashed var(--c-gold)" : undefined,
-                }}
-                onDragOver={(e) => { e.preventDefault(); setOver(member.id); }}
-                onDragLeave={() => setOver((o) => (o === member.id ? null : o))}
-                onDrop={drop(member)}
-                aria-label={`${member.name}, ${hhmm(member.start_minute)} to ${hhmm(member.end_minute)}`}
-              >
-                {gaps(windowsOf(member, avail), first, last).map((g) => (
-                  <div key={g.start} className="sch-off" data-testid="grey"
-                       title={avail?.reason}
-                       style={{ left: (g.start - first) * PX_PER_MIN,
-                                width: (g.end - g.start) * PX_PER_MIN }}>
-                    {closed && g.start === first && <span>{avail?.reason}</span>}
-                  </div>
-                ))}
-                {mine.map((job) => {
-                  const label = jobLabel(job);
-                  return (
-                    <div
-                      key={job.id}
-                      role="button"
-                      tabIndex={0}
-                      draggable={isOpen(job)}
-                      aria-label={label}
-                      className={`sch-job${job.late ? " late" : ""}${isSpa(job) ? " spa" : ""}${job.manual ? " manual" : ""}${statusClass(job)}${focus && job.status !== focus ? " dim" : ""}${isOpen(job) ? "" : " locked"}`}
-                      style={{ left: ((job.start_minute ?? 0) - first) * PX_PER_MIN,
-                               width: job.duration_minutes * PX_PER_MIN - 2 }}
-                      title={`${job.start_time}-${job.end_time} ${label}. ${job.status}${job.reason ? `. ${job.reason}` : ""}`}
-                      onDragStart={isOpen(job) ? startDrag(job) : undefined}
-                      onClick={() => onOpen(job)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(job); }}
-                    >
-                      <strong>{serviceCode(job.service)}</strong>
-                      <span>{job.registration}</span>
-                      <span>{job.parking || "-"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {blocked && <p className="mt-2 mb-0 text-sm text-destructive" role="alert">{blocked}</p>}
-      <UnscheduledList jobs={jobs.filter(isUnplaced)} onOpen={onOpen}
-                       startDrag={startDrag} />
-    </div>
-  );
-}
-
-function UnscheduledList({ jobs, onOpen, startDrag }: {
-  jobs: AdminJob[];
-  onOpen: (job: AdminJob) => void;
-  startDrag: (job: AdminJob) => (e: DragEvent) => void;
-}) {
-  return (
-    <section aria-label="Unscheduled on this day" className="mt-5">
-      <h3 className="mt-0 mb-2 text-sm font-semibold">Unscheduled on this day ({jobs.length})</h3>
-      {jobs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Every job of this day has a crew member.</p>
-      ) : (
-        <>
-          <p className="mt-0 mb-2 text-xs text-muted-foreground">Drag a job onto a crew row, or press Place.</p>
-          <ul className="m-0 flex list-none flex-col divide-y rounded-lg border bg-card p-0">
-            {jobs.map((job) => (
-              <li key={job.id} draggable onDragStart={startDrag(job)}
-                  className="grid cursor-grab grid-cols-1 items-start gap-x-4 gap-y-1 border-l-4 border-l-warn px-4 py-2.5 sm:grid-cols-[13rem_10rem_7rem_minmax(0,1fr)_auto]">
-                <JobLabel job={job} />
-                <span className="truncate text-sm">{job.customer_name}</span>
-                <span className="text-sm text-muted-foreground">{job.finish_by ? `Finish by ${job.finish_by}` : "-"}</span>
-                <span className="text-sm text-muted-foreground">{job.reason}</span>
-                <span className="flex items-center gap-2 sm:justify-end">
-                  <StatusBadge status="Unscheduled" tone="warn" />
-                  <Button size="sm" variant="outline" onClick={() => onOpen(job)}>Place {job.registration}</Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
   );
 }

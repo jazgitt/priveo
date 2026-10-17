@@ -9,5 +9,5 @@ export const routes: RouteObject[] = [{ path: "/schedule", element: createElemen
 export const nav: NavItem = {
   path: "/schedule",
   label: "Schedule",
-  about: "Run the scheduler, review, change and freeze.",
+  about: "Choose a day, run the scheduler, arrange its jobs and freeze.",
 };

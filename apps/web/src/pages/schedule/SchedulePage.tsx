@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Lock, LockOpen, Play, TriangleAlert } from "lucide-react";
+import { ChartGantt, Columns3, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -19,12 +19,15 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { DayLanes, isOpen, isUnplaced, JobFlags, JobLabel, StatusSummary } from "./Board";
-import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { isOpen, JobFlags, JobLabel, StatusSummary } from "./Board";
+import { CardBoard } from "./CardBoard";
+import { addDays, DateBar } from "./DateBar";
+import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
 import { SkippedJobs } from "./SkippedJobs";
+import { Timeline } from "./Timeline";
 import {
-  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, nextSunday, toIso, useBoard, useBoards,
-  useNeedsScheduling, useSchedules, weekday,
+  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useNeedsScheduling,
+  useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
 import "./schedule.css";
@@ -34,16 +37,18 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" },
 ];
 
-/** How far back the Board offers days (ADM-SCH-35). */
-const BOARD_DAYS_BACK = 30;
+/** How far back the day strip goes (ADM-SCH-35). */
+const DAYS_BACK = 30;
 
-/** The sections of the page, one tab each (ADM-SCH-32). */
-const SCHEDULE_TABS = (waiting?: number) => [
+const count = (label: string, n: number) => (n ? `${label} (${n})` : label);
+
+/** The sections of the page, one tab each, all for the chosen day (ADM-SCH-32). */
+const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) => [
   { id: "run", label: "Run" },
   { id: "board", label: "Board" },
-  { id: "needs", label: waiting ? `Needs scheduling (${waiting})` : "Needs scheduling" },
-  { id: "skipped", label: "Skipped and paused" },
-  { id: "cutoff", label: "Cutoff requests" },
+  { id: "needs", label: count("Needs scheduling", n.needs) },
+  { id: "skipped", label: count("Skipped and paused", n.skipped) },
+  { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "improve", label: "Draft improvements" },
 ] as const;
 
@@ -53,29 +58,25 @@ function periodDays(period: Period, start: string): number {
   return 7;
 }
 
-function periodStart(period: Period, start: string, weekStart: number): string {
-  if (period === "monthly") return `${start.slice(0, 7)}-01`;
-  if (period !== "weekly") return start;
-  const d = new Date(`${start}T00:00:00Z`);
+/** The first day of the period that contains `date`. */
+function periodStart(period: Period, date: string, weekStart: number): string {
+  if (period === "monthly") return `${date.slice(0, 7)}-01`;
+  if (period !== "weekly") return date;
+  const d = new Date(`${date}T00:00:00Z`);
   const mondayDay = (d.getUTCDay() + 6) % 7;
   d.setUTCDate(d.getUTCDate() - (mondayDay - weekStart + 7) % 7);
   return d.toISOString().slice(0, 10);
 }
 
-function addDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
+const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 function freezeText(s: ScheduleOut): string {
-  if (s.status === "Frozen") return `Frozen${s.frozen_at ? ` on ${fmtDate(s.frozen_at)}` : ""}`;
+  if (s.status === "Frozen") return `Frozen${s.frozen_at ? ` on ${fmtDate(s.frozen_at)}` : ""}. Crew see it as their cards.`;
   const t = new Date(s.freeze_deadline).toLocaleTimeString("en-IN", {
     hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata",
   });
-  return `Freezes by itself at ${t} on ${fmtDate(s.freeze_deadline)}`;
+  return `Freezes by itself at ${t} on ${fmtDate(s.freeze_deadline)}.`;
 }
 
 export function SchedulePage() {
@@ -84,14 +85,26 @@ export function SchedulePage() {
   const confirm = useConfirm();
   const site = useSite();
   const societyId = site.id;
-  // The period start and the tab are in the address, so a finished run can link to its board.
+  // The day, the tab and the board view are in the address, so a finished run can link to its board.
   const [params, setParams] = useSearchParams();
-  const startDate = params.get("start") ?? nextSunday();
   const setParam = (key: string, value: string | null) => setParams((p) => {
     const next = new URLSearchParams(p);
     if (value) next.set(key, value); else next.delete(key);
     return next;
   }, { replace: true });
+
+  const today = toIso(new Date());
+  const schedulesQ = useSchedules(societyId, addDays(today, -DAYS_BACK));
+  const scheduleOf = new Map<string, ScheduleOut>();
+  // Where two schedules cover a date, the later-starting one (the newer run) shows it.
+  for (const s of schedulesQ.data ?? []) for (const d of datesOf(s.start_date, s.end_date)) scheduleOf.set(d, s);
+  const allDays = [...scheduleOf.keys()].sort();
+  // Today at first, or the next scheduled day when today has no schedule (ADM-SCH-35).
+  const date = isDate(params.get("date")) ? params.get("date")!
+    : scheduleOf.has(today) ? today : allDays.find((d) => d >= today) ?? today;
+  const schedule = scheduleOf.get(date);
+  const boardQ = useScheduleBoard(schedule?.id);
+  const board: Board | null = boardQ.data ?? null;
 
   const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{ key: string; value: string | number }[]>("/v1/admin/directory/settings") });
   const configured = String(preferences.data?.find((p) => p.key === "schedule.period")?.value ?? "Weekly").toLowerCase();
@@ -99,41 +112,38 @@ export function SchedulePage() {
   const [chosenPeriod, setPeriod] = useState<Period | null>(null);
   const period = chosenPeriod ?? configuredPeriod;
   const weekStart = Number(preferences.data?.find((p) => p.key === "schedule.week_start")?.value ?? 6);
-  const runStart = startDate ? periodStart(period, startDate, weekStart) : "";
-  const runDays = runStart ? periodDays(period, runStart) : 0;
+  const runStart = periodStart(period, date, weekStart);
+  const runDays = periodDays(period, runStart);
 
   const [focusStatus, setFocusStatus] = useState("");
+  const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
   const [unfreezing, setUnfreezing] = useState<ScheduleOut | null>(null);
 
-  // The Board offers every day of the site's schedules from 30 days back, and
-  // shows each chosen day as a chart of its own (ADM-SCH-35).
-  const today = toIso(new Date());
-  const schedulesQ = useSchedules(societyId, addDays(today, -BOARD_DAYS_BACK));
-  const scheduleOf = new Map<string, ScheduleOut>();
-  // Where two schedules cover a date, the later-starting one (the newer run) shows it.
-  for (const s of schedulesQ.data ?? []) for (const d of datesOf(s.start_date, s.end_date)) scheduleOf.set(d, s);
-  const allDays = [...scheduleOf.keys()].sort();
-  const defaultDay = allDays.find((d) => d >= today) ?? allDays[allDays.length - 1] ?? "";
-  const chosen = (params.get("days") ?? "").split(",").filter((d) => scheduleOf.has(d)).sort();
-  const selectedDays = chosen.length ? chosen : defaultDay ? [defaultDay] : [];
-  const selectedSchedules = [...new Map(selectedDays.map((d) => [scheduleOf.get(d)!.id, scheduleOf.get(d)!])).values()];
-  const boardsQ = useBoards(selectedSchedules.map((s) => s.id));
-  const boardOf = (scheduleId: string) => boardsQ[selectedSchedules.findIndex((s) => s.id === scheduleId)]?.data;
-  /** The board of the first chosen day: Draft improvements and the job dialog use it. */
-  const board: Board | null = selectedSchedules[0] ? boardOf(selectedSchedules[0].id) ?? null : null;
-  const toggleDay = (d: string) => {
-    const next = selectedDays.includes(d) ? selectedDays.filter((x) => x !== d) : [...selectedDays, d].sort();
-    setParam("days", (next.length ? next : [d]).join(","));
-  };
-
-  const boardQ = useBoard(societyId, startDate);
   const needsQ = useNeedsScheduling(societyId);
-  const runBoard: Board | null | undefined = boardQ.data;
-  const tab = params.get("tab") ?? (allDays.length ? "board" : "run");
+  const cutoffQ = useCutoffRequests();
+  const needsAll = needsQ.data?.jobs ?? [];
+  const needs = needsAll.filter((j) => j.date === date);
+  const addons = (needsQ.data?.pending_addons ?? []).filter((a) => a.date === date);
+  const cutoffs = (cutoffQ.data ?? []).filter((r) => r.date === date);
+  const attention = new Set([...needsAll.map((j) => j.date), ...(cutoffQ.data ?? []).map((r) => r.date)]);
+
+  const dayJobs = board?.jobs.filter((j) => j.date === date) ?? [];
+  // Skipped and paused jobs have their own tab, so the Board shows only work to do (ADM-SCH-36).
+  const jobs = dayJobs.filter((j) => j.status !== "Skipped");
+  const skippedCount = dayJobs.length - jobs.length;
+  const availability = board?.days.find((d) => d.date === date)?.availability ?? [];
+  const view = params.get("view") === "timeline" ? "timeline" : "cards";
+
+  const tab = params.get("tab") ?? (schedulesQ.isSuccess && !schedule ? "run" : "board");
   const runLabel = `Scheduler, ${site.name || "site"}`;
   const running = tasks.isRunning(runLabel);
+  // Changing the day keeps the tab, so the admin stays on the section they are working in.
+  const chooseDate = (d: string) => {
+    setProblem(null);
+    setParams((p) => { const next = new URLSearchParams(p); next.set("date", d); next.set("tab", tab); return next; }, { replace: true });
+  };
 
   const refresh = () => Promise.all([
     qc.invalidateQueries({ queryKey: ["board"] }),
@@ -153,6 +163,7 @@ export function SchedulePage() {
 
   const run = () => {
     const start = runStart;
+    const day = date;
     void tasks.start({
       label: runLabel,
       detail: `${dayText(start)} to ${dayText(addDays(start, runDays - 1))}, placing jobs…`,
@@ -167,12 +178,12 @@ export function SchedulePage() {
         const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
         return {
           message: `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`,
-          link: { label: "Open board", to: `/schedule?start=${start}&tab=board&days=${start}` },
+          link: { label: "Open board", to: `/schedule?date=${day}&tab=board` },
         };
       },
     }).then(() => {
       setProblem(null);
-      setParams({ start, tab: "board", days: start }, { replace: true });
+      setParams({ date: day, tab: "board" }, { replace: true });
     }, () => { /* The task tray and a toast say why it failed. */ });
   };
 
@@ -181,7 +192,9 @@ export function SchedulePage() {
       method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute },
     }),
     pending: "Moving the job…",
-    success: (_d, v) => (v.crewId ? `${v.job.registration} moved.` : `${v.job.registration} taken off its crew member.`),
+    success: (_d, v) => (v.crewId
+      ? `${v.job.registration} moved to ${board?.crew.find((c) => c.id === v.crewId)?.name ?? "the crew member"} at ${hhmm(v.startMinute ?? 0)}.`
+      : `${v.job.registration} taken off its crew member.`),
     onSuccess: () => { setProblem(null); setOpen(null); void refresh(); },
     onError: (e, v) => {
       setOpen(null);
@@ -190,6 +203,7 @@ export function SchedulePage() {
       }
     },
   });
+  const onMove = (job: AdminJob, crewId: string | null, startMinute: number | null) => move.mutate({ job, crewId, startMinute });
 
   const freeze = useAppMutation<string>({
     mutationFn: (id) => api(`/v1/admin/scheduling/schedules/${id}/freeze`, { method: "POST" }),
@@ -198,62 +212,60 @@ export function SchedulePage() {
     onSuccess: () => { setProblem(null); void refresh(); },
   });
 
-  const askFreeze = async (schedule: ScheduleOut) => {
+  const askFreeze = async (s: ScheduleOut) => {
+    const days = s.start_date === s.end_date ? dayText(s.start_date) : `every day from ${dayText(s.start_date)} to ${dayText(s.end_date)}`;
     if (await confirm({
       title: "Freeze this schedule?",
-      description: `${schedule.society_name}, ${fmtDate(schedule.start_date)} to ${fmtDate(schedule.end_date)}. Crew see a frozen schedule as their cards. After this, moving or adding work needs the code.`,
+      description: `${s.society_name}, ${days}. Crew see a frozen schedule as their cards. After this, moving or adding work needs the code.`,
       confirmLabel: "Freeze",
-    })) freeze.mutate(schedule.id);
+    })) freeze.mutate(s.id);
   };
 
-  const allJobsOn = (d: string) => boardOf(scheduleOf.get(d)?.id ?? "")?.jobs.filter((j) => j.date === d) ?? [];
-  // Skipped and paused jobs have their own tab, so the Board shows only work to do (ADM-SCH-36).
-  const jobsOn = (d: string) => allJobsOn(d).filter((j) => j.status !== "Skipped");
-  const skippedCount = selectedDays.reduce((n, d) => n + allJobsOn(d).length - jobsOn(d).length, 0);
-  const selectedJobs = selectedDays.flatMap(jobsOn);
-  const boardsPending = boardsQ.some((q) => q.isPending);
-  const boardsError = boardsQ.find((q) => q.isError)?.error;
   const unfreezeTarget = problem ? (schedulesQ.data ?? []).find((s) => s.id === problem.scheduleId) : undefined;
+  const from = allDays[0] && allDays[0] < today ? (allDays[0] > addDays(today, -DAYS_BACK) ? allDays[0] : addDays(today, -DAYS_BACK)) : addDays(today, -7);
+  const lastDay = allDays[allDays.length - 1];
+  const to = lastDay && lastDay > addDays(today, 13) ? lastDay : addDays(today, 13);
 
   return (
     <>
       <PageHeader
         title="Schedule"
         site={site.name || undefined}
-        description="Run the scheduler, review and change the draft, then freeze it by 8 PM the day before."
+        description="Choose a day. Every tab works on that day: run the scheduler, arrange its jobs, deal with what needs you, and freeze by 8 PM the day before."
       />
 
-      {/* The state of the schedules of the chosen days, on every tab (ADM-SCH-11, -16, -25). */}
-      {societyId && (
-        <div className="mb-5 flex flex-col divide-y rounded-xl border bg-card shadow-xs">
-          {schedulesQ.isPending ? <div className="px-5 py-3"><Skeleton className="h-6 w-80" /></div>
-            : selectedSchedules.length ? selectedSchedules.map((schedule) => (
-            <div key={schedule.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
-              <span className="font-medium">
-                {schedule.start_date === schedule.end_date ? dayText(schedule.start_date)
-                  : `${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}`}
-              </span>
-              <StatusBadge status={schedule.status} />
-              <span className="text-sm text-muted-foreground">{freezeText(schedule)}</span>
-              <div className="ml-auto flex gap-2">
-                {schedule.status === "Draft" ? (
-                  <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
-                    <Lock aria-hidden /> Freeze
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
-                    <LockOpen aria-hidden /> Unfreeze
-                  </Button>
-                )}
-              </div>
-            </div>
-          )) : (
-            <span className="px-5 py-3 text-sm text-muted-foreground">
-              No schedule for this site yet. Run the scheduler to make a draft.
+      {/* The day leads the page: every tab below shows and changes only this day (ADM-SCH-35). */}
+      <DateBar date={date} today={today} from={from} to={to} scheduleOf={scheduleOf} attention={attention} onChange={chooseDate}>
+        {!societyId ? (
+          <p className="m-0 px-5 py-3 text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</p>
+        ) : schedulesQ.isPending ? <div className="px-5 py-3"><Skeleton className="h-6 w-80" /></div>
+          : schedule ? (
+          <div role="group" aria-label="Schedule of this day" className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
+            <StatusBadge status={schedule.status} />
+            <span className="text-sm">
+              {schedule.start_date === schedule.end_date ? "A schedule for this day only."
+                : `Part of the schedule for ${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}. Freezing applies to all its days.`}
             </span>
-          )}
-        </div>
-      )}
+            <span className="text-sm text-muted-foreground">{freezeText(schedule)}</span>
+            <div className="ml-auto flex gap-2">
+              {schedule.status === "Draft" ? (
+                <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
+                  <Lock aria-hidden /> Freeze
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
+                  <LockOpen aria-hidden /> Unfreeze
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+            <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
+            {tab !== "run" && <Button size="sm" variant="outline" className="ml-auto" onClick={() => setParam("tab", "run")}>Go to Run</Button>}
+          </div>
+        )}
+      </DateBar>
 
       {problem && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -264,38 +276,36 @@ export function SchedulePage() {
         </div>
       )}
 
-      <Tabs tabs={SCHEDULE_TABS(needsQ.data?.jobs.length)} active={tab} label="Schedule sections"
-            onChange={(t) => setParam("tab", t)}>
+      <Tabs tabs={SCHEDULE_TABS({ needs: needs.length, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
+            label="Schedule sections" onChange={(t) => setParam("tab", t)}>
         {tab === "run" && (
           <Panel title={`Run the scheduler, ${site.name || "no site chosen"}`}
-                 description="It runs for the chosen site only. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member.">
-            <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_12rem_minmax(0,1fr)_auto]"
+                 description="It runs for the chosen site and the period that contains the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member.">
+            <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,1fr)_auto]"
                   onSubmit={(e) => { e.preventDefault(); if (!running) run(); }}>
               <Field label="Period">
                 {(p) => <SelectBox {...p} value={period} onChange={(v) => setPeriod(v as Period)} choices={PERIODS} />}
               </Field>
-              <Field label="Start date">
-                {(p) => <Input {...p} type="date" value={startDate}
-                               onChange={(e) => setParam("start", e.target.value)} />}
-              </Field>
               <div className="flex min-h-9 flex-col justify-center text-sm">
                 <span className="text-xs font-medium text-muted-foreground">Period to schedule</span>
-                <span>{runStart ? `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}` : "-"}</span>
+                <span>{runDays === 1 ? dayText(runStart) : `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}`}</span>
               </div>
-              <Button type="submit" disabled={!startDate || !societyId || running} aria-busy={running || undefined}>
+              <Button type="submit" disabled={!societyId || running} aria-busy={running || undefined}>
                 {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
-                {running ? "Running…" : runBoard ? "Run again" : "Run scheduler"}
+                {running ? "Running…" : schedule ? "Run again" : "Run scheduler"}
               </Button>
             </form>
-            {period !== configuredPeriod && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                This run uses {period}; the default is {configuredPeriod}.{" "}
-                <Button variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
-                        onClick={() => savePeriod.mutate(period)}>
-                  Make {period} the default
-                </Button>
-              </p>
-            )}
+            <p className="mt-3 mb-0 text-sm text-muted-foreground">
+              To schedule another period, choose one of its days at the top.
+              {period !== configuredPeriod && (
+                <> This run uses {period}; the default is {configuredPeriod}.{" "}
+                  <Button variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
+                          onClick={() => savePeriod.mutate(period)}>
+                    Make {period} the default
+                  </Button>
+                </>
+              )}
+            </p>
             {running && (
               <div role="status" className="mt-4 flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm">
                 <Loader2 className="mt-0.5 size-4 animate-spin text-gold-text" aria-hidden />
@@ -310,83 +320,54 @@ export function SchedulePage() {
         )}
 
         {tab === "board" && (!societyId ? <EmptyState title="Choose a site">Pick a site at the top left to see its board.</EmptyState> : (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
             {schedulesQ.isPending && <Skeleton className="h-72 w-full" />}
             {schedulesQ.isError && <ErrorState message={errorMessage(schedulesQ.error)} onRetry={() => void schedulesQ.refetch()} />}
-            {schedulesQ.data && allDays.length === 0 && (
-              <EmptyState title="No schedule yet"
+            {schedulesQ.isSuccess && !schedule && (
+              <EmptyState title={`No schedule for ${dayText(date)}`}
                           action={<Button onClick={() => setParam("tab", "run")}>Go to Run</Button>}>
-                No schedule has been run for this society in the last {BOARD_DAYS_BACK} days or after. Run the scheduler to make a draft.
+                Run the scheduler to make a draft for this day, or choose another day at the top.
               </EmptyState>
             )}
-            {allDays.length > 0 && (
+            {schedule && boardQ.isPending && <Skeleton className="h-72 w-full" />}
+            {boardQ.isError && <ErrorState message={errorMessage(boardQ.error)} onRetry={() => void boardQ.refetch()} />}
+            {schedule && board && (
               <>
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="m-0 text-sm text-muted-foreground">Click days to add or take them off the view. Each chosen day shows as a chart of its own.</p>
-                    {(selectedDays.length > 1 || (allDays.includes(today) && selectedDays[0] !== today)) && (
-                      <Button size="sm" variant="ghost" onClick={() => setParam("days", allDays.includes(today) ? today : null)}>
-                        {allDays.includes(today) ? "Today only" : "Clear"}
-                      </Button>
-                    )}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="sch-views" role="group" aria-label="Board view">
+                    <button type="button" aria-pressed={view === "cards"} onClick={() => setParam("view", null)}>
+                      <Columns3 aria-hidden /> Cards
+                    </button>
+                    <button type="button" aria-pressed={view === "timeline"} onClick={() => setParam("view", "timeline")}>
+                      <ChartGantt aria-hidden /> Timeline
+                    </button>
                   </div>
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2" role="group" aria-label="Days">
-                    {allDays.map((date) => {
-                      const s = scheduleOf.get(date)!;
-                      const cap = boardOf(s.id)?.days.find((d) => d.date === date);
-                      const left = jobsOn(date).filter(isUnplaced).length;
-                      const on = selectedDays.includes(date);
-                      return (
-                        <button key={date} type="button" aria-pressed={on} onClick={() => toggleDay(date)}
-                                className={cn("flex flex-col items-start rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:bg-accent",
-                                  date < today && "bg-muted/50",
-                                  on && "border-foreground bg-card shadow-[inset_0_-2px_0_var(--c-gold)]")}>
-                          <span className="text-sm font-medium">{dayText(date)}{date === today ? " · Today" : ""}</span>
-                          <span className="text-xs text-muted-foreground">{s.status}</span>
-                          {cap && (
-                            <span className={cn("text-xs text-muted-foreground", cap.over_capacity && "text-destructive")}>
-                              {cap.scheduled_minutes}/{cap.demand_minutes} min{cap.over_capacity ? ", over capacity" : ""}
-                            </span>
-                          )}
-                          {left > 0 && <span className="text-xs font-medium text-[#9a6513]">{left} unscheduled</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <label className="relative">
+                    <span className="sr-only">Find a vehicle</span>
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                    <Input type="search" className="h-8 w-52 pl-8" placeholder="Find a vehicle or parking" value={search}
+                           onChange={(e) => setSearch(e.target.value)} />
+                  </label>
+                  <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
+                  {skippedCount > 0 && (
+                    <Button size="sm" variant="link" className="ml-auto h-auto p-0" onClick={() => setParam("tab", "skipped")}>
+                      {skippedCount} skipped or paused, not shown
+                    </Button>
+                  )}
                 </div>
-                {boardsError ? <ErrorState message={errorMessage(boardsError)} onRetry={() => void refresh()} /> : null}
-                {boardsPending && <Skeleton className="h-72 w-full" />}
-                {!boardsPending && (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <StatusSummary jobs={selectedJobs} focus={focusStatus} onFocus={setFocusStatus} />
-                      {skippedCount > 0 && (
-                        <Button size="sm" variant="link" className="h-auto p-0" onClick={() => setParam("tab", "skipped")}>
-                          {skippedCount} skipped or paused, not shown
-                        </Button>
-                      )}
-                    </div>
-                    {selectedDays.map((date) => {
-                      const s = scheduleOf.get(date)!;
-                      const b = boardOf(s.id);
-                      if (!b) return null;
-                      return (
-                        <section key={date} aria-label={dayText(date)} className="flex flex-col gap-2">
-                          {selectedDays.length > 1 && (
-                            <h3 className="m-0 flex items-center gap-2 text-sm font-semibold">
-                              {dayText(date)} <StatusBadge status={s.status} />
-                            </h3>
-                          )}
-                          {s.status === "Frozen" && (
-                            <p className="m-0 text-sm text-muted-foreground">This schedule is frozen. Taking a job off needs no code. Moving or adding needs the code.</p>
-                          )}
-                          <DayLanes crew={b.crew} jobs={jobsOn(date)} focus={focusStatus} onOpen={setOpen}
-                                    availability={b.days.find((d) => d.date === date)?.availability ?? []}
-                                    onMove={(job, crewId, startMinute) => move.mutate({ job, crewId, startMinute })} />
-                        </section>
-                      );
-                    })}
-                  </>
+                <p className={cn("m-0 text-sm text-muted-foreground", schedule.status === "Frozen" && view === "cards" && "text-foreground")}>
+                  {view === "timeline"
+                    ? "View only. Hover a block, or move to it with Tab, for its details. Use Cards to move jobs."
+                    : schedule.status === "Frozen"
+                      ? "This schedule is frozen. Dropping a card on Unscheduled needs no code. Moving or adding work needs the code."
+                      : "Drag a card onto a free slot to start it where you drop it, or between two cards to take the first free time after the card above. Click a card to set an exact time."}
+                </p>
+                {view === "cards" ? (
+                  <CardBoard crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
+                             onOpen={setOpen} onMove={onMove} />
+                ) : (
+                  <Timeline crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
+                            now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>
             )}
@@ -395,16 +376,16 @@ export function SchedulePage() {
 
         {tab === "needs" && (
           <div className="flex flex-col gap-6">
-            <Panel title="Needs scheduling" description="Visits left without a crew member after the freeze, or that no crew member fits (ADM-SCH-28)." bodyClassName="p-0">
+            <Panel title={`Needs scheduling on ${dayText(date)}`}
+                   description="Jobs of this day left without a crew member after the freeze, or that no crew member fits (ADM-SCH-28)." bodyClassName="p-0">
               {needsQ.isError ? <div className="p-4"><ErrorState message={errorMessage(needsQ.error)} /></div> : (
                 <DataTable
                   className="[&>div]:rounded-none [&>div]:border-0"
-                  rows={needsQ.data?.jobs}
+                  rows={needsQ.data ? needs : undefined}
                   loading={needsQ.isPending}
                   rowKey={(j) => j.id}
-                  empty={<p className="text-sm text-muted-foreground">Nothing needs scheduling.</p>}
+                  empty={<p className="text-sm text-muted-foreground">Nothing needs scheduling on this day.</p>}
                   columns={[
-                    { key: "d", header: "Date", width: "9rem", cell: (j) => dayText(j.date) },
                     { key: "v", header: "Vehicle", width: "14rem", cell: (j) => <JobLabel job={j} /> },
                     { key: "c", header: "Customer", width: "12rem", cell: (j) => j.customer_name },
                     { key: "f", header: "Finish by", width: "6rem", cell: (j) => j.finish_by ?? "-" },
@@ -414,20 +395,21 @@ export function SchedulePage() {
                   ]}
                 />
               )}
+              <OtherDays dates={needsAll.map((j) => j.date)} date={date} onDate={chooseDate} what="job" />
             </Panel>
-            <PendingAddons addons={needsQ.data?.pending_addons ?? []} />
+            <PendingAddons addons={addons} />
           </div>
         )}
         {tab === "skipped" && (!societyId
           ? <EmptyState title="Choose a site">Pick a site at the top left to see its skipped and paused jobs.</EmptyState>
-          : <SkippedJobs key={societyId} societyId={societyId} from={selectedDays[0] ?? today} />)}
-        {tab === "cutoff" && <CutoffRequests refresh={refresh} />}
-        {tab === "improve" && <DraftImprovements board={board ?? null} refresh={refresh} />}
+          : <SkippedJobs key={`${societyId}-${date}`} societyId={societyId} date={date} />)}
+        {tab === "cutoff" && <CutoffRequests date={date} onDate={chooseDate} refresh={refresh} />}
+        {tab === "improve" && <DraftImprovements key={date} board={board} date={date} refresh={refresh} />}
       </Tabs>
 
       {open && (
-        <JobDialog key={open.id} job={open} board={boardOf(open.schedule_id) ?? board} busy={move.isPending} onClose={() => setOpen(null)}
-                   onMove={(job, crewId, startMinute) => move.mutate({ job, crewId, startMinute })} />
+        <JobDialog key={open.id} job={open} board={board} busy={move.isPending} onClose={() => setOpen(null)}
+                   onMove={onMove} />
       )}
       {unfreezing && (
         <UnfreezeDialog schedule={unfreezing} onClose={() => setUnfreezing(null)}
@@ -447,9 +429,11 @@ function UnfreezeDialog({ schedule, onClose, onDone }: { schedule: ScheduleOut; 
     onSuccess: onDone,
     onError: (e) => setCodeError(errorMessage(e)),
   });
+  const days = schedule.start_date === schedule.end_date ? dayText(schedule.start_date)
+    : `${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}`;
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title="Unfreeze with the code" size="sm"
-                description="The schedule becomes a draft so work can be added or moved. Crew keep seeing it until you change it."
+                description={`The schedule for ${days} becomes a draft so work can be added or moved. Crew keep seeing it until you change it.`}
                 submitLabel="Unfreeze" busy={unfreeze.isPending} disabled={!code}
                 onSubmit={() => unfreeze.mutate(code)}>
       <Field label="Code" error={codeError || undefined}>
@@ -484,7 +468,7 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
   const takeOff = async () => {
     if (await confirm({
       title: `Take ${job.registration} off ${job.crew_name ?? "its crew member"}?`,
-      description: "The job goes to the unscheduled list of its day. You can place it again later.",
+      description: "The job goes to Unscheduled for this day. You can place it again later.",
       confirmLabel: "Take off crew member", tone: "danger",
     })) onMove(job, null, null);
   };

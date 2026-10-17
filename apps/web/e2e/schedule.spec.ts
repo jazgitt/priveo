@@ -10,18 +10,19 @@ test.describe("Schedule (scenario R06)", () => {
   });
 
   async function openBoard(page: import("@playwright/test").Page, date: string) {
-    const society = page.getByLabel("Society", { exact: true });
-    await society.selectOption(await optionValue(society, "TEST R06"));
-    await page.getByLabel("Start date").fill(date);
+    // The site is chosen in the sidebar; the day leads the page and its schedule sits under the day strip.
+    await page.getByRole("combobox", { name: "Site" }).click();
+    await page.getByRole("option", { name: /TEST R06/ }).click();
+    await page.getByLabel("Day", { exact: true }).fill(date);
   }
 
   test("freezes a draft schedule", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 1));
-    const board = page.getByRole("region", { name: /Board/ }).or(page.locator(".card", { hasText: "Board" }));
+    const board = page.getByRole("group", { name: "Schedule of this day" });
     await expect(board.getByText("Draft", { exact: true })).toBeVisible();
 
     await board.getByRole("button", { name: "Freeze" }).click();
-    const dialog = page.getByRole("dialog", { name: "Freeze this schedule?" });
+    const dialog = page.getByRole("alertdialog", { name: "Freeze this schedule?" });
     await dialog.getByRole("button", { name: "Freeze" }).click();
 
     await expect(board.getByText("Frozen", { exact: true })).toBeVisible();
@@ -30,7 +31,7 @@ test.describe("Schedule (scenario R06)", () => {
 
   test("a frozen schedule refuses a wrong unfreeze code", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
-    const board = page.locator(".card", { hasText: "Board" });
+    const board = page.getByRole("group", { name: "Schedule of this day" });
     await expect(board.getByText("Frozen", { exact: true })).toBeVisible();
 
     await board.getByRole("button", { name: "Unfreeze" }).click();

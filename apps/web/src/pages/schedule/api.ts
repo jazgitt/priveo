@@ -1,5 +1,5 @@
 // Types and calls for the scheduler (services/api/app/scheduling/schemas.py).
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { api, ApiError } from "../../api/client";
 
@@ -122,23 +122,6 @@ export function societiesOf(rows: CrewRow[] | undefined): Society[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** The board for a society and start date, or null when no run has been made (404). */
-export function useBoard(societyId: string, startDate: string) {
-  return useQuery({
-    queryKey: ["board", societyId, startDate],
-    enabled: Boolean(societyId && startDate),
-    queryFn: async (): Promise<Board | null> => {
-      try {
-        const q = new URLSearchParams({ society_id: societyId, start_date: startDate });
-        return await api<Board>(`/v1/admin/scheduling/board?${q}`);
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 404) return null;
-        throw e;
-      }
-    },
-  });
-}
-
 /** The society's schedules ending on or after `from`, oldest first (ADM-SCH-35). */
 export function useSchedules(societyId: string, from: string) {
   return useQuery({
@@ -151,13 +134,25 @@ export function useSchedules(societyId: string, from: string) {
   });
 }
 
-/** The boards of these schedules, in the order given. */
-export function useBoards(scheduleIds: string[]) {
-  return useQueries({
-    queries: scheduleIds.map((id) => ({
-      queryKey: ["board", "id", id],
-      queryFn: () => api<Board>(`/v1/admin/scheduling/board?${new URLSearchParams({ schedule_id: id })}`),
-    })),
+/** The board of one schedule; idle until there is a schedule (ADM-SCH-35). */
+export function useScheduleBoard(scheduleId: string | undefined) {
+  return useQuery({
+    queryKey: ["board", "id", scheduleId],
+    enabled: Boolean(scheduleId),
+    queryFn: () => api<Board>(`/v1/admin/scheduling/board?${new URLSearchParams({ schedule_id: scheduleId! })}`),
+  });
+}
+
+/** A cutoff change a customer made after the freeze (ADM-SCH-22). */
+export interface CutoffRequest {
+  id: string; registration: string; customer_name: string; date: string; cutoff_time: string;
+  old_cutoff: string | null; crew_name: string | null; start_time: string | null;
+}
+
+export function useCutoffRequests() {
+  return useQuery({
+    queryKey: ["cutoff-requests"],
+    queryFn: () => api<CutoffRequest[]>("/v1/admin/scheduling/cutoff-requests"),
   });
 }
 

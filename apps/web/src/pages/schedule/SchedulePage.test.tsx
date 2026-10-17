@@ -70,6 +70,7 @@ interface Opts {
   boardReply?: () => Response;
   /** More boards by schedule ID, for the days of other schedules (ADM-SCH-35). */
   boards?: Record<string, ReturnType<typeof board>>;
+  needs?: ReturnType<typeof job>[];
 }
 
 function server(o: Opts = {}) {
@@ -98,8 +99,8 @@ function server(o: Opts = {}) {
       ]);
     }
     if (url.startsWith("/v1/admin/scheduling/needs-scheduling")) {
-      return json(200, { jobs: [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null,
-                                      start_time: null, reason: "Capacity is short." })] });
+      return json(200, { jobs: o.needs ?? [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null,
+                                                 start_time: null, reason: "Capacity is short." })] });
     }
     if (url.startsWith("/v1/admin/scheduling/capacity")) {
       return json(200, [
@@ -129,9 +130,20 @@ function callsTo(suffix: string) {
   return fetchMock.mock.calls.filter((c) => String(c[0]).endsWith(suffix));
 }
 
-/** The page for the week from 08-Nov-26, as a finished run links to it. */
-async function openBoard(days = "2026-11-08") {
-  wrap(<SchedulePage />, `/schedule?start=2026-11-08&days=${days}`);
+/** The page for one day; 08-Nov-26 is the first day of the weekly draft. */
+async function openDay(date = "2026-11-08", extra = "") {
+  wrap(<SchedulePage />, `/schedule?date=${date}${extra}`);
+}
+
+const column = (id: string) => screen.findByTestId(`col-${id}`);
+const bodyOf = (col: HTMLElement) => col.querySelector(".sch-col-body")!;
+
+/** Drags a card onto a column body, at a pointer height (jsdom has no DragEvent). */
+function dragTo(card: Element, target: Element, clientY = 0) {
+  fireEvent.dragStart(card, { dataTransfer: { setData: vi.fn() } });
+  const dropEvent = createEvent.drop(target);
+  Object.defineProperty(dropEvent, "clientY", { value: clientY });
+  fireEvent(target, dropEvent);
 }
 
 beforeEach(() => vi.stubGlobal("fetch", fetchMock));
@@ -140,50 +152,97 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("schedule board", () => {
-  it("shows crew lanes, job cards, flags and the unscheduled reason", async () => {
+describe("the card board (ADM-SCH-33)", () => {
+  it("shows a column for Unscheduled and each crew member, with job cards, flags and the reason", async () => {
     server({ jobs: [
       job(),
       job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", start_minute: 600,
-            start_time: "10:00", late: true, manual: true, reason: "Misses the cutoff." }),
+            start_time: "10:00", end_time: "10:20", late: true, manual: true, reason: "Misses the cutoff." }),
       job({ id: "j3", registration: "KA03XX0002", crew_id: null, start_minute: null,
             start_time: null, reason: "No crew member is free." }),
     ] });
-    await openBoard();
-    const lane1 = await screen.findByTestId("lane-c1");
-    // Each job shows the service code, the vehicle number and the parking place.
-    const card1 = within(lane1).getByRole("button", { name: "EXT,KA01AB1234,B1-24" });
-    expect(card1).toHaveTextContent("EXTKA01AB1234B1-24");
-    const lane2 = screen.getByTestId("lane-c2");
-    const card2 = within(lane2).getByRole("button", { name: /KA02ZZ0001/ });
+    await openDay();
+    const asha = await column("c1");
+    // Each card shows the time, the service code, the vehicle number and the parking place.
+    const card1 = within(asha).getByRole("button", { name: "EXT,KA01AB1234,B1-24" });
+    expect(card1).toHaveTextContent("09:00-09:20");
+    expect(card1).toHaveTextContent("EXT");
+    expect(card1).toHaveTextContent("B1-24");
+    expect(card1).toHaveTextContent("by 10:00");
+    const card2 = within(await column("c2")).getByRole("button", { name: /KA02ZZ0001/ });
     expect(card2).toHaveClass("late");
     expect(card2).toHaveClass("manual");
+    expect(card2).toHaveTextContent("Late");
     expect(card2).toHaveAttribute("title", expect.stringContaining("Misses the cutoff."));
-    expect(screen.getAllByText("Draft").length).toBeGreaterThan(0);
-    expect(screen.getByText("No crew member is free.")).toBeInTheDocument();
-    expect(screen.getByText("Unscheduled on this day (1)")).toBeInTheDocument();
+    const unscheduled = await column("unscheduled");
+    expect(unscheduled).toHaveAccessibleName("Unscheduled (1)");
+    expect(within(unscheduled).getByText("No crew member is free.")).toBeInTheDocument();
+    // The column header gives the use: 20 of Asha's 240 minutes, and her free slots.
+    expect(asha).toHaveTextContent("8%");
+    expect(asha).toHaveTextContent("20 min of 4 h used · 3 h 40 min free");
+    expect(within(asha).getByLabelText("Free 08:00-09:00")).toHaveTextContent("1 h");
+    expect(within(asha).getByLabelText("Free 09:20-12:00")).toHaveTextContent("2 h 40 min");
   });
 
-  it("moves a job by dropping it on another crew lane", async () => {
+  it("moves a card to the first free time of another crew member", async () => {
     server();
-    await openBoard();
-    const card = (await screen.findByTestId("lane-c1")).querySelector("[draggable]")!;
-    const track = screen.getByTestId("lane-c2").querySelector(".sch-track")!;
-    fireEvent.dragStart(card, { dataTransfer: { setData: vi.fn() } });
-    // jsdom has no DragEvent, so the point is set on a plain event.
-    const dropEvent = createEvent.drop(track);
-    Object.defineProperty(dropEvent, "clientX", { value: 880 }); // 520 = 40 min after 08:00, from 05:00 at 4 px a minute
-    fireEvent(track, dropEvent);
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    dragTo(card, bodyOf(await column("c2")));
     await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
     const [path, init] = callsTo("/move")[0];
     expect(path).toBe("/v1/admin/scheduling/jobs/j1/move");
-    expect(JSON.parse(init.body)).toEqual({ crew_id: "c2", start_minute: 520 });
+    expect(JSON.parse(init.body)).toEqual({ crew_id: "c2", start_minute: 480 });
+    expect(await screen.findByText("KA01AB1234 moved to Ravi at 08:00.")).toBeInTheDocument();
+  });
+
+  it("puts a card dropped below another at the first free time after it", async () => {
+    server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi",
+                                 start_minute: 600, start_time: "10:00", end_time: "10:20" })] });
+    await openDay();
+    const ravi = await column("c2");
+    const below = within(ravi).getByRole("button", { name: /KA02ZZ0001/ });
+    below.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(ravi), 100);
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 620 });
+  });
+
+  it("starts a card where it is dropped inside a free slot, at any 5 minutes", async () => {
+    server();
+    await openDay();
+    const slot = within(await column("c2")).getByLabelText("Free 08:00-12:00");
+    slot.getBoundingClientRect = () => ({ top: 0, height: 100, bottom: 100, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    // Halfway down the 240 minute slot: 08:00 + half of the 220 minutes a 20 minute job can start in.
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), slot, 50);
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 590 });
+  });
+
+  it("refuses a free slot too short for the card", async () => {
+    server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi",
+                                 start_minute: 490, start_time: "08:10", end_time: "08:30" })] });
+    await openDay();
+    const slot = within(await column("c2")).getByLabelText("Free 08:00-08:10");
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), slot);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only 10 min is free there; KA01AB1234 needs 20 min.");
+    expect(callsTo("/move")).toHaveLength(0);
+  });
+
+  it("takes a card off its crew member when it is dropped on Unscheduled, after a confirmation", async () => {
+    server();
+    await openDay();
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("unscheduled")));
+    expect(callsTo("/move")).toHaveLength(0);
+    await confirmWith("Take off crew member");
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
   });
 
   it("moves and takes a job off from its dialog", async () => {
     server();
-    await openBoard();
-    await userEvent.click(await within(await screen.findByTestId("lane-c1")).findByRole("button"));
+    await openDay();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
     await choose("Crew member", /Ravi/);
     fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "09:40" } });
     await userEvent.click(screen.getByRole("button", { name: "Move here" }));
@@ -191,13 +250,26 @@ describe("schedule board", () => {
     expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 580 });
   });
 
+  it("confirms before taking a job off its crew member from the dialog", async () => {
+    server();
+    await openDay();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Take off crew member" }));
+    expect(callsTo("/move")).toHaveLength(0);
+    await confirmWith("Take off crew member");
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
+  });
+
   it("shows a frozen-schedule conflict plainly and offers the code prompt", async () => {
     server({
+      status: "Frozen",
       moveReply: () => json(409, err("schedule_frozen",
         "This schedule is frozen. Unfreeze it with the code to move work.")),
     });
-    await openBoard();
-    await userEvent.click(await within(await screen.findByTestId("lane-c1")).findByRole("button"));
+    await openDay();
+    expect(await screen.findByText(/This schedule is frozen. Dropping a card on Unscheduled needs no code/)).toBeInTheDocument();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
     await userEvent.click(screen.getByRole("button", { name: "Move here" }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("This schedule is frozen. Unfreeze it with the code to move work.");
@@ -205,11 +277,135 @@ describe("schedule board", () => {
     expect(screen.getByRole("dialog", { name: "Unfreeze with the code" })).toBeInTheDocument();
   });
 
-  it("freezes a draft after a confirmation", async () => {
+  it("dims the cards that do not match the vehicle search", async () => {
+    server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", parking: "B2-07" })] });
+    await openDay();
+    await column("c1");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a vehicle" }), "zz00");
+    expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
+    expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
+  });
+});
+
+describe("the timeline view (ADM-SCH-33)", () => {
+  it("shows compact rows on an hour ruler for the day's hours, with details on hover and nothing to drag", async () => {
     server();
-    await openBoard();
+    await openDay("2026-11-08", "&view=timeline");
+    const chart = await screen.findByRole("group", { name: "Day timeline" });
+    expect(screen.getByRole("button", { name: /Timeline/ })).toHaveAttribute("aria-pressed", "true");
+    // The crew work 08:00 to 12:00, so the ruler runs 08:00 to 12:00 with a label each hour.
+    const hours = [...chart.querySelectorAll(".sch-tl-hour")].map((h) => h.textContent);
+    expect(hours).toEqual(["08:00", "09:00", "10:00", "11:00", ""]);
+    const row = screen.getByTestId("row-c1");
+    expect(row).toHaveTextContent("Asha");
+    expect(row).toHaveTextContent("20/240");
+    const block = within(row).getByLabelText(/09:00-09:20 EXT,KA01AB1234,B1-24, Scheduled/);
+    // 09:00 is a quarter of the way through 08:00-12:00; 20 minutes is a twelfth of it.
+    expect(block.style.left).toBe("25%");
+    expect(parseFloat(block.style.width)).toBeCloseTo(8.333, 2);
+    expect(block).not.toHaveAttribute("draggable");
+    expect(screen.queryByRole("group", { name: "Day board" })).not.toBeInTheDocument();
+
+    await userEvent.hover(block);
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Honda City");
+    expect(tip).toHaveTextContent("Meena");
+    expect(tip).toHaveTextContent("Finish by10:00");
+    await userEvent.unhover(block);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("switches between Cards and Timeline", async () => {
+    server();
+    await openDay();
+    expect(await screen.findByRole("group", { name: "Day board" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Timeline/ }));
+    expect(await screen.findByRole("group", { name: "Day timeline" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Cards/ }));
+    expect(await screen.findByRole("group", { name: "Day board" })).toBeInTheDocument();
+  });
+});
+
+describe("the chosen day leads the page (ADM-SCH-35)", () => {
+  function nextDay() {
+    const b = board("Frozen", [job({ id: "j7", date: "2026-11-15", registration: "KA07AA0007", status: "Completed",
+                                     schedule_id: "sch2" })]);
+    b.schedule = { ...b.schedule, id: "sch2", start_date: "2026-11-15", end_date: "2026-11-15" };
+    b.days = [{ ...b.days[0], date: "2026-11-15" }];
+    return b;
+  }
+
+  it("shows the days with their schedule status and moves the whole page to the day chosen", async () => {
+    server({ boards: { sch2: nextDay() } });
+    await openDay();
+    const days = await screen.findByRole("group", { name: "Days" });
+    const first = await within(days).findByRole("button", { name: /^Sun 08-Nov-26, Draft/ });
+    expect(first).toHaveAttribute("aria-pressed", "true");
+    const later = within(days).getByRole("button", { name: /^Sun 15-Nov-26, Frozen/ });
+    expect(later).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText(/Part of the schedule for Sun 08-Nov-26 to Sat 14-Nov-26/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Freeze" })).toBeInTheDocument();
+
+    await userEvent.click(later);
+    expect(later).toHaveAttribute("aria-pressed", "true");
+    expect(first).toHaveAttribute("aria-pressed", "false");
+    expect(await screen.findByRole("button", { name: /KA07AA0007/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+    expect(screen.getByText("A schedule for this day only.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unfreeze" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Freeze" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
+  });
+
+  it("steps a day with the arrows and says when a day has no schedule", async () => {
+    server();
+    await openDay("2026-11-14");
+    expect(await screen.findByRole("button", { name: "Freeze" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(await screen.findByText("No schedule covers this day yet. Run the scheduler to make a draft.")).toBeInTheDocument();
+    expect(screen.getByText("No schedule for Sun 15-Nov-26")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Previous day" }));
+    expect(await screen.findByRole("button", { name: "Freeze" })).toBeInTheDocument();
+  });
+
+  it("runs the scheduler for the period that contains the chosen day", async () => {
+    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
+    await openDay("2026-11-11");
+    // No schedule covers the day, so the page opens on Run.
+    expect(await screen.findByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
+    expect(screen.getByText("Sun 08-Nov-26 to Sat 14-Nov-26")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Run scheduler" }));
+    await waitFor(() => expect(callsTo("/run")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-08", days: 7 });
+  });
+
+  it("marks days that need the admin and lists needs scheduling for the chosen day only", async () => {
+    server({ needs: [
+      job({ id: "j9", crew_id: null, crew_name: null, start_minute: null, start_time: null, reason: "Capacity is short." }),
+      job({ id: "j10", date: "2026-11-09", registration: "KA10NN0010", crew_id: null, crew_name: null,
+            start_minute: null, start_time: null, reason: "No crew member fits." }),
+    ] });
+    await openDay();
+    const days = await screen.findByRole("group", { name: "Days" });
+    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, needs you/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Needs scheduling (1)" }));
+    expect(await screen.findByText("Capacity is short.")).toBeInTheDocument();
+    expect(screen.queryByText("KA10NN0010")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Mon 09-Nov-26 (1)" }));
+    expect(await screen.findByText("KA10NN0010")).toBeInTheDocument();
+    expect(screen.queryByText("Capacity is short.")).not.toBeInTheDocument();
+    expect(within(days).getByRole("button", { name: /^Mon 09-Nov-26/ })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("freezing", () => {
+  it("freezes a draft after a confirmation that names all its days", async () => {
+    server();
+    await openDay();
     await userEvent.click(await screen.findByRole("button", { name: "Freeze" }));
     expect(callsTo("/freeze")).toHaveLength(0);
+    expect(await screen.findByText(/every day from Sun 08-Nov-26 to Sat 14-Nov-26/)).toBeInTheDocument();
     await confirmWith("Freeze");
     await waitFor(() => expect(callsTo("/freeze")).toHaveLength(1));
     expect(callsTo("/freeze")[0][0]).toBe("/v1/admin/scheduling/schedules/sch1/freeze");
@@ -223,7 +419,7 @@ describe("schedule board", () => {
         ? json(403, err("wrong_code", "That code is not right."))
         : json(200, board("Draft").schedule)),
     });
-    await openBoard();
+    await openDay();
     await userEvent.click(await screen.findByRole("button", { name: "Unfreeze" }));
     const dialog = screen.getByRole("dialog");
     await userEvent.type(within(dialog).getByLabelText("Code"), "nope");
@@ -236,53 +432,21 @@ describe("schedule board", () => {
     expect(JSON.parse(callsTo("/unfreeze")[1][1].body)).toEqual({ code: "unfreeze" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
-
-  it("runs the scheduler with the chosen period and lists needs scheduling", async () => {
-    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
-    await openBoard();
-    await userEvent.click(screen.getByRole("tab", { name: "Board" }));
-    expect(await screen.findByText(/No schedule has been run for this society/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: /^Needs scheduling/ }));
-    expect(await screen.findByText("Capacity is short.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "Run" }));
-    await userEvent.click(screen.getByRole("button", { name: "Run scheduler" }));
-    await waitFor(() => expect(callsTo("/run")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({
-      society_id: SOC, start_date: "2026-11-08", days: 7,
-    });
-  });
-});
-
-describe("board as a gantt chart", () => {
-  it("has a time ruler from 05:00 to 22:00 with a tick every 30 minutes, and a row for each crew member", async () => {
-    server();
-    await openBoard();
-    const chart = await screen.findByRole("group", { name: "Day plan" });
-    const ruler = chart.querySelector(".sch-g-ruler")!;
-    expect(ruler.querySelectorAll("span")).toHaveLength(35); // 05:00, 05:30 ... 22:00
-    expect(within(ruler as HTMLElement).getByText("05:00")).toBeInTheDocument();
-    expect(within(ruler as HTMLElement).getByText("22:00")).toBeInTheDocument();
-    expect(ruler.querySelectorAll("span.half")).toHaveLength(17);
-    expect(screen.getByTestId("lane-c1")).toBeInTheDocument();
-    expect(screen.getByTestId("lane-c2")).toBeInTheDocument();
-    // 09:00 is 240 minutes after 05:00, at 4 px a minute, 80 px wide for 20 minutes.
-    const card = within(screen.getByTestId("lane-c1")).getByRole("button");
-    expect(card).toHaveStyle({ left: "960px", width: "78px" });
-  });
 });
 
 describe("job status on the board (ADM-SCH-34)", () => {
-  it("fills completed jobs green and missed ones red, counts each status and picks one out", async () => {
+  it("fills completed cards green and missed ones red, counts each status and picks one out", async () => {
     server({ jobs: [
       job({ id: "j1", registration: "KA01AA0001", status: "Completed" }),
       job({ id: "j2", registration: "KA01AA0002", status: "Could not complete", start_minute: 600, start_time: "10:00", end_time: "10:20" }),
       job({ id: "j3", registration: "KA01AA0003", status: "Scheduled", start_minute: 660, start_time: "11:00", end_time: "11:20" }),
     ] });
-    await openBoard();
-    const lane = await screen.findByTestId("lane-c1");
-    const card = (reg: string) => within(lane).getByRole("button", { name: new RegExp(reg) });
+    await openDay();
+    const asha = await column("c1");
+    const card = (reg: string) => within(asha).getByRole("button", { name: new RegExp(reg) });
     expect(card("KA01AA0001")).toHaveClass("done");
     expect(card("KA01AA0002")).toHaveClass("failed");
+    expect(card("KA01AA0002")).toHaveTextContent("Could not complete");
     expect(card("KA01AA0003")).not.toHaveClass("done");
     expect(card("KA01AA0003")).not.toHaveClass("failed");
 
@@ -297,83 +461,52 @@ describe("job status on the board (ADM-SCH-34)", () => {
 });
 
 describe("skipped and finished jobs cannot be placed or moved", () => {
-  it("leaves a skipped job out of the unscheduled list and shows a finished job without move controls", async () => {
+  it("leaves a skipped job off the board and shows a finished job without move controls", async () => {
     server({ jobs: [
       job({ id: "j1", status: "Completed" }),
       job({ id: "j5", registration: "KA05SK0005", crew_id: null, crew_name: null, start_minute: null,
             start_time: null, status: "Skipped" }),
     ] });
-    await openBoard();
-    const card = within(await screen.findByTestId("lane-c1")).getByRole("button");
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     expect(card).toHaveAttribute("draggable", "false");
-    expect(screen.getByText("Unscheduled on this day (0)")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Place KA05SK0005" })).not.toBeInTheDocument();
+    const unscheduled = await column("unscheduled");
+    expect(unscheduled).toHaveAccessibleName("Unscheduled (0)");
+    expect(within(unscheduled).getByText("Every job of this day has a crew member.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /KA05SK0005/ })).not.toBeInTheDocument();
 
     await userEvent.click(card);
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("This job is Completed, so it can no longer be placed or moved.")).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Start time")).not.toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    // The dialog's own X is also named Close; the footer button is the last one.
+    await userEvent.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1)!);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(callsTo("/move")).toHaveLength(0);
   });
 
-  it("keeps skipped jobs off the board and lists them with why on their own tab (ADM-SCH-36)", async () => {
+  it("counts skipped jobs and lists them with why for the chosen day on their own tab (ADM-SCH-36)", async () => {
     server({ jobs: [
       job(),
       job({ id: "j5", registration: "KA05SK0005", crew_id: "c2", status: "Skipped" }),
     ] });
-    await openBoard();
-    expect(within(await screen.findByTestId("lane-c2")).queryByRole("button")).not.toBeInTheDocument();
+    await openDay();
+    expect(within(await column("c2")).queryByRole("button", { name: /KA05SK0005/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Skipped/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Skipped and paused (1)" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "1 skipped or paused, not shown" }));
-    expect(screen.getByRole("tab", { name: "Skipped and paused" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Skipped and paused (1)" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Skipped and paused on Sun 08-Nov-26")).toBeInTheDocument();
     expect(await screen.findByText("Paused by the customer, 08-Nov-26 to 10-Nov-26")).toBeInTheDocument();
     expect(screen.getByText("Skipped by operations")).toBeInTheDocument();
     const [path] = fetchMock.mock.calls.find((c) => String(c[0]).startsWith("/v1/admin/scheduling/skipped?"))!;
     expect(String(path)).toContain("date_from=2026-11-08");
-    expect(String(path)).toContain("date_to=2026-11-14");
+    expect(String(path)).toContain("date_to=2026-11-08");
 
     await choose("Show", "Paused only");
     expect(screen.queryByText("Skipped by operations")).not.toBeInTheDocument();
     expect(screen.getByText("Paused by the customer, 08-Nov-26 to 10-Nov-26")).toBeInTheDocument();
-  });
-});
-
-describe("every day of every schedule on the board (ADM-SCH-35)", () => {
-  function nextDay() {
-    const b = board("Frozen", [job({ id: "j7", date: "2026-11-15", registration: "KA07AA0007", status: "Completed",
-                                     schedule_id: "sch2" })]);
-    b.schedule = { ...b.schedule, id: "sch2", start_date: "2026-11-15", end_date: "2026-11-15" };
-    b.days = [{ ...b.days[0], date: "2026-11-15" }];
-    return b;
-  }
-
-  it("lists the days of all schedules and shows each chosen day as its own chart", async () => {
-    server({ boards: { sch2: nextDay() } });
-    await openBoard();
-    const days = await screen.findByRole("group", { name: "Days" });
-    // Seven days of the weekly draft, then the one-day frozen schedule.
-    expect(within(days).getAllByRole("button")).toHaveLength(8);
-    const later = within(days).getByRole("button", { name: /15-Nov-26/ });
-    expect(later).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(1);
-
-    await userEvent.click(later);
-    expect(later).toHaveAttribute("aria-pressed", "true");
-    await waitFor(() => expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(2));
-    expect(screen.getByRole("region", { name: /15-Nov-26/ })).toHaveTextContent("KA07AA0007");
-    // One count for all chosen days, and a freeze row for each schedule.
-    expect(screen.getByRole("button", { name: "All jobs 2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Freeze" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Unfreeze" })).toBeInTheDocument();
-
-    // Clicking a chosen day takes it off again.
-    await userEvent.click(within(days).getByRole("button", { name: /08-Nov-26/ }));
-    await waitFor(() => expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(1));
-    expect(screen.queryByRole("button", { name: "Freeze" })).not.toBeInTheDocument();
   });
 });
 
@@ -384,43 +517,47 @@ describe("schedule tabs and unavailable crew time", () => {
     { crew_id: "c2", status: "Off", windows: [], reason: "Sick on this date." },
   ];
 
-  it("shows the sections as tabs, the board first once a schedule exists", async () => {
+  it("shows the sections as tabs with the chosen day's counts, the board first once a schedule exists", async () => {
     server();
-    await openBoard();
+    await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
-    expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Run", "Board", "Needs scheduling", "Cutoff requests", "Draft improvements"]);
-    expect(await screen.findByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
+    await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
+      "Run", "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Draft improvements"]));
+    expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Run" }));
     expect(screen.getByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run again" })).toBeInTheDocument();
   });
 
-  it("greys out the time a crew member cannot work and explains it on hover", async () => {
+  it("greys out a crew member who cannot work, explains it on hover and refuses a drop there", async () => {
     server({ boardReply: () => json(200, board("Draft", [job()], avail)) });
-    await openBoard();
-    const asha = await screen.findByTestId("lane-c1");
-    expect(within(asha).getAllByTestId("grey")).toHaveLength(2); // before 08:00 and after 10:00
-    const ravi = screen.getByTestId("lane-c2");
+    await openDay();
+    const ravi = await column("c2");
     expect(ravi).toHaveClass("closed");
-    expect(within(ravi).getByTestId("grey")).toHaveTextContent("Sick on this date.");
+    expect(ravi).toHaveTextContent("Sick on this date.");
     const tip = within(ravi).getByRole("tooltip");
     expect(tip).toHaveTextContent("Sick on this date.");
     expect(tip).toHaveTextContent("Cannot take work this day.");
-    expect(within(asha).getByRole("tooltip")).toHaveTextContent("Booked");
+    expect(within(await column("c1")).getByRole("tooltip")).toHaveTextContent("Booked");
+    // Members who cannot work come last.
+    const cols = within(screen.getByRole("group", { name: "Day board" })).getAllByRole("region");
+    expect(cols.map((c) => c.getAttribute("aria-label"))).toEqual(["Unscheduled (0)", "Asha", "Ravi"]);
+
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(ravi));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ravi cannot take work this day. Sick on this date.");
+    expect(callsTo("/move")).toHaveLength(0);
   });
 
-  it("does not move a job onto time the crew member cannot work", async () => {
+  it("greys out the time a crew member cannot work on the timeline", async () => {
     server({ boardReply: () => json(200, board("Draft", [job()], avail)) });
-    await openBoard();
-    const card = (await screen.findByTestId("lane-c1")).querySelector("[draggable]")!;
-    const track = screen.getByTestId("lane-c2").querySelector(".sch-track")!;
-    fireEvent.dragStart(card, { dataTransfer: { setData: vi.fn() } });
-    const dropEvent = createEvent.drop(track);
-    Object.defineProperty(dropEvent, "clientX", { value: 880 });
-    fireEvent(track, dropEvent);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Ravi cannot take work there");
-    expect(callsTo("/move")).toHaveLength(0);
+    await openDay("2026-11-08", "&view=timeline");
+    // The ruler runs 08:00 to 12:00: Asha cannot work after 10:00, Ravi not at all.
+    expect(within(await screen.findByTestId("row-c1")).getAllByTestId("grey")).toHaveLength(1);
+    const ravi = screen.getByTestId("row-c2");
+    expect(ravi).toHaveClass("closed");
+    expect(ravi).toHaveTextContent("Off");
+    expect(within(ravi).getByTestId("grey")).toHaveAttribute("title", "Sick on this date.");
   });
 });
 
@@ -464,7 +601,7 @@ describe("long runs, confirmations and the action tabs", () => {
     let finish: (r: Response) => void = () => {};
     serverWith({ "/v1/admin/scheduling/run": () => new Promise<Response>((res) => { finish = res; }) as unknown as Response },
       { boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
-    await openBoard();
+    await openDay();
     await userEvent.click(await screen.findByRole("button", { name: "Run scheduler" }));
     expect(await screen.findByRole("button", { name: "Running…" })).toBeDisabled();
     expect(screen.getByText(/You can leave this page/)).toBeInTheDocument();
@@ -475,33 +612,27 @@ describe("long runs, confirmations and the action tabs", () => {
 
   it("does not change the default period unless asked", async () => {
     server();
-    await openBoard();
+    await openDay();
     await userEvent.click(await screen.findByRole("tab", { name: "Run" }));
     await choose("Period", "Daily");
+    expect(screen.getByText("Period to schedule").nextSibling).toHaveTextContent(/^Sun 08-Nov-26$/);
     expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "Make daily the default" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(true));
   });
 
-  it("confirms before taking a job off its crew member", async () => {
-    server();
-    await openBoard();
-    await userEvent.click(await within(await screen.findByTestId("lane-c1")).findByRole("button"));
-    await userEvent.click(screen.getByRole("button", { name: "Take off crew member" }));
-    expect(callsTo("/move")).toHaveLength(0);
-    await confirmWith("Take off crew member");
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
-  });
-
-  it("applies or rejects a cutoff request after a confirmation", async () => {
+  it("shows the chosen day's cutoff requests, links to other days and applies or rejects after a confirmation", async () => {
     serverWith({
       "/v1/admin/scheduling/cutoff-requests/r1/handle": () => json(200, {}),
       "/v1/admin/scheduling/cutoff-requests": () => json(200, [{ id: "r1", registration: "HR01", customer_name: "Asha", date: "2026-11-09",
         cutoff_time: "08:00", old_cutoff: "10:00", crew_name: "Raj", start_time: "07:00" }]),
     });
-    await openBoard();
+    await openDay();
     await userEvent.click(await screen.findByRole("tab", { name: "Cutoff requests" }));
+    expect(await screen.findByText("No pending cutoff requests for this day.")).toBeInTheDocument();
+    expect(screen.getByText("1 more request on other days:")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Mon 09-Nov-26 (1)" }));
+    expect(screen.getByRole("tab", { name: "Cutoff requests (1)" })).toHaveAttribute("aria-selected", "true");
     await userEvent.click(await screen.findByRole("button", { name: "Apply and schedule" }));
     await confirmWith("Apply and schedule");
     await waitFor(() => expect(callsTo("/r1/handle")).toHaveLength(1));
@@ -512,16 +643,20 @@ describe("long runs, confirmations and the action tabs", () => {
     expect(JSON.parse(callsTo("/r1/handle")[1][1].body)).toEqual({ apply: false });
   });
 
-  it("swaps two jobs and applies the chosen improvements with the preview fingerprint", async () => {
+  it("swaps two jobs of the day and applies the chosen improvements with the preview fingerprint", async () => {
     serverWith({
       "/v1/admin/scheduling/jobs/swap": () => json(200, {}),
       "/v1/admin/scheduling/schedules/sch1/suggestions/apply": () => json(200, {}),
       "/v1/admin/scheduling/schedules/sch1/suggestions": () => json(200, { fingerprint: "version1",
-        items: [{ job_id: "j1", crew_id: "c2", start_minute: 425, date: "2026-11-08", service: "Cleaning-External" }] }),
-    }, { jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi" })] });
-    await openBoard();
+        items: [{ job_id: "j1", crew_id: "c2", start_minute: 425, date: "2026-11-08", service: "Cleaning-External" },
+                { job_id: "j8", crew_id: "c2", start_minute: 500, date: "2026-11-09", service: "Cleaning-External" }] }),
+    }, { jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi" }),
+                job({ id: "j8", registration: "KA08OT0008", date: "2026-11-09" })] });
+    await openDay();
     await userEvent.click(await screen.findByRole("tab", { name: "Draft improvements" }));
-    await choose("First job", /KA01AB1234/);
+    await userEvent.click(screen.getByRole("combobox", { name: "First job" }));
+    expect(screen.queryByRole("option", { name: /KA08OT0008/ })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("option", { name: /KA01AB1234/ }));
     await choose("Second job", /KA02ZZ0001/);
     await userEvent.click(screen.getByRole("button", { name: "Swap crew and times" }));
     await confirmWith("Swap crew and times");
@@ -530,6 +665,8 @@ describe("long runs, confirmations and the action tabs", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Preview improvements" }));
     const choice = await screen.findByRole("checkbox", { name: "Apply for KA01AB1234" });
+    // The suggestion for another day is not offered here.
+    expect(screen.queryByRole("checkbox", { name: "Apply for KA08OT0008" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply selected improvements" })).toBeDisabled();
     await userEvent.click(choice);
     await userEvent.click(screen.getByRole("button", { name: "Apply selected improvements" }));
@@ -540,17 +677,16 @@ describe("long runs, confirmations and the action tabs", () => {
 
   it("disables the draft actions on a frozen schedule", async () => {
     server({ status: "Frozen" });
-    await openBoard();
+    await openDay();
     await userEvent.click(await screen.findByRole("tab", { name: "Draft improvements" }));
-    expect(await screen.findByText("Unfreeze this schedule to swap work or apply improvements.")).toBeInTheDocument();
+    expect(await screen.findByText("This day's schedule is frozen. Unfreeze it to swap work or apply improvements.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview improvements" })).toBeDisabled();
   });
 
-  it("lists add-ons waiting for a scheduling period under Needs scheduling", async () => {
+  it("lists add-ons waiting for a scheduling period on their day under Needs scheduling", async () => {
     serverWith({ "/v1/admin/scheduling/needs-scheduling": () => json(200, { jobs: [],
       pending_addons: [{ id: "b1", registration: "HR03", date: "2026-11-21", finish_by: "12:00" }] }) });
-    await openBoard();
-    await userEvent.click(await screen.findByRole("tab", { name: /^Needs scheduling/ }));
+    await openDay("2026-11-21", "&tab=needs");
     expect(await screen.findByText("Add-ons awaiting a scheduling period")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Manage booking" })).toHaveAttribute("href", "/addons");
   });

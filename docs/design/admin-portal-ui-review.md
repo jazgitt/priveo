@@ -89,7 +89,14 @@ requirement. Where a screen decision fills a gap, it is marked **UI decision** a
   onboarding, ADM-CUS-01), with a visible step bar, fields in a two-column grid, a photo preview, and a
   review step laid out as label and value pairs.
 
-## 4. Schedule (ADM-SCH-01 to ADM-SCH-33)
+## 4. Schedule (ADM-SCH-01 to ADM-SCH-36)
+
+> **18 Oct 2026, owner:** the page is now led by one chosen day (ADM-SCH-35). A day bar sits above the
+> tabs: arrows, a date field and a strip of days with their schedule status, then the chosen day's
+> schedule with Freeze or Unfreeze. Every tab works on that day only; Run schedules the period that
+> contains it, and the Start date field is gone. The Board has two views (ADM-SCH-33): Cards (default,
+> columns of job cards per crew member, drag to move) and Timeline (view-only compact Gantt with details
+> on hover). Choosing several days at once is withdrawn. Where this section disagrees, the note wins.
 
 ### What the admin does here
 
