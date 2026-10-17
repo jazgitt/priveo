@@ -68,6 +68,9 @@ export interface AdminJob {
   late: boolean;
   manual: boolean;
   reason: string;
+  /** A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36). */
+  skip_kind?: string;
+  skip_reason?: string;
 }
 
 export interface Board {

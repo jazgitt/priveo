@@ -39,6 +39,7 @@
   .sch-job.done { background: #d9f0e3; border-color: #8fd0ad; }
   .sch-job.failed { background: #f6d3cf; border-color: #e39c94; }
   .sch-job.dim { opacity: 0.25; }
+  .sch-job.locked { cursor: pointer; }
   .sch-chip { display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--c-line);
     border-radius: 999px; background: var(--c-card); padding: 0.25rem 0.75rem; font-size: 0.8125rem; cursor: pointer; }
   .sch-chip b { font-variant-numeric: tabular-nums; }

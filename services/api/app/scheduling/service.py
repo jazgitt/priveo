@@ -1026,6 +1026,56 @@ def board(db: Session, schedule: Schedule) -> dict:
     }
 
 
+def skipped_jobs(
+    db: Session, society_id: uuid.UUID, date_from: date, date_to: date
+) -> list[dict]:
+    """Skipped jobs of a society between two dates, each with whether it was
+    paused or skipped and by whom (ADM-SCH-36)."""
+    from app.visits.models import JobOutcome, OperationsDecision
+
+    rows = job_rows(
+        db,
+        Schedule.society_id == society_id,
+        Job.status == "Skipped",
+        Visit.date >= date_from,
+        Visit.date <= date_to,
+    )
+    if not rows:
+        return rows
+    ids = [r["id"] for r in rows]
+    decided = set(db.scalars(
+        select(OperationsDecision.job_id).where(
+            OperationsDecision.job_id.in_(ids), OperationsDecision.action == "Skip")))
+    by_crew = set(db.scalars(
+        select(JobOutcome.job_id).where(JobOutcome.job_id.in_(ids), JobOutcome.kind == "skipped")))
+    changes = db.scalars(
+        select(ScheduleChange).where(
+            ScheduleChange.vehicle_id.in_({r["vehicle_id"] for r in rows}),
+            ScheduleChange.kind.in_(("skip", "pause")),
+            ScheduleChange.status.in_(("Active", "Applied")),
+            ScheduleChange.start_date <= date_to,
+            ScheduleChange.end_date >= date_from,
+        ).order_by(ScheduleChange.created_at)
+    ).all()
+    for r in rows:
+        change = next((c for c in reversed(changes) if c.vehicle_id == r["vehicle_id"]
+                       and c.start_date <= r["date"] <= c.end_date), None)
+        if change is not None:
+            who = "the admin" if change.actor == "admin" else "the customer"
+            r["skip_kind"] = "Paused" if change.kind == "pause" else "Skipped"
+            r["skip_reason"] = (
+                f"Paused by {who}, {change.start_date:%d-%b-%y} to {change.end_date:%d-%b-%y}"
+                if change.kind == "pause" else f"Skipped by {who}")
+        elif r["id"] in decided:
+            r["skip_kind"], r["skip_reason"] = "Skipped", "Skipped by operations"
+        elif r["id"] in by_crew:
+            r["skip_kind"], r["skip_reason"] = "Skipped", "Skipped by a crew manager"
+        else:
+            r["skip_kind"] = "Skipped"
+            r["skip_reason"] = "No longer due (subscription, vehicle or add-on changed)"
+    return rows
+
+
 def needs_scheduling(db: Session, society_id: uuid.UUID | None) -> list[dict]:
     """Jobs with no crew member: Unscheduled in a draft, or on the Needs
     scheduling list of a frozen schedule (ADM-SCH-08, ADM-SCH-28)."""

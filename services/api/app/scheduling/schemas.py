@@ -123,6 +123,9 @@ class AdminJob(BaseModel):
     late: bool
     manual: bool
     reason: str
+    # A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36).
+    skip_kind: str = ""
+    skip_reason: str = ""
 
 
 class Board(BaseModel):

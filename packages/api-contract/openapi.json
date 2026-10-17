@@ -5596,6 +5596,90 @@
         }
       }
     },
+    "/v1/admin/scheduling/skipped": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Skipped",
+        "description": "Skipped and paused jobs of a society between two dates (ADM-SCH-36).",
+        "operationId": "skipped_v1_admin_scheduling_skipped_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminJob"
+                  },
+                  "title": "Response Skipped V1 Admin Scheduling Skipped Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/needs-scheduling": {
       "get": {
         "tags": [
@@ -17675,6 +17759,16 @@
           "reason": {
             "type": "string",
             "title": "Reason"
+          },
+          "skip_kind": {
+            "type": "string",
+            "title": "Skip Kind",
+            "default": ""
+          },
+          "skip_reason": {
+            "type": "string",
+            "title": "Skip Reason",
+            "default": ""
           }
         },
         "type": "object",

@@ -32,6 +32,16 @@ function isSpa(job: AdminJob): boolean {
   return job.service.toLowerCase().includes("spa");
 }
 
+/** Only a Scheduled job can still be placed or moved; a skipped or finished one cannot. */
+export function isOpen(job: AdminJob): boolean {
+  return job.status === "Scheduled";
+}
+
+/** A job still waiting for a crew member. A skipped job has none but needs no place. */
+export function isUnplaced(job: AdminJob): boolean {
+  return job.crew_id === null && isOpen(job);
+}
+
 /** The job statuses in the order the work moves through them. */
 export const JOB_STATUSES = ["Scheduled", "In progress", "Completed", "Skipped", "Could not complete"] as const;
 
@@ -271,13 +281,13 @@ export function DayLanes({ crew, jobs, availability = [], focus = "", onMove, on
                       key={job.id}
                       role="button"
                       tabIndex={0}
-                      draggable
+                      draggable={isOpen(job)}
                       aria-label={label}
-                      className={`sch-job${job.late ? " late" : ""}${isSpa(job) ? " spa" : ""}${job.manual ? " manual" : ""}${statusClass(job)}${focus && job.status !== focus ? " dim" : ""}`}
+                      className={`sch-job${job.late ? " late" : ""}${isSpa(job) ? " spa" : ""}${job.manual ? " manual" : ""}${statusClass(job)}${focus && job.status !== focus ? " dim" : ""}${isOpen(job) ? "" : " locked"}`}
                       style={{ left: ((job.start_minute ?? 0) - first) * PX_PER_MIN,
                                width: job.duration_minutes * PX_PER_MIN - 2 }}
                       title={`${job.start_time}-${job.end_time} ${label}. ${job.status}${job.reason ? `. ${job.reason}` : ""}`}
-                      onDragStart={startDrag(job)}
+                      onDragStart={isOpen(job) ? startDrag(job) : undefined}
                       onClick={() => onOpen(job)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(job); }}
                     >
@@ -293,7 +303,7 @@ export function DayLanes({ crew, jobs, availability = [], focus = "", onMove, on
         })}
       </div>
       {blocked && <p className="mt-2 mb-0 text-sm text-destructive" role="alert">{blocked}</p>}
-      <UnscheduledList jobs={jobs.filter((j) => j.crew_id === null)} onOpen={onOpen}
+      <UnscheduledList jobs={jobs.filter(isUnplaced)} onOpen={onOpen}
                        startDrag={startDrag} />
     </div>
   );

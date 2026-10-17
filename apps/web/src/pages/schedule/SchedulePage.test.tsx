@@ -88,6 +88,15 @@ function server(o: Opts = {}) {
       if (id && o.boards?.[id]) return json(200, o.boards[id]);
       return o.boardReply ? o.boardReply() : json(200, main());
     }
+    if (url.startsWith("/v1/admin/scheduling/skipped?")) {
+      return json(200, [
+        job({ id: "j5", registration: "KA05SK0005", crew_id: null, crew_name: null, start_minute: null,
+              start_time: null, status: "Skipped", skip_kind: "Paused",
+              skip_reason: "Paused by the customer, 08-Nov-26 to 10-Nov-26" }),
+        job({ id: "j6", registration: "KA06SK0006", crew_id: null, crew_name: null, start_minute: null,
+              start_time: null, status: "Skipped", skip_kind: "Skipped", skip_reason: "Skipped by operations" }),
+      ]);
+    }
     if (url.startsWith("/v1/admin/scheduling/needs-scheduling")) {
       return json(200, { jobs: [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null,
                                       start_time: null, reason: "Capacity is short." })] });
@@ -284,6 +293,52 @@ describe("job status on the board (ADM-SCH-34)", () => {
     expect(card("KA01AA0001")).toHaveClass("dim");
     await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
     expect(card("KA01AA0001")).not.toHaveClass("dim");
+  });
+});
+
+describe("skipped and finished jobs cannot be placed or moved", () => {
+  it("leaves a skipped job out of the unscheduled list and shows a finished job without move controls", async () => {
+    server({ jobs: [
+      job({ id: "j1", status: "Completed" }),
+      job({ id: "j5", registration: "KA05SK0005", crew_id: null, crew_name: null, start_minute: null,
+            start_time: null, status: "Skipped" }),
+    ] });
+    await openBoard();
+    const card = within(await screen.findByTestId("lane-c1")).getByRole("button");
+    expect(card).toHaveAttribute("draggable", "false");
+    expect(screen.getByText("Unscheduled on this day (0)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Place KA05SK0005" })).not.toBeInTheDocument();
+
+    await userEvent.click(card);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("This job is Completed, so it can no longer be placed or moved.")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Start time")).not.toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(callsTo("/move")).toHaveLength(0);
+  });
+
+  it("keeps skipped jobs off the board and lists them with why on their own tab (ADM-SCH-36)", async () => {
+    server({ jobs: [
+      job(),
+      job({ id: "j5", registration: "KA05SK0005", crew_id: "c2", status: "Skipped" }),
+    ] });
+    await openBoard();
+    expect(within(await screen.findByTestId("lane-c2")).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Skipped/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "1 skipped or paused, not shown" }));
+    expect(screen.getByRole("tab", { name: "Skipped and paused" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("Paused by the customer, 08-Nov-26 to 10-Nov-26")).toBeInTheDocument();
+    expect(screen.getByText("Skipped by operations")).toBeInTheDocument();
+    const [path] = fetchMock.mock.calls.find((c) => String(c[0]).startsWith("/v1/admin/scheduling/skipped?"))!;
+    expect(String(path)).toContain("date_from=2026-11-08");
+    expect(String(path)).toContain("date_to=2026-11-14");
+
+    await choose("Show", "Paused only");
+    expect(screen.queryByText("Skipped by operations")).not.toBeInTheDocument();
+    expect(screen.getByText("Paused by the customer, 08-Nov-26 to 10-Nov-26")).toBeInTheDocument();
   });
 });
 

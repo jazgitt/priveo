@@ -19,8 +19,9 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { DayLanes, JobFlags, JobLabel, StatusSummary } from "./Board";
+import { DayLanes, isOpen, isUnplaced, JobFlags, JobLabel, StatusSummary } from "./Board";
 import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { SkippedJobs } from "./SkippedJobs";
 import {
   datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, nextSunday, toIso, useBoard, useBoards,
   useNeedsScheduling, useSchedules, weekday,
@@ -41,6 +42,7 @@ const SCHEDULE_TABS = (waiting?: number) => [
   { id: "run", label: "Run" },
   { id: "board", label: "Board" },
   { id: "needs", label: waiting ? `Needs scheduling (${waiting})` : "Needs scheduling" },
+  { id: "skipped", label: "Skipped and paused" },
   { id: "cutoff", label: "Cutoff requests" },
   { id: "improve", label: "Draft improvements" },
 ] as const;
@@ -137,6 +139,7 @@ export function SchedulePage() {
     qc.invalidateQueries({ queryKey: ["board"] }),
     qc.invalidateQueries({ queryKey: ["schedules"] }),
     qc.invalidateQueries({ queryKey: ["needs-scheduling"] }),
+    qc.invalidateQueries({ queryKey: ["skipped"] }),
     qc.invalidateQueries({ queryKey: ["capacity"] }),
   ]);
 
@@ -203,7 +206,10 @@ export function SchedulePage() {
     })) freeze.mutate(schedule.id);
   };
 
-  const jobsOn = (d: string) => boardOf(scheduleOf.get(d)?.id ?? "")?.jobs.filter((j) => j.date === d) ?? [];
+  const allJobsOn = (d: string) => boardOf(scheduleOf.get(d)?.id ?? "")?.jobs.filter((j) => j.date === d) ?? [];
+  // Skipped and paused jobs have their own tab, so the Board shows only work to do (ADM-SCH-36).
+  const jobsOn = (d: string) => allJobsOn(d).filter((j) => j.status !== "Skipped");
+  const skippedCount = selectedDays.reduce((n, d) => n + allJobsOn(d).length - jobsOn(d).length, 0);
   const selectedJobs = selectedDays.flatMap(jobsOn);
   const boardsPending = boardsQ.some((q) => q.isPending);
   const boardsError = boardsQ.find((q) => q.isError)?.error;
@@ -328,7 +334,7 @@ export function SchedulePage() {
                     {allDays.map((date) => {
                       const s = scheduleOf.get(date)!;
                       const cap = boardOf(s.id)?.days.find((d) => d.date === date);
-                      const left = jobsOn(date).filter((j) => j.crew_id === null).length;
+                      const left = jobsOn(date).filter(isUnplaced).length;
                       const on = selectedDays.includes(date);
                       return (
                         <button key={date} type="button" aria-pressed={on} onClick={() => toggleDay(date)}
@@ -352,7 +358,14 @@ export function SchedulePage() {
                 {boardsPending && <Skeleton className="h-72 w-full" />}
                 {!boardsPending && (
                   <>
-                    <StatusSummary jobs={selectedJobs} focus={focusStatus} onFocus={setFocusStatus} />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <StatusSummary jobs={selectedJobs} focus={focusStatus} onFocus={setFocusStatus} />
+                      {skippedCount > 0 && (
+                        <Button size="sm" variant="link" className="h-auto p-0" onClick={() => setParam("tab", "skipped")}>
+                          {skippedCount} skipped or paused, not shown
+                        </Button>
+                      )}
+                    </div>
                     {selectedDays.map((date) => {
                       const s = scheduleOf.get(date)!;
                       const b = boardOf(s.id);
@@ -405,6 +418,9 @@ export function SchedulePage() {
             <PendingAddons addons={needsQ.data?.pending_addons ?? []} />
           </div>
         )}
+        {tab === "skipped" && (!societyId
+          ? <EmptyState title="Choose a site">Pick a site at the top left to see its skipped and paused jobs.</EmptyState>
+          : <SkippedJobs key={societyId} societyId={societyId} from={selectedDays[0] ?? today} />)}
         {tab === "cutoff" && <CutoffRequests refresh={refresh} />}
         {tab === "improve" && <DraftImprovements board={board ?? null} refresh={refresh} />}
       </Tabs>
@@ -473,10 +489,12 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
     })) onMove(job, null, null);
   };
 
+  const movable = isOpen(job);
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${job.registration}, ${job.service}`} size="md"
-                submitLabel="Move here" busy={busy} onSubmit={submit}
-                extraActions={job.crew_id ? (
+                submitLabel={movable ? "Move here" : "Close"} cancelLabel={movable ? "Cancel" : null}
+                busy={busy} onSubmit={movable ? submit : onClose}
+                extraActions={movable && job.crew_id ? (
                   <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void takeOff()}>
                     Take off crew member
                   </Button>
@@ -492,7 +510,12 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
       ]} />
       {(job.late || job.manual) && <div className="flex gap-2"><JobFlags job={job} /></div>}
       {job.reason && <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{job.reason}</p>}
-      <div className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
+      {!movable && (
+        <p className="m-0 border-t pt-4 text-sm text-muted-foreground">
+          This job is {job.status}, so it can no longer be placed or moved.
+        </p>
+      )}
+      {movable && <div className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
         <Field label="Crew member">
           {(p) => <SelectBox {...p} value={crewId} onChange={setCrewId}
                              choices={crew.map((c) => ({ value: c.id, label: `${c.name} (${hhmm(c.start_minute)} to ${hhmm(c.end_minute)})` }))} />}
@@ -500,7 +523,7 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
         <Field label="Start time" error={error || undefined}>
           {(p) => <Input {...p} type="time" step={300} value={time} onChange={(e) => setTime(e.target.value)} />}
         </Field>
-      </div>
+      </div>}
     </FormDialog>
   );
 }

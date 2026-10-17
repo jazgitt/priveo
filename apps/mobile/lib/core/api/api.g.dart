@@ -996,6 +996,8 @@ class AdminJob {
     required this.late,
     required this.manual,
     required this.reason,
+    this.skipKind,
+    this.skipReason,
   });
 
   final String id;
@@ -1020,6 +1022,8 @@ class AdminJob {
   final bool late;
   final bool manual;
   final String reason;
+  final String? skipKind;
+  final String? skipReason;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1044,6 +1048,8 @@ class AdminJob {
         late: j['late'] as bool,
         manual: j['manual'] as bool,
         reason: j['reason'] as String,
+        skipKind: j['skip_kind'] == null ? null : j['skip_kind'] as String,
+        skipReason: j['skip_reason'] == null ? null : j['skip_reason'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1069,6 +1075,8 @@ class AdminJob {
         'late': late,
         'manual': manual,
         'reason': reason,
+        'skip_kind': skipKind,
+        'skip_reason': skipReason,
       };
 }
 

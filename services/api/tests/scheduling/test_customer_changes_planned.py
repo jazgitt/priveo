@@ -31,3 +31,34 @@ def test_changes_made_before_planning_are_kept(api, world, run_week):
     assert rows[date(2026, 10, 19)].status == "Skipped"
     assert rows[date(2026, 10, 20)].status == "Scheduled"
     assert rows[date(2026, 10, 20)].finish_by_minute == 9 * 60 + 30
+
+
+def test_skipped_and_paused_jobs_are_listed_with_why(api, admin, world, run_week):
+    # ADM-SCH-36: the Skipped and paused tab says whether a job was paused or
+    # skipped, and by whom.
+    world.add_crew(end=600)
+    car = world.add_vehicle(cutoff=time(8, 0))
+    base = {"customer_id": world.customer.id, "vehicle_id": car.id}
+    world.db.add_all([
+        ScheduleChange(kind="skip", start_date=SUNDAY, end_date=SUNDAY, status="Active",
+                       actor="customer", **base),
+        ScheduleChange(kind="pause", start_date=date(2026, 10, 19),
+                       end_date=date(2026, 10, 20), status="Active", actor="admin", **base),
+    ])
+    world.db.commit()
+    run_week(days=3)
+
+    params = {"society_id": str(world.society.id), "date_from": "2026-10-18",
+              "date_to": "2026-10-19"}
+    r = api.get("/v1/admin/scheduling/skipped", headers=admin, params=params)
+    assert r.status_code == 200, r.text
+    rows = {j["date"]: j for j in r.json()}
+    assert set(rows) == {"2026-10-18", "2026-10-19"}
+    assert rows["2026-10-18"]["skip_kind"] == "Skipped"
+    assert rows["2026-10-18"]["skip_reason"] == "Skipped by the customer"
+    assert rows["2026-10-19"]["skip_kind"] == "Paused"
+    assert rows["2026-10-19"]["skip_reason"] == "Paused by the admin, 19-Oct-26 to 20-Oct-26"
+
+    params["date_to"] = "2026-10-17"
+    r = api.get("/v1/admin/scheduling/skipped", headers=admin, params=params)
+    assert r.status_code == 422

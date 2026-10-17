@@ -170,6 +170,21 @@ def freeze_due(user: User = Depends(require_role("admin")), db: Session = Depend
     return {"frozen": service.freeze_due(db, now_ist())}
 
 
+@admin.get("/skipped", response_model=list[AdminJob])
+def skipped(
+    society_id: uuid.UUID,
+    date_from: date,
+    date_to: date,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Skipped and paused jobs of a society between two dates (ADM-SCH-36)."""
+    if date_to < date_from:
+        raise ApiError("validation_failed", "The end date is before the start date.", 422,
+                       {"date_to": "Must be on or after date_from."})
+    return service.skipped_jobs(db, society_id, date_from, date_to)
+
+
 @admin.get("/needs-scheduling", response_model=NeedsScheduling)
 def needs_scheduling(
     society_id: uuid.UUID | None = None,
