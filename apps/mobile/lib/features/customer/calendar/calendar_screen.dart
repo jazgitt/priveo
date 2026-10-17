@@ -8,7 +8,8 @@ import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
-import '../../changes_money/data/money_repository.dart' show subscriptionProvider;
+import '../../changes_money/data/money_repository.dart'
+    show calendarSubscriptionProvider;
 import '../cust_strings.dart';
 import 'calendar_strings.dart';
 import 'day_card.dart';
@@ -109,7 +110,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     // its status marks, including earlier months. Past dates allow no actions.
     final sub = vehicleId == null
         ? null
-        : ref.watch(subscriptionProvider(vehicleId)).value;
+        : ref.watch(calendarSubscriptionProvider(vehicleId)).value;
     final coveredFrom = sub?.startDate == null ? null : _dateOnly(sub!.startDate!);
     final coveredTo = sub == null ? null : _dateOnly(sub.endDate);
     final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);

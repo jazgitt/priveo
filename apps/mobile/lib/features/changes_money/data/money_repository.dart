@@ -192,5 +192,17 @@ final paymentDetailProvider = FutureProvider.autoDispose
     .family<PaymentDetailDto, String>((ref, paymentId) =>
         ref.watch(moneyRepositoryProvider).paymentDetail(paymentId));
 
+/// The subscription as the service calendar needs it (the dates it covers).
+/// A failed load gives null, so the calendar shows every day instead of an
+/// error or a retry loop.
+final calendarSubscriptionProvider = FutureProvider.autoDispose
+    .family<SubscriptionDto?, String>((ref, vehicleId) async {
+  try {
+    return await ref.watch(moneyRepositoryProvider).subscription(vehicleId);
+  } catch (_) {
+    return null;
+  }
+});
+
 final addonsProvider = FutureProvider.autoDispose<AddonsDto>(
     (ref) => ref.watch(moneyRepositoryProvider).addons());

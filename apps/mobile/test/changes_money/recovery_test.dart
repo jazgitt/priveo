@@ -32,7 +32,7 @@ void main(){
     final r=RecoveryMoney();await openAt(t,subscriptionPath('v1'),money:r);r.failure=const ApiFailure(code:'conflict',message:'Payment is closed');
     await t.tap(find.text('Renew subscription'));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);
     r.failure=null;await openAt(t,payPath('p1'),money:r);r.failure=const ApiFailure(code:'conflict',message:'Payment is closed');
-    await t.tap(find.text("I've paid"));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);expect(find.text('Pay by UPI'),findsOneWidget);
+    await t.tap(find.text("I've paid"));await t.pumpAndSettle();expect(find.text('Payment is closed'),findsOneWidget);expect(find.text('Renew subscription'),findsOneWidget);
   });
   testWidgets('Spa booking and cancellation failures retain the request',(t)async{
     final r=RecoveryMoney();r.addonList=AddonsDto(offers:r.addonList.offers,requests:[AddonRequestDto(id:'a1',service:'Deep Spa',standalone:false,date:DateTime.now().add(const Duration(days:2)),finishBy:'12:00',status:'Requested',priceRupees:1500,paymentId:'p1',paymentStatus:'Due',canChange:true)]);

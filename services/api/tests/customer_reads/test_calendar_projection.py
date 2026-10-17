@@ -232,8 +232,10 @@ def test_next_service_is_projected_without_a_planned_visit(db, asha, repo):
     now = datetime(2026, 12, 20, 10, 0, tzinfo=IST)
     reads = CustomerReads(db, repo, lambda: now)
     items = reads.next_services(login, date(2026, 12, 20))
+    # Today's service is still next until the crew closes it, so it is today
+    # (20-Dec-26), not tomorrow, even after the 7 AM cutoff has passed.
     assert [(i.date, i.source, i.visit_id) for i in items] == [
-        (date(2026, 12, 21), "projected", None)
+        (date(2026, 12, 20), "projected", None)
     ] * 2
     assert items[0].services == ["Cleaning-External"]
     assert items[0].cutoff_time == "07:00"

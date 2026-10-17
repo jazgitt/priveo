@@ -312,7 +312,9 @@ Future<ProviderContainer> pumpApp(
   addTearDown(uploadQueue.dispose);
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  final container = ProviderContainer(overrides: [
+  // No automatic retries: a tab kept alive whose fake route fails would leave
+  // a retry timer pending when the test ends.
+  final container = ProviderContainer(retry: (_, _) => null, overrides: [
     readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
     appConfigProvider.overrideWithValue(AppConfig.dev),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),

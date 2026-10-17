@@ -76,7 +76,9 @@ def test_next_service_is_the_first_visit_not_over_for_each_vehicle(db, asha, rep
     items = reads.next_services(login, date(2026, 11, 20))
     assert [(i.vehicle_id, i.visit_id, i.service) for i in items] == [
         (asha["vehicles"][0], "v-3", "Cleaning-External"),
-        (asha["vehicles"][1], "v-4", ""),
+        # No visit is planned for the second car today, so its service day (today)
+        # is projected and stays next until the crew closes it.
+        (asha["vehicles"][1], None, "Cleaning-External"),
     ]
     # Visits that are over are not next: the subscription's next day takes over.
     later = CustomerReads(db, repo, lambda: datetime(2026, 12, 2, 10, 0, tzinfo=IST))

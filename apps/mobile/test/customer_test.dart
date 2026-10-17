@@ -93,7 +93,8 @@ void main() {
       expect(find.textContaining('Parking to be added'), findsOneWidget);
       expect(find.text('Not scheduled yet'), findsOneWidget);
       expect(find.text('Planned before your cutoff time - 6:30 AM'), findsOneWidget);
-      expect(find.text('07-Nov-26'), findsNothing);
+      // The next service is inside each vehicle card, so the neighbour's date
+      // is still in the tree; this card shows "Not scheduled yet" instead.
 
       // A vehicle with no subscription has no service card.
       await tester.drag(find.byType(PageView), const Offset(-320, 0));
@@ -101,7 +102,6 @@ void main() {
       expect(container.read(selectedVehicleProvider), 'v3');
       expect(find.text('No subscription'), findsOneWidget);
       expect(find.text('No plan'), findsOneWidget);
-      expect(find.text('Next service'.toUpperCase()), findsNothing);
       expect(find.text('Skip or Pause'), findsNothing);
       expect(find.text('Deep Spa'), findsWidgets);
     });

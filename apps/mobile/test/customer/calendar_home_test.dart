@@ -131,6 +131,7 @@ Future<void> pumpWith(
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   final container = ProviderContainer(
+    retry: (_, _) => null,
     overrides: [
       readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       apiProvider.overrideWithValue(FakePriveoApi()),

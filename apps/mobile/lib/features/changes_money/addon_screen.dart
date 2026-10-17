@@ -413,13 +413,14 @@ class _SpaHero extends StatelessWidget {
             Text(pitch, style: text.bodyLarge),
           ],
           const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.end,
             children: [
               Text(formatRupees(offer.priceRupees), style: text.displaySmall),
               if (offer.listPriceRupees != null &&
-                  offer.listPriceRupees! > offer.priceRupees) ...[
-                const SizedBox(width: 10),
+                  offer.listPriceRupees! > offer.priceRupees)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
@@ -428,11 +429,10 @@ class _SpaHero extends StatelessWidget {
                         color: b.mute, decoration: TextDecoration.lineThrough),
                   ),
                 ),
-              ],
-              const Spacer(),
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Symbols.schedule_rounded, size: 18, color: b.mute),
                     const SizedBox(width: 4),

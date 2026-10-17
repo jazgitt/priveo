@@ -708,7 +708,7 @@ void main() {
     expect(wire.CustomerEdit.fromJson(input).toJson(), equals(input));
   });
   test('CustomerHome preserves populated wire fields', () {
-    final input = jsonDecode('{"greeting_name":"wire-value","onboarding_confirmed":true,"vehicles":[{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":"wire-value","monthly_price_rupees":1,"cutoff_time":"wire-value","interior_day":"wire-value","variant":"wire-value","photo_url":"wire-value","next_service":{"date":"2026-10-20","service":"wire-value","status":"wire-value"}}],"quick_actions":[{"key":"wire-value","label":"wire-value"}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"greeting_name":"wire-value","onboarding_confirmed":true,"vehicles":[{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":"wire-value","monthly_price_rupees":1,"plan_name":"wire-value","expires_on":"2026-10-20","cutoff_time":"wire-value","interior_day":"wire-value","variant":"wire-value","photo_url":"wire-value","next_service":{"date":"2026-10-20","service":"wire-value","status":"wire-value"}}],"quick_actions":[{"key":"wire-value","label":"wire-value"}]}') as Map<String, dynamic>;
     expect(wire.CustomerHome.fromJson(input).toJson(), equals(input));
   });
   test('CustomerHome preserves nullable wire fields', () {
@@ -780,11 +780,11 @@ void main() {
     expect(wire.DirectoryAddonCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryAddonOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","description":"wire-value","service":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1,"sort_order":1,"active":true}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","description":"wire-value","service":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1,"sort_order":1,"active":true}') as Map<String, dynamic>;
     expect(wire.DirectoryAddonOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryAddonOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","description":"wire-value","service":"wire-value","price_rupees":1,"list_price_rupees":null,"duration_minutes":1,"sort_order":1,"active":false}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","description":"wire-value","service":"wire-value","price_rupees":1,"list_price_rupees":null,"duration_minutes":1,"sort_order":1,"active":false}') as Map<String, dynamic>;
     expect(wire.DirectoryAddonOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryAddonUpdate preserves populated wire fields', () {
@@ -892,11 +892,11 @@ void main() {
     expect(wire.DirectoryPlanCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"active":true,"active_subscriptions":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"active":true,"active_subscriptions":1}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1,"active":false,"active_subscriptions":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1,"active":false,"active_subscriptions":1}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanUpdate preserves populated wire fields', () {
@@ -1628,11 +1628,11 @@ void main() {
     expect(wire.SubscriptionStatusOut.fromJson(input).toJson(), equals(input));
   });
   test('SubscriptionView preserves populated wire fields', () {
-    final input = jsonDecode('{"vehicle_id":"wire-value","subscription_id":"wire-value","plan_name":"wire-value","vehicle":"wire-value","registration":"wire-value","society":"wire-value","status":"wire-value","monthly_price_rupees":1,"payment_method":"wire-value","cutoff_time":"wire-value","interior_day":"wire-value","cycle_start":"2026-10-20","renewal_date":"2026-10-20","cycle_days":1,"days_left":1,"latest_payment":{"id":"wire-value","kind":"wire-value","description":"wire-value","amount_rupees":1,"status":"wire-value","due_date":"2026-10-20","cycle_start":"2026-10-20","cycle_end":"2026-10-20","vehicle_id":"wire-value","received_on":"2026-10-20","invoice_number":"wire-value"},"can_pay_next":true}') as Map<String, dynamic>;
+    final input = jsonDecode('{"vehicle_id":"wire-value","subscription_id":"wire-value","plan_name":"wire-value","plan_code":"wire-value","plan_list_price_rupees":1,"plan_inclusions":["wire-value"],"vehicle":"wire-value","registration":"wire-value","society":"wire-value","status":"wire-value","monthly_price_rupees":1,"payment_method":"wire-value","cutoff_time":"wire-value","interior_day":"wire-value","start_date":"2026-10-20","cycle_start":"2026-10-20","renewal_date":"2026-10-20","expires_on":"2026-10-20","cycle_days":1,"days_left":1,"latest_payment":{"id":"wire-value","kind":"wire-value","description":"wire-value","amount_rupees":1,"status":"wire-value","due_date":"2026-10-20","cycle_start":"2026-10-20","cycle_end":"2026-10-20","vehicle_id":"wire-value","received_on":"2026-10-20","invoice_number":"wire-value"},"can_pay_next":true}') as Map<String, dynamic>;
     expect(wire.SubscriptionView.fromJson(input).toJson(), equals(input));
   });
   test('SubscriptionView preserves nullable wire fields', () {
-    final input = jsonDecode('{"vehicle_id":"wire-value","subscription_id":"wire-value","plan_name":null,"vehicle":"wire-value","registration":"wire-value","society":"wire-value","status":"wire-value","monthly_price_rupees":1,"payment_method":"wire-value","cutoff_time":null,"interior_day":null,"cycle_start":"2026-10-20","renewal_date":"2026-10-20","cycle_days":1,"days_left":1,"latest_payment":null,"can_pay_next":false}') as Map<String, dynamic>;
+    final input = jsonDecode('{"vehicle_id":"wire-value","subscription_id":"wire-value","plan_name":null,"plan_code":null,"plan_list_price_rupees":null,"plan_inclusions":[],"vehicle":"wire-value","registration":"wire-value","society":"wire-value","status":"wire-value","monthly_price_rupees":1,"payment_method":"wire-value","cutoff_time":null,"interior_day":null,"start_date":"2026-10-20","cycle_start":"2026-10-20","renewal_date":"2026-10-20","expires_on":"2026-10-20","cycle_days":1,"days_left":1,"latest_payment":null,"can_pay_next":false}') as Map<String, dynamic>;
     expect(wire.SubscriptionView.fromJson(input).toJson(), equals(input));
   });
   test('SuggestionApply preserves populated wire fields', () {
@@ -1772,11 +1772,11 @@ void main() {
     expect(wire.VehicleAnswer.fromJson(input).toJson(), equals(input));
   });
   test('VehicleCard preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":"wire-value","monthly_price_rupees":1,"cutoff_time":"wire-value","interior_day":"wire-value","variant":"wire-value","photo_url":"wire-value","next_service":{"date":"2026-10-20","service":"wire-value","status":"wire-value"}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":"wire-value","monthly_price_rupees":1,"plan_name":"wire-value","expires_on":"2026-10-20","cutoff_time":"wire-value","interior_day":"wire-value","variant":"wire-value","photo_url":"wire-value","next_service":{"date":"2026-10-20","service":"wire-value","status":"wire-value"}}') as Map<String, dynamic>;
     expect(wire.VehicleCard.fromJson(input).toJson(), equals(input));
   });
   test('VehicleCard preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":null,"monthly_price_rupees":null,"cutoff_time":null,"interior_day":null,"variant":"wire-value","photo_url":null,"next_service":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","model":"wire-value","make":"wire-value","society":"wire-value","parking":"wire-value","subscription_status":null,"monthly_price_rupees":null,"plan_name":null,"expires_on":null,"cutoff_time":null,"interior_day":null,"variant":"wire-value","photo_url":null,"next_service":null}') as Map<String, dynamic>;
     expect(wire.VehicleCard.fromJson(input).toJson(), equals(input));
   });
   test('VehicleCreate preserves populated wire fields', () {

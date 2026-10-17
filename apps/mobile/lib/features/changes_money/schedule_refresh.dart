@@ -15,5 +15,6 @@ void refreshAfterScheduleChange(WidgetRef ref) {
   ref.invalidate(calendarMonthProvider);
   ref.invalidate(nextServicesProvider);
   ref.invalidate(subscriptionProvider);
+  ref.invalidate(calendarSubscriptionProvider);
   ref.invalidate(customerHomeProvider);
 }

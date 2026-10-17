@@ -1183,6 +1183,8 @@
         "parking": "wire-value",
         "subscription_status": "wire-value",
         "monthly_price_rupees": 1,
+        "plan_name": "wire-value",
+        "expires_on": "2026-10-20",
         "cutoff_time": "wire-value",
         "interior_day": "wire-value",
         "variant": "wire-value",
@@ -1266,6 +1268,7 @@
   },
   "DirectoryAddonOut": {
     "id": "11111111-1111-1111-1111-111111111111",
+    "code": "wire-value",
     "name": "wire-value",
     "description": "wire-value",
     "service": "wire-value",
@@ -1388,6 +1391,7 @@
   },
   "DirectoryPlanOut": {
     "id": "11111111-1111-1111-1111-111111111111",
+    "code": "wire-value",
     "name": "wire-value",
     "monthly_price_rupees": 1,
     "list_price_rupees": 1,
@@ -2279,6 +2283,11 @@
     "vehicle_id": "wire-value",
     "subscription_id": "wire-value",
     "plan_name": "wire-value",
+    "plan_code": "wire-value",
+    "plan_list_price_rupees": 1,
+    "plan_inclusions": [
+      "wire-value"
+    ],
     "vehicle": "wire-value",
     "registration": "wire-value",
     "society": "wire-value",
@@ -2287,8 +2296,10 @@
     "payment_method": "wire-value",
     "cutoff_time": "wire-value",
     "interior_day": "wire-value",
+    "start_date": "2026-10-20",
     "cycle_start": "2026-10-20",
     "renewal_date": "2026-10-20",
+    "expires_on": "2026-10-20",
     "cycle_days": 1,
     "days_left": 1,
     "latest_payment": {
@@ -2481,6 +2492,8 @@
     "parking": "wire-value",
     "subscription_status": "wire-value",
     "monthly_price_rupees": 1,
+    "plan_name": "wire-value",
+    "expires_on": "2026-10-20",
     "cutoff_time": "wire-value",
     "interior_day": "wire-value",
     "variant": "wire-value",
