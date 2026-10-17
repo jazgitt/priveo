@@ -21,6 +21,8 @@ from app.crew.service import (
     CrewService,
     CrewSessionOut,
     CrewSessionsEnded,
+    CrewSocietyMove,
+    CrewSocietyStay,
     NewCrew,
 )
 from app.identity.service import User
@@ -122,6 +124,39 @@ def pair_trainee(
 ):
     """Pairs a Trainee with a Member of the same society (ADM-CRW-19)."""
     return crews.pair(crew_id, body)
+
+
+@admin.get("/{crew_id}/society-history", response_model=list[CrewSocietyStay])
+def society_history(
+    crew_id: uuid.UUID,
+    _: User = Depends(require_role("admin")),
+    crews: CrewService = Depends(get_admin_crew_service),
+):
+    """Every stay of the crew member in a society, oldest first (ADM-CRW-22)."""
+    return crews.society_history(crew_id)
+
+
+@admin.post("/{crew_id}/society", response_model=CrewChange)
+def move_society(
+    crew_id: uuid.UUID,
+    body: CrewSocietyMove,
+    _: User = Depends(require_role("admin")),
+    crews: CrewService = Depends(get_admin_crew_service),
+):
+    """Moves the crew member to another society from a date (ADM-CRW-22). The
+    past stays as it was. Open jobs from the date go to Needs scheduling."""
+    return crews.move_society(crew_id, body)
+
+
+@admin.delete("/{crew_id}/society-moves/{assignment_id}", response_model=CrewOut)
+def cancel_society_move(
+    crew_id: uuid.UUID,
+    assignment_id: uuid.UUID,
+    _: User = Depends(require_role("admin")),
+    crews: CrewService = Depends(get_admin_crew_service),
+):
+    """Cancels a move that has not happened yet."""
+    return crews.cancel_society_move(crew_id, assignment_id)
 
 
 @admin.put("/{crew_id}/working-hours", response_model=CrewChange)

@@ -111,7 +111,14 @@ def _automatic_planning(db: Session, now: datetime, settings: MoneySettings) -> 
     return run_due(db, now)
 
 
+def _crew_society_moves(db: Session, now: datetime, settings: MoneySettings) -> dict:
+    from app.changes.rules import today_of
+    from app.crew.society_moves import apply_due_moves
+    return {"applied": apply_due_moves(db, today_of(now))}
+
+
 JOBS = {
+    "crew-society-moves": _crew_society_moves,
     "automatic-planning": _automatic_planning,
     "freeze-due": _freeze_due,
     "payments-generate": _payments_generate,

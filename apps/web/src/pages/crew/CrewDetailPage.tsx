@@ -6,6 +6,7 @@ import { useCrew } from "./api";
 import {
   AccountPanel, DetailsPanel, ExceptionsPanel, HoursPanel, RolePanel, SessionsPanel,
 } from "./panels";
+import { SocietyPanel } from "./SocietyPanel";
 
 export function CrewDetailPage() {
   const { id = "" } = useParams();
@@ -32,6 +33,7 @@ export function CrewDetailPage() {
         {c.role}, {c.society}, {c.mobile}
       </p>
       <DetailsPanel key={`d-${v}`} crew={c} />
+      <SocietyPanel key={`s-${c.society_id}`} crew={c} />
       <RolePanel key={`r-${v}`} crew={c} />
       <HoursPanel key={`h-${v}`} crew={c} />
       <ExceptionsPanel crew={c} />

@@ -1144,6 +1144,19 @@
   "CrewSessionsEnded": {
     "ended": 1
   },
+  "CrewSocietyMove": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "effective_from": "2026-10-20",
+    "paired_member_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "CrewSocietyStay": {
+    "id": "wire-value",
+    "society_id": "wire-value",
+    "society": "wire-value",
+    "effective_from": "2026-10-20",
+    "effective_to": "2026-10-20",
+    "pending": true
+  },
   "CustomerCreate": {
     "first_name": "wire-value",
     "last_name": "wire-value",

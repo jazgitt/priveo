@@ -221,6 +221,12 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
 
 
 def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingCrew]:
+    from app.crew.society_moves import apply_due_moves
+    from app.platform.clock import today_ist
+
+    # Moves whose date has come take effect before the crew is read. The
+    # caller's own commit keeps them.
+    apply_due_moves(db, today_ist(), commit=False)
     rows = (
         db.execute(
             select(SchedulingCrew)
@@ -329,6 +335,35 @@ def release_unfit(db: Session, crew: SchedulingCrew, today: date) -> list[dict]:
             continue
         job.crew_id, job.start_minute, job.late, job.manual = None, None, False, False
         job.note = "The crew member is not available."
+        released.append(
+            {
+                "job_id": job.id,
+                "date": visit.date,
+                "service": job.service,
+                "vehicle_id": vehicle.id,
+                "registration": vehicle.registration or "",
+            }
+        )
+    db.flush()
+    return released
+
+
+def release_open_jobs(db: Session, crew: SchedulingCrew, from_date: date) -> list[dict]:
+    """Takes every open (Scheduled) job of the crew member from `from_date` on
+    and puts it on the Needs scheduling list. Used when the crew member moves to
+    another society: those jobs belong to the old society's schedules. Started
+    and finished jobs, and earlier dates, stay. The caller commits."""
+    rows = db.execute(
+        select(Job, Visit, Vehicle)
+        .join(Visit, Job.visit_id == Visit.id)
+        .join(Vehicle, Visit.vehicle_id == Vehicle.id)
+        .where(Job.crew_id == crew.id, Job.status == "Scheduled", Visit.date >= from_date)
+        .order_by(Visit.date, Job.start_minute)
+    ).all()
+    released = []
+    for job, visit, vehicle in rows:
+        job.crew_id, job.start_minute, job.late, job.manual = None, None, False, False
+        job.note = "The crew member moved to another society."
         released.append(
             {
                 "job_id": job.id,

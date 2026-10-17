@@ -16,7 +16,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.crew.models import CREW_ROLES, CrewMember
+from app.crew import society_moves
+from app.crew.models import CREW_ROLES, CrewMember, CrewSocietyAssignment
 from app.customers.models import WEEKDAYS
 from app.directory.models import Society
 from app.identity.models import AuthEvent, AuthSession, Login
@@ -126,6 +127,28 @@ class CrewReleasedJob(BaseModel):
     service: str
     vehicle_id: str
     registration: str
+
+
+class CrewSocietyMove(BaseModel):
+    """Moves a crew member to another society from a date (ADM-CRW-22)."""
+
+    society_id: uuid.UUID
+    # Today or a later date. The past is never changed.
+    effective_from: date
+    # Required for a Trainee: the Member of the new society they are paired with.
+    paired_member_id: uuid.UUID | None = None
+
+
+class CrewSocietyStay(BaseModel):
+    """One stay in a society. `effective_to` is empty for the current or the
+    last stay. `pending` is true for a move that has not happened yet."""
+
+    id: str
+    society_id: str
+    society: str
+    effective_from: date
+    effective_to: date | None = None
+    pending: bool = False
 
 
 class CrewChange(BaseModel):
@@ -353,6 +376,7 @@ class CrewService:
         return self._out(crew, login, self._db.get(Society, crew.society_id).name)
 
     def _get(self, crew_id: uuid.UUID) -> tuple[CrewMember, Login]:
+        society_moves.apply_due_moves(self._db, today_ist())
         crew = self._db.get(CrewMember, crew_id)
         login = self._db.get(Login, crew.login_id) if crew else None
         if crew is None or login is None:
@@ -365,6 +389,7 @@ class CrewService:
         return self._out_of(crew, login)
 
     def list(self, society_id: uuid.UUID | None = None) -> list[CrewOut]:
+        society_moves.apply_due_moves(self._db, today_ist())
         query = (
             select(CrewMember, Login, Society.name)
             .join(Login, Login.id == CrewMember.login_id)
@@ -405,6 +430,11 @@ class CrewService:
         if login is None or not login.active:
             raise _problem(
                 "Choose a Member who is active.", paired_member_id="This Member is not active."
+            )
+        if society_moves.pending_move(self._db, member.id, today_ist()) is not None:
+            raise _problem(
+                "This Member is moving to another society.",
+                paired_member_id="This Member has a move to another society coming up.",
             )
         return self._sync(member, login)
 
@@ -486,6 +516,7 @@ class CrewService:
         sc = self._sync(crew, login)
         if mate_sc is not None:
             sc.paired_member_id = mate_sc.id
+        society_moves.add_first_assignment(self._db, crew, today_ist(), self._actor_id)
         self._db.add(AuthEvent(login_id=login.id, kind="crew_created"))
         self._commit()
         return CrewPassword(
@@ -518,6 +549,99 @@ class CrewService:
             crew.mobile = login.login_id = mobile
             self._end_sessions(login.id, "login_changed")
             self._db.add(AuthEvent(login_id=login.id, kind="login_id_changed_by_admin"))
+        self._commit()
+        return self._out_of(crew, login)
+
+    # ---- society over time (ADM-CRW-13, ADM-CRW-22) -----------------------
+
+    def society_history(self, crew_id: uuid.UUID) -> list[CrewSocietyStay]:
+        crew, _login = self._get(crew_id)
+        society_moves.ensure_first_assignment(self._db, crew)
+        rows = society_moves.history(self._db, crew.id)
+        today = today_ist()
+        names = {s.id: s.name for s in self._db.scalars(select(Society))}
+        return [
+            CrewSocietyStay(
+                id=str(r.id), society_id=str(r.society_id), society=names.get(r.society_id, ""),
+                effective_from=r.effective_from, effective_to=to, pending=r.effective_from > today)
+            for r, to in zip(rows, society_moves.end_dates(rows), strict=True)
+        ]
+
+    def move_society(self, crew_id: uuid.UUID, body: CrewSocietyMove) -> CrewChange:
+        """Moves the crew member to another society from a date. The old stay is
+        kept as it was; the new one starts on `effective_from`. A move for today
+        takes effect now and puts the crew member's open jobs from today on back
+        on the Needs scheduling list. A later date takes effect on that day."""
+        crew, login = self._get(crew_id)
+        today = today_ist()
+        if body.effective_from < today:
+            raise _problem(
+                "Choose today or a later date.",
+                effective_from="Past dates cannot be changed. Choose today or a later date.",
+            )
+        society = self._db.get(Society, body.society_id)
+        if society is None or not society.active:
+            raise _problem("Choose a society.", society_id="Choose an active society.")
+        if society_moves.pending_move(self._db, crew.id, today) is not None:
+            raise ApiError(
+                "move_pending",
+                "A move to another society is already set. Cancel it first.",
+                409,
+                {"effective_from": "A move is already set."},
+            )
+        if society.id == crew.society_id:
+            raise _problem(
+                "The crew member is already in this society.",
+                society_id="Choose a different society.",
+            )
+        society_moves.ensure_first_assignment(self._db, crew)
+        sc = self._sync(crew, login)
+        if crew.role == "Member" and self._trainees_of(sc):
+            raise ApiError(
+                "trainees_paired",
+                "Pair this Member's Trainees with another Member first.",
+                409,
+                {"society_id": "Trainees are paired with this Member."},
+            )
+        mate_id = None
+        if crew.role == "Trainee":
+            if body.paired_member_id is None:
+                raise _problem(
+                    "Choose the Member this Trainee will be paired with.",
+                    paired_member_id="Choose a Member of the new society.",
+                )
+            self._member_to_pair(body.paired_member_id, society.id)
+            mate_id = body.paired_member_id
+        # A stay that began today has not lasted a day yet, so a move for today
+        # replaces it instead of adding a second row for the same date.
+        row = self._db.scalar(select(CrewSocietyAssignment).where(
+            CrewSocietyAssignment.crew_id == crew.id,
+            CrewSocietyAssignment.effective_from == body.effective_from))
+        if row is not None:
+            row.society_id, row.paired_member_id = society.id, mate_id
+        else:
+            row = CrewSocietyAssignment(
+                crew_id=crew.id, society_id=society.id, effective_from=body.effective_from,
+                paired_member_id=mate_id, created_by=self._actor_id)
+            self._db.add(row)
+        self._db.flush()
+        released: list[dict] = []
+        if body.effective_from == today:
+            released = society_moves.apply_one(self._db, crew, row, today)
+        self._db.add(AuthEvent(login_id=login.id, kind="crew_society_move"))
+        self._commit()
+        return CrewChange(crew=self._out_of(crew, login), released_jobs=_released(released))
+
+    def cancel_society_move(self, crew_id: uuid.UUID, assignment_id: uuid.UUID) -> CrewOut:
+        """Cancels a move that has not happened yet."""
+        crew, login = self._get(crew_id)
+        row = self._db.get(CrewSocietyAssignment, assignment_id)
+        if row is None or row.crew_id != crew.id:
+            raise ApiError("not_found", "This move was not found.", 404)
+        if row.effective_from <= today_ist():
+            raise ApiError("move_done", "That move has already happened.", 409)
+        self._db.delete(row)
+        self._db.add(AuthEvent(login_id=login.id, kind="crew_society_move_cancelled"))
         self._commit()
         return self._out_of(crew, login)
 

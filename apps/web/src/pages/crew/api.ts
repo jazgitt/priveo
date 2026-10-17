@@ -37,6 +37,16 @@ export interface CrewSession { id: string; channel: string; signed_in_at: string
   device_name?: string; platform?: string; app_version?: string }
 export interface Society { id: string; name: string; active: boolean }
 
+/** One stay of a crew member in a society (ADM-CRW-22). */
+export interface SocietyStay {
+  id: string;
+  society_id: string;
+  society: string;
+  effective_from: string;
+  effective_to: string | null;
+  pending: boolean;
+}
+
 export interface NewCrewBody {
   name: string;
   mobile: string;
@@ -76,6 +86,13 @@ export function useCrew(id: string) {
   return useQuery({ queryKey: ["crew", id], queryFn: () => api<Crew>(`${base}/${id}`) });
 }
 
+export function useSocietyHistory(id: string) {
+  return useQuery({
+    queryKey: ["crew", id, "society-history"],
+    queryFn: () => api<SocietyStay[]>(`${base}/${id}/society-history`),
+  });
+}
+
 export function useSessions(id: string) {
   return useQuery({
     queryKey: ["crew", id, "sessions"],
@@ -99,6 +116,10 @@ export function useCrewActions(id: string) {
     role: useCrewMutation((v: { role: string; paired_member_id: string | null }) =>
       call<CrewChange>("/role", "PUT", v)),
     pair: useCrewMutation((v: { paired_member_id: string }) => call<Crew>("/pair", "PUT", v)),
+    moveSociety: useCrewMutation((v: { society_id: string; effective_from: string; paired_member_id: string | null }) =>
+      call<CrewChange>("/society", "POST", v)),
+    cancelMove: useCrewMutation((assignmentId: string) =>
+      call<Crew>(`/society-moves/${assignmentId}`, "DELETE")),
     hours: useCrewMutation((v: DayHours[]) =>
       call<CrewChange>("/working-hours", "PUT", { working_hours: hoursBody(v) })),
     addException: useCrewMutation((v: { kind: string; from_date: string; to_date: string | null; start: string }) =>

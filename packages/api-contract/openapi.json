@@ -3698,6 +3698,210 @@
         }
       }
     },
+    "/v1/admin/crew/{crew_id}/society-history": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Society History",
+        "description": "Every stay of the crew member in a society, oldest first (ADM-CRW-22).",
+        "operationId": "society_history_v1_admin_crew__crew_id__society_history_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrewSocietyStay"
+                  },
+                  "title": "Response Society History V1 Admin Crew  Crew Id  Society History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/crew/{crew_id}/society": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Move Society",
+        "description": "Moves the crew member to another society from a date (ADM-CRW-22). The\npast stays as it was. Open jobs from the date go to Needs scheduling.",
+        "operationId": "move_society_v1_admin_crew__crew_id__society_post",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewSocietyMove"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewChange"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/crew/{crew_id}/society-moves/{assignment_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Cancel Society Move",
+        "description": "Cancels a move that has not happened yet.",
+        "operationId": "cancel_society_move_v1_admin_crew__crew_id__society_moves__assignment_id__delete",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/crew/{crew_id}/working-hours": {
       "put": {
         "tags": [
@@ -19485,6 +19689,86 @@
           "ended"
         ],
         "title": "CrewSessionsEnded"
+      },
+      "CrewSocietyMove": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "effective_from": {
+            "type": "string",
+            "format": "date",
+            "title": "Effective From"
+          },
+          "paired_member_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired Member Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "society_id",
+          "effective_from"
+        ],
+        "title": "CrewSocietyMove",
+        "description": "Moves a crew member to another society from a date (ADM-CRW-22)."
+      },
+      "CrewSocietyStay": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "society_id": {
+            "type": "string",
+            "title": "Society Id"
+          },
+          "society": {
+            "type": "string",
+            "title": "Society"
+          },
+          "effective_from": {
+            "type": "string",
+            "format": "date",
+            "title": "Effective From"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "society_id",
+          "society",
+          "effective_from"
+        ],
+        "title": "CrewSocietyStay",
+        "description": "One stay in a society. `effective_to` is empty for the current or the\nlast stay. `pending` is true for a move that has not happened yet."
       },
       "CustomerCreate": {
         "properties": {

@@ -2892,6 +2892,66 @@ class CrewSessionsEnded {
       };
 }
 
+class CrewSocietyMove {
+  const CrewSocietyMove({
+    required this.societyId,
+    required this.effectiveFrom,
+    required this.pairedMemberId,
+  });
+
+  final String societyId;
+  final DateTime effectiveFrom;
+  final String? pairedMemberId;
+
+  factory CrewSocietyMove.fromJson(Map<String, dynamic> j) => CrewSocietyMove(
+        societyId: j['society_id'] as String,
+        effectiveFrom: DateTime.parse(j['effective_from'] as String),
+        pairedMemberId: j['paired_member_id'] == null ? null : j['paired_member_id'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'effective_from': _date(effectiveFrom),
+        'paired_member_id': pairedMemberId,
+      };
+}
+
+class CrewSocietyStay {
+  const CrewSocietyStay({
+    required this.id,
+    required this.societyId,
+    required this.society,
+    required this.effectiveFrom,
+    required this.effectiveTo,
+    this.pending,
+  });
+
+  final String id;
+  final String societyId;
+  final String society;
+  final DateTime effectiveFrom;
+  final DateTime? effectiveTo;
+  final bool? pending;
+
+  factory CrewSocietyStay.fromJson(Map<String, dynamic> j) => CrewSocietyStay(
+        id: j['id'] as String,
+        societyId: j['society_id'] as String,
+        society: j['society'] as String,
+        effectiveFrom: DateTime.parse(j['effective_from'] as String),
+        effectiveTo: j['effective_to'] == null ? null : DateTime.parse(j['effective_to'] as String),
+        pending: j['pending'] == null ? null : j['pending'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'society_id': societyId,
+        'society': society,
+        'effective_from': _date(effectiveFrom),
+        'effective_to': effectiveTo == null ? null : _date(effectiveTo!),
+        'pending': pending,
+      };
+}
+
 class CustomerCreate {
   const CustomerCreate({
     required this.firstName,

@@ -216,3 +216,54 @@ describe("hours helper", () => {
     expect(hoursBody(h)[6]).toEqual({ day: "Sunday", working: false, start: "", end: "" });
   });
 });
+
+describe("crew society over time", () => {
+  const stay = (over: object) => ({ id: "a1", society_id: "s1", society: "Lake View",
+    effective_from: "2026-09-01", effective_to: null, pending: false, ...over });
+
+  it("shows the stays and sets a move from a date", async () => {
+    fetchMock.mockImplementation(async (p: string, init?: RequestInit) => {
+      if (p === "/v1/admin/crew/c1/society" && init?.method === "POST") {
+        return json(200, { crew: raj, released_jobs: [] });
+      }
+      if (p === "/v1/admin/crew/c1/society-history") return json(200, [stay({})]);
+      if (p === "/v1/admin/crew/c1/sessions") return json(200, []);
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p === "/v1/admin/crew/c1") return json(200, raj);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew/c1");
+    expect(await screen.findByText("now")).toBeInTheDocument(); // The current stay has no end.
+    await userEvent.selectOptions(await screen.findByLabelText("Move to society"), "s2");
+    const date = screen.getByLabelText("Starts on") as HTMLInputElement;
+    await userEvent.clear(date);
+    await userEvent.type(date, "2099-01-15");
+    await userEvent.click(screen.getByRole("button", { name: "Move crew member" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      (c) => c[0] === "/v1/admin/crew/c1/society" && c[1]?.method === "POST")).toBe(true));
+    const post = fetchMock.mock.calls.find((c) => c[0] === "/v1/admin/crew/c1/society")!;
+    expect(JSON.parse(post[1].body)).toEqual({
+      society_id: "s2", effective_from: "2099-01-15", paired_member_id: null });
+  });
+
+  it("shows a move that starts later and lets the admin cancel it", async () => {
+    fetchMock.mockImplementation(async (p: string, init?: RequestInit) => {
+      if (p === "/v1/admin/crew/c1/society-moves/a2" && init?.method === "DELETE") return json(200, raj);
+      if (p === "/v1/admin/crew/c1/sessions") return json(200, []);
+      if (p === "/v1/admin/crew/c1/society-history") {
+        return json(200, [stay({ effective_to: "2099-01-14" }),
+          stay({ id: "a2", society_id: "s2", society: "Park", effective_from: "2099-01-15", pending: true })]);
+      }
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p === "/v1/admin/crew/c1") return json(200, raj);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew/c1");
+    expect(await screen.findByText("Starts later")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel the move to Park" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      (c) => c[0] === "/v1/admin/crew/c1/society-moves/a2" && c[1]?.method === "DELETE")).toBe(true));
+  });
+});

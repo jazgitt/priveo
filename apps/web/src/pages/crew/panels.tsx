@@ -22,7 +22,7 @@ function fieldsOf(e: unknown): Record<string, string> {
   return e instanceof ApiError ? e.fields : {};
 }
 
-/** ADM-CRW-02: name and mobile. The society does not change (ADM-CRW-13). */
+/** ADM-CRW-02: name and mobile. The society is changed in the Society panel (ADM-CRW-22). */
 export function DetailsPanel({ crew }: { crew: Crew }) {
   const toast = useToast();
   const { edit, unlock } = useCrewActions(crew.id);
@@ -32,7 +32,7 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
   const fe = fieldsOf(edit.error);
   return (
     <Card title="Details">
-      <p className="muted">Society: {crew.society}. A crew member cannot move to another society.</p>
+      <p className="muted">Society: {crew.society}. To move to another society, use the Society panel below.</p>
       <div style={row}>
         <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} error={fe.name} />
         <TextField label="Mobile number" value={mobile} onChange={(e) => setMobile(e.target.value)}

@@ -691,6 +691,22 @@ void main() {
     final input = jsonDecode('{"ended":1}') as Map<String, dynamic>;
     expect(wire.CrewSessionsEnded.fromJson(input).toJson(), equals(input));
   });
+  test('CrewSocietyMove preserves populated wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","effective_from":"2026-10-20","paired_member_id":"11111111-1111-1111-1111-111111111111"}') as Map<String, dynamic>;
+    expect(wire.CrewSocietyMove.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewSocietyMove preserves nullable wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","effective_from":"2026-10-20","paired_member_id":null}') as Map<String, dynamic>;
+    expect(wire.CrewSocietyMove.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewSocietyStay preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","society_id":"wire-value","society":"wire-value","effective_from":"2026-10-20","effective_to":"2026-10-20","pending":true}') as Map<String, dynamic>;
+    expect(wire.CrewSocietyStay.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewSocietyStay preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","society_id":"wire-value","society":"wire-value","effective_from":"2026-10-20","effective_to":null,"pending":false}') as Map<String, dynamic>;
+    expect(wire.CrewSocietyStay.fromJson(input).toJson(), equals(input));
+  });
   test('CustomerCreate preserves populated wire fields', () {
     final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":"wire-value","mobile":"wire-value","flat":"wire-value","vehicle":{"society_id":"11111111-1111-1111-1111-111111111111","catalogue_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","plan_id":"11111111-1111-1111-1111-111111111111","cutoff_time":"wire-value","interior_day":"wire-value","photo_upload_id":"11111111-1111-1111-1111-111111111111","rc_upload_id":"11111111-1111-1111-1111-111111111111","first_payment_status":"Due"}}') as Map<String, dynamic>;
     expect(wire.CustomerCreate.fromJson(input).toJson(), equals(input));
