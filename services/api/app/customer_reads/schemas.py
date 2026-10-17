@@ -19,6 +19,17 @@ class VisitChecklistItem(BaseModel):
     checked_at: datetime | None = None
 
 
+class JobOutcomeOut(BaseModel):
+    """Why a job was not done, as the crew recorded it (CRW-CNC-02,
+    CRW-MGR-02). Customers see it by owner decision, 17-Oct-26."""
+
+    kind: str  # could_not_complete | skipped
+    reason: str
+    note: str = ""
+    # The crew's photo, as a signed read URL, when one was taken.
+    photo_url: str | None = None
+
+
 class JobOut(BaseModel):
     id: str
     service: str
@@ -33,6 +44,7 @@ class JobOut(BaseModel):
     checklist: list[VisitChecklistItem] = []
     checklist_done: int = 0
     checklist_total: int = 0
+    outcome: JobOutcomeOut | None = None
 
 
 class VisitRatingGiven(BaseModel):

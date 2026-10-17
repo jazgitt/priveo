@@ -1869,7 +1869,19 @@
       }
     ],
     "checklist_done": 1,
-    "checklist_total": 1
+    "checklist_total": 1,
+    "outcome": {
+      "kind": "wire-value",
+      "reason": "wire-value",
+      "note": "wire-value",
+      "photo_url": "wire-value"
+    }
+  },
+  "JobOutcomeOut": {
+    "kind": "wire-value",
+    "reason": "wire-value",
+    "note": "wire-value",
+    "photo_url": "wire-value"
   },
   "LoginRequest": {
     "login_id": "wire-value",
@@ -2802,7 +2814,13 @@
           }
         ],
         "checklist_done": 1,
-        "checklist_total": 1
+        "checklist_total": 1,
+        "outcome": {
+          "kind": "wire-value",
+          "reason": "wire-value",
+          "note": "wire-value",
+          "photo_url": "wire-value"
+        }
       }
     ],
     "finished_at": "2026-10-20T07:30:00+00:00",

@@ -22517,6 +22517,16 @@
             "type": "integer",
             "title": "Checklist Total",
             "default": 0
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOutcomeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -22527,6 +22537,41 @@
           "proof"
         ],
         "title": "JobOut"
+      },
+      "JobOutcomeOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "title": "JobOutcomeOut",
+        "description": "Why a job was not done, as the crew recorded it (CRW-CNC-02,\nCRW-MGR-02). Customers see it by owner decision, 17-Oct-26."
       },
       "LoginRequest": {
         "properties": {

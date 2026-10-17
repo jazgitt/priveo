@@ -256,6 +256,30 @@ class ChecklistItemDto {
   );
 }
 
+/// Why a job was not done, as the crew recorded it: the reason from the
+/// admin's list, their note and photo (owner decision 17-Oct-26).
+class JobOutcomeDto {
+  const JobOutcomeDto({
+    required this.kind,
+    required this.reason,
+    this.note = '',
+    this.photoUrl,
+  });
+
+  /// `could_not_complete` or `skipped`.
+  final String kind;
+  final String reason;
+  final String note;
+  final String? photoUrl;
+
+  factory JobOutcomeDto.fromJson(Map<String, dynamic> j) => JobOutcomeDto(
+    kind: j['kind'] as String,
+    reason: (j['reason'] as String?) ?? '',
+    note: (j['note'] as String?) ?? '',
+    photoUrl: j['photo_url'] as String?,
+  );
+}
+
 class JobDto {
   const JobDto({
     required this.id,
@@ -267,6 +291,7 @@ class JobDto {
     this.startedAt,
     this.finishedAt,
     this.checklist = const [],
+    this.outcome,
   });
 
   final String id;
@@ -280,6 +305,7 @@ class JobDto {
   final DateTime? startedAt;
   final DateTime? finishedAt;
   final List<ChecklistItemDto> checklist;
+  final JobOutcomeDto? outcome;
 
   int get checklistDone => checklist.where((c) => c.checkedAt != null).length;
 
@@ -295,6 +321,9 @@ class JobDto {
     checklist: j['checklist'] == null
         ? const []
         : _list(j['checklist'], ChecklistItemDto.fromJson),
+    outcome: j['outcome'] == null
+        ? null
+        : JobOutcomeDto.fromJson((j['outcome'] as Map).cast<String, dynamic>()),
   );
 }
 

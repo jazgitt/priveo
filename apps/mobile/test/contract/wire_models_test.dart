@@ -1164,12 +1164,20 @@ void main() {
     expect(wire.JobDetail.fromJson(input).toJson(), equals(input));
   });
   test('JobOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[{"id":"wire-value","kind":"wire-value","url":"wire-value","stage":"wire-value","taken_at":"2026-10-20T07:30:00+00:00"}],"crew_name":"wire-value","crew_society":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","checklist":[{"key":"wire-value","label":"wire-value","checked_at":"2026-10-20T07:30:00+00:00"}],"checklist_done":1,"checklist_total":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[{"id":"wire-value","kind":"wire-value","url":"wire-value","stage":"wire-value","taken_at":"2026-10-20T07:30:00+00:00"}],"crew_name":"wire-value","crew_society":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","checklist":[{"key":"wire-value","label":"wire-value","checked_at":"2026-10-20T07:30:00+00:00"}],"checklist_done":1,"checklist_total":1,"outcome":{"kind":"wire-value","reason":"wire-value","note":"wire-value","photo_url":"wire-value"}}') as Map<String, dynamic>;
     expect(wire.JobOut.fromJson(input).toJson(), equals(input));
   });
   test('JobOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[],"crew_name":null,"crew_society":"wire-value","started_at":null,"finished_at":null,"checklist":[],"checklist_done":1,"checklist_total":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[],"crew_name":null,"crew_society":"wire-value","started_at":null,"finished_at":null,"checklist":[],"checklist_done":1,"checklist_total":1,"outcome":null}') as Map<String, dynamic>;
     expect(wire.JobOut.fromJson(input).toJson(), equals(input));
+  });
+  test('JobOutcomeOut preserves populated wire fields', () {
+    final input = jsonDecode('{"kind":"wire-value","reason":"wire-value","note":"wire-value","photo_url":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.JobOutcomeOut.fromJson(input).toJson(), equals(input));
+  });
+  test('JobOutcomeOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"kind":"wire-value","reason":"wire-value","note":"wire-value","photo_url":null}') as Map<String, dynamic>;
+    expect(wire.JobOutcomeOut.fromJson(input).toJson(), equals(input));
   });
   test('LoginRequest preserves populated wire fields', () {
     final input = jsonDecode('{"login_id":"wire-value","password":"wire-value"}') as Map<String, dynamic>;
@@ -1916,7 +1924,7 @@ void main() {
     expect(wire.VisitChecklistItem.fromJson(input).toJson(), equals(input));
   });
   test('VisitDetail preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","vehicle_id":"wire-value","vehicle_registration":"wire-value","vehicle_model":"wire-value","date":"2026-10-20","status":"wire-value","jobs":[{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[{"id":"wire-value","kind":"wire-value","url":"wire-value","stage":"wire-value","taken_at":"2026-10-20T07:30:00+00:00"}],"crew_name":"wire-value","crew_society":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","checklist":[{"key":"wire-value","label":"wire-value","checked_at":"2026-10-20T07:30:00+00:00"}],"checklist_done":1,"checklist_total":1}],"finished_at":"2026-10-20T07:30:00+00:00","rating":{"rating":1,"tags":["wire-value"]}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","vehicle_id":"wire-value","vehicle_registration":"wire-value","vehicle_model":"wire-value","date":"2026-10-20","status":"wire-value","jobs":[{"id":"wire-value","service":"wire-value","status":"wire-value","proof":[{"id":"wire-value","kind":"wire-value","url":"wire-value","stage":"wire-value","taken_at":"2026-10-20T07:30:00+00:00"}],"crew_name":"wire-value","crew_society":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","checklist":[{"key":"wire-value","label":"wire-value","checked_at":"2026-10-20T07:30:00+00:00"}],"checklist_done":1,"checklist_total":1,"outcome":{"kind":"wire-value","reason":"wire-value","note":"wire-value","photo_url":"wire-value"}}],"finished_at":"2026-10-20T07:30:00+00:00","rating":{"rating":1,"tags":["wire-value"]}}') as Map<String, dynamic>;
     expect(wire.VisitDetail.fromJson(input).toJson(), equals(input));
   });
   test('VisitDetail preserves nullable wire fields', () {

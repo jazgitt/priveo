@@ -1513,6 +1513,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cust_proof_rate_today => 'Rate today\'s clean';
 
   @override
+  String get cust_proof_outcome_reason => 'Reason';
+
+  @override
+  String get cust_proof_outcome_note => 'Note from the crew';
+
+  @override
+  String get cust_proof_outcome_photo => 'Photo from the crew';
+
+  @override
+  String get cust_proof_imported_title => 'Imported record';
+
+  @override
+  String get cust_proof_imported_tag => 'Imported';
+
+  @override
+  String get cust_proof_imported_about =>
+      'From the records kept before the Priveo app. Completion and photos were not recorded.';
+
+  @override
+  String get cust_proof_date_unknown => 'Date unknown';
+
+  @override
+  String get cust_proof_undated_heading => 'Earlier records, date unknown';
+
+  @override
+  String get cust_proof_completion_not_recorded => 'Completion not recorded';
+
+  @override
+  String get cust_proof_service_label => 'Service';
+
+  @override
+  String get cust_proof_date_label => 'Date';
+
+  @override
+  String get cust_proof_payment_label => 'Payment';
+
+  @override
+  String get cust_proof_amount_label => 'Amount';
+
+  @override
+  String get cust_proof_notes_label => 'Notes';
+
+  @override
+  String get cust_proof_unknown => 'Unknown';
+
+  @override
   String get money_invoiceCopy => 'Copy invoice';
 
   @override

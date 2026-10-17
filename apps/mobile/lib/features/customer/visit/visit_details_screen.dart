@@ -12,6 +12,8 @@ import '../cust_strings.dart';
 import '../cust_ui.dart';
 import '../data/customer_reads_repository.dart';
 import '../data/proof_reads_repository.dart';
+import '../home/customer_home_data.dart';
+import '../home/vehicle_header.dart';
 import 'visit_strings.dart';
 import 'proof_video_screen.dart';
 
@@ -46,9 +48,25 @@ class VisitDetailsScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(visitDetailProvider(visitId)),
         builder: (v) {
           final completed = v.status == 'Completed';
+          // The standard heading of the customer screens: the vehicle card.
+          // A vehicle no longer on the account still shows its name.
+          final known = ref.watch(customerHomeProvider).value?.vehicles
+              .any((x) => x.id == v.vehicleId) ?? false;
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (known)
+                VehicleHeader(v.vehicleId)
+              else ...[
+                Text(
+                  [
+                    v.vehicleModel,
+                    v.vehicleRegistration,
+                  ].where((s) => s.isNotEmpty).join('  '),
+                  style: text.titleSmall,
+                ),
+                const SizedBox(height: 12),
+              ],
               Row(
                 children: [
                   Expanded(
@@ -56,14 +74,6 @@ class VisitDetailsScreen extends ConsumerWidget {
                   ),
                   StatusChip(v.status, tone: statusTone(v.status)),
                 ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                [
-                  v.vehicleModel,
-                  v.vehicleRegistration,
-                ].where((s) => s.isNotEmpty).join('  '),
-                style: text.bodyMedium?.copyWith(color: b.mute),
               ),
               if (v.finishedAt != null) ...[
                 const SizedBox(height: 4),
@@ -167,6 +177,10 @@ class _JobCard extends StatelessWidget {
             ].join(' · '),
             style: text.bodyMedium?.copyWith(color: b.mute),
           ),
+          if (job.outcome != null) ...[
+            const SizedBox(height: 12),
+            _OutcomeBox(outcome: job.outcome!, service: job.service),
+          ],
           if (job.checklist.isNotEmpty) ...[
             const SizedBox(height: 14),
             Row(
@@ -303,6 +317,75 @@ class _JobCard extends StatelessWidget {
           ],
           initial: index,
         ),
+      ),
+    );
+  }
+}
+
+/// Why a job was not done: the reason, the crew's note and photo, as the crew
+/// recorded them (owner decision 17-Oct-26).
+class _OutcomeBox extends StatelessWidget {
+  const _OutcomeBox({required this.outcome, required this.service});
+
+  final JobOutcomeDto outcome;
+  final String service;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final b = context.brand;
+    final photo = outcome.photoUrl;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: b.warn.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: b.warn.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Symbols.info_rounded, size: 18, color: b.warn),
+              const SizedBox(width: 8),
+              Text(VisitStrings.outcomeTitle(outcome.kind), style: text.titleSmall),
+            ],
+          ),
+          if (outcome.reason.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(VisitStrings.outcomeReason, style: text.labelMedium?.copyWith(color: b.mute)),
+            Text(outcome.reason, style: text.bodyMedium),
+          ],
+          if (outcome.note.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(VisitStrings.outcomeNote, style: text.labelMedium?.copyWith(color: b.mute)),
+            Text(outcome.note, style: text.bodyMedium),
+          ],
+          if (photo != null) ...[
+            const SizedBox(height: 8),
+            Text(VisitStrings.outcomePhoto, style: text.labelMedium?.copyWith(color: b.mute)),
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                fullscreenDialog: true,
+                builder: (_) => PhotoViewer(
+                  urls: [photo],
+                  captions: ['${VisitStrings.outcomePhoto} · $service'],
+                ),
+              )),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 120,
+                  height: 90,
+                  child: _Photo(photo, fit: BoxFit.cover),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -53,6 +53,28 @@ class VisitStrings {
   static String stars(int n) => '$n star${n == 1 ? '' : 's'}';
   static const historyMonthEmpty = 'No services in this month.';
 
+  // What the crew recorded when a job was not done (owner decision 17-Oct-26).
+  static String outcomeTitle(String kind) =>
+      kind == 'skipped' ? 'Skipped' : 'Could not be done';
+  static const outcomeReason = 'Reason';
+  static const outcomeNote = 'Note from the crew';
+  static const outcomePhoto = 'Photo from the crew';
+
+  // Records kept before the Priveo app, imported into the history.
+  static const importedTitle = 'Imported record';
+  static const importedTag = 'Imported';
+  static const importedAbout =
+      'From the records kept before the Priveo app. Completion and photos were not recorded.';
+  static const dateUnknown = 'Date unknown';
+  static const undatedHeading = 'Earlier records, date unknown';
+  static const completionNotRecorded = 'Completion not recorded';
+  static const serviceLabel = 'Service';
+  static const dateLabel = 'Date';
+  static const paymentLabel = 'Payment';
+  static const amountLabel = 'Amount';
+  static const notesLabel = 'Notes';
+  static const unknown = 'Unknown';
+
   static const todayDone = "Today's clean is done";
   static String todaySummary(String time, int done, int total, int photos) =>
       [

@@ -221,3 +221,33 @@ def test_profile_photo_has_a_read_url(client, make_crew, crew_headers):
     saved = client.put("/v1/crew/profile/photo", headers=headers,
                        json={"upload_id": ticket["id"]}).json()
     assert client.get(saved["url"]).content == b"z" * 10
+
+
+def test_customer_sees_why_a_job_was_not_done_with_the_crew_note_and_photo(
+        client, make_crew, crew_headers, owner_headers, new_visit):
+    """Owner decision 17-Oct-26: the crew's reason, note and photo reach the
+    customer on the visit details."""
+    ravi = make_crew("9000000010", "Ravi Kumar")
+    visit, (job,) = new_visit(assigned=ravi)
+    headers = crew_headers(ravi)
+    photo = upload_file(client, headers, str(job.id), purpose="reason")
+    r = client.post(f"/v1/crew/jobs/{job.id}/could-not-complete", headers=headers,
+                    json={"reason_key": "car_locked", "note": "Locked, no one around",
+                          "upload_id": photo})
+    assert r.status_code == 200, r.text
+
+    detail = client.get(f"/v1/customer/visits/{visit.id}", headers=owner_headers)
+    assert detail.status_code == 200, detail.text
+    outcome = detail.json()["jobs"][0]["outcome"]
+    assert outcome["kind"] == "could_not_complete"
+    assert outcome["reason"] and outcome["reason"] != "car_locked"  # the list's label
+    assert outcome["note"] == "Locked, no one around"
+    assert outcome["photo_url"]
+
+
+def test_a_finished_job_has_no_outcome(client, make_crew, crew_headers, owner_headers, new_visit):
+    ravi = make_crew("9000000010", "Ravi Kumar")
+    visit, (job,) = new_visit(assigned=ravi)
+    finish_job(client, crew_headers(ravi), str(job.id))
+    detail = client.get(f"/v1/customer/visits/{visit.id}", headers=owner_headers).json()
+    assert detail["jobs"][0]["outcome"] is None

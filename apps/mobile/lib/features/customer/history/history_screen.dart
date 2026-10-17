@@ -16,6 +16,7 @@ import '../data/proof_reads_repository.dart';
 import '../home/customer_home_data.dart';
 import '../home/vehicle_header.dart';
 import '../visit/visit_details_screen.dart';
+import 'imported_record_screen.dart';
 import '../visit/visit_strings.dart';
 
 /// Opens the service history over the current screen.
@@ -28,11 +29,24 @@ void openHistory(BuildContext context) {
 /// A page of history is this many visits (the API's default).
 const _pageSize = 30;
 
-final importedHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+final importedHistoryProvider = FutureProvider.autoDispose<List<ImportedRecord>>((ref) async {
   ref.watch(readRefreshProvider);
   final response = await ref.watch(dioProvider).get<List<dynamic>>('/v1/customer/history/imported');
-  return (response.data ?? []).cast<Map<String, dynamic>>();
+  return [
+    for (final e in response.data ?? const [])
+      ImportedRecord.fromJson((e as Map).cast<String, dynamic>()),
+  ];
 });
+
+/// One row of the history: a visit from the app, or an imported record.
+class _Entry {
+  _Entry.visit(HistoryItemDto v) : date = v.date, visit = v, imported = null;
+  _Entry.imported(ImportedRecord r) : date = r.date, visit = null, imported = r;
+
+  final DateTime? date;
+  final HistoryItemDto? visit;
+  final ImportedRecord? imported;
+}
 
 String _monthKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
@@ -116,7 +130,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final text = Theme.of(context).textTheme;
     final b = context.brand;
     final current = _monthKey(DateTime.now());
-    final earliest = meta?.earliestMonth;
+    final imported = [
+      for (final r in ref.watch(importedHistoryProvider).value ?? const <ImportedRecord>[])
+        if (_vehicleId == null || r.vehicleId == null || r.vehicleId == _vehicleId) r,
+    ];
+    // Paging reaches back to the oldest visit or imported record.
+    final months = [
+      ?meta?.earliestMonth,
+      for (final r in imported)
+        if (r.date != null) _monthKey(r.date!),
+    ]..sort();
+    final earliest = months.isEmpty ? null : months.first;
     final canGoBack = earliest == null || _month.compareTo(earliest) > 0;
     final canGoForward = _month.compareTo(current) < 0;
     final label = DateFormat('MMMM yyyy').format(_monthStart(_month));
@@ -127,21 +151,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: VehicleHeader(_vehicleId),
-          ),
-          ref.watch(importedHistoryProvider).when(
-            skipLoadingOnReload: true,
-            skipError: true,
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => TextButton(onPressed: () => ref.invalidate(importedHistoryProvider),
-                child: const Text('Retry imported service history')),
-            data: (records) => records.isEmpty ? const SizedBox.shrink() : ConstrainedBox(constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView(shrinkWrap: true, children: [
-                const ListTile(title: Text('Imported service history · all dates')),
-                for (final record in records)
-                  if (_vehicleId == null || record['vehicle_id'] == _vehicleId || record['vehicle_id'] == null)
-                    ListTile(title: Text('${record['service']} · ${record['date'] == null ? 'Date unknown' : formatDate(DateTime.parse(record['date'] as String))}'),
-                      subtitle: Text('Imported record · ${record['vehicle']}\nCompletion not recorded · Payment ${record['payment_status'] ?? 'unknown'}\n${record['notes'] ?? ''}')),
-              ])),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -167,7 +176,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ],
             ),
           ),
-          Expanded(child: _body(context, text, b)),
+          Expanded(child: _body(context, text, b, imported, !canGoBack)),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Text(
@@ -185,7 +194,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  Widget _body(BuildContext context, TextTheme text, BrandColors b) {
+  Widget _body(BuildContext context, TextTheme text, BrandColors b,
+      List<ImportedRecord> imported, bool oldestMonth) {
     if (_loading && _items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -195,76 +205,119 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         onRetry: _load,
       );
     }
-    if (_items.isEmpty) {
+    // Visits and imported records of this month in one list, newest first.
+    final entries = [
+      for (final v in _items) _Entry.visit(v),
+      for (final r in imported)
+        if (r.date != null && _monthKey(r.date!) == _month) _Entry.imported(r),
+    ]..sort((x, y) => y.date!.compareTo(x.date!));
+    // Records without a date sit under the oldest month.
+    final undated = oldestMonth
+        ? [for (final r in imported) if (r.date == null) r]
+        : const <ImportedRecord>[];
+    if (entries.isEmpty && undated.isEmpty) {
       return Center(child: Text(VisitStrings.historyMonthEmpty));
     }
     return RefreshIndicator(
-          onRefresh: () => refreshAll(ref),
-          child: ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      itemCount: _items.length + (_more ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        if (i == _items.length) {
-          return TextButton(
-            onPressed: _loading ? null : () => _load(append: true),
-            child: const Text(VisitStrings.loadMore),
-          );
-        }
-        final h = _items[i];
-        final completed = h.status == 'Completed';
-        return Card(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: completed
-                ? () => openVisitDetails(context, h.visitId)
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          [
-                            formatDate(h.date),
-                            if (h.finishedAt != null)
-                              VisitStrings.finishedShort(h.finishedAt!),
-                          ].join('  ·  '),
-                          style: text.titleSmall,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          [
-                            h.services.join(' + '),
-                            if (h.photoCount > 0)
-                              CustStrings.photoCount(h.photoCount),
-                          ].where((s) => s.isNotEmpty).join('  ·  '),
-                          style: text.bodySmall?.copyWith(color: b.mute),
-                        ),
-                        if (completed) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            h.rating == null
-                                ? VisitStrings.noRating
-                                : VisitStrings.stars(h.rating!),
-                            style: text.bodySmall?.copyWith(color: b.mute),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  StatusChip(h.status, tone: statusTone(h.status)),
-                ],
-              ),
+      onRefresh: () => refreshAll(ref),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          for (final e in entries) ...[
+            e.visit != null
+                ? _visitCard(context, text, b, e.visit!)
+                : _importedCard(context, text, b, e.imported!),
+            const SizedBox(height: 8),
+          ],
+          if (_more)
+            TextButton(
+              onPressed: _loading ? null : () => _load(append: true),
+              child: const Text(VisitStrings.loadMore),
             ),
+          if (undated.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Text(VisitStrings.undatedHeading, style: text.titleSmall),
+            ),
+            for (final r in undated) ...[
+              _importedCard(context, text, b, r),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _row(TextTheme text, BrandColors b, VoidCallback onTap,
+      String title, String subtitle, String? third, Widget chip) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: text.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: text.bodySmall?.copyWith(color: b.mute)),
+                    if (third != null) ...[
+                      const SizedBox(height: 4),
+                      Text(third, style: text.bodySmall?.copyWith(color: b.mute)),
+                    ],
+                  ],
+                ),
+              ),
+              chip,
+              Icon(Symbols.chevron_right_rounded, color: b.mute),
+            ],
           ),
-        );
-      },
-    ),
-        );
+        ),
+      ),
+    );
+  }
+
+  /// Every visit opens its service details: proof, checklist, and what the
+  /// crew recorded when a job was not done.
+  Widget _visitCard(BuildContext context, TextTheme text, BrandColors b,
+      HistoryItemDto h) {
+    final completed = h.status == 'Completed';
+    return _row(
+      text,
+      b,
+      () => openVisitDetails(context, h.visitId),
+      [
+        formatDate(h.date),
+        if (h.finishedAt != null) VisitStrings.finishedShort(h.finishedAt!),
+      ].join('  ·  '),
+      [
+        h.services.join(' + '),
+        if (h.photoCount > 0) CustStrings.photoCount(h.photoCount),
+      ].where((s) => s.isNotEmpty).join('  ·  '),
+      completed
+          ? (h.rating == null ? VisitStrings.noRating : VisitStrings.stars(h.rating!))
+          : null,
+      StatusChip(h.status, tone: statusTone(h.status)),
+    );
+  }
+
+  Widget _importedCard(BuildContext context, TextTheme text, BrandColors b,
+      ImportedRecord r) {
+    return _row(
+      text,
+      b,
+      () => openImportedRecord(context, r),
+      r.date == null ? VisitStrings.dateUnknown : formatDate(r.date!),
+      [r.service, if (_vehicleId == null) r.vehicle]
+          .where((s) => s.isNotEmpty).join('  ·  '),
+      null,
+      const StatusChip(VisitStrings.importedTag),
+    );
   }
 }

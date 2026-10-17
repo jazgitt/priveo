@@ -11,6 +11,7 @@ import 'package:priveo/core/auth/auth_controller.dart';
 import 'package:priveo/core/providers.dart';
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/ui/theme.dart';
+import 'package:priveo/core/util/format.dart';
 import 'package:priveo/features/customer/account/account_screen.dart';
 import 'package:priveo/features/customer/calendar/calendar_screen.dart';
 import 'package:priveo/features/support/data/support_repository.dart';
@@ -18,6 +19,7 @@ import 'package:priveo/features/customer/data/customer_reads_repository.dart';
 import 'package:priveo/features/customer/data/proof_reads_repository.dart';
 import 'package:priveo/features/customer/home/todays_clean_strip.dart';
 import 'package:priveo/features/customer/history/history_screen.dart';
+import 'package:priveo/features/customer/history/imported_record_screen.dart';
 import 'package:priveo/features/customer/home/customer_home_data.dart';
 import 'package:priveo/features/customer/home/customer_shell.dart';
 import 'package:priveo/features/customer/notifications/notifications_screen.dart';
@@ -141,6 +143,28 @@ class FakeReads implements CustomerReadsRepository {
   @override
   Future<VisitDetailDto> visit(String visitId) async => visitId == 'v-proof'
       ? richVisit(rating: rated)
+      : visitId == 'v-missed'
+      ? VisitDetailDto(
+          id: visitId,
+          vehicleId: 'v1',
+          vehicleRegistration: 'MH 12 AB 1234',
+          vehicleModel: 'Hyundai Creta',
+          date: DateTime(2026, 11, 4),
+          status: 'Missed',
+          jobs: const [
+            JobDto(
+              id: 'j-9',
+              service: 'Cleaning-External',
+              status: 'Missed',
+              proof: [],
+              outcome: JobOutcomeDto(
+                kind: 'could_not_complete',
+                reason: 'Car not at parking',
+                note: 'Slot B2-14 was empty at 6:40.',
+              ),
+            ),
+          ],
+        )
       : VisitDetailDto(
     id: visitId,
     vehicleId: 'v1',
@@ -309,6 +333,7 @@ Future<ProviderContainer> pumpScreen(
   FakeAuthRepository? auth,
   MemorySessionStore? store,
   bool scaffold = false,
+  List<ImportedRecord> imported = const [],
 }) async {
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 2;
@@ -318,6 +343,7 @@ Future<ProviderContainer> pumpScreen(
     overrides: [
       readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       proofReadsProvider.overrideWithValue(proof ?? FakeProofReads()),
+      importedHistoryProvider.overrideWith((ref) async => imported),
       supportRepositoryProvider.overrideWithValue(FakeSupportRepository()),
       apiProvider.overrideWithValue(FakePriveoApi()),
       customerReadsProvider.overrideWithValue(reads ?? FakeReads()),
@@ -469,9 +495,67 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Service details'), findsOneWidget);
     });
+
+    testWidgets('a visit that is not completed also opens its details', (
+      tester,
+    ) async {
+      await pumpScreen(tester, const HistoryScreen());
+      await tester.tap(find.text('03-Nov-26'));
+      await tester.pumpAndSettle();
+      expect(find.text('Service details'), findsOneWidget);
+    });
+
+    testWidgets('imported records join the list, newest first, and open', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final day = DateTime(now.year, now.month, 1);
+      await pumpScreen(
+        tester,
+        const HistoryScreen(),
+        imported: [
+          ImportedRecord(
+            id: 'i-1',
+            service: 'Deep Spa',
+            vehicle: 'MH 12 AB 1234',
+            vehicleId: 'v1',
+            date: day,
+            paymentStatus: 'Received',
+            amountRupees: 1499,
+          ),
+          const ImportedRecord(
+            id: 'i-2',
+            service: 'Cleaning-External',
+            vehicle: 'MH 12 AB 1234',
+            vehicleId: 'v1',
+          ),
+        ],
+      );
+      final newest = tester.getTopLeft(find.text('03-Nov-26')).dy;
+      final older = tester.getTopLeft(find.text('02-Nov-26  ·  7:30 AM')).dy;
+      final oldest = tester.getTopLeft(find.text(formatDate(day))).dy;
+      expect(newest < older && older < oldest, isTrue);
+      // Undated records show only on the oldest month.
+      expect(find.text('Earlier records, date unknown'), findsNothing);
+      await tester.tap(find.textContaining('Deep Spa'));
+      await tester.pumpAndSettle();
+      expect(find.text('Imported record'), findsOneWidget);
+      expect(find.text('Received'), findsOneWidget);
+      expect(find.text('Completion not recorded'), findsOneWidget);
+    });
   });
 
   group('proof on service details', () {
+    testWidgets('shows the crew reason and note for a job not done', (
+      tester,
+    ) async {
+      await pumpScreen(tester, const VisitDetailsScreen(visitId: 'v-missed'));
+      expect(find.text('Could not be done'), findsOneWidget);
+      expect(find.text('Car not at parking'), findsOneWidget);
+      expect(find.text('Slot B2-14 was empty at 6:40.'), findsOneWidget);
+      expect(find.text('Note from the crew'), findsOneWidget);
+    });
+
     testWidgets('shows the crew card, checklist and AFTER label', (
       tester,
     ) async {

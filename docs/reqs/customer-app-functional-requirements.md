@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.24 (vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.25 (every history row opens its details, imported records in the same newest-first list, and the crew's reason, note and photo for a job not done, 17 Oct 2026; vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -201,19 +201,21 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | SVC-06 | Video of the service with duration, play-in-place and a progress bar. Videos follow the size limit in rule 17. | Defined |
 | SVC-07 | Rating: customer rates the clean from 1 to 5 stars with a single tap. The rating is for the visit as a whole. It is a general rating and is not given to any crew member. A thank-you message confirms it. At 5 stars, positive tags are offered (SVC-11); below 5 stars, issue tags are offered (SVC-14). | Defined |
 | SVC-08 | "Report an issue with this clean" opens the report form with the visit pre-linked. | Defined |
-| SVC-09 | Service details can be opened for any completed visit from Home, the calendar or the history. | Defined |
+| SVC-09 | Service details can be opened for any completed visit from Home, the calendar or the history. From the history, every visit opens its details, whatever its status (HIST-01). | Defined and Owner |
 | SVC-11 | When the customer gives a visit 5 stars, a short list of positive tags is shown and the customer can pick any of them (optional). Starting tags: **Spotless**, **On time**, **Great tyre finish**. The list is loaded from the backend and is configurable by the admin, like the feedback categories. | Owner |
 | SVC-12 | The selected tags are saved with the rating against the visit. They are not tied to a crew member. | Owner |
 | SVC-13 | A customer's words are used as a testimonial only with the customer's permission (FDBK-05, SVC-15). | Owner |
 | SVC-14 | When the customer gives a visit fewer than 5 stars, the 9 feedback categories (FDBK-06) are offered as issue tags and the customer can pick any that apply (optional). The tags are saved with the rating against the visit. | Owner |
 | SVC-15 | The rating flow, at any star level, has an optional comments box and a testimonial permission checkbox, off by default, with the same wording as FDBK-05. | Owner |
+| SVC-16 | For a job that was skipped or could not be done, the service details show what the crew recorded: the reason, the free-text note and the photo, which opens full screen (CRW-CNC-06; owner decision of 17 Oct 2026). | Owner |
 
 ### 5.1 Service history
 
 | ID | Requirement | Status |
 |---|---|---|
-| HIST-01 | List of past services, newest first: date, service type, finish time and the rating given (or none). Each row opens Service Details. | Defined |
+| HIST-01 | List of past services, newest first: date, service type, finish time and the rating given (or none). Each row opens Service Details, whatever the visit's status. The details page starts with the vehicle header, then the service, status, photos, videos, checklist and any crew note (SVC-16). | Defined and Owner |
 | HIST-02 | The list shows one month at a time, starting with the current month. The user can move to earlier months, and long months load in pages. A footer states the month and the member-since date. | Owner |
+| HIST-03 | Records imported from before the Priveo app appear in the same list, sorted with the visits by date, newest first, and tagged "Imported". Each opens a page with the vehicle header, date, service, payment and notes, and says that completion and photos were not recorded. Imported records without a date are listed under "Earlier records, date unknown" on the oldest month. | Owner and Derived |
 
 ---
 

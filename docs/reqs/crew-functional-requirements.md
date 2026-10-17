@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Crew App Functional Requirements
 
-**Status:** Draft v0.5: owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.6: the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 3 (Crew), MVP. Customer requirements are in `customer-app-functional-requirements.md`. Admin requirements are in `admin-functional-requirements.md`.
 **Platforms:** The same Flutter mobile app as the customer, with screens chosen by the user's role. Admins use a web portal, with a limited set of quick actions in the app.
 **Language:** English only
@@ -80,7 +80,7 @@ Rules followed:
 | CRW-SCH-01 | The crew member sees their scheduled jobs as job cards, one for each assigned vehicle. Jobs appear once the admin freezes a schedule (ADM-SCH-20). | Owner |
 | CRW-SCH-02 | A job card shows: the vehicle (registration, make, model, category), the society, the parking spot (basement and number), the assigned slot time, the service to be done, and the job status. | Owner |
 | CRW-SCH-03 | The card also shows the vehicle photo the customer gave at signup, to help the crew find the car. The crew does not use it to identify the car (rule 17 in the customer file). | Derived |
-| CRW-SCH-04 | The card shows the time the job must be finished by: the customer's service cutoff time, or for a Deep Spa add-on the finish-by time the customer proposed. The customer sees the assigned crew member and time once the visit is assigned (CAL-10 in the customer file), but never the crew's notes or contact details. | Owner |
+| CRW-SCH-04 | The card shows the time the job must be finished by: the customer's service cutoff time, or for a Deep Spa add-on the finish-by time the customer proposed. The customer sees the assigned crew member and time once the visit is assigned (CAL-10 in the customer file), but never the crew's contact details. The only crew notes the customer sees are those recorded with a job not done (CRW-CNC-06). | Owner |
 | CRW-SCH-05 | The service shown is Cleaning-External for every visit. On the customer's interior care day there is also a separate job for Cleaning-Internal. A Deep Spa job appears when a customer has bought it, as an add-on or as a standalone service, and it has been scheduled (section 9a of the customer file). Each job has its own job card, checklist, proof and completion, and can be done by a different crew member. The scheduler plans these jobs with their own durations: 20 minutes for Cleaning-Internal and 2 hours for Deep Spa (ADM-SVS-09, ADM-SVS-10), so the card shows the assigned start and end time for each. | Owner |
 | CRW-SCH-06 | The crew member can view the cards day by day, or all of the jobs scheduled so far. | Owner |
 | CRW-SCH-07 | Job statuses: **Scheduled**, **In progress** (started and not finished), **Completed**, **Could not complete**. | Derived |
@@ -136,7 +136,7 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | CRW-CNC-03 | The reason list is managed by the admin (ADM-CNC-01). A starting list is in the admin file. | Derived |
 | CRW-CNC-04 | The job status becomes **Could not complete** and the job is **Missed** in the system. The other jobs of the visit are not affected. The admin is told by push notification (ADM-SCH-24). | Derived |
 | CRW-CNC-05 | The admin decides what happens next (ADM-CNC-03). For a Cleaning-External job nothing is needed, because the next day's regular job covers it, unless the admin skips it by operations (the plan is extended by one day). For a Cleaning-Internal or Deep Spa job the admin schedules it again for the next day only, or skips it. A job scheduled again appears on the crew member's cards for the next day, assigned automatically (ADM-SCH-26). | Owner and Derived |
-| CRW-CNC-06 | The customer sees "Missed", then "Rescheduled on dd-Mon-yy" or "Covered on dd-Mon-yy", and no push notification is sent (CAL-09 in the customer file). | Owner and Derived |
+| CRW-CNC-06 | The customer sees "Missed", then "Rescheduled on dd-Mon-yy" or "Covered on dd-Mon-yy", and no push notification is sent (CAL-09 in the customer file). On the service details the customer also sees the reason, the free-text note and the photo the crew recorded (SVC-16 in the customer file; owner decision of 17 Oct 2026). | Owner and Derived |
 
 ---
 

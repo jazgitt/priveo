@@ -4721,6 +4721,7 @@ class JobOut {
     this.checklist,
     this.checklistDone,
     this.checklistTotal,
+    required this.outcome,
   });
 
   final String id;
@@ -4734,6 +4735,7 @@ class JobOut {
   final List<VisitChecklistItem>? checklist;
   final int? checklistDone;
   final int? checklistTotal;
+  final JobOutcomeOut? outcome;
 
   factory JobOut.fromJson(Map<String, dynamic> j) => JobOut(
         id: j['id'] as String,
@@ -4747,6 +4749,7 @@ class JobOut {
         checklist: j['checklist'] == null ? null : [for (final x in j['checklist'] as List) VisitChecklistItem.fromJson(x as Map<String, dynamic>)],
         checklistDone: j['checklist_done'] == null ? null : j['checklist_done'] as int,
         checklistTotal: j['checklist_total'] == null ? null : j['checklist_total'] as int,
+        outcome: j['outcome'] == null ? null : JobOutcomeOut.fromJson(j['outcome'] as Map<String, dynamic>),
       );
 
   Map<String, dynamic> toJson() => {
@@ -4761,6 +4764,35 @@ class JobOut {
         'checklist': checklist == null ? null : [for (final x in checklist!) x.toJson()],
         'checklist_done': checklistDone,
         'checklist_total': checklistTotal,
+        'outcome': outcome?.toJson(),
+      };
+}
+
+class JobOutcomeOut {
+  const JobOutcomeOut({
+    required this.kind,
+    required this.reason,
+    this.note,
+    required this.photoUrl,
+  });
+
+  final String kind;
+  final String reason;
+  final String? note;
+  final String? photoUrl;
+
+  factory JobOutcomeOut.fromJson(Map<String, dynamic> j) => JobOutcomeOut(
+        kind: j['kind'] as String,
+        reason: j['reason'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+        photoUrl: j['photo_url'] == null ? null : j['photo_url'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind,
+        'reason': reason,
+        'note': note,
+        'photo_url': photoUrl,
       };
 }
 

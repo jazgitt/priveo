@@ -9,14 +9,16 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customer_reads.repository import ChecklistEntry, Job, ProofItem, Visit
+from app.customer_reads.repository import ChecklistEntry, Job, JobOutcomeEntry, ProofItem, Visit
+from app.directory import lookup
 from app.identity.models import Login
+from app.media.models import STATUS_CONFIRMED, MediaUpload
 from app.media.service import confirmed_proof, download_url
 from app.media.store import ObjectStore, get_object_store
 from app.scheduling.models import Job as JobRow
 from app.scheduling.models import Schedule, SchedulingCrew
 from app.scheduling.models import Visit as VisitRow
-from app.visits.models import JobChecklistProgress, JobTiming
+from app.visits.models import JobChecklistProgress, JobOutcome, JobTiming
 
 # The scheduler's job statuses as the customer screens name them.
 _JOB_STATUS = {
@@ -115,6 +117,7 @@ class SqlVisitReadRepository:
         proof = confirmed_proof(self.db, job_ids)
         timings = {t.job_id: t for t in self.db.scalars(
             select(JobTiming).where(JobTiming.job_id.in_(job_ids)))} if job_ids else {}
+        outcomes = self._outcomes(job_ids)
         ticks: dict[uuid.UUID, dict[str, datetime]] = {}
         if job_ids:
             for p in self.db.scalars(select(JobChecklistProgress)
@@ -137,5 +140,24 @@ class SqlVisitReadRepository:
                 start_minute=r.start_minute, duration_minutes=r.duration_minutes,
                 finish_by_minute=r.finish_by_minute,
                 addon_request_id=str(r.addon_booking_id or r.addon_request_id)
-                    if r.addon_booking_id or r.addon_request_id else None))
+                    if r.addon_booking_id or r.addon_request_id else None,
+                outcome=outcomes.get(r.id)))
+        return out
+
+    def _outcomes(self, job_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, JobOutcomeEntry]:
+        """The crew's reason, note and photo for jobs that were not done."""
+        if not job_ids:
+            return {}
+        rows = list(self.db.scalars(select(JobOutcome).where(JobOutcome.job_id.in_(job_ids))))
+        out = {}
+        for o in rows:
+            photo = self.db.get(MediaUpload, o.upload_id) if o.upload_id else None
+            label = lookup.reason_label(self.db, o.reason_key) if o.reason_key else None
+            out[o.job_id] = JobOutcomeEntry(
+                kind=o.kind,
+                # A reason missing from every list still shows its stored key.
+                reason=label or o.reason_key or "",
+                note=o.note or "",
+                photo_url=download_url(self.store, photo)
+                if photo is not None and photo.status == STATUS_CONFIRMED else None)
         return out

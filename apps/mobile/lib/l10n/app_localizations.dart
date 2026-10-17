@@ -2824,6 +2824,96 @@ abstract class AppLocalizations {
   /// **'Rate today\'s clean'**
   String get cust_proof_rate_today;
 
+  /// No description provided for @cust_proof_outcome_reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get cust_proof_outcome_reason;
+
+  /// No description provided for @cust_proof_outcome_note.
+  ///
+  /// In en, this message translates to:
+  /// **'Note from the crew'**
+  String get cust_proof_outcome_note;
+
+  /// No description provided for @cust_proof_outcome_photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo from the crew'**
+  String get cust_proof_outcome_photo;
+
+  /// No description provided for @cust_proof_imported_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported record'**
+  String get cust_proof_imported_title;
+
+  /// No description provided for @cust_proof_imported_tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported'**
+  String get cust_proof_imported_tag;
+
+  /// No description provided for @cust_proof_imported_about.
+  ///
+  /// In en, this message translates to:
+  /// **'From the records kept before the Priveo app. Completion and photos were not recorded.'**
+  String get cust_proof_imported_about;
+
+  /// No description provided for @cust_proof_date_unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Date unknown'**
+  String get cust_proof_date_unknown;
+
+  /// No description provided for @cust_proof_undated_heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier records, date unknown'**
+  String get cust_proof_undated_heading;
+
+  /// No description provided for @cust_proof_completion_not_recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion not recorded'**
+  String get cust_proof_completion_not_recorded;
+
+  /// No description provided for @cust_proof_service_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get cust_proof_service_label;
+
+  /// No description provided for @cust_proof_date_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get cust_proof_date_label;
+
+  /// No description provided for @cust_proof_payment_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get cust_proof_payment_label;
+
+  /// No description provided for @cust_proof_amount_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get cust_proof_amount_label;
+
+  /// No description provided for @cust_proof_notes_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get cust_proof_notes_label;
+
+  /// No description provided for @cust_proof_unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get cust_proof_unknown;
+
   /// No description provided for @money_invoiceCopy.
   ///
   /// In en, this message translates to:

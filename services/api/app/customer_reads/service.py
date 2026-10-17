@@ -21,6 +21,7 @@ from app.customer_reads.schemas import (
     HistoryItem,
     HistoryMetaOut,
     JobOut,
+    JobOutcomeOut,
     NextServiceItem,
     ProofOut,
     TodayCleanOut,
@@ -161,7 +162,10 @@ class CustomerReads:
                 checklist=[VisitChecklistItem(key=c.key, label=c.label,
                                               checked_at=c.checked_at) for c in j.checklist],
                 checklist_done=sum(1 for c in j.checklist if c.checked_at is not None),
-                checklist_total=len(j.checklist)) for j in jobs])
+                checklist_total=len(j.checklist),
+                outcome=JobOutcomeOut(kind=j.outcome.kind, reason=j.outcome.reason,
+                                      note=j.outcome.note, photo_url=j.outcome.photo_url)
+                if j.outcome else None) for j in jobs])
 
     def history(self, login_id: uuid.UUID, vehicle_id: str | None, limit: int,
                 offset: int, month: str | None = None) -> list[HistoryItem]:

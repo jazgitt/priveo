@@ -31,6 +31,16 @@ class ChecklistEntry:
 
 
 @dataclass(frozen=True)
+class JobOutcomeEntry:
+    """What the crew recorded when a job was not done: could not complete or
+    skipped by a Manager. Shown to the customer by owner decision (17-Oct-26)."""
+    kind: str  # "could_not_complete" or "skipped"
+    reason: str  # the reason's label from the admin's list, or "" for none
+    note: str = ""
+    photo_url: str | None = None
+
+
+@dataclass(frozen=True)
 class Job:
     id: str
     visit_id: str
@@ -49,6 +59,7 @@ class Job:
     finish_by_minute: int | None = None
     addon_request_id: str | None = None
     source_job_id: str | None = None
+    outcome: JobOutcomeEntry | None = None
 
 
 @dataclass(frozen=True)
