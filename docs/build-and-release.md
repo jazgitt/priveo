@@ -83,7 +83,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 **Vercel (default host)**
 
 1. Sign in once: `npx vercel login`.
-2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
+2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Singapore region (`sin1`) for the `dev` API, the same region as the Neon database, so each query is a short hop. Production on AWS runs in Mumbai with the database beside it.
 3. Add the database: `npx vercel integration add neon --name priveo-dev`. The first time, accept Neon's terms in the browser when asked. It adds `DATABASE_URL` to the project. Copy that value into the GitHub secret `DATABASE_URL`.
 4. Add the runtime environment variable `TOKEN_SECRET` (a long random value) to the project (Production). Use `npx vercel env add TOKEN_SECRET production`.
    - Until email is connected, also add `MOCK_EMAIL_CODE` (6 digits of your choice) the same way, then deploy again. It is the code every customer enters at first sign-in and after "Forgot password" on `dev`. No email is sent. Without it those two steps answer "Email is not set up yet". It does nothing when `ENVIRONMENT=prod`.
