@@ -311,6 +311,18 @@ class UploadQueue {
     unawaited(drain());
   }
 
+  /// Takes an item off the phone for good, for a file that cannot be sent.
+  /// The crew member can take the photo or video again.
+  Future<void> remove(int id) async {
+    final i = _items.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final item = _items[i];
+    await store.remove(id);
+    _items = _items.where((e) => e.id != id).toList();
+    _publish();
+    await _discard(item.path);
+  }
+
   /// Sends every waiting item, in order. Stops at the first sign that the
   /// connection is gone, and tries again when it comes back.
   Future<void> drain() async {
@@ -374,8 +386,10 @@ class UploadQueue {
       if (!_active) return false;
       // No connection, or signed out: wait. Nothing is counted against the file.
       if (e.isNetwork || e.statusCode == 401) return false;
-      // The signed link ran out. Ask for a new one.
-      if (e.statusCode == 403 && item.step == UploadStep.requested) {
+      // The signed link ran out (403), or the storage it points to no longer
+      // knows it (404, for example after the storage moved). Ask for a new one.
+      if ((e.statusCode == 403 || e.statusCode == 404) &&
+          item.step == UploadStep.requested) {
         await _save(item.copyWith(step: UploadStep.queued, clearTicket: true));
         return true;
       }

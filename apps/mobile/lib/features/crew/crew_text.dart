@@ -45,6 +45,10 @@ abstract final class CrewText {
   static const photo = 'Photo';
   static const sendFailed = 'Could not send';
   static const retry = 'Retry';
+  static const remove = 'Remove';
+  static const removeUploadTitle = 'Remove this file?';
+  static const removeUploadBody =
+      'It will not be sent. You can take the photo or video again.';
   static const reason = 'Reason';
   static const noteOptional = 'Note (optional)';
   static const addPhoto = 'Add a photo (optional)';

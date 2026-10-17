@@ -265,20 +265,53 @@ class _WaitingList extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                        '${q.kind == 'video' ? CrewText.video : CrewText.photo}'
-                        ' · ${CrewText.stage(q.stage)}'
-                        '${q.step == UploadStep.failed ? ' · ${CrewText.sendFailed}' : ''}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            '${q.kind == 'video' ? CrewText.video : CrewText.photo}'
+                            ' · ${CrewText.stage(q.stage)}'
+                            '${q.step == UploadStep.failed ? ' · ${CrewText.sendFailed}' : ''}'),
+                        // Why it failed, for example "This file is too large to send."
+                        if (q.step == UploadStep.failed && q.lastError != null)
+                          Text(q.lastError!,
+                              style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
                   ),
-                  if (q.step == UploadStep.failed)
+                  if (q.step == UploadStep.failed) ...[
                     TextButton(
                       onPressed: () =>
                           ref.read(uploadQueueProvider).retry(q.id),
                       child: Text(CrewText.retry),
                     ),
+                    TextButton(
+                      onPressed: () => _confirmRemove(context, ref, q.id),
+                      child: Text(CrewText.remove),
+                    ),
+                  ],
                 ],
               ),
           ],
         ),
       );
+
+  Future<void> _confirmRemove(BuildContext context, WidgetRef ref, int id) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(CrewText.removeUploadTitle),
+        content: Text(CrewText.removeUploadBody),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(CrewText.cancel)),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(CrewText.remove)),
+        ],
+      ),
+    );
+    if (yes == true) await ref.read(uploadQueueProvider).remove(id);
+  }
 }

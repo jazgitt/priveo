@@ -896,6 +896,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crew_retry => 'Retry';
 
   @override
+  String get crew_remove => 'Remove';
+
+  @override
+  String get crew_remove_upload_title => 'Remove this file?';
+
+  @override
+  String get crew_remove_upload_body =>
+      'It will not be sent. You can take the photo or video again.';
+
+  @override
   String get crew_reason => 'Reason';
 
   @override

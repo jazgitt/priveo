@@ -1738,6 +1738,24 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get crew_retry;
 
+  /// No description provided for @crew_remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get crew_remove;
+
+  /// No description provided for @crew_remove_upload_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this file?'**
+  String get crew_remove_upload_title;
+
+  /// No description provided for @crew_remove_upload_body.
+  ///
+  /// In en, this message translates to:
+  /// **'It will not be sent. You can take the photo or video again.'**
+  String get crew_remove_upload_body;
+
   /// No description provided for @crew_reason.
   ///
   /// In en, this message translates to:

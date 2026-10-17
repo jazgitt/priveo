@@ -245,6 +245,53 @@ void main() {
     expect(api.calls.where((c) => c.startsWith('request')).length, greaterThan(1));
   });
 
+  test('a link the storage no longer knows (404 before sending) asks for a new one',
+      () async {
+    final q = make();
+    api.failSend =
+        const ApiFailure(code: 'not_found', message: 'x', statusCode: 404);
+    await _add(q);
+    await _settle();
+    await q.drain();
+    expect(q.items.single.step, UploadStep.queued);
+    expect(q.items.single.ticket, isNull);
+
+    api.failSend = null;
+    await q.drain();
+    expect(q.items, isEmpty);
+  });
+
+  test('a file the host refuses as too large (413) is parked, not retried forever',
+      () async {
+    final q = make();
+    // What ApiFailure.fromDio makes of a 413 page without our error envelope.
+    api.failSend = const ApiFailure(
+        code: 'too_large', message: 'This file is too large to send.', statusCode: 413);
+    await _add(q);
+    await _settle();
+    expect(q.items.single.step, UploadStep.failed);
+    expect(q.items.single.lastError, 'This file is too large to send.');
+    final sends = api.calls.length;
+    await q.drain();
+    expect(api.calls.length, sends, reason: 'a failed file waits for Retry or Remove');
+  });
+
+  test('remove takes a file off the phone for good', () async {
+    final discarded = <String>[];
+    final q = UploadQueue(api: api, store: store, retryAfter: Duration.zero,
+        discard: (path) async => discarded.add(path));
+    addTearDown(q.dispose);
+    api.failRequest = const ApiFailure(
+        code: 'validation_failed', message: 'Too big', statusCode: 422);
+    final item = await _add(q);
+    await _settle();
+    await q.remove(item.id);
+    expect(q.items, isEmpty);
+    expect(await store.all(), isEmpty);
+    expect(discarded, ['/tmp/a.jpg']);
+    await q.remove(999); // nothing to remove: no error
+  });
+
   test('a rejected file is parked as failed, and retry puts it back',
       () async {
     final q = make();
