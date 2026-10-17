@@ -62,10 +62,22 @@ export function useDebounced<T>(value: T, ms = 300): T {
   return v;
 }
 
+/**
+ * Headers the store's signed upload asks for that a browser may not send: Vercel
+ * Blob's CORS reply does not list them, so the browser blocks the whole upload.
+ * The signed token already carries both settings (no random suffix, overwrite
+ * allowed), so the phone can send them and the portal can leave them out.
+ */
+const NOT_ALLOWED_IN_BROWSER = ["x-add-random-suffix", "x-allow-overwrite"];
+
+export function browserUploadHeaders(headers: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(headers).filter(([k]) => !NOT_ALLOWED_IN_BROWSER.includes(k.toLowerCase())));
+}
+
 export async function uploadCustomerAsset(file: File, purpose: "vehicle" | "rc") {
   const t = await api<{ id: string; upload_url: string; method: string; headers: Record<string, string> }>(
     "/v1/admin/customer-uploads", { method: "POST", body: { purpose, content_type: file.type, size_bytes: file.size } });
-  const sent = await fetch(t.upload_url, { method: t.method, headers: t.headers, body: file });
+  const sent = await fetch(t.upload_url, { method: t.method, headers: browserUploadHeaders(t.headers), body: file });
   if (!sent.ok) throw new Error("The file could not be uploaded. Please try again.");
   return api<{ id: string; url: string }>(`/v1/admin/customer-uploads/${t.id}/confirm`, { method: "POST" });
 }
