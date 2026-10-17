@@ -32,6 +32,44 @@ function isSpa(job: AdminJob): boolean {
   return job.service.toLowerCase().includes("spa");
 }
 
+/** The job statuses in the order the work moves through them. */
+export const JOB_STATUSES = ["Scheduled", "In progress", "Completed", "Skipped", "Could not complete"] as const;
+
+/** The fill of a job on the chart: green when completed, red when it could not be done (ADM-SCH-34). */
+function statusClass(job: AdminJob): string {
+  if (job.status === "Completed") return " done";
+  if (job.status === "Could not complete") return " failed";
+  return "";
+}
+
+/**
+ * How many of the day's jobs are in each status. Pressing a status keeps only
+ * its jobs bright on the chart; pressing it again shows all (ADM-SCH-34).
+ */
+export function StatusSummary({ jobs, focus, onFocus }: {
+  jobs: AdminJob[];
+  focus: string;
+  onFocus: (status: string) => void;
+}) {
+  const counts = new Map<string, number>();
+  for (const j of jobs) counts.set(j.status, (counts.get(j.status) ?? 0) + 1);
+  const shown = [...JOB_STATUSES.filter((s) => counts.has(s)),
+    ...[...counts.keys()].filter((s) => !(JOB_STATUSES as readonly string[]).includes(s))];
+  const chip = (status: string, label: string, n: number) => (
+    <button key={status || "all"} type="button" aria-pressed={focus === status}
+            onClick={() => onFocus(focus === status ? "" : status)}
+            className={`sch-chip${status ? ` st-${status.toLowerCase().replace(/ /g, "-")}` : ""}`}>
+      {label} <b>{n}</b>
+    </button>
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Job status">
+      {chip("", "All jobs", jobs.length)}
+      {shown.map((s) => chip(s, s, counts.get(s) ?? 0))}
+    </div>
+  );
+}
+
 export function JobLabel({ job }: { job: AdminJob }) {
   return (
     <span className="flex min-w-0 flex-col">
@@ -114,10 +152,12 @@ function Reasoning({ member, avail, jobs }: {
  * slots) is greyed out and takes no job. Hovering a name gives the reasoning
  * (ADM-SCH-32, ADM-SCH-33).
  */
-export function DayLanes({ crew, jobs, availability = [], onMove, onOpen }: {
+export function DayLanes({ crew, jobs, availability = [], focus = "", onMove, onOpen }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability?: CrewDayAvailability[];
+  /** A job status to pick out; jobs in other statuses are dimmed. Empty shows all. */
+  focus?: string;
   onMove: (job: AdminJob, crewId: string, startMinute: number) => void;
   onOpen: (job: AdminJob) => void;
 }) {
@@ -233,10 +273,10 @@ export function DayLanes({ crew, jobs, availability = [], onMove, onOpen }: {
                       tabIndex={0}
                       draggable
                       aria-label={label}
-                      className={`sch-job${job.late ? " late" : ""}${isSpa(job) ? " spa" : ""}${job.manual ? " manual" : ""}`}
+                      className={`sch-job${job.late ? " late" : ""}${isSpa(job) ? " spa" : ""}${job.manual ? " manual" : ""}${statusClass(job)}${focus && job.status !== focus ? " dim" : ""}`}
                       style={{ left: ((job.start_minute ?? 0) - first) * PX_PER_MIN,
                                width: job.duration_minutes * PX_PER_MIN - 2 }}
-                      title={`${job.start_time}-${job.end_time} ${label}${job.reason ? `. ${job.reason}` : ""}`}
+                      title={`${job.start_time}-${job.end_time} ${label}. ${job.status}${job.reason ? `. ${job.reason}` : ""}`}
                       onDragStart={startDrag(job)}
                       onClick={() => onOpen(job)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(job); }}

@@ -8,7 +8,7 @@ const TONE_OF: Record<string, Tone> = {
   Activating: "warn", Due: "warn", Initiated: "info", Partial: "warn", Pending: "warn",
   Unscheduled: "warn", Late: "error",
   Inactive: "error", "Over due": "error", Missed: "error", Off: "neutral",
-  Frozen: "info", Draft: "neutral", Scheduled: "info",
+  Frozen: "info", Draft: "neutral", Scheduled: "info", "In progress": "info", "Could not complete": "error",
 };
 
 const CLASSES: Record<Tone, string> = {

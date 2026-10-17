@@ -19,7 +19,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { DayLanes, JobFlags, JobLabel } from "./Board";
+import { DayLanes, JobFlags, JobLabel, StatusSummary } from "./Board";
 import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
 import {
   daysInMonthFrom, fmtDate, hhmm, minuteOf, nextSunday, useBoard, useNeedsScheduling, weekday,
@@ -97,6 +97,7 @@ export function SchedulePage() {
   const runDays = runStart ? periodDays(period, runStart) : 0;
 
   const [pickedDay, setPickedDay] = useState("");
+  const [focusStatus, setFocusStatus] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
   const [unfreezing, setUnfreezing] = useState(false);
@@ -302,7 +303,8 @@ export function SchedulePage() {
                 {board.schedule.status === "Frozen" && (
                   <p className="text-sm text-muted-foreground">This schedule is frozen. Taking a job off needs no code. Moving or adding needs the code.</p>
                 )}
-                <DayLanes crew={board.crew} jobs={dayJobs} availability={dayAvailability} onOpen={setOpen}
+                <StatusSummary jobs={dayJobs} focus={focusStatus} onFocus={setFocusStatus} />
+                <DayLanes crew={board.crew} jobs={dayJobs} availability={dayAvailability} focus={focusStatus} onOpen={setOpen}
                           onMove={(job, crewId, startMinute) => move.mutate({ job, crewId, startMinute })} />
               </>
             )}
@@ -415,6 +417,7 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
         { label: "Customer", value: job.customer_name },
         { label: "Date", value: dayText(job.date) },
         { label: "Duration", value: `${job.duration_minutes} min` },
+        { label: "Status", value: <StatusBadge status={job.status} /> },
         { label: "Now", value: job.crew_name ? `${job.crew_name} at ${job.start_time}` : "Unscheduled" },
         { label: "Finish by", value: job.finish_by },
       ]} />

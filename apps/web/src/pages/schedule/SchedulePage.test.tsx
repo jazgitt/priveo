@@ -253,6 +253,31 @@ describe("board as a gantt chart", () => {
   });
 });
 
+describe("job status on the board (ADM-SCH-34)", () => {
+  it("fills completed jobs green and missed ones red, counts each status and picks one out", async () => {
+    server({ jobs: [
+      job({ id: "j1", registration: "KA01AA0001", status: "Completed" }),
+      job({ id: "j2", registration: "KA01AA0002", status: "Could not complete", start_minute: 600, start_time: "10:00", end_time: "10:20" }),
+      job({ id: "j3", registration: "KA01AA0003", status: "Scheduled", start_minute: 660, start_time: "11:00", end_time: "11:20" }),
+    ] });
+    await openBoard();
+    const lane = await screen.findByTestId("lane-c1");
+    const card = (reg: string) => within(lane).getByRole("button", { name: new RegExp(reg) });
+    expect(card("KA01AA0001")).toHaveClass("done");
+    expect(card("KA01AA0002")).toHaveClass("failed");
+    expect(card("KA01AA0003")).not.toHaveClass("done");
+    expect(card("KA01AA0003")).not.toHaveClass("failed");
+
+    const chips = screen.getByRole("group", { name: "Job status" });
+    expect(within(chips).getByRole("button", { name: "All jobs 3" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
+    expect(card("KA01AA0002")).not.toHaveClass("dim");
+    expect(card("KA01AA0001")).toHaveClass("dim");
+    await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
+    expect(card("KA01AA0001")).not.toHaveClass("dim");
+  });
+});
+
 describe("schedule tabs and unavailable crew time", () => {
   const avail = [
     { crew_id: "c1", status: "Partial", windows: [{ start: 480, end: 600 }],
