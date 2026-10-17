@@ -47,6 +47,12 @@ h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; }
 .sidebar-brand { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700;
   color: var(--c-gold-text); padding: 0.25rem 0.75rem 1rem; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.site-select { display: flex; flex-direction: column; gap: 0.2rem; padding: 0 0.75rem 0.75rem;
+  font-size: 0.8rem; color: var(--c-mute); }
+.site-select select { font: inherit; font-size: 1rem; padding: 0.4rem; color: var(--c-text);
+  border: 1px solid var(--c-line); border-radius: var(--r-input); background: var(--c-app); }
+.nav-group { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-mute);
+  padding: 0.9rem 0.75rem 0.25rem; }
 .nav-link {
   display: block; padding: 0.55rem 0.75rem; border-radius: var(--r-input);
   color: var(--c-text); text-decoration: none; font-weight: 500;

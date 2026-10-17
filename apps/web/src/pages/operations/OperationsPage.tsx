@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
@@ -44,7 +45,7 @@ function JobCard({ job, reasons }: { job: OperationJob; reasons: { key: string; 
 }
 
 export function OperationsPage() {
-  const [queue, setQueue] = useState("missed"); const [society, setSociety] = useState("");
+  const [queue, setQueue] = useState("missed"); const society = useSite().id;
   const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [reason, setReason] = useState("");
   const [unresolved, setUnresolved] = useState(false);
   const params = new URLSearchParams({ queue });
@@ -53,14 +54,12 @@ export function OperationsPage() {
   if (unresolved && queue === "missed") params.set("unresolved", "true");
   const jobs = useQuery({ queryKey: ["operations", params.toString()], queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
   const reasons = useQuery({ queryKey: ["operations-reasons"], queryFn: () => api<{ key: string; label: string }[]>("/v1/admin/operations/reasons") });
-  const societies = useQuery({ queryKey: ["customer-societies"], queryFn: () => api<{ id: string; name: string }[]>("/v1/admin/directory/societies") });
   return <><h1 className="page-title">Operations</h1><Card title="Service outcomes">
     <SelectField label="Queue" value={queue} onChange={e => setQueue(e.target.value)}><option value="missed">Missed jobs</option><option value="scheduled">Scheduled work</option><option value="history">Resolution history</option></SelectField>
-    <SelectField label="Society" value={society} onChange={e => setSociety(e.target.value)}><option value="">All societies</option>{societies.data?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
     <TextField label="From date" type="date" value={from} onChange={e => setFrom(e.target.value)} /><TextField label="To date" type="date" value={to} onChange={e => setTo(e.target.value)} />
     <SelectField label="Failure reason" value={reason} onChange={e => setReason(e.target.value)}><option value="">All reasons</option>{reasons.data?.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</SelectField>
     {queue === "missed" && <label><input type="checkbox" checked={unresolved} onChange={e => setUnresolved(e.target.checked)} />Only Interior/Spa jobs awaiting an outcome</label>}
-    <ApiErrorNote error={jobs.error ?? societies.error ?? reasons.error} />
+    <ApiErrorNote error={jobs.error ?? reasons.error} />
     {jobs.isPending && <p>Loading jobs…</p>}{jobs.data?.length === 0 && <p>No jobs match these filters.</p>}
   </Card>{jobs.data?.map(j => <JobCard key={`${j.id}:${j.resolved_at ?? "open"}`} job={j} reasons={reasons.data ?? []} />)}</>;
 }

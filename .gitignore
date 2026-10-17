@@ -65,3 +65,7 @@ playwright-report/
 test-results/
 /.local/e2e/
 /.local/widget/
+
+# Local copy of the dev database (tools/dev/local-db.ps1) holds real dev data.
+/.local-db/
+/services/api/.local-api.log*

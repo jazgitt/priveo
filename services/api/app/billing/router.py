@@ -1,6 +1,7 @@
 import datetime as dt
+import uuid
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings, get_money_settings
@@ -12,6 +13,8 @@ from app.billing.schemas import (
     PaymentDetail,
     PaymentOut,
     StatusIn,
+    SubscriptionEventOut,
+    SubscriptionRowOut,
     SubscriptionStatusIn,
     SubscriptionStatusOut,
     SubscriptionView,
@@ -229,6 +232,31 @@ def read_alert(
 ):
     svc.mark_alert_read(alert_id)
     return Response(status_code=204)
+
+
+@admin.get("/subscriptions", response_model=list[SubscriptionRowOut])
+def list_subscriptions(
+    status: str | None = None,
+    society_id: uuid.UUID | None = None,
+    limit: int = Query(default=200, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(require_role("admin")),
+    svc: BillingService = Depends(get_billing_service),
+):
+    """Every subscription for the admin list (ADM-SUB-01 to ADM-SUB-05). `status`
+    is Active, Activating, Paused or Inactive; `society_id` limits it to one
+    site (ADM-SITE-01)."""
+    return svc.list_subscriptions(status or None, limit, offset, society_id)
+
+
+@admin.get("/subscriptions/{subscription_id}/events", response_model=list[SubscriptionEventOut])
+def subscription_events(
+    subscription_id: str,
+    user: User = Depends(require_role("admin")),
+    svc: BillingService = Depends(get_billing_service),
+):
+    """The status changes of one subscription, newest first (ADM-SUB-05)."""
+    return svc.subscription_events(subscription_id)
 
 
 @admin.put("/subscriptions/{subscription_id}/status", response_model=SubscriptionStatusOut)

@@ -65,6 +65,54 @@ def window_for(
     return (start, end) if end > start else None
 
 
+def _clock(text: str) -> int:
+    hour, minute = text.split(":")
+    return int(hour) * 60 + int(minute)
+
+
+def hours_windows(
+    working_hours: list | None, weekday: int, start: int, end: int
+) -> list[tuple[int, int]]:
+    """All base windows on a weekday (0 is Monday): the day's first window and
+    its extra slots, for example 05:00-13:00 and 17:00-19:00 (ADM-CRW-04,
+    ADM-CRW-25). With no per-weekday hours the single window applies every day.
+    Empty on a day off."""
+    if not working_hours:
+        return [(start, end)]
+    entry = working_hours[weekday] if weekday < len(working_hours) else None
+    if not entry or not entry.get("working"):
+        return []
+    found = []
+    try:
+        found.append((_clock(entry["start"]), _clock(entry["end"])))
+    except (KeyError, ValueError, AttributeError):
+        return []
+    for slot in entry.get("extra_slots") or []:
+        try:
+            found.append((_clock(slot["start"]), _clock(slot["end"])))
+        except (KeyError, ValueError, AttributeError, TypeError):
+            continue
+    return [w for w in sorted(found) if w[1] > w[0]]
+
+
+def windows_for(
+    role: str, windows: list[tuple[int, int]], exception_kind: str | None,
+    from_minute: int | None,
+) -> list[tuple[int, int]]:
+    """The windows a crew member really works on a date: none for a Trainee, none
+    on Sick or Leave, and a Late start moves the start of every window that has
+    not ended yet (ADM-CAP-01, ADM-CAP-02, ADM-CRW-09)."""
+    if role == "Trainee" or exception_kind in ("Sick", "Leave"):
+        return []
+    out = []
+    for start, end in windows:
+        if exception_kind == "Late start" and from_minute is not None:
+            start = max(start, from_minute)
+        if end > start:
+            out.append((start, end))
+    return out
+
+
 def hours_window(
     working_hours: list | None, weekday: int, start: int, end: int
 ) -> tuple[int, int] | None:

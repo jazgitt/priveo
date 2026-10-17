@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 
+import { useSite } from "../../site/SiteContext";
 import { ApiError } from "../../api/client";
 import { ApiErrorNote } from "../../components/ApiErrorNote";
 import { showDate } from "../../components/format";
@@ -26,7 +27,8 @@ export function SubscriptionsPage() {
   const [subId, setSubId] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [changesFor, setChangesFor] = useState("");
-  const list = useSubscriptions(status);
+  const site = useSite();
+  const list = useSubscriptions(status, site.id);
   const missing = list.error instanceof ApiError && [404, 405].includes(list.error.status);
 
   const columns: Column<SubscriptionRow>[] = [

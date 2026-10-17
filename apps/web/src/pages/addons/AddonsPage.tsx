@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { Button, Card, SelectField, StatusChip, TextField } from "../../components";
 import { ApiErrorNote } from "../../components/ApiErrorNote";
 import { showDate } from "../../components/format";
-import { times, type Customer, type Society } from "../customers/api";
+import { times, type Customer } from "../customers/api";
 
 interface Booking {
   id: string; service: string; customer_name: string; vehicle: string; society: string; date: string;
@@ -43,8 +44,7 @@ export function AddonsPage() {
   const qc = useQueryClient(); const [status, setStatus] = useState(""); const [search, setSearch] = useState("");
   const [customerId, setCustomerId] = useState(""); const [vehicleId, setVehicleId] = useState("");
   const [date, setDate] = useState(""); const [finish, setFinish] = useState("12:00");
-  const [society, setSociety] = useState(""); const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [service, setService] = useState("");
-  const societies = useQuery({ queryKey: ["customer-societies"], queryFn: () => api<Society[]>("/v1/admin/directory/societies") });
+  const society = useSite().id; const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [service, setService] = useState("");
   const params = new URLSearchParams();
   if (status) params.set("status", status); if (society) params.set("society_id", society);
   if (from) params.set("date_from", from); if (to) params.set("date_to", to); if (service) params.set("service", service);
@@ -60,9 +60,9 @@ export function AddonsPage() {
     <TextField label="Proposed date" type="date" value={date} onChange={e => setDate(e.target.value)} /><SelectField label="Finish by" value={finish} onChange={e => setFinish(e.target.value)}>{times.map(t => <option key={t}>{t}</option>)}</SelectField>
     <ApiErrorNote error={create.error ?? customers.error ?? customer.error} /><Button busy={create.isPending} disabled={!vehicleId || !date} onClick={() => create.mutate()}>Request Deep Spa</Button>
   </Card><Card title="Requests"><SelectField label="Status filter" value={status} onChange={e => setStatus(e.target.value)}><option value="">All</option>{["Requested", "Scheduled", "Completed", "Missed", "Cancelled"].map(s => <option key={s}>{s}</option>)}</SelectField><ApiErrorNote error={bookings.error} />{bookings.isPending && <p>Loading…</p>}{bookings.data?.length === 0 && <p>No add-on requests.</p>}</Card>
-    <Card title="Filter requests"><SelectField label="Society filter" value={society} onChange={e => setSociety(e.target.value)}><option value="">All societies</option>{societies.data?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
+    <Card title="Filter requests">
       <TextField label="From date" type="date" value={from} onChange={e => setFrom(e.target.value)} /><TextField label="To date" type="date" value={to} onChange={e => setTo(e.target.value)} />
-      <SelectField label="Add-on filter" value={service} onChange={e => setService(e.target.value)}><option value="">All add-ons</option><option value="Deep Spa">Deep Spa</option></SelectField><ApiErrorNote error={societies.error} />
+      <SelectField label="Add-on filter" value={service} onChange={e => setService(e.target.value)}><option value="">All add-ons</option><option value="Deep Spa">Deep Spa</option></SelectField>
     </Card>{bookings.data?.map(b => <BookingCard key={`${b.id}:${b.date}:${b.finish_by}`} b={b} />)}
   </>;
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { withSite } from "../site/testSite";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,7 +22,7 @@ const response=(body:unknown)=>new Response(JSON.stringify(body),{status:200});
 let data:Record<string,unknown>;
 function mount(ui:React.ReactElement,path='/') {
   const c=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});clients.push(c);
-  render(<QueryClientProvider client={c}><ToastProvider><MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter></ToastProvider></QueryClientProvider>);
+  render(<QueryClientProvider client={c}><ToastProvider><MemoryRouter initialEntries={[path]}>{withSite(ui)}</MemoryRouter></ToastProvider></QueryClientProvider>);
 }
 async function sent(path:string,body?:unknown,method='POST') {
   await waitFor(()=>expect(fetchMock.mock.calls.some(([p,o])=>p===path && o?.method===method && (body===undefined || JSON.stringify(JSON.parse(o.body))===JSON.stringify(body)))).toBe(true));
@@ -71,7 +72,7 @@ it('books standalone Spa and sends all request filters to the API',async()=>{
   await userEvent.selectOptions(screen.getByLabelText('Finish by'),'13:00');await userEvent.click(screen.getByRole('button',{name:'Request Deep Spa'}));
   await sent('/v1/admin/addons',{vehicle_id:'v1',service:'Deep Spa',date:'2026-10-20',finish_by:'13:00'});
   await userEvent.type(screen.getByLabelText('Find customer'),'Asha');
-  await userEvent.selectOptions(screen.getByLabelText('Status filter'),'Scheduled');await userEvent.selectOptions(screen.getByLabelText('Society filter'),'s1');
+  await userEvent.selectOptions(screen.getByLabelText('Status filter'),'Scheduled');
   fireEvent.change(screen.getByLabelText('From date'),{target:{value:'2026-10-19'}});fireEvent.change(screen.getByLabelText('To date'),{target:{value:'2026-10-21'}});
   await userEvent.selectOptions(screen.getByLabelText('Add-on filter'),'Deep Spa');
   await waitFor(()=>expect(fetchMock.mock.calls.some(([p])=>p.includes('status=Scheduled&society_id=s1&date_from=2026-10-19&date_to=2026-10-21&service=Deep+Spa'))).toBe(true));

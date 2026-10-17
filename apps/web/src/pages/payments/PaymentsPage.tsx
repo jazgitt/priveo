@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from "react";
+import { useSite } from "../../site/SiteContext";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
@@ -27,7 +28,7 @@ export function PaymentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [draft, setDraft] = useState<PaymentFilters>(NO_FILTERS);
   const [filters, setFilters] = useState<PaymentFilters>(NO_FILTERS);
-  const [society, setSociety] = useState("");
+  const society = useSite().name;
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<AdminPayment | null>(null);
   const [recording, setRecording] = useState(false);
@@ -35,9 +36,6 @@ export function PaymentsPage() {
   const alerts = useAlerts();
   const readAlert = useReadAlert();
 
-  const directory = useQuery({ queryKey: ["payment-societies"],
-    queryFn: () => api<{ name: string }[]>("/v1/admin/directory/societies") });
-  const societies = (directory.data ?? []).map(s => s.name).sort();
   const rows = list.data ?? [];
   const linkedId = searchParams.get("payment");
   const linked = useQuery({ queryKey: ["linked-payment", linkedId], enabled: !!linkedId,
@@ -100,15 +98,10 @@ export function PaymentsPage() {
           <TextField label="Vehicle ID" value={draft.vehicle_id} onChange={set("vehicle_id")} />
           <TextField label="Due after" type="date" value={draft.due_after} onChange={set("due_after")} />
           <TextField label="Due before" type="date" value={draft.due_before} onChange={set("due_before")} />
-          <SelectField label="Society" value={society} onChange={(e) => { setSociety(e.target.value); setPage(0); }}>
-            <option value="">All</option>
-            {societies.map((s) => <option key={s}>{s}</option>)}
-          </SelectField>
           <Button type="submit">Apply</Button>
           <Button variant="ghost" onClick={() => {
             setDraft(NO_FILTERS);
             setFilters(NO_FILTERS);
-            setSociety("");
             setPage(0);
           }}>Clear</Button>
         </form>

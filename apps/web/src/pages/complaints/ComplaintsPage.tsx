@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -19,7 +20,7 @@ export function statusTone(status: string): ChipTone {
 export function ComplaintsPage() {
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
-  const [society, setSociety] = useState("");
+  const society = useSite().name;
 
   const params = new URLSearchParams();
   if (status) params.set("status", status);
@@ -30,13 +31,12 @@ export function ComplaintsPage() {
     queryKey: [...KEYS.complaints, qs],
     queryFn: () => api<ComplaintSummary[]>(`/v1/admin/complaints${qs ? `?${qs}` : ""}`),
   });
-  // Category and society choices come from the rows seen so far.
+  // Category choices come from the rows seen so far.
   const all = useQuery({
     queryKey: [...KEYS.complaints, ""],
     queryFn: () => api<ComplaintSummary[]>("/v1/admin/complaints"),
   });
   const categories = [...new Set((all.data ?? []).map((c) => c.category))].sort();
-  const societies = [...new Set((all.data ?? []).map((c) => c.society))].sort();
   const rows = (list.data ?? []).filter((c) => !society || c.society === society);
 
   return (
@@ -52,11 +52,6 @@ export function ComplaintsPage() {
                        onChange={(e) => setCategory(e.target.value)}>
             <option value="">All</option>
             {categories.map((s) => <option key={s} value={s}>{s}</option>)}
-          </SelectField>
-          <SelectField label="Society" value={society}
-                       onChange={(e) => setSociety(e.target.value)}>
-            <option value="">All</option>
-            {societies.map((s) => <option key={s} value={s}>{s}</option>)}
           </SelectField>
         </div>
         {list.isLoading && <p className="muted">Loading...</p>}

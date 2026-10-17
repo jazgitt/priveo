@@ -12,17 +12,26 @@
 .sch-day[aria-pressed="true"] { border-color: var(--c-gold); box-shadow: inset 0 -3px 0 var(--c-gold); }
 .sch-day small { display: block; color: var(--c-mute); }
 .sch-day.over small { color: var(--c-error); }
-.sch-lanes { display: flex; gap: 0.75rem; overflow-x: auto; align-items: flex-start; }
-.sch-lane { flex: 0 0 13rem; }
-.sch-lane h3 { margin: 0 0 0.4rem; font-size: var(--fs-4); }
-.sch-lane h3 small { color: var(--c-mute); font-weight: 400; }
-.sch-track { position: relative; border: 1px solid var(--c-line); border-radius: var(--r-input);
-  background: repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--c-line) 47px,
-  var(--c-line) 48px); }
-.sch-off { position: absolute; left: 0; right: 0; background: var(--c-app); opacity: 0.8; }
-.sch-axis { flex: 0 0 3rem; position: relative; font-size: var(--fs-3); color: var(--c-mute); }
-.sch-axis span { position: absolute; right: 0.25rem; }
-.sch-job { position: absolute; left: 3px; right: 3px; overflow: hidden; border-radius: 6px;
+.sch-gantt { overflow-x: auto; border: 1px solid var(--c-line); border-radius: var(--r-input);
+  background: var(--c-card); }
+.sch-g-row { display: flex; align-items: stretch; width: max-content; min-width: 100%;
+  border-bottom: 1px solid var(--c-line); }
+.sch-g-row:last-child { border-bottom: 0; }
+.sch-g-name { flex: 0 0 11rem; position: sticky; left: 0; z-index: 5; background: var(--c-card);
+  border-right: 1px solid var(--c-line); padding: 0.5rem 0.75rem; font-weight: 600;
+  display: flex; align-items: center; }
+.sch-g-name small { color: var(--c-mute); font-weight: 400; }
+.sch-g-head { position: sticky; top: 0; z-index: 6; background: var(--c-card); }
+.sch-g-track { position: relative; flex: 0 0 auto; min-height: 3.6rem; }
+.sch-g-ruler { min-height: 2rem; }
+.sch-g-ruler span { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--c-line);
+  font-size: var(--fs-3); color: var(--c-mute); padding-left: 3px; }
+.sch-g-ruler span.half { top: 55%; }
+.sch-g-ruler span.hour { border-left-color: var(--c-mute); }
+.sch-job { z-index: 2; line-height: 1.15; font-size: 0.7rem; padding: 2px 4px; }
+.sch-job span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap-tip-why { display: block; margin-top: 0.4rem; color: var(--c-mute); }
+.sch-job { position: absolute; top: 3px; bottom: 3px; overflow: hidden; border-radius: 6px;
   border: 1px solid var(--c-line); background: var(--c-card); padding: 2px 6px; font-size: var(--fs-3);
   cursor: grab; border-left: 4px solid var(--c-ok); }
 .sch-job.late { border-left-color: var(--c-error); }

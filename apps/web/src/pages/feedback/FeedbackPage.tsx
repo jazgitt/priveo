@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
 
 import { api } from "../../api/client";
@@ -25,16 +26,9 @@ function inRange(r: Range, society: string, created: string): boolean {
   return (!r.society || society === r.society) && (!r.from || d >= r.from) && (!r.to || d <= r.to);
 }
 
-function Filters({ value, onChange, societies }: {
-  value: Range; onChange: (r: Range) => void; societies: string[];
-}) {
+function Filters({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
   return (
     <>
-      <SelectField label="Society" value={value.society}
-                   onChange={(e) => onChange({ ...value, society: e.target.value })}>
-        <option value="">All</option>
-        {societies.map((s) => <option key={s} value={s}>{s}</option>)}
-      </SelectField>
       <TextField label="From" type="date" value={value.from}
                  onChange={(e) => onChange({ ...value, from: e.target.value })} />
       <TextField label="To" type="date" value={value.to}
@@ -43,12 +37,17 @@ function Filters({ value, onChange, societies }: {
   );
 }
 
-const uniq = (xs: string[]) => [...new Set(xs)].sort();
+/** The date range, plus the chosen site as the society (ADM-SITE-01). */
+function useRange(): [Range, (r: Range) => void] {
+  const site = useSite();
+  const [r, set] = useState<Range>({ society: "", from: "", to: "" });
+  return [{ ...r, society: site.name }, (next) => set({ ...next, society: "" })];
+}
 
 function FeedbackTab() {
   const [category, setCategory] = useState("");
   const [rating, setRating] = useState("");
-  const [range, setRange] = useState<Range>({ society: "", from: "", to: "" });
+  const [range, setRange] = useRange();
   const qs = new URLSearchParams();
   if (category) qs.set("category", category);
   if (rating) qs.set("rating", rating);
@@ -75,8 +74,7 @@ function FeedbackTab() {
           <option value="">All</option>
           {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars</option>)}
         </SelectField>
-        <Filters value={range} onChange={setRange}
-                 societies={uniq((list.data ?? []).map((f) => f.society))} />
+        <Filters value={range} onChange={setRange} />
       </div>
       {list.isLoading && <p className="muted">Loading...</p>}
       {list.isError && <p role="alert">Could not load the feedback.</p>}
@@ -97,7 +95,7 @@ function FeedbackTab() {
 }
 
 function RatingsTab() {
-  const [range, setRange] = useState<Range>({ society: "", from: "", to: "" });
+  const [range, setRange] = useRange();
   const report = useQuery({
     queryKey: ["admin", "ratings"],
     queryFn: () => api<RatingsReport>("/v1/admin/ratings"),
@@ -111,8 +109,7 @@ function RatingsTab() {
     <div className="sp-stack">
       <Card>
         <div className="sp-filters">
-          <Filters value={range} onChange={setRange}
-                   societies={uniq((report.data?.items ?? []).map((r) => r.society))} />
+          <Filters value={range} onChange={setRange} />
         </div>
         {report.isLoading && <p className="muted">Loading...</p>}
         {report.isError && <p role="alert">Could not load the ratings.</p>}
@@ -154,7 +151,7 @@ function RatingsTab() {
 }
 
 function CheckInsTab() {
-  const [range, setRange] = useState<Range>({ society: "", from: "", to: "" });
+  const [range, setRange] = useRange();
   const report = useQuery({
     queryKey: ["admin", "checkins"],
     queryFn: () => api<CheckInsReport>("/v1/admin/checkins"),
@@ -173,8 +170,7 @@ function CheckInsTab() {
     <div className="sp-stack">
       <Card>
         <div className="sp-filters">
-          <Filters value={range} onChange={setRange}
-                   societies={uniq((report.data?.items ?? []).map((c) => c.society))} />
+          <Filters value={range} onChange={setRange} />
         </div>
         {report.isLoading && <p className="muted">Loading...</p>}
         {report.isError && <p role="alert">Could not load the check-ins.</p>}

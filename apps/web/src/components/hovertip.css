@@ -1,0 +1,12 @@
+/* Detail on hover (ADM-CAP-06, ADM-CRW-26) */
+.cap-tip { position: relative; display: inline-block; cursor: help;
+  border-bottom: 1px dotted var(--c-mute); }
+.cap-tip-box { display: none; position: fixed; z-index: 50; max-height: 70vh; overflow-y: auto; min-width: 15rem;
+  padding: 0.6rem 0.75rem; text-align: left; background: var(--c-card); color: var(--c-text);
+  border: 1px solid var(--c-line); border-radius: var(--r-input);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+.cap-tip-box strong { display: block; margin-bottom: 0.3rem; }
+.cap-tip-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.15rem 0; }
+.cap-tip-row small { display: block; color: var(--c-mute); }
+.cap-tip-row.warn { color: var(--c-warn); }
+.cap-tip-value .dow-warn { color: var(--c-warn); font-weight: 700; }

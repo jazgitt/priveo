@@ -14,7 +14,21 @@ export interface ScheduleOut {
   freeze_deadline: string;
 }
 
+export interface CrewCapacityLine { name: string; role: string; minutes: number; slots: string }
+export interface DemandLine { service: string; source: string; jobs: number; minutes: number }
+
+/** Whether a crew member can take work on a day, and why (ADM-SCH-32). */
+export interface CrewDayAvailability {
+  crew_id: string;
+  status: "Working" | "Partial" | "Off";
+  windows: { start: number; end: number }[];
+  reason: string;
+}
+
 export interface DayCapacity {
+  availability?: CrewDayAvailability[];
+  crew?: CrewCapacityLine[];
+  demand?: DemandLine[];
   date: string;
   capacity_minutes: number;
   demand_minutes: number;
@@ -39,6 +53,8 @@ export interface AdminJob {
   vehicle_id: string;
   registration: string;
   vehicle: string;
+  /** For example "B1-24": basement and parking number. */
+  parking?: string;
   customer_name: string;
   service: string;
   status: string;

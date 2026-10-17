@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Button, Card, Dialog, SelectField, Table, TextField, useToast } from "../../components";
 import { fieldError, useDirectory, useDirMutation } from "./api";
 import { Notice, QueryState } from "./common";
-import { SERVICE_NAMES, WEEKDAYS, type Slot, type Society } from "./types";
+import { useSite } from "../../site/SiteContext";
+import { SERVICE_NAMES, WEEKDAYS, type Slot } from "./types";
 
 function SlotForm({ societyId, slot, service, onClose }: {
   societyId: string;
@@ -61,25 +62,22 @@ function SlotForm({ societyId, slot, service, onClose }: {
   );
 }
 
-/** Working slots per society and service (ADM-SVS-05 to -08). */
+/** Working slots of the chosen site, per service (ADM-SVS-05 to -08). */
 export function SlotsTab() {
-  const societies = useDirectory<Society[]>("/societies?include_inactive=false");
-  const [society, setSociety] = useState("");
+  const site = useSite();
   const [service, setService] = useState<string>(SERVICE_NAMES[0]);
   const [editing, setEditing] = useState<Slot | "new" | null>(null);
   const del = useDirMutation();
 
-  const chosen = society || societies.data?.[0]?.id || "";
+  const chosen = site.id;
   const slots = useDirectory<Slot[]>(
     `/societies/${chosen}/slots?service=${encodeURIComponent(service)}`, Boolean(chosen));
 
   return (
-    <Card title="Working slots" actions={
+    <Card title={`Working slots${site.name ? `, ${site.name}` : ""}`} actions={
       <Button disabled={!chosen} onClick={() => setEditing("new")}>Add a slot</Button>}>
       <div className="ref-toolbar">
-        <SelectField label="Society" value={chosen} onChange={(e) => setSociety(e.target.value)}>
-          {(societies.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </SelectField>
+        <p className="muted">Site: {site.name || "none chosen"}</p>
         <SelectField label="Service" value={service} onChange={(e) => setService(e.target.value)}>
           {SERVICE_NAMES.map((s) => <option key={s}>{s}</option>)}
         </SelectField>
@@ -103,7 +101,7 @@ export function SlotsTab() {
             ]} />
           )}
         </QueryState>
-      ) : <p className="muted">Add a society first.</p>}
+      ) : <p className="muted">Choose a site first.</p>}
       {editing && (
         <SlotForm societyId={chosen} service={service} slot={editing === "new" ? null : editing}
                   onClose={() => setEditing(null)} />

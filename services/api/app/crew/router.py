@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.crew.service import (
     CrewChange,
     CrewDeactivate,
+    DayHours,
     CrewEdit,
     CrewExceptionEdit,
     CrewExceptionNew,
@@ -81,6 +82,17 @@ def list_crew(
     crews: CrewService = Depends(get_admin_crew_service),
 ):
     return crews.list(society_id)
+
+
+@admin.get("/default-hours", response_model=list[DayHours])
+def default_hours(
+    society_id: uuid.UUID,
+    _: User = Depends(require_role("admin")),
+    crews: CrewService = Depends(get_admin_crew_service),
+):
+    """The working hours a new crew member starts with in a society: its working
+    slots for the cleaning services (ADM-CRW-25)."""
+    return crews.default_hours(society_id)
 
 
 @admin.get("/{crew_id}", response_model=CrewOut)

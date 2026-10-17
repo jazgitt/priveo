@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { withSite } from "../../site/testSite";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -23,7 +24,7 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockReset(); });
 function page() {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    <MemoryRouter><AddonsPage /></MemoryRouter>
+    <MemoryRouter>{withSite(<AddonsPage />)}</MemoryRouter>
   </QueryClientProvider>);
 }
 it("shows the real assignment and unpaid payment, and resolves a pending change", async () => {
@@ -35,9 +36,8 @@ it("shows the real assignment and unpaid payment, and resolves a pending change"
     path === "/v1/admin/addons/spa1" && options?.method === "PATCH" &&
     JSON.parse(options.body).reject_change === true)).toBe(true));
 });
-it("filters by society and cancels only the selected booking", async () => {
+it("filters by the chosen site and cancels only the selected booking", async () => {
   page(); await screen.findByText("Ravi at 09:00");
-  await userEvent.selectOptions(screen.getByLabelText("Society filter"), "s1");
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("society_id=s1"))).toBe(true));
   await userEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
   await waitFor(() => expect(fetchMock.mock.calls.some(([path, options]) =>

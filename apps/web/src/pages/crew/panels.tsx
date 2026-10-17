@@ -5,7 +5,7 @@ import { ApiErrorNote } from "../../components/ApiErrorNote";
 import { showDate } from "../../components/format";
 import { Button, Card, Dialog, SelectField, TextField, useToast } from "../../components";
 import {
-  EXCEPTION_KINDS, ROLES, useCrewActions, useCrewList, useSessions,
+  EXCEPTION_KINDS, ROLES, useCrewActions, useCrewList, useDefaultHours, useSessions,
   type Crew, type CrewException, type CrewPassword, type DayHours, type ReleasedJob,
 } from "./api";
 import { HoursEditor } from "./HoursEditor";
@@ -117,9 +117,20 @@ export function HoursPanel({ crew }: { crew: Crew }) {
   const { hours: save } = useCrewActions(crew.id);
   const [hours, setHours] = useState<DayHours[]>(crew.working_hours);
   const [released, setReleased] = useState<ReleasedJob[]>([]);
+  const defaults = useDefaultHours(crew.society_id);
   return (
     <Card title="Working hours">
+      <p className="muted">
+        A day can have several slots, for example 05:00 to 13:00 and 17:00 to 19:00. Use
+        "+ Add slot" on a day.
+      </p>
       <HoursEditor value={hours} onChange={setHours} error={fieldsOf(save.error).working_hours} />
+      <p>
+        <Button variant="secondary" disabled={!defaults.data}
+                onClick={() => defaults.data && setHours(defaults.data)}>
+          Use {crew.society} working slots
+        </Button>
+      </p>
       <p className="muted">A change applies from today on. Jobs that no longer fit go to Needs scheduling.</p>
       <Button busy={save.isPending} onClick={() => save.mutate(hours, {
         onSuccess: (r) => {

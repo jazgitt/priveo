@@ -18,7 +18,7 @@ from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, Visit
-from app.scheduling.solver import SolverCrew, SolverJob, solve_day
+from app.scheduling.solver import SolverJob, solve_day
 
 router = APIRouter(prefix="/v1/admin/scheduling", tags=["scheduling"])
 
@@ -105,7 +105,11 @@ def preview(db, schedule):
             if visit.date != day or job.status == "Skipped":
                 continue
             fixed = (
-                (str(job.crew_id), job.start_minute or 0)
+                (
+                    service.crew_key_for(
+                        job.crew_id, job.start_minute or 0, windows.get(job.crew_id)),
+                    job.start_minute or 0,
+                )
                 if job.crew_id and (job.manual or job.status != "Scheduled")
                 else None
             )
@@ -126,9 +130,11 @@ def preview(db, schedule):
                     else service.service_windows(db, schedule.society_id, job.service, day),
                 )
             )
-        result = solve_day([SolverCrew(str(cid), s, e) for cid, (s, e) in windows.items()], jobs)
+        result = solve_day(service.solver_crews(windows), jobs)
         for job, visit in rows:
             proposed = result.placed.get(str(job.id))
+            if proposed:
+                proposed = (str(service.base_crew(proposed[0])), proposed[1])
             if (
                 proposed
                 and job.status == "Scheduled"

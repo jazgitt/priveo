@@ -159,7 +159,8 @@ def attendance(db: Session, manager: SchedulingCrew, day: date) -> m.CrewManager
     )
     entries = []
     for sc, name in team:
-        base = rules.hours_window(sc.working_hours, day.weekday(), sc.start_minute, sc.end_minute)
+        wins = rules.hours_windows(sc.working_hours, day.weekday(), sc.start_minute, sc.end_minute)
+        base = (wins[0][0], wins[-1][1]) if wins else None
         working = base is not None and base[1] > base[0]
         ex = exceptions.get(sc.id)
         entries.append(
@@ -356,7 +357,7 @@ def reassign_problem(
     window = scheduling.availability(db, {target.id: target}, [visit.date])[visit.date].get(
         target.id
     )
-    if window is None:
+    if not window:
         return "crew_not_working", _why_not_working(db, target, visit.date), None
     busy = _busy(db, target, visit.date, job.id)
     start = job.start_minute
@@ -373,10 +374,11 @@ def reassign_problem(
         )
     ):
         return "outside_slot", "The service's working slots do not allow that time.", None
-    if start < window[0] or end > window[1]:
+    if not scheduling.fits_a_window(window, start, job.duration_minutes):
+        worked = " and ".join(f"{rules.hhmm(s)} to {rules.hhmm(e)}" for s, e in window)
         return (
             "outside_hours",
-            f"Works {rules.hhmm(window[0])} to {rules.hhmm(window[1])} that day. The job "
+            f"Works {worked} that day. The job "
             f"is {rules.hhmm(start)} to {rules.hhmm(end)}.",
             None,
         )
@@ -442,12 +444,13 @@ def _service_slot(db, job, visit, window, busy):
     for start, end in scheduling.service_windows(
         db, manager_society(db, visit), job.service, visit.date
     ):
-        interval = (max(start, window[0]), min(end, window[1]))
-        if interval[0] >= interval[1]:
-            continue
-        at = _first_slot(interval, busy, job.duration_minutes)
-        if at is not None:
-            candidates.append(at)
+        for w_start, w_end in window:
+            interval = (max(start, w_start), min(end, w_end))
+            if interval[0] >= interval[1]:
+                continue
+            at = _first_slot(interval, busy, job.duration_minutes)
+            if at is not None:
+                candidates.append(at)
     return min(candidates) if candidates else None
 
 

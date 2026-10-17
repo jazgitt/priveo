@@ -3431,6 +3431,70 @@
         }
       }
     },
+    "/v1/admin/crew/default-hours": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Default Hours",
+        "description": "The working hours a new crew member starts with in a society: its working\nslots for the cleaning services (ADM-CRW-25).",
+        "operationId": "default_hours_v1_admin_crew_default_hours_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DayHours"
+                  },
+                  "title": "Response Default Hours V1 Admin Crew Default Hours Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/crew/{crew_id}": {
       "get": {
         "tags": [
@@ -11964,6 +12028,179 @@
         }
       }
     },
+    "/v1/admin/subscriptions": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "List Subscriptions",
+        "description": "Every subscription for the admin list (ADM-SUB-01 to ADM-SUB-05). `status`\nis Active, Activating, Paused or Inactive; `society_id` limits it to one\nsite (ADM-SITE-01).",
+        "operationId": "list_subscriptions_v1_admin_subscriptions_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubscriptionRowOut"
+                  },
+                  "title": "Response List Subscriptions V1 Admin Subscriptions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/subscriptions/{subscription_id}/events": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Subscription Events",
+        "description": "The status changes of one subscription, newest first (ADM-SUB-05).",
+        "operationId": "subscription_events_v1_admin_subscriptions__subscription_id__events_get",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubscriptionEventOut"
+                  },
+                  "title": "Response Subscription Events V1 Admin Subscriptions  Subscription Id  Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/subscriptions/{subscription_id}/status": {
       "put": {
         "tags": [
@@ -17258,6 +17495,11 @@
             "type": "string",
             "title": "Vehicle"
           },
+          "parking": {
+            "type": "string",
+            "title": "Parking",
+            "default": ""
+          },
           "customer_name": {
             "type": "string",
             "title": "Customer Name"
@@ -18656,6 +18898,35 @@
         ],
         "title": "CouldNotComplete"
       },
+      "CrewCapacityLine": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          },
+          "slots": {
+            "type": "string",
+            "title": "Slots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role",
+          "minutes",
+          "slots"
+        ],
+        "title": "CrewCapacityLine",
+        "description": "What one crew member adds to a day's capacity."
+      },
       "CrewChange": {
         "properties": {
           "crew": {
@@ -18718,6 +18989,39 @@
           "jobs"
         ],
         "title": "CrewDay"
+      },
+      "CrewDayAvailability": {
+        "properties": {
+          "crew_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Crew Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/CrewDayWindow"
+            },
+            "type": "array",
+            "title": "Windows"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "crew_id",
+          "status",
+          "windows",
+          "reason"
+        ],
+        "title": "CrewDayAvailability",
+        "description": "Whether a crew member can take work on a day, and why (ADM-SCH-32)."
       },
       "CrewDayJob": {
         "properties": {
@@ -18825,6 +19129,24 @@
           "finish_by"
         ],
         "title": "CrewDayJob"
+      },
+      "CrewDayWindow": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "CrewDayWindow"
       },
       "CrewDeactivate": {
         "properties": {
@@ -20046,6 +20368,30 @@
           "over_capacity": {
             "type": "boolean",
             "title": "Over Capacity"
+          },
+          "crew": {
+            "items": {
+              "$ref": "#/components/schemas/CrewCapacityLine"
+            },
+            "type": "array",
+            "title": "Crew",
+            "default": []
+          },
+          "demand": {
+            "items": {
+              "$ref": "#/components/schemas/DemandLine"
+            },
+            "type": "array",
+            "title": "Demand",
+            "default": []
+          },
+          "availability": {
+            "items": {
+              "$ref": "#/components/schemas/CrewDayAvailability"
+            },
+            "type": "array",
+            "title": "Availability",
+            "default": []
           }
         },
         "type": "object",
@@ -20077,6 +20423,14 @@
             "type": "string",
             "title": "End",
             "default": ""
+          },
+          "extra_slots": {
+            "items": {
+              "$ref": "#/components/schemas/TimeSlot"
+            },
+            "type": "array",
+            "title": "Extra Slots",
+            "default": []
           }
         },
         "type": "object",
@@ -20085,6 +20439,35 @@
           "working"
         ],
         "title": "DayHours"
+      },
+      "DemandLine": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "jobs": {
+            "type": "integer",
+            "title": "Jobs"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "source",
+          "jobs",
+          "minutes"
+        ],
+        "title": "DemandLine",
+        "description": "Work due on a day for one service, from subscriptions or add-ons."
       },
       "DeviceBody": {
         "properties": {
@@ -22321,10 +22704,17 @@
             "title": "Role"
           },
           "working_hours": {
-            "items": {
-              "$ref": "#/components/schemas/DayHours"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DayHours"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Working Hours"
           },
           "paired_member_id": {
@@ -22345,8 +22735,7 @@
           "name",
           "mobile",
           "society_id",
-          "role",
-          "working_hours"
+          "role"
         ],
         "title": "NewCrew"
       },
@@ -24279,6 +24668,123 @@
         "type": "object",
         "title": "SubscriptionEdit"
       },
+      "SubscriptionEventOut": {
+        "properties": {
+          "from_status": {
+            "type": "string",
+            "title": "From Status"
+          },
+          "to_status": {
+            "type": "string",
+            "title": "To Status"
+          },
+          "by": {
+            "type": "string",
+            "title": "By"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_status",
+          "to_status",
+          "by",
+          "reason",
+          "at"
+        ],
+        "title": "SubscriptionEventOut",
+        "description": "One change of a subscription's status (ADM-SUB-05)."
+      },
+      "SubscriptionRowOut": {
+        "properties": {
+          "subscription_id": {
+            "type": "string",
+            "title": "Subscription Id"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "title": "Vehicle Id"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "flat": {
+            "type": "string",
+            "title": "Flat"
+          },
+          "society": {
+            "type": "string",
+            "title": "Society"
+          },
+          "vehicle": {
+            "type": "string",
+            "title": "Vehicle"
+          },
+          "plan_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "first_service_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Service Date"
+          },
+          "renewal_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renewal Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscription_id",
+          "vehicle_id",
+          "customer_name",
+          "flat",
+          "society",
+          "vehicle",
+          "plan_name",
+          "status",
+          "first_service_date",
+          "renewal_date"
+        ],
+        "title": "SubscriptionRowOut",
+        "description": "One row of the admin Subscriptions list (ADM-SUB-01 to ADM-SUB-05)."
+      },
       "SubscriptionStatusIn": {
         "properties": {
           "status": {
@@ -24666,6 +25172,24 @@
           "jobs"
         ],
         "title": "TeamMember"
+      },
+      "TimeSlot": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TimeSlot"
       },
       "TodayCleanOut": {
         "properties": {

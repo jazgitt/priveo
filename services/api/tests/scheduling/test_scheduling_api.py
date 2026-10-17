@@ -40,6 +40,7 @@ def test_a_run_makes_a_draft_and_respects_capacity(api, admin, world, run_week):
     assert b["days"][0]["capacity_minutes"] == 120
     assert b["days"][0]["demand_minutes"] == 160 and b["days"][0]["over_capacity"]
     placed = [j for j in b["jobs"] if j["crew_id"]]
+    assert all("parking" in j for j in b["jobs"])  # the Gantt card shows it (ADM-SCH-33)
     for crew_id in {j["crew_id"] for j in placed}:
         spans = sorted((j["start_minute"], j["start_minute"] + j["duration_minutes"])
                        for j in placed if j["crew_id"] == crew_id)
@@ -132,6 +133,44 @@ def test_inactive_and_trainee_do_not_count(api, admin, world, run_week):
     b = board(api, admin, summary["schedule_id"])
     assert len(b["jobs"]) == 1
     assert b["days"][0]["capacity_minutes"] == 120
+
+
+def test_capacity_days_break_down_crew_hours_and_demand(api, admin, world, run_week):
+    # The Capacity page shows these lines on hover (ADM-CAP-01).
+    world.add_crew()
+    world.add_crew()
+    for _ in range(3):
+        world.add_vehicle(cutoff=time(8, 0))
+    world.db.commit()
+    day = board(api, admin, run_week(days=1)["schedule_id"])["days"][0]
+    r = api.get(f"{BASE}/capacity", headers=admin, params={
+        "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 1})
+    assert r.status_code == 200, r.text
+    row = r.json()[0]
+    assert row["capacity_minutes"] == day["capacity_minutes"] == 120
+    assert sum(c["minutes"] for c in row["crew"]) == 120 and len(row["crew"]) == 2
+    assert all(c["name"] and c["slots"] and c["role"] == "Member" for c in row["crew"])
+    assert sum(d["minutes"] for d in row["demand"]) == row["demand_minutes"] == 60
+    assert all(d["source"] == "Subscription" and d["jobs"] > 0 for d in row["demand"])
+    # Each crew member's windows and the reason, for the board (ADM-SCH-30).
+    assert len(row["availability"]) == 2
+    assert all(a["status"] == "Working" and a["windows"] and a["reason"].startswith("Works")
+               for a in row["availability"])
+
+
+def test_capacity_explains_why_a_crew_member_is_off(api, admin, world, run_week):
+    sick = world.add_crew()
+    world.add_crew()
+    world.add_vehicle(cutoff=time(8, 0))
+    world.db.add(SchedulingCrewException(crew_id=sick.id, on_date=SUNDAY, kind="Sick"))
+    world.db.commit()
+    r = api.get(f"{BASE}/capacity", headers=admin, params={
+        "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 1})
+    by = {a["crew_id"]: a for a in r.json()[0]["availability"]}
+    assert by[str(sick.id)]["status"] == "Off" and by[str(sick.id)]["windows"] == []
+    assert by[str(sick.id)]["reason"] == "Sick on this date."
+    others = [a for k, a in by.items() if k != str(sick.id)]
+    assert others[0]["status"] == "Working" and others[0]["windows"]
 
 
 def test_a_crew_exception_removes_that_days_capacity(api, admin, world, run_week):

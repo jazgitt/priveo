@@ -4,14 +4,12 @@ import { AddonsTab } from "./AddonsTab";
 import { ChecklistsTab, ReasonsTab } from "./ChecklistsTab";
 import { PlansTab } from "./PlansTab";
 import { ServicesTab } from "./ServicesTab";
-import { SlotsTab } from "./SlotsTab";
 import { SocietiesTab } from "./SocietiesTab";
 import { VehiclesTab } from "./VehiclesTab";
 import "./reference.css";
 
 const TABS = [
   { id: "societies", label: "Societies", view: SocietiesTab },
-  { id: "slots", label: "Working slots", view: SlotsTab },
   { id: "plans", label: "Plans", view: PlansTab },
   { id: "vehicles", label: "Vehicle catalogue", view: VehiclesTab },
   { id: "services", label: "Services", view: ServicesTab },
@@ -20,7 +18,7 @@ const TABS = [
   { id: "addons", label: "Add-on catalogue", view: AddonsTab },
 ] as const;
 
-/** Reference data: societies, slots, plans, vehicles, services, checklists, reasons, add-ons. */
+/** Master data (all sites): societies, plans, vehicles, services, checklists, reasons, add-ons. */
 export function ReferencePage() {
   const [tab, setTab] = useState<string>(TABS[0].id);
   const View = (TABS.find((t) => t.id === tab) ?? TABS[0]).view;

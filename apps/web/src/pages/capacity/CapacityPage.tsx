@@ -1,16 +1,28 @@
 import { useState } from "react";
 
-import { Card, SelectField, StatusChip, Table, TextField } from "../../components";
+import { useSite } from "../../site/SiteContext";
+import { Card, HoverTip, StatusChip, Table, TextField, TipRows, type TipRow } from "../../components";
 import {
-  errorText, fmtDate, fmtHours, nextSunday, societiesOf, useCapacity, useCrewList, weekday,
+  errorText, fmtDate, fmtHours, nextSunday, useCapacity, useCrewList, weekday,
   type DayCapacity,
 } from "../schedule/api";
 import "../schedule/schedule.css";
 
+/** A capacity figure with its breakup on hover. */
+function Tip({ label, title, rows, empty }: {
+  label: string; title: string; rows: TipRow[]; empty: string;
+}) {
+  return (
+    <HoverTip label={label} ariaLabel={`${title} ${label}. Hover for the breakup.`}>
+      <TipRows title={title} rows={rows} empty={empty} />
+    </HoverTip>
+  );
+}
+
 export function CapacityPage() {
   const crewQ = useCrewList();
-  const societies = societiesOf(crewQ.data);
-  const [societyId, setSocietyId] = useState("");
+  const site = useSite();
+  const societyId = site.id;
   const [startDate, setStartDate] = useState(nextSunday());
   const [days, setDays] = useState("7");
 
@@ -21,18 +33,8 @@ export function CapacityPage() {
   return (
     <>
       <h1 className="page-title">Capacity</h1>
-      <Card title="Society and period">
+      <Card title={`Period, ${site.name || "no site chosen"}`}>
         <div className="sch-controls">
-          {societies.length > 0 ? (
-            <SelectField label="Society" value={societyId}
-                         onChange={(e) => setSocietyId(e.target.value)}>
-              <option value="">Choose a society</option>
-              {societies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectField>
-          ) : (
-            <TextField label="Society ID" value={societyId}
-                       onChange={(e) => setSocietyId(e.target.value.trim())} />
-          )}
           <TextField label="From" type="date" value={startDate}
                      onChange={(e) => setStartDate(e.target.value)} />
           <TextField label="Days" type="number" min={1} max={31} value={days}
@@ -40,7 +42,7 @@ export function CapacityPage() {
         </div>
       </Card>
 
-      {!societyId && <p className="muted" style={{ marginTop: "1rem" }}>Choose a society.</p>}
+      {!societyId && <p className="muted" style={{ marginTop: "1rem" }}>Choose a site.</p>}
 
       {societyId && (
         <div className="sch-stack" style={{ marginTop: "1rem" }}>
@@ -53,10 +55,18 @@ export function CapacityPage() {
                 rowKey={(d) => d.date}
                 columns={[
                   { key: "d", header: "Date", render: (d) => `${weekday(d.date)} ${fmtDate(d.date)}` },
-                  { key: "c", header: "Crew available", align: "right",
-                    render: (d) => fmtHours(d.capacity_minutes) },
-                  { key: "n", header: "Demand", align: "right",
-                    render: (d) => fmtHours(d.demand_minutes) },
+                  { key: "c", header: "Crew available", align: "right", render: (d) => (
+                    <Tip label={fmtHours(d.capacity_minutes)} title="Crew available"
+                         empty="No crew available" rows={(d.crew ?? []).map((c) => ({
+                           key: c.name + c.slots, left: `${c.name} (${c.role})`,
+                           right: fmtHours(c.minutes), note: c.slots }))} />) },
+                  { key: "n", header: "Demand", align: "right", render: (d) => (
+                    <Tip label={fmtHours(d.demand_minutes)} title="Demand"
+                         empty="Nothing due" rows={(d.demand ?? []).map((l) => ({
+                           key: l.service + l.source,
+                           left: `${l.service}${l.source === "Add-on" ? " (add-on)" : ""}`,
+                           right: fmtHours(l.minutes),
+                           note: `${l.jobs} ${l.jobs === 1 ? "job" : "jobs"}` }))} />) },
                   { key: "s", header: "Scheduled", align: "right",
                     render: (d) => fmtHours(d.scheduled_minutes) },
                   { key: "u", header: "Use", render: (d) => {

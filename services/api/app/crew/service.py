@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.crew import society_moves
 from app.crew.models import CREW_ROLES, CrewMember, CrewSocietyAssignment
 from app.customers.models import WEEKDAYS
+from app.directory import lookup
 from app.directory.models import Society
 from app.identity.models import AuthEvent, AuthSession, Login
 from app.identity.service import hash_password
@@ -41,12 +42,20 @@ EXCEPTION_KINDS = ("Sick", "Leave", "Late start")  # ADM-CRW-08
 MAX_RANGE_DAYS = 62
 
 
+class TimeSlot(BaseModel):
+    start: str
+    end: str
+
+
 class DayHours(BaseModel):
     day: str
     working: bool
-    # "HH:MM". Empty on a day off.
+    # "HH:MM". Empty on a day off. This is the day's first slot.
     start: str = ""
     end: str = ""
+    # More slots the same day, after the first, for example 17:00 to 19:00 after
+    # 05:00 to 13:00 (ADM-CRW-25).
+    extra_slots: list[TimeSlot] = []
 
 
 class NewCrew(BaseModel):
@@ -54,7 +63,8 @@ class NewCrew(BaseModel):
     mobile: str
     society_id: uuid.UUID
     role: str
-    working_hours: list[DayHours]
+    # Left out, the hours come from the society's working slots (ADM-CRW-25).
+    working_hours: list[DayHours] | None = None
     # A Trainee is onboarded with the Member they are paired with (ADM-CRW-19).
     paired_member_id: uuid.UUID | None = None
 
@@ -228,6 +238,25 @@ def check_hours(hours: list[DayHours]) -> list[dict]:
                     f"The start must be before the end on {h.day}.",
                     working_hours=f"{h.day}: start is after end.",
                 )
+            previous_end = time.fromisoformat(h.end)
+            for slot in h.extra_slots:
+                if not (_TIME.fullmatch(slot.start) and _TIME.fullmatch(slot.end)):
+                    raise _problem(
+                        f"Set a start and end time for every slot on {h.day}.",
+                        working_hours=f"{h.day}: use HH:MM.",
+                    )
+                begin, finish = time.fromisoformat(slot.start), time.fromisoformat(slot.end)
+                if begin >= finish:
+                    raise _problem(
+                        f"The start must be before the end on {h.day}.",
+                        working_hours=f"{h.day}: start is after end.",
+                    )
+                if begin <= previous_end:
+                    raise _problem(
+                        f"The slots on {h.day} must not overlap and need a gap between them.",
+                        working_hours=f"{h.day}: slots overlap.",
+                    )
+                previous_end = finish
             out.append(h.model_dump())
         else:
             out.append(DayHours(day=h.day, working=False).model_dump())
@@ -249,7 +278,43 @@ def _summary(hours: list[dict]) -> tuple[int, int]:
     working = [h for h in hours if h["working"]]
     if not working:
         return 0, 0
-    return min(_minutes(h["start"]) for h in working), max(_minutes(h["end"]) for h in working)
+    ends = [_minutes(h["end"]) for h in working]
+    ends += [_minutes(s["end"]) for h in working for s in h.get("extra_slots") or []]
+    return min(_minutes(h["start"]) for h in working), max(ends)
+
+
+def society_default_hours(db: Session, society_id: uuid.UUID) -> list[DayHours]:
+    """Working hours taken from the society's working slots for Cleaning-External
+    and Cleaning-Internal: on each weekday the slots are joined where they touch
+    or overlap, the first is the day's window and the rest are extra slots. A
+    weekday with no slot is a day off. A society with no slots at all gets the
+    standard 05:00 to 11:00 (ADM-CRW-25, ADM-SVS-05)."""
+    slots = [s for s in lookup.working_slots(db, society_id)
+             if s.service in ("Cleaning-External", "Cleaning-Internal")]
+
+    def clock(minute: int) -> str:
+        minute = min(minute, 24 * 60 - 1)
+        return f"{minute // 60:02d}:{minute % 60:02d}"
+
+    out = []
+    for number, day in enumerate(WEEKDAYS):
+        spans = sorted((s.start_minute, s.end_minute) for s in slots if number in s.days)
+        if not slots:
+            spans = [(300, 660)]
+        merged: list[list[int]] = []
+        for start, end in spans:
+            if merged and start <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        if not merged:
+            out.append(DayHours(day=day, working=False))
+            continue
+        first, rest = merged[0], merged[1:]
+        out.append(DayHours(
+            day=day, working=True, start=clock(first[0]), end=clock(first[1]),
+            extra_slots=[TimeSlot(start=clock(s), end=clock(e)) for s, e in rest]))
+    return out
 
 
 def _released(rows: list[dict]) -> list[CrewReleasedJob]:
@@ -473,7 +538,9 @@ class CrewService:
         society = self._db.get(Society, body.society_id)
         if society is None:
             raise _problem("Choose a society.", society_id="Choose a society.")
-        hours = check_hours(body.working_hours)
+        hours = check_hours(
+            body.working_hours if body.working_hours is not None
+            else society_default_hours(self._db, society.id))
         mate_sc = None
         if body.role == "Trainee":
             if body.paired_member_id is None:
@@ -553,6 +620,12 @@ class CrewService:
         return self._out_of(crew, login)
 
     # ---- society over time (ADM-CRW-13, ADM-CRW-22) -----------------------
+
+    def default_hours(self, society_id: uuid.UUID) -> "list[DayHours]":
+        """What a new crew member's hours start as in this society."""
+        if self._db.get(Society, society_id) is None:
+            raise ApiError("not_found", "This society was not found.", 404)
+        return society_default_hours(self._db, society_id)
 
     def society_history(self, crew_id: uuid.UUID) -> "list[CrewSocietyStay]":
         crew, _login = self._get(crew_id)

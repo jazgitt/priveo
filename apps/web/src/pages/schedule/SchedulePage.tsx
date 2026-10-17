@@ -1,16 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useCallback, useState } from "react";
 
 import { api, ApiError } from "../../api/client";
 import {
-  Button, Card, Dialog, SelectField, StatusChip, Table, TextField, useToast,
+  Button, Card, Dialog, SelectField, StatusChip, Table, Tabs, TextField, useToast,
 } from "../../components";
 import { DayLanes, JobFlags, JobLabel } from "./Board";
 import { ScheduleActions } from "./ScheduleActions";
 import { ApiErrorNote } from "../../components/ApiErrorNote";
 import {
-  daysInMonthFrom, errorText, fmtDate, hhmm, minuteOf, nextSunday, societiesOf, useBoard,
-  useCrewList, useNeedsScheduling, weekday,
+  daysInMonthFrom, errorText, fmtDate, hhmm, minuteOf, nextSunday, useBoard,
+  useNeedsScheduling, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
 import "./schedule.css";
@@ -18,6 +19,15 @@ import "./schedule.css";
 type Period = "daily" | "weekly" | "monthly";
 
 interface Problem { code: string; message: string }
+
+/** The sections of the page, one tab each. */
+const SCHEDULE_TABS = (waiting?: number) => [
+  { id: "run", label: "Run" },
+  { id: "board", label: "Board" },
+  { id: "needs", label: waiting ? `Needs scheduling (${waiting})` : "Needs scheduling" },
+  { id: "cutoff", label: "Cutoff requests" },
+  { id: "improve", label: "Draft improvements" },
+] as const;
 
 function periodDays(period: Period, start: string): number {
   if (period === "daily") return 1;
@@ -45,10 +55,9 @@ function freezeText(s: ScheduleOut): string {
 export function SchedulePage() {
   const qc = useQueryClient();
   const toast = useToast();
-  const crewList = useCrewList();
-  const societies = societiesOf(crewList.data);
 
-  const [societyId, setSocietyId] = useState("");
+  const site = useSite();
+  const societyId = site.id;
   const [startDate, setStartDate] = useState(nextSunday());
   const [chosenPeriod, setPeriod] = useState<Period | null>(null);
   const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{key: string; value: string | number}[]>("/v1/admin/directory/settings") });
@@ -56,8 +65,9 @@ export function SchedulePage() {
   const period: Period = chosenPeriod ?? (configured === "daily" ? "daily" : configured === "monthly" ? "monthly" : "weekly");
   const savePeriod = useMutation({ mutationFn: (value: Period) => api("/v1/admin/directory/settings/schedule.period", { method: "PUT", body: {value: value[0].toUpperCase() + value.slice(1)} }) });
   const [pickedDay, setPickedDay] = useState("");
+  // Until the admin picks a tab: the board once there is one, otherwise Run.
+  const [chosenTab, setTab] = useState<string | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
-  const [results, setResults] = useState<RunResult[] | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
   const [freezing, setFreezing] = useState(false);
   const [unfreezing, setUnfreezing] = useState(false);
@@ -86,13 +96,13 @@ export function SchedulePage() {
     onSuccess: (r) => {
       setStartDate(periodStart(period, startDate, Number(preferences.data?.find(p => p.key === "schedule.week_start")?.value ?? 6)));
       setProblem(null);
-      setResults(r.schedules);
       const sum = (k: "placed" | "unscheduled" | "late") =>
         r.schedules.reduce((n, s) => n + s[k], 0);
       toast.show(
         `Scheduler ran for ${r.schedules.length} ${r.schedules.length === 1 ? "society" : "societies"}: `
         + `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`, "ok");
       refresh();
+      setTab("board");
     },
     onError: (e) => setProblem({
       code: e instanceof ApiError ? e.code : "error", message: errorText(e),
@@ -150,6 +160,8 @@ export function SchedulePage() {
     ? pickedDay : board?.days[0]?.date ?? "";
   const dayJobs = board ? board.jobs.filter((j) => j.date === day) : [];
   const schedule = board?.schedule;
+  const tab = chosenTab ?? (board ? "board" : "run");
+  const dayAvailability = board?.days.find((d) => d.date === day)?.availability ?? [];
 
   // The dialogs take stable close handlers: the Dialog refocuses itself
   // whenever `onClose` changes, which would drop focus on every keystroke.
@@ -165,19 +177,23 @@ export function SchedulePage() {
     <>
       <h1 className="page-title">Schedule</h1>
 
-      <Card title="Run the scheduler">
-        <form className="sch-controls" onSubmit={(e) => { e.preventDefault(); run.mutate(); }}>
-          {societies.length > 0 ? (
-            <SelectField label="Society" value={societyId}
-                         onChange={(e) => { setSocietyId(e.target.value); setResults(null); }}>
-              <option value="">All societies</option>
-              {societies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectField>
-          ) : (
-            <TextField label="Society ID" value={societyId}
-                       hint="Leave empty to run every society."
-                       onChange={(e) => setSocietyId(e.target.value.trim())} />
+      {problem && (
+        <div className="sch-banner" role="alert" style={{ marginTop: "1rem" }}>
+          <span>{problem.message}</span>
+          {problem.code === "schedule_frozen" && (
+            <Button variant="secondary" onClick={() => setUnfreezing(true)}>
+              Unfreeze with code
+            </Button>
           )}
+        </div>
+      )}
+
+      <Tabs tabs={SCHEDULE_TABS(needsQ.data?.length)} active={tab} label="Schedule sections"
+            onChange={setTab}>
+        {tab === "run" && (
+          <>
+      <Card title={`Run the scheduler, ${site.name || "no site chosen"}`}>
+        <form className="sch-controls" onSubmit={(e) => { e.preventDefault(); run.mutate(); }}>
           <SelectField label="Period" value={period}
                        onChange={(e) => { const value = e.target.value as Period; setPeriod(value); savePeriod.mutate(value); }}>
             <option value="daily">Daily</option>
@@ -192,48 +208,16 @@ export function SchedulePage() {
           </Button>
         </form>
         <p className="muted">
-          A run keeps every change made by hand. On a frozen schedule it places only the jobs
+          It runs for the chosen site only. A run keeps every change made by hand. On a frozen schedule it places only the jobs
           that have no crew member.
         </p>
         <ApiErrorNote error={savePeriod.error ?? preferences.error} />
       </Card>
-
-      {problem && (
-        <div className="sch-banner" role="alert" style={{ marginTop: "1rem" }}>
-          <span>{problem.message}</span>
-          {problem.code === "schedule_frozen" && (
-            <Button variant="secondary" onClick={() => setUnfreezing(true)}>
-              Unfreeze with code
-            </Button>
-          )}
-        </div>
-      )}
-
-      {results && !societyId && (
-        <div style={{ marginTop: "1rem" }}>
-          <Card title="Result of the run">
-            <Table
-              rows={results}
-              rowKey={(r) => r.schedule_id}
-              columns={[
-                { key: "s", header: "Society", render: (r) =>
-                  societies.find((s) => s.id === r.society_id)?.name ?? r.society_id },
-                { key: "st", header: "Status", render: (r) => r.status },
-                { key: "p", header: "Placed", align: "right", render: (r) => r.placed },
-                { key: "u", header: "Unscheduled", align: "right", render: (r) => r.unscheduled },
-                { key: "l", header: "Late", align: "right", render: (r) => r.late },
-                { key: "o", header: "", render: (r) => (
-                  <Button variant="ghost" onClick={() => { setSocietyId(r.society_id); }}>
-                    Open the board
-                  </Button>) },
-              ]}
-            />
-          </Card>
-        </div>
-      )}
-
-      {societyId && (
-        <div style={{ marginTop: "1rem" }}>
+          </>
+        )}
+        {tab === "board" && (
+          !societyId ? <p className="muted">Choose a site.</p> : (
+            <>
           <Card title="Board">
             {boardQ.isLoading && <p className="loading">Loading...</p>}
             {boardQ.isError && (
@@ -291,16 +275,18 @@ export function SchedulePage() {
                 <DayLanes
                   crew={board.crew}
                   jobs={dayJobs}
+                  availability={dayAvailability}
                   onOpen={setOpen}
                   onMove={(job, crewId, startMinute) => move.mutate({ job, crewId, startMinute })}
                 />
               </>
             )}
           </Card>
-        </div>
-      )}
-
-      <div style={{ marginTop: "1rem" }}>
+            </>
+          )
+        )}
+        {tab === "needs" && (
+          <>
         <Card title="Needs scheduling">
           {needsQ.isError && <p className="form-error" role="alert">{errorText(needsQ.error)}</p>}
           {needsQ.data && (
@@ -320,9 +306,12 @@ export function SchedulePage() {
             />
           )}
         </Card>
-      </div>
+          </>
+        )}
+        {tab === "cutoff" && <ScheduleActions section="cutoff" board={board ?? null} refresh={refresh} />}
+        {tab === "improve" && <ScheduleActions section="improve" board={board ?? null} refresh={refresh} />}
+      </Tabs>
 
-      <ScheduleActions board={board ?? null} refresh={refresh} />
       <JobDialog
         job={open}
         board={board ?? null}

@@ -47,12 +47,48 @@ class ScheduleOut(BaseModel):
     freeze_deadline: datetime
 
 
+class CrewCapacityLine(BaseModel):
+    """What one crew member adds to a day's capacity."""
+
+    name: str
+    role: str
+    minutes: int
+    # For example "05:00-13:00, 17:00-19:00".
+    slots: str
+
+
+class DemandLine(BaseModel):
+    """Work due on a day for one service, from subscriptions or add-ons."""
+
+    service: str
+    source: str  # "Subscription" or "Add-on"
+    jobs: int
+    minutes: int
+
+
+class CrewDayWindow(BaseModel):
+    start: int  # minutes after midnight
+    end: int
+
+
+class CrewDayAvailability(BaseModel):
+    """Whether a crew member can take work on a day, and why (ADM-SCH-32)."""
+
+    crew_id: uuid.UUID
+    status: str  # "Working", "Partial" (late start) or "Off"
+    windows: list[CrewDayWindow]
+    reason: str
+
+
 class DayCapacity(BaseModel):
     date: date
     capacity_minutes: int
     demand_minutes: int
     scheduled_minutes: int
     over_capacity: bool
+    crew: list[CrewCapacityLine] = []
+    demand: list[DemandLine] = []
+    availability: list[CrewDayAvailability] = []
 
 
 class SchedulingCrewOut(BaseModel):
@@ -72,6 +108,8 @@ class AdminJob(BaseModel):
     vehicle_id: uuid.UUID
     registration: str
     vehicle: str
+    # The parking place, for example "B1-24" (basement and number).
+    parking: str = ""
     customer_name: str
     service: str
     status: str

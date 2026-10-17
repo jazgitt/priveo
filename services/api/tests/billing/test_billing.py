@@ -51,6 +51,50 @@ def test_a_confirmed_renewal_moves_the_expiry_date_on_at_once(money):
     assert [v["expires_on"] for v in home["vehicles"]] == ["2026-11-29"]
 
 
+def test_admin_lists_subscriptions_with_filters_and_a_status_history(money):
+    m = money
+    rows = m.client.get("/v1/admin/subscriptions", headers=m.admin).json()
+    row = next(r for r in rows if r["vehicle_id"] == m.vehicle_id)
+    assert (row["customer_name"], row["flat"], row["society"], row["status"]) == (
+        "Meera Rao", "A-101", "DLF Meadows", "Active")
+    assert row["first_service_date"] == "2026-10-01" and row["renewal_date"] == "2026-10-31"
+    assert "Hyundai Creta" in row["vehicle"]
+
+    def ids(status):
+        r = m.client.get("/v1/admin/subscriptions", params={"status": status}, headers=m.admin)
+        assert r.status_code == 200, r.text
+        return {x["subscription_id"] for x in r.json()}
+
+    sid = str(m.subscription_id)
+    assert sid in ids("Active") and sid not in ids("Inactive") and sid not in ids("Paused")
+    assert len(m.client.get("/v1/admin/subscriptions", params={"limit": 1},
+                            headers=m.admin).json()) == 1
+
+    # A pause running today shows the subscription as Paused.
+    m.client.post(f"/v1/customer/vehicles/{m.vehicle_id}/pauses",
+                  json={"from_date": "2026-10-12", "to_date": "2026-10-14"}, headers=m.customer)
+    m.clock.now = at(13, 10)
+    assert sid in ids("Paused") and sid not in ids("Active")
+
+    # Status changes are listed newest first, with who made them.
+    r = m.client.put(f"/v1/admin/subscriptions/{sid}/status", headers=m.admin,
+                     json={"status": "Inactive", "reason": "Moved away"})
+    assert r.status_code == 200, r.text
+    events = m.client.get(f"/v1/admin/subscriptions/{sid}/events", headers=m.admin).json()
+    assert (events[0]["from_status"], events[0]["to_status"], events[0]["reason"]) == (
+        "Active", "Inactive", "Moved away")
+    assert events[0]["by"] != ""
+    assert sid in ids("Inactive")
+    missing = m.client.get(f"/v1/admin/subscriptions/{uuid.uuid4()}/events", headers=m.admin)
+    assert missing.status_code == 404
+    # The Site selector limits the list to one society (ADM-SITE-01).
+    other = m.client.get("/v1/admin/subscriptions", params={"society_id": str(uuid.uuid4())},
+                         headers=m.admin)
+    assert other.status_code == 200 and other.json() == []
+    # Only an admin may read the list.
+    assert m.client.get("/v1/admin/subscriptions", headers=m.customer).status_code == 403
+
+
 def test_a_payment_runs_from_due_to_received(money):
     m = money
     p = admin_payment(m)

@@ -28,6 +28,8 @@ from app.billing.schemas import (
     PaymentAlertOut,
     PaymentDetail,
     PaymentOut,
+    SubscriptionEventOut,
+    SubscriptionRowOut,
     SubscriptionView,
 )
 from app.changes.access import parse_id
@@ -622,6 +624,69 @@ class BillingService:
         if a.read_at is None:
             a.read_at = utcnow()
             self._db.commit()
+
+    def list_subscriptions(
+        self, status: str | None, limit: int, offset: int,
+        society_id: uuid.UUID | None = None,
+    ) -> "list[SubscriptionRowOut]":
+        """Every subscription, with the customer, vehicle, plan and dates, for the
+        admin list. `status` filters on what the admin sees, so Paused means an
+        Active subscription with a pause running today."""
+        from app.changes.models import ScheduleChange
+
+        today = today_of(self._now())
+        paused_now = set(self._db.scalars(
+            select(ScheduleChange.vehicle_id).where(
+                ScheduleChange.kind == "pause", ScheduleChange.status == "Active",
+                ScheduleChange.start_date <= today, ScheduleChange.end_date >= today)))
+        found = []
+        for sub, vehicle, customer in self._db.execute(
+            select(Subscription, Vehicle, Customer)
+            .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
+            .join(Customer, Customer.id == Vehicle.customer_id)
+            .order_by(Customer.first_name, Customer.last_name, Vehicle.created_at, Vehicle.id)
+        ):
+            shown = "Paused" if sub.status == "Active" and vehicle.id in paused_now else sub.status
+            if status and shown != status:
+                continue
+            if society_id and (vehicle.society_id or customer.society_id) != society_id:
+                continue
+            found.append((sub, vehicle, customer, shown))
+        page = found[offset: offset + limit]
+        societies = {s.id: s.name for s in self._db.scalars(select(Society))}
+        plans = {p.id: p.name for p in self._db.scalars(select(Plan))}
+        out = []
+        for sub, vehicle, customer, shown in page:
+            _, renewal = cycle_window(
+                sub.first_service_date, shift_days(self._db, vehicle.id), today, self._cycle_days)
+            out.append(SubscriptionRowOut(
+                subscription_id=str(sub.id), vehicle_id=str(vehicle.id),
+                customer_name=customer_name(customer), flat=customer.flat,
+                society=societies.get(vehicle.society_id or customer.society_id, ""),
+                vehicle=vehicle_label(vehicle),
+                plan_name=plans.get(sub.plan_id) if sub.plan_id else None,
+                status=shown, first_service_date=sub.first_service_date,
+                renewal_date=renewal))
+        return out
+
+    def subscription_events(self, subscription_id: str) -> "list[SubscriptionEventOut]":
+        """The status changes of one subscription, newest first (ADM-SUB-05)."""
+        from app.identity.models import Login
+
+        sub = self._db.get(Subscription, parse_id(subscription_id, "subscription"))
+        if sub is None:
+            raise ApiError("not_found", "That subscription was not found.", 404)
+        names = {lg.id: lg.display_name for lg in self._db.scalars(select(Login))}
+        rows = self._db.scalars(
+            select(SubscriptionEvent).where(SubscriptionEvent.subscription_id == sub.id)
+            .order_by(SubscriptionEvent.at.desc()))
+        return [
+            SubscriptionEventOut(
+                from_status=e.from_status, to_status=e.to_status,
+                by=names.get(e.by_login_id, "") if e.by_login_id else "System",
+                reason=e.reason, at=e.at)
+            for e in rows
+        ]
 
     def set_subscription_status(
         self,

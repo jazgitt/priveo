@@ -60,6 +60,29 @@ describe("portal shell", () => {
     expect(screen.getByText("Priveo Papa")).toBeInTheDocument();
   });
 
+  it("has a master Site selector; site pages are grouped apart from master data", async () => {
+    fetchMock.mockImplementation(async (path: string) => {
+      if (path === "/v1/web/me") return json(200, profile);
+      if (path.startsWith("/v1/admin/directory/societies")) {
+        return json(200, [{ id: "s1", name: "Lake View" }, { id: "s2", name: "Park" }]);
+      }
+      return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
+    });
+    localStorage.removeItem("priveo.site");
+    renderAt("/payments");
+    const site = await screen.findByLabelText("Site");
+    await screen.findByRole("option", { name: "Park" });
+    expect(site).toHaveValue("s1");
+    await userEvent.selectOptions(site, "s2");
+    expect(localStorage.getItem("priveo.site")).toBe("s2");
+    const nav = screen.getByRole("navigation", { name: "Admin areas" });
+    expect(within(nav).getByText("This site")).toBeInTheDocument();
+    expect(within(nav).getByText("All sites")).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Working slots" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Master data" })).toBeInTheDocument();
+    localStorage.removeItem("priveo.site");
+  });
+
   it("signs in and lands on the page that was asked for", async () => {
     fetchMock.mockImplementation(async (path: string) => {
       if (path === "/v1/web/me") return json(401, unauthorized);

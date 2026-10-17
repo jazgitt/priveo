@@ -4,7 +4,7 @@ import { api } from "../../api/client";
 
 export const SUB_STATUSES = ["Inactive", "Activating", "Active"] as const;
 
-/** Expected row of GET /v1/admin/subscriptions. That endpoint does not exist yet. */
+/** Expected row of GET /v1/admin/subscriptions. */
 export interface SubscriptionRow {
   subscription_id: string;
   vehicle_id: string;
@@ -18,7 +18,7 @@ export interface SubscriptionRow {
   renewal_date: string | null;
 }
 
-/** Expected row of GET /v1/admin/subscriptions/{id}/events (ADM-SUB-05). Not built yet. */
+/** Expected row of GET /v1/admin/subscriptions/{id}/events (ADM-SUB-05). */
 export interface SubscriptionEvent {
   from_status: string;
   to_status: string;
@@ -44,11 +44,11 @@ export interface Changes {
   renewal_date: string | null;
 }
 
-export function useSubscriptions(status: string) {
+export function useSubscriptions(status: string, societyId = "") {
   return useQuery({
-    queryKey: ["admin-subscriptions", status],
+    queryKey: ["admin-subscriptions", status, societyId],
     queryFn: () => api<SubscriptionRow[]>(
-      `/v1/admin/subscriptions${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+      `/v1/admin/subscriptions?${new URLSearchParams({ ...(status && { status }), ...(societyId && { society_id: societyId }) })}`),
     retry: false,
   });
 }

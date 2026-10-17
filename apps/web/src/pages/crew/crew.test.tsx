@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { withSite } from "../../site/testSite";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -34,7 +35,7 @@ function renderAt(path: string) {
       <ToastProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/crew" element={<CrewListPage />} />
+            <Route path="/crew" element={withSite(<CrewListPage />)} />
             <Route path="/crew/:id" element={<CrewDetailPage />} />
           </Routes>
         </MemoryRouter>
@@ -53,7 +54,7 @@ afterEach(() => {
 });
 
 describe("crew list", () => {
-  it("filters by role and search, and asks the API for a society", async () => {
+  it("filters by role and search, and asks the API for the chosen site", async () => {
     fetchMock.mockImplementation(async (p: string) => {
       if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
       if (p.startsWith("/v1/admin/crew")) return json(200, [raj, asha]);
@@ -67,7 +68,6 @@ describe("crew list", () => {
     await userEvent.selectOptions(screen.getByLabelText("Role"), "");
     await userEvent.type(screen.getByLabelText("Search"), "9000000001");
     expect(screen.queryByText("Asha Devi")).not.toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Society"), "s1");
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew?society_id=s1")).toBe(true));
   });

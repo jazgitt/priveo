@@ -239,11 +239,39 @@ def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingC
     return {c.id: c for c in rows}
 
 
+def solver_crews(day_windows: dict[uuid.UUID, list[tuple[int, int]]]) -> list[SolverCrew]:
+    """One solver "crew" for each working window, so a crew member with two
+    windows in a day (05:00-13:00 and 17:00-19:00) is two separate time
+    ranges that cannot overlap. The key is `<crew id>|<window number>`."""
+    return [
+        SolverCrew(f"{cid}|{i}", s, e)
+        for cid, wins in day_windows.items()
+        for i, (s, e) in enumerate(wins)
+    ]
+
+
+def crew_key_for(cid: uuid.UUID, start: int, windows: list[tuple[int, int]] | None) -> str:
+    """The solver key of the window a job that starts at `start` falls in."""
+    for i, (s, e) in enumerate(windows or []):
+        if s <= start < e:
+            return f"{cid}|{i}"
+    return f"{cid}|0"
+
+
+def base_crew(key: str) -> uuid.UUID:
+    return uuid.UUID(key.split("|", 1)[0])
+
+
+def fits_a_window(windows: list[tuple[int, int]] | None, start: int, minutes: int) -> bool:
+    return any(s <= start and start + minutes <= e for s, e in windows or [])
+
+
 def availability(
     db: Session, crew: dict[uuid.UUID, SchedulingCrew], days: list[date]
-) -> dict[date, dict[uuid.UUID, tuple[int, int]]]:
-    """For each date, the working window of every counted crew member: the
-    weekday's hours, then the date's exception (ADM-CRW-04, ADM-CRW-09)."""
+) -> dict[date, dict[uuid.UUID, list[tuple[int, int]]]]:
+    """For each date, the working windows of every counted crew member: the
+    weekday's hours (one or more slots), then the date's exception
+    (ADM-CRW-04, ADM-CRW-09, ADM-CRW-25)."""
     exceptions: dict[tuple[uuid.UUID, date], SchedulingCrewException] = {}
     if crew and days:
         for ex in db.execute(
@@ -253,19 +281,52 @@ def availability(
             )
         ).scalars():
             exceptions[(ex.crew_id, ex.on_date)] = ex
-    out: dict[date, dict[uuid.UUID, tuple[int, int]]] = {}
+    out: dict[date, dict[uuid.UUID, list[tuple[int, int]]]] = {}
     for day in days:
         out[day] = {}
         for cid, c in crew.items():
             ex = exceptions.get((cid, day))
-            base = rules.hours_window(c.working_hours, day.weekday(), c.start_minute, c.end_minute)
-            if base is None:
-                continue
-            window = rules.window_for(
-                c.role, base[0], base[1], ex.kind if ex else None, ex.from_minute if ex else None
-            )
-            if window is not None:
-                out[day][cid] = window
+            base = rules.hours_windows(
+                c.working_hours, day.weekday(), c.start_minute, c.end_minute)
+            windows = rules.windows_for(
+                c.role, base, ex.kind if ex else None, ex.from_minute if ex else None)
+            if windows:
+                out[day][cid] = windows
+    return out
+
+
+def _clock(m: int) -> str:
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def day_availability(
+    crew: dict[uuid.UUID, SchedulingCrew],
+    windows: dict[uuid.UUID, list[tuple[int, int]]],
+    exceptions: dict[uuid.UUID, SchedulingCrewException],
+    day: date,
+) -> list[dict]:
+    """For each crew member, the windows they can take work in on `day` and the
+    reason when that is less than the weekday's hours (ADM-SCH-32)."""
+    out = []
+    for cid, c in crew.items():
+        ex = exceptions.get(cid)
+        wins = windows.get(cid, [])
+        base = rules.hours_windows(c.working_hours, day.weekday(), c.start_minute, c.end_minute)
+        slots = ", ".join(f"{_clock(s)}-{_clock(e)}" for s, e in wins)
+        if c.role == "Trainee":
+            status = "Off"
+            reason = "Trainee: adds no capacity and follows the paired Member's jobs."
+        elif ex and ex.kind in ("Sick", "Leave"):
+            status, reason = "Off", f"{ex.kind} on this date."
+        elif not base:
+            status, reason = "Off", f"Day off: not a working day for {day.strftime('%A')}."
+        elif ex and ex.kind == "Late start" and wins != base:
+            status = "Partial"
+            reason = f"Late start from {_clock(ex.from_minute or 0)}. Works {slots or 'no slot'}."
+        else:
+            status, reason = "Working", f"Works {slots}."
+        out.append({"crew_id": cid, "status": status, "reason": reason,
+                    "windows": [{"start": s, "end": e} for s, e in wins]})
     return out
 
 
@@ -277,12 +338,33 @@ def capacity(
     days = daterange(start, end)
     crew = load_crew(db, society_id)
     windows = availability(db, crew, days)
+    day_exceptions: dict[date, dict[uuid.UUID, SchedulingCrewException]] = {d: {} for d in days}
+    if crew and days:
+        for ex in db.execute(
+            select(SchedulingCrewException).where(
+                SchedulingCrewException.crew_id.in_(list(crew)),
+                SchedulingCrewException.on_date.in_(days),
+            )
+        ).scalars():
+            day_exceptions[ex.on_date][ex.crew_id] = ex
+    names = {
+        row.id: row.display_name
+        for row in db.execute(
+            select(Login).where(Login.id.in_([c.login_id for c in crew.values()]))
+        ).scalars()
+    }
     demand_minutes = dict.fromkeys(days, 0)
+    lines: dict[date, dict[tuple[str, str], list[int]]] = {day: {} for day in days}
     durations = lookup.durations(db)
     for d in build_demand(db, society_id, days):
         if d.skipped:
             continue
-        demand_minutes[d.day] += durations.get(d.service, d.duration)
+        minutes = durations.get(d.service, d.duration)
+        demand_minutes[d.day] += minutes
+        source = "Add-on" if (d.addon_request_id or d.addon_booking_id) else "Subscription"
+        line = lines[d.day].setdefault((d.service, source), [0, 0])
+        line[0] += 1
+        line[1] += minutes
     scheduled = dict.fromkeys(days, 0)
     if schedule is not None:
         rows = db.execute(
@@ -297,10 +379,28 @@ def capacity(
                 scheduled[day] += minutes
     out = []
     for day in days:
-        cap = sum(e - s for s, e in windows[day].values())
+        cap = sum(e - s for wins in windows[day].values() for s, e in wins)
+        crew_lines = [
+            {
+                "name": names.get(crew[cid].login_id, ""),
+                "role": crew[cid].role,
+                "minutes": sum(e - s for s, e in wins),
+                "slots": ", ".join(f"{s // 60:02d}:{s % 60:02d}-{e // 60:02d}:{e % 60:02d}"
+                                   for s, e in wins),
+            }
+            for cid, wins in windows[day].items()
+            if wins
+        ]
+        crew_lines.sort(key=lambda c: c["name"])
         out.append(
             {
                 "date": day,
+                "crew": crew_lines,
+                "availability": day_availability(crew, windows[day], day_exceptions[day], day),
+                "demand": [
+                    {"service": svc_name, "source": source, "jobs": n, "minutes": m}
+                    for (svc_name, source), (n, m) in sorted(lines[day].items())
+                ],
                 "capacity_minutes": cap,
                 "demand_minutes": demand_minutes[day],
                 "scheduled_minutes": scheduled[day],
@@ -329,9 +429,8 @@ def release_unfit(db: Session, crew: SchedulingCrew, today: date) -> list[dict]:
     windows = availability(db, {crew.id: crew}, days) if crew.active else {}
     released = []
     for job, visit, vehicle in rows:
-        window = windows.get(visit.date, {}).get(crew.id)
         start = job.start_minute or 0
-        if window is not None and start >= window[0] and start + job.duration_minutes <= window[1]:
+        if fits_a_window(windows.get(visit.date, {}).get(crew.id), start, job.duration_minutes):
             continue
         job.crew_id, job.start_minute, job.late, job.manual = None, None, False, False
         job.note = "The crew member is not available."
@@ -561,7 +660,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 continue
             fixed = None
             if job.crew_id is not None:
-                fixed = (str(job.crew_id), job.start_minute or 0)
+                at = job.start_minute or 0
+                fixed = (crew_key_for(job.crew_id, at, day_windows.get(job.crew_id)), at)
             else:
                 free.append((job, visit))
             slots = service_windows(db, schedule.society_id, job.service, day)
@@ -583,13 +683,12 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             )
         if not solver_jobs:
             continue
-        crew_in = [SolverCrew(str(cid), s, e) for cid, (s, e) in day_windows.items()]
-        result = solve_day(crew_in, solver_jobs)
+        result = solve_day(solver_crews(day_windows), solver_jobs)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
                 crew_key, start = result.placed[key]
-                job.crew_id = uuid.UUID(crew_key)
+                job.crew_id = base_crew(crew_key)
                 job.start_minute = start
                 job.note = ""
             elif key in result.unplaced:
@@ -704,10 +803,10 @@ def move_job(
     member = crew.get(crew_id)
     if member is None:
         raise ApiError("crew_not_found", "That crew member is not in this society.", 404)
-    window = availability(db, {crew_id: member}, [visit.date])[visit.date].get(crew_id)
-    if window is None:
+    windows = availability(db, {crew_id: member}, [visit.date])[visit.date].get(crew_id)
+    if not windows:
         raise ApiError("crew_unavailable", "That crew member is not working that day.", 409)
-    if start_minute < window[0] or start_minute + job.duration_minutes > window[1]:
+    if not fits_a_window(windows, start_minute, job.duration_minutes):
         raise ApiError("outside_hours", "That time is outside the crew member's hours.", 409)
     if not any(
         s <= start_minute and start_minute + job.duration_minutes <= e
@@ -842,6 +941,7 @@ def _job_dict(
         "vehicle_id": vehicle.id,
         "registration": vehicle.registration or "",
         "vehicle": vehicle_label(vehicle),
+        "parking": "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p),
         "customer_name": (
             f"{customer.first_name} {customer.last_name}".strip() if customer else ""
         ),

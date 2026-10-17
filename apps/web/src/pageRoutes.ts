@@ -13,6 +13,7 @@ import { routes as feedback } from "./pages/feedback";
 import { routes as payments } from "./pages/payments";
 import { routes as reference } from "./pages/reference";
 import { routes as schedule } from "./pages/schedule";
+import { routes as slots } from "./pages/slots";
 import { routes as settings } from "./pages/settings";
 import { routes as subscriptions } from "./pages/subscriptions";
 
@@ -27,6 +28,7 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...complaints,
   ...feedback,
   ...reference,
+  ...slots,
   ...settings,
   ...audit,
   ...crew,

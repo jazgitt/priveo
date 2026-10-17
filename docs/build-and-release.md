@@ -124,3 +124,11 @@ Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `
 - Prototype content that needs data the API does not send yet: the car photo on the vehicle card and the vehicle variant.
 - Branch protection on `main`. GitHub does not allow it on a private repository on the free plan, so a failing check does not block a merge yet. **Open:** GitHub Pro, a public repository, or leave it.
 - An Android package build in `mobile-ci`. Only `mobile-integration` builds one, and it runs on request, so a native build error is not caught on the pull request.
+
+## Try the admin portal on localhost
+
+Run `tools\dev\portal-local.ps1` from the repo root. It starts the API on `http://localhost:8000` and the portal dev server on `http://localhost:5173/portal/`, which reloads on every edit. The database is the dev Neon database; no local copy is made. The first run pulls the Vercel environment into `services/api/.env.neon` (git-ignored, never printed). Use `-Refresh` after a Vercel variable changes. The script does not run migrations or the seed; the deploy does that. What you save while testing is real dev data.
+
+### Run the portal against a local copy of the dev database
+
+`tools\dev\portal-local.ps1 -Local` does the same as above but uses a local PostgreSQL (port 5433) holding a copy of the shared dev database, so nothing you do reaches Neon. The first run starts the local server and makes the copy with `tools\dev\local-db.ps1`; use `tools\dev\local-db.ps1 -Refresh` to copy again, and `-Stop` to stop the server. The copy lives in the git-ignored `.local-db` folder and holds real dev data. In this mode email, push and S3 are switched off. The copy is made by `services/api/scripts/copy_dev_db.py` (schema from the migrations, rows streamed from Neon), because Neon runs a newer PostgreSQL than the local `pg_dump`.

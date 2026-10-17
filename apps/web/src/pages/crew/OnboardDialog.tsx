@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useSite } from "../../site/SiteContext";
+import { useEffect, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { ApiErrorNote } from "../../components/ApiErrorNote";
 import { Button, Dialog, SelectField, TextField, useToast } from "../../components";
 import {
-  ROLES, defaultHours, hoursBody, useCreateCrew, useCrewList, useSocieties,
+  ROLES, defaultHours, hoursBody, useCreateCrew, useCrewList, useDefaultHours, useSocieties,
   type CrewPassword, type DayHours,
 } from "./api";
 import { HoursEditor } from "./HoursEditor";
@@ -19,11 +20,17 @@ export function OnboardDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateCrew();
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [societyId, setSocietyId] = useState("");
+  const [societyId, setSocietyId] = useState(useSite().id);
   const [role, setRole] = useState("Member");
   const [mate, setMate] = useState("");
   const [hours, setHours] = useState<DayHours[]>(defaultHours());
   const [issued, setIssued] = useState<CrewPassword | null>(null);
+
+  // The hours start as the society's working slots; the admin can still change them.
+  const defaults = useDefaultHours(societyId);
+  useEffect(() => {
+    if (defaults.data) setHours(defaults.data);
+  }, [defaults.data]);
 
   const members = (crew.data ?? []).filter(
     (c) => c.role === "Member" && c.active && c.society_id === societyId);
@@ -71,6 +78,9 @@ export function OnboardDialog({ onClose }: { onClose: () => void }) {
             <option value="">Choose</option>
             {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </SelectField>
+        )}
+        {societyId !== "" && (
+          <p className="muted">These hours come from the society's working slots. You can change them.</p>
         )}
         <HoursEditor value={hours} onChange={setHours} error={fe.working_hours} />
         <ApiErrorNote error={create.error} />

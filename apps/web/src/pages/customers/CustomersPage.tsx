@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSite } from "../../site/SiteContext";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
@@ -10,11 +11,12 @@ import { VehicleWizard } from "./VehicleWizard";
 
 export function CustomersPage() {
   const navigate = useNavigate();
+  const site = useSite();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
-  const list = useQuery({ queryKey: ["customers", search, page], queryFn: () => api<{ id: string; name: string; email: string; mobile: string }[]>(`/v1/admin/customers?q=${encodeURIComponent(search)}&limit=50&offset=${page * 50}`) });
-  return <><h1 className="page-title">Customers</h1><Card title="Find a customer">
+  const list = useQuery({ queryKey: ["customers", search, page, site.id], queryFn: () => api<{ id: string; name: string; email: string; mobile: string }[]>(`/v1/admin/customers?q=${encodeURIComponent(search)}${site.id ? `&society_id=${site.id}` : ""}&limit=50&offset=${page * 50}`) });
+  return <><h1 className="page-title">Customers</h1><Card title={`Find a customer${site.name ? `, ${site.name}` : ""}`}>
     <TextField label="Search by name, mobile, registration or society" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
     <Button onClick={() => setCreating(true)}>Create customer</Button><ApiErrorNote error={list.error} />
     {list.isPending && <p>Loading customersâ€¦</p>}

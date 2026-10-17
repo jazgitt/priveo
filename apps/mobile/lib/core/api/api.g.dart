@@ -982,6 +982,7 @@ class AdminJob {
     required this.vehicleId,
     required this.registration,
     required this.vehicle,
+    this.parking,
     required this.customerName,
     required this.service,
     required this.status,
@@ -1005,6 +1006,7 @@ class AdminJob {
   final String vehicleId;
   final String registration;
   final String vehicle;
+  final String? parking;
   final String customerName;
   final String service;
   final String status;
@@ -1028,6 +1030,7 @@ class AdminJob {
         vehicleId: j['vehicle_id'] as String,
         registration: j['registration'] as String,
         vehicle: j['vehicle'] as String,
+        parking: j['parking'] == null ? null : j['parking'] as String,
         customerName: j['customer_name'] as String,
         service: j['service'] as String,
         status: j['status'] as String,
@@ -1052,6 +1055,7 @@ class AdminJob {
         'vehicle_id': vehicleId,
         'registration': registration,
         'vehicle': vehicle,
+        'parking': parking,
         'customer_name': customerName,
         'service': service,
         'status': status,
@@ -2008,6 +2012,34 @@ class CouldNotComplete {
       };
 }
 
+class CrewCapacityLine {
+  const CrewCapacityLine({
+    required this.name,
+    required this.role,
+    required this.minutes,
+    required this.slots,
+  });
+
+  final String name;
+  final String role;
+  final int minutes;
+  final String slots;
+
+  factory CrewCapacityLine.fromJson(Map<String, dynamic> j) => CrewCapacityLine(
+        name: j['name'] as String,
+        role: j['role'] as String,
+        minutes: j['minutes'] as int,
+        slots: j['slots'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'role': role,
+        'minutes': minutes,
+        'slots': slots,
+      };
+}
+
 class CrewChange {
   const CrewChange({
     required this.crew,
@@ -2061,6 +2093,34 @@ class CrewDay {
         'done': done,
         'left': left,
         'jobs': [for (final x in jobs) x.toJson()],
+      };
+}
+
+class CrewDayAvailability {
+  const CrewDayAvailability({
+    required this.crewId,
+    required this.status,
+    required this.windows,
+    required this.reason,
+  });
+
+  final String crewId;
+  final String status;
+  final List<CrewDayWindow> windows;
+  final String reason;
+
+  factory CrewDayAvailability.fromJson(Map<String, dynamic> j) => CrewDayAvailability(
+        crewId: j['crew_id'] as String,
+        status: j['status'] as String,
+        windows: [for (final x in j['windows'] as List) CrewDayWindow.fromJson(x as Map<String, dynamic>)],
+        reason: j['reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'status': status,
+        'windows': [for (final x in windows) x.toJson()],
+        'reason': reason,
       };
 }
 
@@ -2133,6 +2193,26 @@ class CrewDayJob {
         'start_time': startTime,
         'end_time': endTime,
         'finish_by': finishBy,
+      };
+}
+
+class CrewDayWindow {
+  const CrewDayWindow({
+    required this.start,
+    required this.end,
+  });
+
+  final int start;
+  final int end;
+
+  factory CrewDayWindow.fromJson(Map<String, dynamic> j) => CrewDayWindow(
+        start: j['start'] as int,
+        end: j['end'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start': start,
+        'end': end,
       };
 }
 
@@ -3163,6 +3243,9 @@ class DayCapacity {
     required this.demandMinutes,
     required this.scheduledMinutes,
     required this.overCapacity,
+    this.crew,
+    this.demand,
+    this.availability,
   });
 
   final DateTime date;
@@ -3170,6 +3253,9 @@ class DayCapacity {
   final int demandMinutes;
   final int scheduledMinutes;
   final bool overCapacity;
+  final List<CrewCapacityLine>? crew;
+  final List<DemandLine>? demand;
+  final List<CrewDayAvailability>? availability;
 
   factory DayCapacity.fromJson(Map<String, dynamic> j) => DayCapacity(
         date: DateTime.parse(j['date'] as String),
@@ -3177,6 +3263,9 @@ class DayCapacity {
         demandMinutes: j['demand_minutes'] as int,
         scheduledMinutes: j['scheduled_minutes'] as int,
         overCapacity: j['over_capacity'] as bool,
+        crew: j['crew'] == null ? null : [for (final x in j['crew'] as List) CrewCapacityLine.fromJson(x as Map<String, dynamic>)],
+        demand: j['demand'] == null ? null : [for (final x in j['demand'] as List) DemandLine.fromJson(x as Map<String, dynamic>)],
+        availability: j['availability'] == null ? null : [for (final x in j['availability'] as List) CrewDayAvailability.fromJson(x as Map<String, dynamic>)],
       );
 
   Map<String, dynamic> toJson() => {
@@ -3185,6 +3274,9 @@ class DayCapacity {
         'demand_minutes': demandMinutes,
         'scheduled_minutes': scheduledMinutes,
         'over_capacity': overCapacity,
+        'crew': crew == null ? null : [for (final x in crew!) x.toJson()],
+        'demand': demand == null ? null : [for (final x in demand!) x.toJson()],
+        'availability': availability == null ? null : [for (final x in availability!) x.toJson()],
       };
 }
 
@@ -3194,18 +3286,21 @@ class DayHours {
     required this.working,
     this.start,
     this.end,
+    this.extraSlots,
   });
 
   final String day;
   final bool working;
   final String? start;
   final String? end;
+  final List<TimeSlot>? extraSlots;
 
   factory DayHours.fromJson(Map<String, dynamic> j) => DayHours(
         day: j['day'] as String,
         working: j['working'] as bool,
         start: j['start'] == null ? null : j['start'] as String,
         end: j['end'] == null ? null : j['end'] as String,
+        extraSlots: j['extra_slots'] == null ? null : [for (final x in j['extra_slots'] as List) TimeSlot.fromJson(x as Map<String, dynamic>)],
       );
 
   Map<String, dynamic> toJson() => {
@@ -3213,6 +3308,35 @@ class DayHours {
         'working': working,
         'start': start,
         'end': end,
+        'extra_slots': extraSlots == null ? null : [for (final x in extraSlots!) x.toJson()],
+      };
+}
+
+class DemandLine {
+  const DemandLine({
+    required this.service,
+    required this.source,
+    required this.jobs,
+    required this.minutes,
+  });
+
+  final String service;
+  final String source;
+  final int jobs;
+  final int minutes;
+
+  factory DemandLine.fromJson(Map<String, dynamic> j) => DemandLine(
+        service: j['service'] as String,
+        source: j['source'] as String,
+        jobs: j['jobs'] as int,
+        minutes: j['minutes'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'service': service,
+        'source': source,
+        'jobs': jobs,
+        'minutes': minutes,
       };
 }
 
@@ -4790,7 +4914,7 @@ class NewCrew {
   final String mobile;
   final String societyId;
   final String role;
-  final List<DayHours> workingHours;
+  final List<DayHours>? workingHours;
   final String? pairedMemberId;
 
   factory NewCrew.fromJson(Map<String, dynamic> j) => NewCrew(
@@ -4798,7 +4922,7 @@ class NewCrew {
         mobile: j['mobile'] as String,
         societyId: j['society_id'] as String,
         role: j['role'] as String,
-        workingHours: [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
+        workingHours: j['working_hours'] == null ? null : [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
         pairedMemberId: j['paired_member_id'] == null ? null : j['paired_member_id'] as String,
       );
 
@@ -4807,7 +4931,7 @@ class NewCrew {
         'mobile': mobile,
         'society_id': societyId,
         'role': role,
-        'working_hours': [for (final x in workingHours) x.toJson()],
+        'working_hours': workingHours == null ? null : [for (final x in workingHours!) x.toJson()],
         'paired_member_id': pairedMemberId,
       };
 }
@@ -6348,6 +6472,90 @@ class SubscriptionEdit {
       };
 }
 
+class SubscriptionEventOut {
+  const SubscriptionEventOut({
+    required this.fromStatus,
+    required this.toStatus,
+    required this.by,
+    required this.reason,
+    required this.at,
+  });
+
+  final String fromStatus;
+  final String toStatus;
+  final String by;
+  final String reason;
+  final String at;
+
+  factory SubscriptionEventOut.fromJson(Map<String, dynamic> j) => SubscriptionEventOut(
+        fromStatus: j['from_status'] as String,
+        toStatus: j['to_status'] as String,
+        by: j['by'] as String,
+        reason: j['reason'] as String,
+        at: j['at'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'from_status': fromStatus,
+        'to_status': toStatus,
+        'by': by,
+        'reason': reason,
+        'at': at,
+      };
+}
+
+class SubscriptionRowOut {
+  const SubscriptionRowOut({
+    required this.subscriptionId,
+    required this.vehicleId,
+    required this.customerName,
+    required this.flat,
+    required this.society,
+    required this.vehicle,
+    required this.planName,
+    required this.status,
+    required this.firstServiceDate,
+    required this.renewalDate,
+  });
+
+  final String subscriptionId;
+  final String vehicleId;
+  final String customerName;
+  final String flat;
+  final String society;
+  final String vehicle;
+  final String? planName;
+  final String status;
+  final DateTime? firstServiceDate;
+  final DateTime? renewalDate;
+
+  factory SubscriptionRowOut.fromJson(Map<String, dynamic> j) => SubscriptionRowOut(
+        subscriptionId: j['subscription_id'] as String,
+        vehicleId: j['vehicle_id'] as String,
+        customerName: j['customer_name'] as String,
+        flat: j['flat'] as String,
+        society: j['society'] as String,
+        vehicle: j['vehicle'] as String,
+        planName: j['plan_name'] == null ? null : j['plan_name'] as String,
+        status: j['status'] as String,
+        firstServiceDate: j['first_service_date'] == null ? null : DateTime.parse(j['first_service_date'] as String),
+        renewalDate: j['renewal_date'] == null ? null : DateTime.parse(j['renewal_date'] as String),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'subscription_id': subscriptionId,
+        'vehicle_id': vehicleId,
+        'customer_name': customerName,
+        'flat': flat,
+        'society': society,
+        'vehicle': vehicle,
+        'plan_name': planName,
+        'status': status,
+        'first_service_date': firstServiceDate == null ? null : _date(firstServiceDate!),
+        'renewal_date': renewalDate == null ? null : _date(renewalDate!),
+      };
+}
+
 class SubscriptionStatusIn {
   const SubscriptionStatusIn({
     required this.status,
@@ -6649,6 +6857,26 @@ class TeamMember {
         'name': name,
         'role': role,
         'jobs': [for (final x in jobs) x.toJson()],
+      };
+}
+
+class TimeSlot {
+  const TimeSlot({
+    required this.start,
+    required this.end,
+  });
+
+  final String start;
+  final String end;
+
+  factory TimeSlot.fromJson(Map<String, dynamic> j) => TimeSlot(
+        start: j['start'] as String,
+        end: j['end'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start': start,
+        'end': end,
       };
 }
 

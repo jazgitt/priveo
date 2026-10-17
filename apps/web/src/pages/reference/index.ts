@@ -10,6 +10,6 @@ export const routes: RouteObject[] = [
 
 export const nav: NavItem = {
   path: "/reference",
-  label: "Reference data",
-  about: "Checklists, proof minimums and plans.",
+  label: "Master data",
+  about: "Societies, base plans, services, checklists and the add-on catalogue.",
 };

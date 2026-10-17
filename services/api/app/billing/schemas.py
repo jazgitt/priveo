@@ -122,6 +122,34 @@ class SubscriptionStatusIn(BaseModel):
     first_service_date: dt.date | None = None
 
 
+class SubscriptionRowOut(BaseModel):
+    """One row of the admin Subscriptions list (ADM-SUB-01 to ADM-SUB-05)."""
+
+    subscription_id: str
+    vehicle_id: str
+    customer_name: str
+    flat: str
+    society: str
+    vehicle: str
+    plan_name: str | None
+    # Active | Activating | Paused | Inactive. Paused is an Active subscription
+    # with a pause running today.
+    status: str
+    first_service_date: dt.date | None
+    # The end of the current billing cycle.
+    renewal_date: dt.date | None
+
+
+class SubscriptionEventOut(BaseModel):
+    """One change of a subscription's status (ADM-SUB-05)."""
+
+    from_status: str
+    to_status: str
+    by: str
+    reason: str
+    at: dt.datetime
+
+
 class SubscriptionStatusOut(BaseModel):
     subscription_id: str
     status: str

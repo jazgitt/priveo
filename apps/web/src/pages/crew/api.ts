@@ -6,7 +6,11 @@ export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 export const ROLES = ["Manager", "Member", "Trainee"] as const;
 export const EXCEPTION_KINDS = ["Sick", "Leave", "Late start"] as const;
 
-export interface DayHours { day: string; working: boolean; start: string; end: string }
+export interface Slot { start: string; end: string }
+/** One weekday. `start` and `end` are the first slot; `extra_slots` are more the same day. */
+export interface DayHours {
+  day: string; working: boolean; start: string; end: string; extra_slots?: Slot[];
+}
 export interface CrewException { id: string; date: string; kind: string; start: string }
 
 /** CrewOut. No customer data is part of a crew record. */
@@ -63,7 +67,9 @@ export function defaultHours(): DayHours[] {
 
 /** The API wants an empty start and end on a day off. */
 export function hoursBody(hours: DayHours[]): DayHours[] {
-  return hours.map((h) => (h.working ? h : { day: h.day, working: false, start: "", end: "" }));
+  return hours.map((h) => (h.working
+    ? { ...h, extra_slots: h.extra_slots ?? [] }
+    : { day: h.day, working: false, start: "", end: "", extra_slots: [] }));
 }
 
 const base = "/v1/admin/crew";
@@ -72,6 +78,15 @@ export function useSocieties() {
   return useQuery({
     queryKey: ["directory-societies"],
     queryFn: () => api<Society[]>("/v1/admin/directory/societies"),
+  });
+}
+
+/** The hours a new crew member starts with in a society: its working slots (ADM-CRW-25). */
+export function useDefaultHours(societyId: string) {
+  return useQuery({
+    queryKey: ["crew", "default-hours", societyId],
+    queryFn: () => api<DayHours[]>(`${base}/default-hours?society_id=${encodeURIComponent(societyId)}`),
+    enabled: societyId !== "",
   });
 }
 
