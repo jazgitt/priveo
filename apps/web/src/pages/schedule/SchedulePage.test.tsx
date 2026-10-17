@@ -68,6 +68,8 @@ interface Opts {
   freezeReply?: () => Response;
   unfreezeReply?: () => Response;
   boardReply?: () => Response;
+  /** More boards by schedule ID, for the days of other schedules (ADM-SCH-35). */
+  boards?: Record<string, ReturnType<typeof board>>;
 }
 
 function server(o: Opts = {}) {
@@ -76,8 +78,15 @@ function server(o: Opts = {}) {
     if (url.startsWith("/v1/admin/directory/settings")) return json(200, []);
     if (url.startsWith("/v1/admin/scheduling/cutoff-requests")) return json(200, []);
     if (url.startsWith("/v1/admin/crew")) return json(200, crew);
+    const main = () => board(o.status ?? "Draft", o.jobs ?? [job()]);
+    if (url.startsWith("/v1/admin/scheduling/schedules?")) {
+      if (o.boardReply && o.boardReply().status === 404) return json(200, []);
+      return json(200, [main().schedule, ...Object.values(o.boards ?? {}).map((b) => b.schedule)]);
+    }
     if (url.startsWith("/v1/admin/scheduling/board")) {
-      return o.boardReply ? o.boardReply() : json(200, board(o.status ?? "Draft", o.jobs ?? [job()]));
+      const id = new URL(url, "http://x").searchParams.get("schedule_id");
+      if (id && o.boards?.[id]) return json(200, o.boards[id]);
+      return o.boardReply ? o.boardReply() : json(200, main());
     }
     if (url.startsWith("/v1/admin/scheduling/needs-scheduling")) {
       return json(200, { jobs: [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null,
@@ -112,8 +121,8 @@ function callsTo(suffix: string) {
 }
 
 /** The page for the week from 08-Nov-26, as a finished run links to it. */
-async function openBoard() {
-  wrap(<SchedulePage />, "/schedule?start=2026-11-08");
+async function openBoard(days = "2026-11-08") {
+  wrap(<SchedulePage />, `/schedule?start=2026-11-08&days=${days}`);
 }
 
 beforeEach(() => vi.stubGlobal("fetch", fetchMock));
@@ -141,7 +150,7 @@ describe("schedule board", () => {
     expect(card2).toHaveClass("late");
     expect(card2).toHaveClass("manual");
     expect(card2).toHaveAttribute("title", expect.stringContaining("Misses the cutoff."));
-    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(screen.getAllByText("Draft").length).toBeGreaterThan(0);
     expect(screen.getByText("No crew member is free.")).toBeInTheDocument();
     expect(screen.getByText("Unscheduled on this day (1)")).toBeInTheDocument();
   });
@@ -275,6 +284,41 @@ describe("job status on the board (ADM-SCH-34)", () => {
     expect(card("KA01AA0001")).toHaveClass("dim");
     await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
     expect(card("KA01AA0001")).not.toHaveClass("dim");
+  });
+});
+
+describe("every day of every schedule on the board (ADM-SCH-35)", () => {
+  function nextDay() {
+    const b = board("Frozen", [job({ id: "j7", date: "2026-11-15", registration: "KA07AA0007", status: "Completed",
+                                     schedule_id: "sch2" })]);
+    b.schedule = { ...b.schedule, id: "sch2", start_date: "2026-11-15", end_date: "2026-11-15" };
+    b.days = [{ ...b.days[0], date: "2026-11-15" }];
+    return b;
+  }
+
+  it("lists the days of all schedules and shows each chosen day as its own chart", async () => {
+    server({ boards: { sch2: nextDay() } });
+    await openBoard();
+    const days = await screen.findByRole("group", { name: "Days" });
+    // Seven days of the weekly draft, then the one-day frozen schedule.
+    expect(within(days).getAllByRole("button")).toHaveLength(8);
+    const later = within(days).getByRole("button", { name: /15-Nov-26/ });
+    expect(later).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(1);
+
+    await userEvent.click(later);
+    expect(later).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() => expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(2));
+    expect(screen.getByRole("region", { name: /15-Nov-26/ })).toHaveTextContent("KA07AA0007");
+    // One count for all chosen days, and a freeze row for each schedule.
+    expect(screen.getByRole("button", { name: "All jobs 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Freeze" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unfreeze" })).toBeInTheDocument();
+
+    // Clicking a chosen day takes it off again.
+    await userEvent.click(within(days).getByRole("button", { name: /08-Nov-26/ }));
+    await waitFor(() => expect(screen.getAllByRole("group", { name: "Day plan" })).toHaveLength(1));
+    expect(screen.queryByRole("button", { name: "Freeze" })).not.toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,5 @@
 // Types and calls for the scheduler (services/api/app/scheduling/schemas.py).
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { api, ApiError } from "../../api/client";
 
@@ -134,6 +134,40 @@ export function useBoard(societyId: string, startDate: string) {
       }
     },
   });
+}
+
+/** The society's schedules ending on or after `from`, oldest first (ADM-SCH-35). */
+export function useSchedules(societyId: string, from: string) {
+  return useQuery({
+    queryKey: ["schedules", societyId, from],
+    enabled: Boolean(societyId),
+    queryFn: () => {
+      const q = new URLSearchParams({ society_id: societyId, date_from: from });
+      return api<ScheduleOut[]>(`/v1/admin/scheduling/schedules?${q}`);
+    },
+  });
+}
+
+/** The boards of these schedules, in the order given. */
+export function useBoards(scheduleIds: string[]) {
+  return useQueries({
+    queries: scheduleIds.map((id) => ({
+      queryKey: ["board", "id", id],
+      queryFn: () => api<Board>(`/v1/admin/scheduling/board?${new URLSearchParams({ schedule_id: id })}`),
+    })),
+  });
+}
+
+/** The dates from `start` to `end`, both included. */
+export function datesOf(start: string, end: string): string[] {
+  const out: string[] = [];
+  const d = new Date(`${start.slice(0, 10)}T00:00:00Z`);
+  const last = end.slice(0, 10);
+  while (d.toISOString().slice(0, 10) <= last && out.length < 400) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
 }
 
 /** An add-on waiting for a scheduling period to be run. */

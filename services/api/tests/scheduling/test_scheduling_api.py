@@ -389,3 +389,23 @@ def test_a_changed_service_duration_is_used_for_new_jobs(api, admin, world, run_
         durations = set(db.scalars(select(Job.duration_minutes).where(
             Job.service == "Cleaning-External")))
     assert durations == {35}
+
+
+def test_the_schedules_of_a_society_list_oldest_first_from_a_date(api, admin, world, run_week):
+    # ADM-SCH-35: the Board offers the days of every schedule, not just one.
+    world.add_crew()
+    world.add_vehicle()
+    world.db.commit()
+    first = run_week(days=1)
+    second = run_week(days=1, start_date="2026-10-19")
+
+    r = api.get(f"{BASE}/schedules", headers=admin, params={"society_id": str(world.society.id)})
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    assert [s["id"] for s in rows] == [first["schedule_id"], second["schedule_id"]]
+    assert rows[0]["start_date"] == "2026-10-18" and rows[0]["status"] == "Draft"
+    assert rows[1]["end_date"] == "2026-10-19" and rows[1]["freeze_deadline"]
+
+    r = api.get(f"{BASE}/schedules", headers=admin,
+                params={"society_id": str(world.society.id), "date_from": "2026-10-19"})
+    assert [s["id"] for s in r.json()] == [second["schedule_id"]]

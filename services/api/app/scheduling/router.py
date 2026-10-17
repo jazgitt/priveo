@@ -96,6 +96,17 @@ def run(
     return {"schedules": [RunResult(**vars(s)) for s in done]}
 
 
+@admin.get("/schedules", response_model=list[ScheduleOut])
+def schedules(
+    society_id: uuid.UUID,
+    date_from: date | None = None,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """The society's schedules that end on or after `date_from`, oldest first (ADM-SCH-35)."""
+    return service.schedules_of(db, society_id, date_from)
+
+
 @admin.get("/board", response_model=Board)
 def board(
     schedule_id: uuid.UUID | None = None,

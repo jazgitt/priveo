@@ -975,8 +975,33 @@ def job_rows(db: Session, *where) -> list[dict]:
     return [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
 
 
-def board(db: Session, schedule: Schedule) -> dict:
+def schedule_summary(db: Session, schedule: Schedule) -> dict:
+    """A schedule's dates, status and freeze deadline (ADM-SCH-11, ADM-SCH-16)."""
     society = db.get(Society, schedule.society_id)
+    return {
+        "id": schedule.id,
+        "society_id": schedule.society_id,
+        "society_name": society.name if society else "",
+        "start_date": schedule.start_date,
+        "end_date": schedule.end_date,
+        "status": schedule.status,
+        "frozen_at": schedule.frozen_at,
+        "freeze_deadline": rules.freeze_deadline(
+            schedule.start_date, lookup.setting(db, "schedule.freeze_hour")
+        ),
+    }
+
+
+def schedules_of(db: Session, society_id: uuid.UUID, date_from: date | None) -> list[dict]:
+    """The schedules of a society that end on or after `date_from`, oldest
+    first, so the Board can offer all their days (ADM-SCH-35)."""
+    q = select(Schedule).where(Schedule.society_id == society_id)
+    if date_from is not None:
+        q = q.where(Schedule.end_date >= date_from)
+    return [schedule_summary(db, s) for s in db.scalars(q.order_by(Schedule.start_date))]
+
+
+def board(db: Session, schedule: Schedule) -> dict:
     crew = load_crew(db, schedule.society_id)
     names = {
         row.id: row.display_name
@@ -985,18 +1010,7 @@ def board(db: Session, schedule: Schedule) -> dict:
         ).scalars()
     }
     return {
-        "schedule": {
-            "id": schedule.id,
-            "society_id": schedule.society_id,
-            "society_name": society.name if society else "",
-            "start_date": schedule.start_date,
-            "end_date": schedule.end_date,
-            "status": schedule.status,
-            "frozen_at": schedule.frozen_at,
-            "freeze_deadline": rules.freeze_deadline(
-                schedule.start_date, lookup.setting(db, "schedule.freeze_hour")
-            ),
-        },
+        "schedule": schedule_summary(db, schedule),
         "days": capacity(db, schedule.society_id, schedule.start_date, schedule.end_date, schedule),
         "crew": [
             {
