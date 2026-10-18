@@ -310,6 +310,7 @@ class AddonChangeIn {
 
 class AddonOffer {
   const AddonOffer({
+    this.code,
     required this.service,
     required this.name,
     required this.description,
@@ -318,6 +319,7 @@ class AddonOffer {
     required this.durationMinutes,
   });
 
+  final String? code;
   final String service;
   final String name;
   final String description;
@@ -326,6 +328,7 @@ class AddonOffer {
   final int durationMinutes;
 
   factory AddonOffer.fromJson(Map<String, dynamic> j) => AddonOffer(
+        code: j['code'] == null ? null : j['code'] as String,
         service: j['service'] as String,
         name: j['name'] as String,
         description: j['description'] as String,
@@ -335,6 +338,7 @@ class AddonOffer {
       );
 
   Map<String, dynamic> toJson() => {
+        'code': code,
         'service': service,
         'name': name,
         'description': description,
@@ -348,6 +352,7 @@ class AddonOut {
   const AddonOut({
     required this.id,
     required this.service,
+    this.addonName,
     required this.vehicleId,
     required this.standalone,
     required this.date,
@@ -368,6 +373,7 @@ class AddonOut {
 
   final String id;
   final String service;
+  final String? addonName;
   final String? vehicleId;
   final bool standalone;
   final DateTime date;
@@ -388,6 +394,7 @@ class AddonOut {
   factory AddonOut.fromJson(Map<String, dynamic> j) => AddonOut(
         id: j['id'] as String,
         service: j['service'] as String,
+        addonName: j['addon_name'] == null ? null : j['addon_name'] as String,
         vehicleId: j['vehicle_id'] == null ? null : j['vehicle_id'] as String,
         standalone: j['standalone'] as bool,
         date: DateTime.parse(j['date'] as String),
@@ -409,6 +416,7 @@ class AddonOut {
   Map<String, dynamic> toJson() => {
         'id': id,
         'service': service,
+        'addon_name': addonName,
         'vehicle_id': vehicleId,
         'standalone': standalone,
         'date': _date(date),
@@ -431,22 +439,26 @@ class AddonOut {
 class AddonRequestIn {
   const AddonRequestIn({
     this.service,
+    this.addon,
     required this.date,
     required this.finishBy,
   });
 
   final String? service;
+  final String? addon;
   final DateTime date;
   final String finishBy;
 
   factory AddonRequestIn.fromJson(Map<String, dynamic> j) => AddonRequestIn(
         service: j['service'] == null ? null : j['service'] as String,
+        addon: j['addon'] == null ? null : j['addon'] as String,
         date: DateTime.parse(j['date'] as String),
         finishBy: j['finish_by'] as String,
       );
 
   Map<String, dynamic> toJson() => {
         'service': service,
+        'addon': addon,
         'date': _date(date),
         'finish_by': finishBy,
       };
@@ -475,18 +487,21 @@ class AddonsOut {
 class AdminAddonCreate {
   const AdminAddonCreate({
     this.service,
+    this.addon,
     required this.date,
     required this.finishBy,
     required this.vehicleId,
   });
 
   final String? service;
+  final String? addon;
   final DateTime date;
   final String finishBy;
   final String vehicleId;
 
   factory AdminAddonCreate.fromJson(Map<String, dynamic> j) => AdminAddonCreate(
         service: j['service'] == null ? null : j['service'] as String,
+        addon: j['addon'] == null ? null : j['addon'] as String,
         date: DateTime.parse(j['date'] as String),
         finishBy: j['finish_by'] as String,
         vehicleId: j['vehicle_id'] as String,
@@ -494,6 +509,7 @@ class AdminAddonCreate {
 
   Map<String, dynamic> toJson() => {
         'service': service,
+        'addon': addon,
         'date': _date(date),
         'finish_by': finishBy,
         'vehicle_id': vehicleId,
@@ -536,6 +552,7 @@ class AdminAddonOut {
   const AdminAddonOut({
     required this.id,
     required this.service,
+    this.addonName,
     required this.vehicleId,
     required this.standalone,
     required this.date,
@@ -562,6 +579,7 @@ class AdminAddonOut {
 
   final String id;
   final String service;
+  final String? addonName;
   final String? vehicleId;
   final bool standalone;
   final DateTime date;
@@ -588,6 +606,7 @@ class AdminAddonOut {
   factory AdminAddonOut.fromJson(Map<String, dynamic> j) => AdminAddonOut(
         id: j['id'] as String,
         service: j['service'] as String,
+        addonName: j['addon_name'] == null ? null : j['addon_name'] as String,
         vehicleId: j['vehicle_id'] == null ? null : j['vehicle_id'] as String,
         standalone: j['standalone'] as bool,
         date: DateTime.parse(j['date'] as String),
@@ -615,6 +634,7 @@ class AdminAddonOut {
   Map<String, dynamic> toJson() => {
         'id': id,
         'service': service,
+        'addon_name': addonName,
         'vehicle_id': vehicleId,
         'standalone': standalone,
         'date': _date(date),
@@ -1611,6 +1631,7 @@ class ChangesOut {
     required this.pauses,
     required this.cutoffChanges,
     required this.renewalDate,
+    required this.planEndsOn,
   });
 
   final String vehicleId;
@@ -1618,6 +1639,7 @@ class ChangesOut {
   final List<ChangeOut> pauses;
   final List<ChangeOut> cutoffChanges;
   final DateTime? renewalDate;
+  final DateTime? planEndsOn;
 
   factory ChangesOut.fromJson(Map<String, dynamic> j) => ChangesOut(
         vehicleId: j['vehicle_id'] as String,
@@ -1625,6 +1647,7 @@ class ChangesOut {
         pauses: [for (final x in j['pauses'] as List) ChangeOut.fromJson(x as Map<String, dynamic>)],
         cutoffChanges: [for (final x in j['cutoff_changes'] as List) ChangeOut.fromJson(x as Map<String, dynamic>)],
         renewalDate: j['renewal_date'] == null ? null : DateTime.parse(j['renewal_date'] as String),
+        planEndsOn: j['plan_ends_on'] == null ? null : DateTime.parse(j['plan_ends_on'] as String),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1633,6 +1656,7 @@ class ChangesOut {
         'pauses': [for (final x in pauses) x.toJson()],
         'cutoff_changes': [for (final x in cutoffChanges) x.toJson()],
         'renewal_date': renewalDate == null ? null : _date(renewalDate!),
+        'plan_ends_on': planEndsOn == null ? null : _date(planEndsOn!),
       };
 }
 
@@ -6395,6 +6419,7 @@ class SkipVisit {
 class StandaloneIn {
   const StandaloneIn({
     this.service,
+    this.addon,
     required this.vehicleId,
     required this.date,
     required this.finishBy,
@@ -6403,6 +6428,7 @@ class StandaloneIn {
   });
 
   final String? service;
+  final String? addon;
   final String vehicleId;
   final DateTime date;
   final String finishBy;
@@ -6411,6 +6437,7 @@ class StandaloneIn {
 
   factory StandaloneIn.fromJson(Map<String, dynamic> j) => StandaloneIn(
         service: j['service'] == null ? null : j['service'] as String,
+        addon: j['addon'] == null ? null : j['addon'] as String,
         vehicleId: j['vehicle_id'] as String,
         date: DateTime.parse(j['date'] as String),
         finishBy: j['finish_by'] as String,
@@ -6420,6 +6447,7 @@ class StandaloneIn {
 
   Map<String, dynamic> toJson() => {
         'service': service,
+        'addon': addon,
         'vehicle_id': vehicleId,
         'date': _date(date),
         'finish_by': finishBy,

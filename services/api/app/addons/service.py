@@ -71,6 +71,7 @@ class AddonService:
         if all_rows:
             return [
                 AddonOffer(
+                    code=r.code,
                     service=r.service,
                     name=r.name,
                     description=r.description,
@@ -79,7 +80,7 @@ class AddonService:
                     duration_minutes=r.duration_minutes,
                 )
                 for r in all_rows
-                if r.active and r.service == "Deep Spa"
+                if r.active
             ]
         price, list_price = lookup.addon_price(self._db)
         return [
@@ -93,12 +94,15 @@ class AddonService:
             )
         ]
 
-    def _price(self, service: str) -> int:
+    def _offer(self, addon: str, service: str) -> AddonOffer:
+        """The add-on being bought: by its catalogue ID, or else the first one for
+        the service (older apps send only the service)."""
         for o in self.offers():
-            if o.service == service:
-                return o.price_rupees
+            if (o.code == addon) if addon else (o.service == service):
+                return o
         raise ApiError(
-            "validation_failed", "That add-on is not offered.", 422, {"service": "unknown"}
+            "validation_failed", "That add-on is not offered.", 422,
+            {"addon" if addon else "service": "unknown"},
         )
 
     def _payment_status(self, b: AddonBooking) -> str | None:
@@ -121,6 +125,7 @@ class AddonService:
         return AddonOut(
             id=str(b.id),
             service=b.service,
+            addon_name=b.addon_name or b.service,
             vehicle_id=str(b.vehicle_id) if b.vehicle_id else None,
             standalone=b.standalone,
             date=b.proposed_date,
@@ -166,6 +171,7 @@ class AddonService:
         finish_by: str,
         key: str | None,
         admin: bool = False,
+        addon: str = "",
     ) -> AddonOut:
         again = self._by_key(customer, key)
         if again is not None:
@@ -187,16 +193,19 @@ class AddonService:
                 409,
                 {"date": "inside_pause"},
             )
-        price = self._price(body_service)
+        offer = self._offer(addon, body_service)
+        price = offer.price_rupees
         finish = _time(finish_by)
         require_open(day, now, bound=not admin, hour=self._hour)
         payment = self._billing.open_addon_payment(
-            customer, vehicle, f"{body_service} on {day.strftime('%d-%b-%y')}", price
+            customer, vehicle, f"{offer.name} on {day.strftime('%d-%b-%y')}", price
         )
         b = AddonBooking(
             customer_id=customer.id,
             vehicle_id=vehicle.id,
-            service=body_service,
+            service=offer.service,
+            addon_code=offer.code,
+            addon_name=offer.name,
             proposed_date=day,
             finish_by=finish,
             price_rupees=price,
@@ -218,19 +227,22 @@ class AddonService:
         again = self._by_key(customer, key)
         if again is not None:
             return self._out(again)
-        price = self._price(body.service)
+        offer = self._offer(body.addon, body.service)
+        price = offer.price_rupees
         finish = _time(body.finish_by)
         _, vehicle, sub = owned_vehicle(self._db, login_id, body.vehicle_id)
         if sub is not None:
             raise ApiError("has_subscription", "Book Spa through the active-subscription add-on flow.", 409)
         require_open(body.date, self._now(), bound=not admin, hour=self._hour)
         payment = self._billing.open_addon_payment(
-            customer, vehicle, f"{body.service} on {body.date:%d-%b-%y}", price)
+            customer, vehicle, f"{offer.name} on {body.date:%d-%b-%y}", price)
         mobile = (body.contact_mobile or customer.mobile).strip()
         b = AddonBooking(
             customer_id=customer.id,
             vehicle_id=vehicle.id,
-            service=body.service,
+            service=offer.service,
+            addon_code=offer.code,
+            addon_name=offer.name,
             standalone=True,
             proposed_date=body.date,
             finish_by=finish,

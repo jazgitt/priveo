@@ -70,6 +70,8 @@ class FakeMoneyRepository implements MoneyRepository {
     payment('p1'),
     payment('p0', status: 'Received', invoice: 'PRV102643210001', due: d(8)),
   ];
+  /// The last day the plan covers (PAUSE-08); null leaves the dates unlimited.
+  DateTime? planEndsOn;
   AddonsDto addonList = const AddonsDto(offers: [
     AddonOfferDto(
         service: 'Deep Spa',
@@ -87,7 +89,7 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<ChangesDto> changes(String v) async =>
-      ChangesDto(skips: const [], pauses: pauses);
+      ChangesDto(skips: const [], pauses: pauses, planEndsOn: planEndsOn);
 
   @override
   Future<List<UpcomingDayDto>> upcoming(String v) async {
@@ -189,11 +191,12 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<AddonRequestDto> requestAddon(
-      String v, DateTime date, String finishBy) async {
-    calls.add('addon ${date.day} $finishBy');
+      String v, DateTime date, String finishBy,
+      {String addon = '', String service = 'Deep Spa'}) async {
+    calls.add('addon ${date.day} $finishBy${addon.isEmpty ? '' : ' $addon'}');
     return AddonRequestDto(
         id: 'a1',
-        service: 'Deep Spa',
+        service: service,
         standalone: false,
         date: date,
         finishBy: finishBy,
@@ -210,8 +213,10 @@ class FakeMoneyRepository implements MoneyRepository {
       required DateTime date,
       required String finishBy,
       required String mobile,
-      required String notes}) async {
-    calls.add('standalone $mobile');
+      required String notes,
+      String addon = '',
+      String service = 'Deep Spa'}) async {
+    calls.add('standalone $mobile${addon.isEmpty ? '' : ' $addon'}');
     return AddonRequestDto(
         id: 'a2',
         service: 'Deep Spa',

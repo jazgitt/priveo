@@ -154,3 +154,47 @@ def test_a_changed_add_on_price_is_the_one_offered(money):
     offers = money.client.get("/v1/customer/addons", headers=money.customer).json()["offers"]
     assert offers[0]["price_rupees"] == 1777
     assert request(money).json()["price_rupees"] == 1777
+
+
+def _second_add_on(m, service="Cleaning-Internal", price=499):
+    from app.directory.models import AddonCatalogueItem
+    from app.directory.seed import seed_defaults
+    seed_defaults(m.db)
+    m.db.add(AddonCatalogueItem(
+        code="ADN-0002", name="Interior shine", description="Dash and seats.",
+        service=service, price_rupees=price, duration_minutes=20, sort_order=5))
+    m.db.commit()
+
+
+def test_every_active_add_on_is_offered_whatever_its_service(money):
+    m = money
+    _second_add_on(m)
+    offers = m.client.get("/v1/customer/addons", headers=m.customer).json()["offers"]
+    assert [(o["code"], o["name"], o["service"]) for o in offers] == [
+        ("ADN-0001", "Deep Spa", "Deep Spa"),
+        ("ADN-0002", "Interior shine", "Cleaning-Internal")]
+
+
+def test_a_customer_buys_the_add_on_chosen_and_it_keeps_its_name_and_price(money):
+    m = money
+    _second_add_on(m)
+    r = request(m, addon="ADN-0002", service="Deep Spa")  # the ID decides
+    assert r.status_code == 201, r.text
+    a = r.json()
+    assert (a["service"], a["addon_name"], a["price_rupees"]) == (
+        "Cleaning-Internal", "Interior shine", 499)
+    pay = m.db.scalar(select(Payment))
+    assert pay.amount_rupees == 499
+    spa = request(m, addon="ADN-0001", date="2026-10-21").json()
+    assert (spa["service"], spa["addon_name"]) == ("Deep Spa", "Deep Spa")
+    # An unknown add-on is refused; an old app that sends only the service gets Deep Spa.
+    assert request(m, addon="ADN-9999").status_code == 422
+    old = request(m, date="2026-10-22").json()
+    assert (old["service"], old["addon_name"]) == ("Deep Spa", "Deep Spa")
+
+
+def test_two_add_ons_for_one_service_are_told_apart_by_their_id(money):
+    m = money
+    _second_add_on(m, service="Deep Spa", price=999)
+    assert request(m, addon="ADN-0002").json()["price_rupees"] == 999
+    assert request(m, addon="ADN-0001", date="2026-10-21").json()["price_rupees"] != 999

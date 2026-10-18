@@ -50,6 +50,9 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
   bool _busy = false;
   String? _error;
 
+  /// The add-on the customer opened, by catalogue ID, when there is more than one.
+  String? _chosen;
+
   Future<void> _confirm(AddonOfferDto offer) async {
     final date = _date;
     if (date == null) {
@@ -61,8 +64,10 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
       final repo = ref.read(moneyRepositoryProvider);
       final r = widget.standalone
           ? await repo.requestStandalone(vehicleId: widget.vehicleId, date: date,
-              finishBy: _finishBy, mobile: '', notes: '')
-          : await repo.requestAddon(widget.vehicleId, date, _finishBy);
+              finishBy: _finishBy, mobile: '', notes: '',
+              addon: offer.code, service: offer.service)
+          : await repo.requestAddon(widget.vehicleId, date, _finishBy,
+              addon: offer.code, service: offer.service);
       ref.invalidate(addonsProvider);
       if (!mounted) return;
       if (r.paymentId != null) {
@@ -180,11 +185,51 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
               child: Text(AppLocalizations.of(context).addonNoOffers),
             );
           }
-          final offer = a.offers.first;
+          // Several add-ons: the customer first chooses one. With one, it opens at once.
+          final many = a.offers.length > 1;
+          final picked = a.offers.where((o) => o.code == _chosen).firstOrNull;
+          if (many && picked == null) {
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                VehicleHeader(widget.vehicleId),
+                const SectionLabel(MoneyStrings.addonChoose),
+                const SizedBox(height: 8),
+                for (final o in a.offers)
+                  _OfferCard(o, onTap: () => setState(() {
+                        _chosen = o.code;
+                        _error = null;
+                      })),
+                const SizedBox(height: 24),
+                const SectionLabel(MoneyStrings.addonRequests),
+                const SizedBox(height: 8),
+                if (a.requests.isEmpty) const Text(MoneyStrings.addonNone),
+                for (final r in a.requests.where(
+                  (r) => r.vehicleId == null || r.vehicleId == widget.vehicleId,
+                ))
+                  _RequestTile(
+                    r,
+                    onCancel: () => _cancel(r),
+                    onChange: () => _change(r),
+                    onSupport: _support,
+                  ),
+              ],
+            );
+          }
+          final offer = picked ?? a.offers.first;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               VehicleHeader(widget.vehicleId),
+              if (many)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _chosen = null),
+                    icon: const Icon(Symbols.arrow_back_rounded),
+                    label: const Text(MoneyStrings.addonChooseAnother),
+                  ),
+                ),
               _SpaHero(offer),
               const SizedBox(height: 16),
               OutlinedButton(
@@ -262,6 +307,62 @@ class _AddonScreenState extends ConsumerState<AddonScreen> {
   }
 }
 
+/// One add-on in the list the customer chooses from: its name, a line about it,
+/// and its price.
+class _OfferCard extends StatelessWidget {
+  const _OfferCard(this.offer, {required this.onTap});
+
+  final AddonOfferDto offer;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = context.brand;
+    final text = Theme.of(context).textTheme;
+    final pitch = offer.description
+        .split('\n')
+        .map((l) => l.trim())
+        .firstWhere((l) => l.isNotEmpty, orElse: () => '');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Semantics(
+        button: true,
+        label: '${offer.name}, ${formatRupees(offer.priceRupees)}',
+        child: ExcludeSemantics(
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: b.card2,
+                border: Border.all(color: b.spa.withValues(alpha: 0.5)),
+              ),
+              child: Row(children: [
+                Icon(Symbols.star_rounded, color: b.spa, size: 28, fill: 1),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(offer.name, style: text.titleMedium),
+                    if (pitch.isNotEmpty)
+                      Text(pitch, style: text.bodyMedium?.copyWith(color: b.mute),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(MoneyStrings.addonDuration(offer.durationMinutes),
+                        style: text.bodySmall?.copyWith(color: b.mute)),
+                  ]),
+                ),
+                const SizedBox(width: 12),
+                Text(formatRupees(offer.priceRupees), style: text.titleMedium),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RequestTile extends StatelessWidget {
   const _RequestTile(
     this.r, {
@@ -285,7 +386,7 @@ class _RequestTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${r.service}, ${formatDate(r.date)}',
+                  '${r.title}, ${formatDate(r.date)}',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 Text('Finish by ${formatClock(r.finishBy)}'),

@@ -57,18 +57,20 @@ class SectionLabel extends StatelessWidget {
   );
 }
 
-/// Gold primary button, 56 px high.
+/// Gold primary button, 56 px high unless a [height] is given.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
     required this.label,
     required this.onPressed,
     this.busy = false,
+    this.height = SizeTokens.buttonHeight,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool busy;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +96,7 @@ class PrimaryButton extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: Ink(
-              height: SizeTokens.buttonHeight,
+              height: height,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: ButtonTokens.primaryGradient,

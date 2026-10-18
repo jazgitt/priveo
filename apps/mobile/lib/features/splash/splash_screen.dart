@@ -287,9 +287,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
 const double _span = ShowroomPainter.span;
 
-/// Room for the two welcome buttons (56 + 6 + 48), which the progress bar shares.
+/// The height of the Get started button: slimmer than the usual 56 so it sits
+/// lightly under the tagline.
+const double _ctaHeight = 44;
+
+/// Room for the two welcome buttons (44 + 6 + 48), which the progress bar shares.
 /// It grows if large text needs more.
-const double _bottomZone = 112;
+const double _bottomZone = _ctaHeight + 6 + 48;
 
 /// 0 to 1 for an animation that starts [delay] seconds into the design's
 /// timeline and lasts [dur] seconds.
@@ -399,7 +403,7 @@ class _Welcome extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: math.max(24, width * .1)),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            PrimaryButton(label: text.getStarted, onPressed: onGetStarted),
+            PrimaryButton(label: text.getStarted, onPressed: onGetStarted, height: _ctaHeight),
             const SizedBox(height: 6),
             TextButton(
               onPressed: onLogIn,

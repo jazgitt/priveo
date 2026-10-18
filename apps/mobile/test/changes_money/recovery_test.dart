@@ -17,7 +17,7 @@ class RecoveryMoney extends FakeMoneyRepository {
   @override Future<AddonsDto> addons()async{guard();return super.addons();}
   @override Future<PaymentDetailDto> payNext(String v)async{guard();return super.payNext(v);}
   @override Future<PaymentDetailDto> markPaid(String id)async{guard();return super.markPaid(id);}
-  @override Future<AddonRequestDto> requestAddon(String v,DateTime date,String finish)async{guard();return super.requestAddon(v,date,finish);}
+  @override Future<AddonRequestDto> requestAddon(String v,DateTime date,String finish,{String addon='',String service='Deep Spa'})async{guard();return super.requestAddon(v,date,finish,addon:addon,service:service);}
   @override Future<AddonRequestDto> cancelAddon(String id)async{guard();return super.cancelAddon(id);}
 }
 void main(){

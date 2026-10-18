@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.changes.access import parse_id
-from app.changes.cycle import cycle_window, paused_days, shift_days
+from app.changes.cycle import cycle_window, paused_days, plan_expires_on, shift_days
 from app.changes.gateway import ScheduleChangeGateway, ServiceDay
 from app.changes.models import ScheduleChange
 from app.changes.projection import day_services
@@ -101,7 +101,12 @@ class ChangesService:
             pauses=[self._out(c) for c in self._active(vehicle.id, "pause", today)],
             cutoff_changes=[self._out(c) for c in self._active(vehicle.id, "cutoff", today)],
             renewal_date=renewal_for(self._db, vehicle, sub, today),
+            plan_ends_on=self._plan_end(sub, today),
         )
+
+    def _plan_end(self, sub: Subscription | None, today: date) -> date | None:
+        """The last day the current plan covers, or None with no subscription."""
+        return None if sub is None else plan_expires_on(self._db, sub, today)
 
     def upcoming(
         self, vehicle: Vehicle, count: int = 14, sub: Subscription | None = None
@@ -117,9 +122,12 @@ class ChangesService:
             d.day: d
             for d in self._gateway.upcoming_days(vehicle.id, today + timedelta(days=1), count)
         }
+        plan_end = self._plan_end(sub, today)
         days = []
         for i in range(1, count + 1):
             day = today + timedelta(days=i)
+            if plan_end is not None and day > plan_end:
+                break  # nothing past the end of the current plan can be changed
             known = planned.get(day)
             services = list(known.services) if known else day_services(sub, day)
             if not services:
@@ -148,6 +156,23 @@ class ChangesService:
         if sub is None or sub.status != "Active":
             raise ApiError(
                 "subscription_not_active", "Skip and pause are for an active subscription.", 409
+            )
+
+    def _require_within_plan(
+        self, actor: Actor, sub: Subscription | None, day: date, field: str
+    ) -> None:
+        """A customer changes only dates the current plan covers (SKIP-09,
+        PAUSE-08). The admin is not held to it."""
+        if not actor.bound:
+            return
+        end = self._plan_end(sub, today_of(self._now()))
+        if end is not None and day > end:
+            raise ApiError(
+                "beyond_plan",
+                f"Your current plan ends on {end.strftime('%d-%b-%y')}. "
+                "Choose a date up to then.",
+                422,
+                {field: "beyond_plan"},
             )
 
     def _existing_by_key(self, actor: Actor, key: str | None) -> ScheduleChange | None:
@@ -207,6 +232,7 @@ class ChangesService:
             return self._out(again)
         self._require_active(sub)
         require_open(day, now, bound=actor.bound, hour=self._hour)  # SKIP-02
+        self._require_within_plan(actor, sub, day, "date")  # SKIP-09
         if self._inside_pause(vehicle.id, day):
             raise ApiError(
                 "inside_pause",
@@ -300,6 +326,7 @@ class ChangesService:
                 {"to_date": "before_start"},
             )
         require_open(start, now, bound=actor.bound, hour=self._hour)  # PAUSE-07
+        self._require_within_plan(actor, sub, end, "to_date")  # PAUSE-08
         wanted = {start + timedelta(days=i) for i in range((end - start).days + 1)}
         if wanted & paused_days(self._db, vehicle.id):
             raise ApiError(

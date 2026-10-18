@@ -80,14 +80,24 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
     });
   }
 
-  Future<void> _pickDate(bool from) async {
+  Future<void> _pickDate(bool from, DateTime? planEnd) async {
     final now = DateTime.now();
     final first = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    // Only dates the current plan covers (PAUSE-08).
+    final last = planEnd == null
+        ? first.add(const Duration(days: 365))
+        : DateTime(planEnd.year, planEnd.month, planEnd.day);
+    if (last.isBefore(first)) {
+      setState(() => _pauseError = MoneyStrings.planEndsNoDays);
+      return;
+    }
+    final start = from ? first : (_from ?? first);
+    final initial = (from ? _from : _to) ?? _from ?? first;
     final chosen = await showDatePicker(
       context: context,
-      initialDate: (from ? _from : _to) ?? _from ?? first,
-      firstDate: from ? first : (_from ?? first),
-      lastDate: first.add(const Duration(days: 365)),
+      initialDate: initial.isAfter(last) ? last : initial,
+      firstDate: start.isAfter(last) ? last : start,
+      lastDate: last,
     );
     if (chosen == null) return;
     setState(() {
@@ -233,19 +243,25 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () => _pickDate(true),
+              onPressed: () => _pickDate(true, changes?.planEndsOn),
               child: Text('${MoneyStrings.pauseFrom}: ${show(_from)}'),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton(
-              onPressed: () => _pickDate(false),
+              onPressed: () => _pickDate(false, changes?.planEndsOn),
               child: Text('${MoneyStrings.pauseTo}: ${show(_to)}'),
             ),
           ),
         ],
       ),
+      if (changes?.planEndsOn != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(MoneyStrings.planEndsNote(formatDate(changes!.planEndsOn!)),
+              style: Theme.of(context).textTheme.bodySmall),
+        ),
       if (_pauseError != null)
         Padding(
           padding: const EdgeInsets.only(top: 8),

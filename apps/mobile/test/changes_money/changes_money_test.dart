@@ -209,6 +209,23 @@ void main() {
       expect(repo.calls, isEmpty);
     });
 
+    testWidgets('the pause screen says the plan limit (PAUSE-08)', (tester) async {
+      final repo = FakeMoneyRepository()..planEndsOn = d(25);
+      await openAt(tester, pausePath(vehicle), money: repo);
+      expect(find.text('You can pause only up to the end of your current plan, 25-Oct-26.'),
+          findsOneWidget);
+    });
+
+    testWidgets('no pause dates are offered once the plan is over', (tester) async {
+      final repo = FakeMoneyRepository()..planEndsOn = DateTime(2000, 1, 1);
+      await openAt(tester, pausePath(vehicle), money: repo);
+      await tester.tap(find.textContaining('From'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your plan ends tomorrow or earlier, so there is nothing left to pause.'),
+          findsOneWidget);
+      expect(find.byType(DatePickerDialog), findsNothing);
+    });
+
     testWidgets('a running pause can be ended', (tester) async {
       final repo = FakeMoneyRepository()
         ..pauses = [
@@ -310,6 +327,42 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Choose a date'), findsOneWidget);
       expect(repo.calls, isEmpty);
+    });
+
+    testWidgets('with several add-ons the customer chooses one, then books it', (tester) async {
+      final repo = FakeMoneyRepository();
+      repo.addonList = AddonsDto(offers: const [
+        AddonOfferDto(code: 'ADN-0001', service: 'Deep Spa', name: 'Deep Spa',
+            description: 'A two-hour deep clean.', priceRupees: 1500, listPriceRupees: null,
+            durationMinutes: 120),
+        AddonOfferDto(code: 'ADN-0002', service: 'Cleaning-Internal', name: 'Interior shine',
+            description: 'Dash and seats.', priceRupees: 499, listPriceRupees: null,
+            durationMinutes: 20),
+      ], requests: [
+        AddonRequestDto(
+            id: 'a1', service: 'Cleaning-Internal', addonName: 'Interior shine',
+            standalone: false, date: d(20), finishBy: '12:30', status: 'Requested',
+            priceRupees: 499, paymentId: 'p-addon', paymentStatus: 'Due', canChange: true),
+      ]);
+      await openAt(tester, addonsPath(vehicle), money: repo);
+      // Both are listed, with their prices, and no booking form yet.
+      expect(find.text('Choose an add-on'.toUpperCase()), findsOneWidget);
+      expect(find.text('Deep Spa'), findsWidgets);
+      expect(find.text('Interior shine'), findsOneWidget);
+      expect(find.text('₹499'), findsOneWidget);
+      expect(find.text('Confirm & pay'), findsNothing);
+      // An earlier request is named for what was bought.
+      expect(find.text('Interior shine, 20-Oct-26'), findsOneWidget);
+      await tester.tap(find.text('Interior shine').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm & pay'), findsOneWidget);
+      expect(find.text('Choose a different add-on'), findsOneWidget);
+      await tester.tap(find.text('Confirm & pay'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a date'), findsOneWidget);
+      await tester.tap(find.text('Choose a different add-on'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm & pay'), findsNothing);
     });
 
     testWidgets('earlier requests show their status and can be cancelled', (tester) async {

@@ -45,11 +45,15 @@ class ChangesDto {
     required this.skips,
     required this.pauses,
     this.renewalDate,
+    this.planEndsOn,
   });
 
   final List<ChangeDto> skips;
   final List<ChangeDto> pauses;
   final DateTime? renewalDate;
+
+  /// The last day the current plan covers: skip and pause stop here.
+  final DateTime? planEndsOn;
 
   factory ChangesDto.fromJson(Map<String, dynamic> j) => ChangesDto(
     skips: [
@@ -61,6 +65,7 @@ class ChangesDto {
         ChangeDto.fromJson(s as Map<String, dynamic>),
     ],
     renewalDate: _dateOrNull(j['renewal_date']),
+    planEndsOn: _dateOrNull(j['plan_ends_on']),
   );
 }
 
@@ -288,6 +293,7 @@ class InvoiceDto {
 
 class AddonOfferDto {
   const AddonOfferDto({
+    this.code = '',
     required this.service,
     required this.name,
     required this.description,
@@ -296,6 +302,8 @@ class AddonOfferDto {
     required this.durationMinutes,
   });
 
+  /// The catalogue ID (ADN-0002) that tells add-ons apart; empty for the built-in one.
+  final String code;
   final String service;
   final String name;
   final String description;
@@ -304,6 +312,7 @@ class AddonOfferDto {
   final int durationMinutes;
 
   factory AddonOfferDto.fromJson(Map<String, dynamic> j) => AddonOfferDto(
+    code: j['code'] as String? ?? '',
     service: j['service'] as String,
     name: j['name'] as String,
     description: j['description'] as String,
@@ -317,6 +326,7 @@ class AddonRequestDto {
   const AddonRequestDto({
     required this.id,
     required this.service,
+    this.addonName = '',
     required this.standalone,
     required this.date,
     required this.finishBy,
@@ -336,9 +346,15 @@ class AddonRequestDto {
 
   final String id;
   final String service;
+
+  /// What the customer bought, as the catalogue named it.
+  final String addonName;
   final bool standalone;
   final DateTime date;
   final String finishBy;
+
+  /// What to call it on screen.
+  String get title => addonName.isEmpty ? service : addonName;
 
   /// Requested, Scheduled, Completed, Cancelled or Missed (ADD-07).
   final String status;
@@ -353,6 +369,7 @@ class AddonRequestDto {
   factory AddonRequestDto.fromJson(Map<String, dynamic> j) => AddonRequestDto(
     id: j['id'] as String,
     service: j['service'] as String,
+    addonName: j['addon_name'] as String? ?? '',
     standalone: j['standalone'] as bool,
     date: _date(j['date']),
     finishBy: j['finish_by'] as String,

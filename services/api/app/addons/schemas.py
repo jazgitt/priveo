@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 
 class AddonOffer(BaseModel):
+    # The catalogue ID (ADN-0001); empty for the built-in Deep Spa fallback.
+    code: str = ""
     service: str
     name: str
     description: str
@@ -14,6 +16,8 @@ class AddonOffer(BaseModel):
 
 class AddonRequestIn(BaseModel):
     service: str = "Deep Spa"
+    # The add-on bought, by its catalogue ID. When given it decides the service.
+    addon: str = ""
     date: dt.date
     # HH:MM in 30-minute steps (ADD-04).
     finish_by: str
@@ -28,6 +32,7 @@ class StandaloneIn(BaseModel):
     """Owner decision: an owned no-subscription vehicle uses the Spa rules."""
 
     service: str = "Deep Spa"
+    addon: str = ""
     vehicle_id: str
     date: dt.date
     finish_by: str
@@ -38,6 +43,7 @@ class StandaloneIn(BaseModel):
 class AddonOut(BaseModel):
     id: str
     service: str
+    addon_name: str = ""
     vehicle_id: str | None
     standalone: bool
     date: dt.date

@@ -63,6 +63,7 @@
     "finish_by": "wire-value"
   },
   "AddonOffer": {
+    "code": "wire-value",
     "service": "wire-value",
     "name": "wire-value",
     "description": "wire-value",
@@ -73,6 +74,7 @@
   "AddonOut": {
     "id": "wire-value",
     "service": "wire-value",
+    "addon_name": "wire-value",
     "vehicle_id": "wire-value",
     "standalone": true,
     "date": "2026-10-20",
@@ -92,12 +94,14 @@
   },
   "AddonRequestIn": {
     "service": "Deep Spa",
+    "addon": "wire-value",
     "date": "2026-10-20",
     "finish_by": "wire-value"
   },
   "AddonsOut": {
     "offers": [
       {
+        "code": "wire-value",
         "service": "wire-value",
         "name": "wire-value",
         "description": "wire-value",
@@ -110,6 +114,7 @@
       {
         "id": "wire-value",
         "service": "wire-value",
+        "addon_name": "wire-value",
         "vehicle_id": "wire-value",
         "standalone": true,
         "date": "2026-10-20",
@@ -131,6 +136,7 @@
   },
   "AdminAddonCreate": {
     "service": "Deep Spa",
+    "addon": "wire-value",
     "date": "2026-10-20",
     "finish_by": "wire-value",
     "vehicle_id": "wire-value"
@@ -145,6 +151,7 @@
   "AdminAddonOut": {
     "id": "wire-value",
     "service": "wire-value",
+    "addon_name": "wire-value",
     "vehicle_id": "wire-value",
     "standalone": true,
     "date": "2026-10-20",
@@ -634,7 +641,8 @@
         "created_at": "2026-10-20T07:30:00+00:00"
       }
     ],
-    "renewal_date": "2026-10-20"
+    "renewal_date": "2026-10-20",
+    "plan_ends_on": "2026-10-20"
   },
   "CheckInAdmin": {
     "id": "11111111-1111-1111-1111-111111111111",
@@ -2433,6 +2441,7 @@
   },
   "StandaloneIn": {
     "service": "Deep Spa",
+    "addon": "wire-value",
     "vehicle_id": "wire-value",
     "date": "2026-10-20",
     "finish_by": "wire-value",

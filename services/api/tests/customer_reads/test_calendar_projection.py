@@ -83,6 +83,8 @@ def test_no_projection_for_the_past_or_without_an_active_subscription(api, asha,
 
 
 def test_skip_pause_and_cutoff_change_on_projected_days(api, asha, clock):
+    # Inside the plan that ends 12-Dec-26 (a customer cannot change dates past it).
+    clock["now"] = datetime(2026, 12, 1, 10, 0, tzinfo=IST)
     vid = asha["vehicles"][0]
     h = asha["headers"]
     r = api.post(f"/v1/customer/vehicles/{vid}/skips", json={"date": "2026-12-05"}, headers=h)
@@ -115,11 +117,13 @@ def test_renewal_dates_move_with_a_pause(api, asha, clock):
     vid = asha["vehicles"][0]
     # First service 14-Sep-26: renewals on 14-Oct-26, 13-Nov-26, 13-Dec-26.
     assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-13"]
-    api.post(
+    clock["now"] = datetime(2026, 12, 1, 10, 0, tzinfo=IST)  # the plan then ends 12-Dec-26
+    r = api.post(
         f"/v1/customer/vehicles/{vid}/pauses",
-        json={"from_date": "2026-12-20", "to_date": "2026-12-21"},
+        json={"from_date": "2026-12-08", "to_date": "2026-12-09"},
         headers=asha["headers"],
     )
+    assert r.status_code == 201, r.text
     # Two paused days: the renewals before the pause move two days on.
     assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-15"]
 
