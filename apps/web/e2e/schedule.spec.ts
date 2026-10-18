@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addDays, optionValue, scenario, signInAsAdmin } from "./helpers";
+import { addDays, scenario, signInAsAdmin } from "./helpers";
 
 // R06 has a Draft schedule (as_of + 1 day) and a Frozen one (as_of + 3 days).
 test.describe("Schedule (scenario R06)", () => {
