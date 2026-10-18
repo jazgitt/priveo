@@ -1,3 +1,6 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 import app.models  # Registers every table, so the links between them resolve.
@@ -19,6 +22,8 @@ from app.customers import administration
 from app.customers import router as customers
 from app.home import router as home
 from app.identity import router as identity
+from app.notifications.cron import get_cron_settings
+from app.platform.config import check_startup, get_settings
 from app.platform.errors import install_error_handlers
 from app.platform.middleware import RequestIdMiddleware
 from app.scheduling import administration as scheduling_admin
@@ -26,8 +31,15 @@ from app.system import router as system
 from app.visits import operations
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    check_startup(get_settings(), cron_secret=get_cron_settings().cron_secret)
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Priveo API", version="0.1.0", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Priveo API", version="0.1.0", docs_url=None, redoc_url=None,
+                  lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.include_router(system.router)

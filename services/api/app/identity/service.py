@@ -1,12 +1,13 @@
+import math
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer
@@ -25,11 +26,18 @@ from app.platform.errors import ApiError
 
 MAX_WRONG_ATTEMPTS = 5  # CRW-ACC-07, AUTH-13
 CUSTOMER_BLOCK = timedelta(minutes=15)  # AUTH-13
+# Crew and admin: each round of wrong attempts within a day blocks for longer
+# (CRW-ACC-07). A block ends by itself, so nobody can lock a login for good.
+STAFF_BLOCKS = (timedelta(minutes=15), timedelta(hours=1), timedelta(hours=24))
+STAFF_BLOCK_MEMORY = timedelta(hours=24)
 ADMIN_MOBILE_IDLE = timedelta(hours=24)  # ADM-ACC-13
+WEB_IDLE = timedelta(minutes=60)  # ADM-ACC-12
 # A browser session has no refresh token, so its one access token lasts a
-# working day. The server session behind it can still be ended at any time.
+# working day. The server session behind it ends after WEB_IDLE without use.
 WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
+# Often enough that the web idle time is close to 60 minutes.
+_WEB_TOUCH_EVERY = timedelta(minutes=1)
 CODE_LIFETIME = timedelta(minutes=30)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
 MAX_WRONG_CODES = 5  # AUTH-07
@@ -127,6 +135,13 @@ def _signed_out() -> ApiError:
     return ApiError("unauthorized", "Please sign in again.", 401)
 
 
+def _blocked(until: datetime, now: datetime) -> ApiError:
+    minutes = max(1, math.ceil((until - now).total_seconds() / 60))
+    wait = (f"{minutes} minutes" if minutes < 120
+            else f"{math.ceil(minutes / 60)} hours")
+    return ApiError("too_many_attempts", f"Too many wrong attempts. Try again in {wait}.", 429)
+
+
 class AuthService:
     def __init__(self, settings: Settings, db: Session,
                  email: EmailSender | None = None):
@@ -163,6 +178,20 @@ class AuthService:
         self._db.commit()
         return self._result(login, session, refresh_token)
 
+    def _block_length(self, login: Login, now: datetime) -> timedelta:
+        """15 minutes for a customer (AUTH-13). For crew and admin it grows with
+        each block in the last day, counted since the password was last set
+        (CRW-ACC-07)."""
+        if login.role == "customer":
+            return CUSTOMER_BLOCK
+        since = now - STAFF_BLOCK_MEMORY
+        if login.password_changed_at and login.password_changed_at > since:
+            since = login.password_changed_at
+        earlier = self._db.scalar(select(func.count()).select_from(AuthEvent).where(
+            AuthEvent.login_id == login.id, AuthEvent.kind == "locked",
+            AuthEvent.at > since)) or 0
+        return STAFF_BLOCKS[min(earlier, len(STAFF_BLOCKS) - 1)]
+
     def login(self, login_id: str, password: str, channel: str = "mobile") -> LoginResult:
         key = normalise(login_id)
         login = self._db.scalar(
@@ -172,12 +201,12 @@ class AuthService:
             raise _invalid()
 
         now = utcnow()
+        # A lock set before blocks became timed stays until the admin lifts it.
         if login.locked:
             raise ApiError("account_locked",
                            "This login is locked. Ask the admin to reset your password.", 403)
         if login.blocked_until and login.blocked_until > now:
-            raise ApiError("too_many_attempts",
-                           "Too many wrong attempts. Try again in 15 minutes.", 429)
+            raise _blocked(login.blocked_until, now)
 
         if not _password_matches(login.password_hash, password):
             login.failed_attempts += 1
@@ -185,15 +214,8 @@ class AuthService:
             error = _invalid()
             if login.failed_attempts >= MAX_WRONG_ATTEMPTS:
                 login.failed_attempts = 0
-                if login.role == "customer":
-                    login.blocked_until = now + CUSTOMER_BLOCK
-                    error = ApiError("too_many_attempts",
-                                     "Too many wrong attempts. Try again in 15 minutes.", 429)
-                else:
-                    login.locked = True
-                    error = ApiError(
-                        "account_locked",
-                        "This login is locked. Ask the admin to reset your password.", 403)
+                login.blocked_until = now + self._block_length(login, now)
+                error = _blocked(login.blocked_until, now)
                 self._event(login, "locked")
             self._db.commit()
             raise error
@@ -352,7 +374,9 @@ class AuthService:
         if login is None or not login.active:
             raise _signed_out()
         idle = utcnow() - session.last_used_at
-        if login.role == "admin" and session.channel == "mobile" and idle > ADMIN_MOBILE_IDLE:
+        if ((session.channel == "web" and idle > WEB_IDLE)
+                or (login.role == "admin" and session.channel == "mobile"
+                    and idle > ADMIN_MOBILE_IDLE)):
             self._end(session, "idle")
             self._db.commit()
             raise _signed_out()
@@ -375,7 +399,8 @@ class AuthService:
             raise _signed_out()
         session, login = self._live(self._db.get(AuthSession, claims.session_id))
         now = utcnow()
-        if now - session.last_used_at > _TOUCH_EVERY:
+        touch_every = _WEB_TOUCH_EVERY if session.channel == "web" else _TOUCH_EVERY
+        if now - session.last_used_at > touch_every:
             session.last_used_at = now
             self._db.commit()
         return User(login.id, login.role, login.display_name, session.id)

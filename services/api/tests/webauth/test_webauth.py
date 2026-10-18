@@ -1,7 +1,12 @@
+from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app import webauth
+from app.identity.models import AuthSession
+from app.platform.db import utcnow
 from app.webauth import portal
 from tests.conftest import LOGIN_IDS, PASSWORDS
 
@@ -98,13 +103,49 @@ def test_logout_without_a_session_just_clears(web):
     assert web.post(LOGOUT).status_code == 204
 
 
-def test_five_wrong_passwords_lock_the_admin(web):
+def test_five_wrong_passwords_block_the_admin(web):
     for _ in range(4):
         assert sign_in(web, "nope").status_code == 401
     r = sign_in(web, "nope")
-    assert r.status_code == 403 and r.json()["code"] == "account_locked"
-    assert sign_in(web).status_code == 403  # even the right password
+    assert r.status_code == 429 and r.json()["code"] == "too_many_attempts"
+    assert sign_in(web).status_code == 429  # even the right password
     assert "set-cookie" not in sign_in(web).headers
+
+
+def _age_sessions(db, by):
+    for session in db.scalars(select(AuthSession)):
+        session.last_used_at = utcnow() - by
+    db.commit()
+
+
+def test_a_portal_session_ends_after_60_idle_minutes(web, db):
+    """ADM-ACC-12."""
+    sign_in(web)
+    _age_sessions(db, timedelta(minutes=59))
+    assert web.get(ME).status_code == 200
+    _age_sessions(db, timedelta(minutes=61))
+    assert web.get(ME).status_code == 401
+    db.expire_all()
+    assert db.scalar(select(AuthSession.ended_reason)) == "idle"
+
+
+def test_portal_use_keeps_the_session_alive(web, db):
+    sign_in(web)
+    _age_sessions(db, timedelta(minutes=2))
+    assert web.get(ME).status_code == 200
+    db.expire_all()
+    since_use = utcnow() - db.scalar(select(AuthSession.last_used_at))
+    assert since_use < timedelta(minutes=1)
+
+
+def test_the_idle_limit_is_for_the_portal_only(client, db):
+    r = client.post("/v1/auth/login", json={
+        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"]})
+    token = r.json()["access_token"]
+    _age_sessions(db, timedelta(hours=2))
+    # The admin's phone keeps its 24-hour limit (ADM-ACC-13).
+    assert client.get(ADMIN_HOME,
+                      headers={"Authorization": f"Bearer {token}"}).status_code == 200
 
 
 def test_crew_and_customers_cannot_sign_in_to_the_portal(web):

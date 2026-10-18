@@ -1,6 +1,8 @@
 name: api-deploy
 
-# Deploys the API to `dev`, then runs the smoke test.
+# Deploys the API to `dev`, then runs the smoke test. This workflow is for dev
+# only: it seeds the demo logins. Production is a separate deployment with its
+# own workflow, its own database and ENVIRONMENT=prod (see docs/build-and-release.md).
 # The host is chosen by the repository variable DEPLOY_PROVIDER:
 #   vercel (default)  ->  job `deploy-vercel`
 #   aws               ->  job `deploy-aws` (ECR + ECS)
@@ -59,6 +61,7 @@ jobs:
           MOCK_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
           MOCK_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
           SEED_DEMO_LOGINS: "true"
+          ENVIRONMENT: dev
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "::error::The DATABASE_URL secret is not set."

@@ -33,7 +33,11 @@ Each role has one look, whatever the phone's light or dark setting (owner decisi
 
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
 
-Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and unlocks the login. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
+Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and ends any block on the login. Five wrong passwords block the admin for 15 minutes, then 1 hour, then 24 hours (CRW-ACC-07). To get in sooner on `dev`, run the `api-deploy` workflow by hand (Actions, Run workflow): it runs the seed. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
+
+## Dev and production are separate deployments
+
+`dev` is the test server. It runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`), and is the only one the `api-deploy` workflow touches. Production is customer-facing: its own host, its own database, its own secrets and its own deploy workflow, with `ENVIRONMENT=prod`. In prod the server refuses to start if `SEED_DEMO_LOGINS`, `MOCK_*`, or `EMAIL_REDIRECT_TO` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins. The production workflow does not exist yet; it is created with the AWS move.
 
 ## 2. The pipelines
 
@@ -85,7 +89,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 1. Sign in once: `npx vercel login`.
 2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Singapore region (`sin1`) for the `dev` API, the same region as the Neon database, so each query is a short hop. Production on AWS runs in Mumbai with the database beside it.
 3. Add the database: `npx vercel integration add neon --name priveo-dev`. The first time, accept Neon's terms in the browser when asked. It adds `DATABASE_URL` to the project. Copy that value into the GitHub secret `DATABASE_URL`.
-4. Add the runtime environment variable `TOKEN_SECRET` (a long random value) to the project (Production). Use `npx vercel env add TOKEN_SECRET production`.
+4. Add the runtime environment variables `TOKEN_SECRET` (a long random value, 32 or more characters) and `ENVIRONMENT` (`dev`) to the project (Production). Use `npx vercel env add TOKEN_SECRET production` and `npx vercel env add ENVIRONMENT production`. Add `CRON_SECRET` too, or the scheduled jobs answer 503. The server will not start without `TOKEN_SECRET`, and a hosted server will not start unless `ENVIRONMENT` is set to exactly `dev` or `prod`. Add `ENVIRONMENT` **before** the first deploy of this change.
    - Until email is connected, also add `MOCK_EMAIL_CODE` (6 digits of your choice) the same way, then deploy again. It is the code every customer enters at first sign-in and after "Forgot password" on `dev`. No email is sent. Without it those two steps answer "Email is not set up yet". It does nothing when `ENVIRONMENT=prod`.
 5. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
 6. Add the repository variables and secrets from section 3.

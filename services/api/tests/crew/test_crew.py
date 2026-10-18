@@ -123,7 +123,7 @@ def test_a_locked_login_is_unlocked_by_reset_and_by_unlock(client, society):
         for _ in range(5):
             sign_in(client, "9000000555", "wrong-Pass1")
         r = sign_in(client, "9000000555", created["password"])
-        assert r.status_code == 403 and r.json()["code"] == "account_locked"
+        assert r.status_code == 429 and r.json()["code"] == "too_many_attempts"
 
     lock()
     listed = client.get("/v1/admin/crew", headers=admin).json()

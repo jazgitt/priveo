@@ -87,21 +87,83 @@ def test_only_the_hash_is_stored(client, db):
     assert PASSWORDS["admin"] not in row.password_hash
 
 
-@pytest.mark.parametrize("role", ["crew", "admin"])
-def test_five_wrong_passwords_lock_crew_and_admin(client, role):
+def _staff_row(db, role):
+    db.expire_all()
+    return db.scalar(select(Login).where(Login.login_id == LOGIN_IDS[role]))
+
+
+def _five_wrong(client, role):
     for _ in range(4):
         assert sign_in(client, role, "wrong").json()["code"] == "invalid_credentials"
-    fifth = sign_in(client, role, "wrong")
-    assert fifth.status_code == 403 and fifth.json()["code"] == "account_locked"
-    # The right password no longer works until the password is reset.
-    assert sign_in(client, role).json()["code"] == "account_locked"
+    return sign_in(client, role, "wrong")
 
 
-def test_seeding_again_unlocks_the_admin(client, db, settings):
-    for _ in range(5):
-        sign_in(client, "admin", "wrong")
-    assert sign_in(client, "admin").status_code == 403
+def _end_block(db, role):
+    row = _staff_row(db, role)
+    row.blocked_until = utcnow() - timedelta(seconds=1)
+    db.commit()
+
+
+@pytest.mark.parametrize("role", ["crew", "admin"])
+def test_five_wrong_passwords_block_crew_and_admin_for_a_while(client, db, role):
+    """CRW-ACC-07 (revised 18-Oct-26): a timed block, never a lock for good."""
+    fifth = _five_wrong(client, role)
+    assert fifth.status_code == 429 and fifth.json()["code"] == "too_many_attempts"
+    assert "15 minutes" in fifth.json()["message"]
+    # Even the right password waits for the block to end.
+    assert sign_in(client, role).json()["code"] == "too_many_attempts"
+    row = _staff_row(db, role)
+    assert not row.locked
+    assert timedelta(minutes=14) < row.blocked_until - utcnow() <= timedelta(minutes=15)
+    _end_block(db, role)
+    assert sign_in(client, role).status_code == 200
+
+
+@pytest.mark.parametrize("role", ["crew", "admin"])
+def test_each_block_in_a_day_lasts_longer(client, db, role):
+    expected = [timedelta(minutes=15), timedelta(hours=1),
+                timedelta(hours=24), timedelta(hours=24)]
+    for length in expected:
+        assert _five_wrong(client, role).status_code == 429
+        left = _staff_row(db, role).blocked_until - utcnow()
+        assert length - timedelta(minutes=1) < left <= length
+        _end_block(db, role)
+    assert sign_in(client, role).status_code == 200
+
+
+def test_blocks_older_than_a_day_are_forgotten(client, db):
+    _five_wrong(client, "admin")
+    _end_block(db, "admin")
+    for event in db.scalars(select(AuthEvent).where(AuthEvent.kind == "locked")):
+        event.at = utcnow() - timedelta(hours=25)
+    db.commit()
+    _five_wrong(client, "admin")
+    left = _staff_row(db, "admin").blocked_until - utcnow()
+    assert left <= timedelta(minutes=15)
+
+
+def test_a_block_message_says_how_long_is_left(client, db):
+    for _ in range(3):
+        _five_wrong(client, "admin")
+        _end_block(db, "admin")
+    r = _five_wrong(client, "admin")
+    assert "24 hours" in r.json()["message"]
+    assert "24 hours" in sign_in(client, "admin").json()["message"]
+
+
+def test_a_lock_from_before_timed_blocks_still_holds(client, db):
+    row = _staff_row(db, "crew")
+    row.locked = True
+    db.commit()
+    r = sign_in(client, "crew")
+    assert r.status_code == 403 and r.json()["code"] == "account_locked"
+
+
+def test_seeding_again_lifts_an_admin_block(client, db, settings):
+    _five_wrong(client, "admin")
+    assert sign_in(client, "admin").status_code == 429
     seed_logins(db, settings)
+    db.commit()
     assert sign_in(client, "admin").status_code == 200
 
 

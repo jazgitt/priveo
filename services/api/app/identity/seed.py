@@ -83,7 +83,9 @@ def seed_logins(db: Session, settings: Settings) -> dict[str, str]:
             db, "admin", ADMIN_LOGIN_ID, "Priveo Admin", settings.admin_password)
     else:
         done[ADMIN_LOGIN_ID] = "skipped: no admin password is configured"
-    if settings.seed_demo_logins:
+    if settings.seed_demo_logins and settings.environment == "prod":
+        done["demo logins"] = "skipped: never seeded in prod"
+    elif settings.seed_demo_logins:
         demo = [
             ("customer", DEMO_CUSTOMER, "Aarav Mehta", settings.mock_customer_password),
             ("crew", "9000000002", "Ravi Kumar", settings.mock_crew_password),

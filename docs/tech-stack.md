@@ -86,7 +86,7 @@
 5. **Scheduler scale.** OR-Tools CP-SAT is fine for one society and a week. Test with realistic volumes before choosing ECS task sizes.
 6. **API compatibility.** The mobile app serves customers, crew and the admin quick actions, so older app versions stay in use. Version the API and plan for forced-update behaviour. The web portal can always be updated at once.
 7. **Flutter, Dart and package versions.** Pin them when the project is created.
-8. **Admin web portal security.** The portal holds every admin power, behind one user ID and password. Decided for the first release: HttpOnly cookies with CSRF protection and short sessions (`ADM-ACC-12`). Not yet decided and listed as V2: two-factor sign-in for admins, and an IP allowlist or AWS WAF rules in front of the portal. These are the main risk of the single admin login, so revisit them soon after launch.
+8. **Admin web portal security.** The portal holds every admin power, behind one user ID and password. Decided for the first release: HttpOnly cookies with CSRF protection and short sessions (`ADM-ACC-12`). Not yet decided and listed as V2: two-factor sign-in for admins, and an IP allowlist or AWS WAF rules in front of the portal. These are the main risk of the single admin login, so revisit them soon after launch. Dev and prod are separate deployments; the prod task definition must set `ENVIRONMENT=prod` and the server refuses to start with dev-only settings (`docs/build-and-release.md`).
 9. **Open owner choices:** the vector logo files (to follow) in section 6. Sections 1, 2 and 5 are decided.
 
 ## 5. Admin web portal: supporting choices (decided)

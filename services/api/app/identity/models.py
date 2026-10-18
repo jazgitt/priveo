@@ -29,9 +29,11 @@ class Login(Base):
     alert_email: Mapped[str] = mapped_column(String(254), default="", server_default="")
     alert_email_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    # Crew and admin: locked until the password is reset (CRW-ACC-07).
+    # Crew and admin: locked until the admin lifts it. Only logins locked
+    # before blocks became timed (CRW-ACC-07, revised 18-Oct-26) still have it.
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Customer: blocked for a while after too many wrong attempts (AUTH-13).
+    # Blocked for a while after too many wrong attempts: a customer for 15
+    # minutes (AUTH-13), crew and admin for longer each time (CRW-ACC-07).
     blocked_until: Mapped[datetime | None] = mapped_column(UtcDateTime)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 

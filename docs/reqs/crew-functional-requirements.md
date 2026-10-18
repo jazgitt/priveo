@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Crew App Functional Requirements
 
-**Status:** Draft v0.6: the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.7: wrong passwords block crew and admin logins for a growing time instead of locking them (owner decision of 18 Oct 2026); the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 3 (Crew), MVP. Customer requirements are in `customer-app-functional-requirements.md`. Admin requirements are in `admin-functional-requirements.md`.
 **Platforms:** The same Flutter mobile app as the customer, with screens chosen by the user's role. Admins use a web portal, with a limited set of quick actions in the app.
 **Language:** English only
@@ -51,7 +51,7 @@ Rules followed:
 | CRW-ACC-04 | When the admin onboards a crew member, the password is generated automatically in this format: the first 3 letters of their name, then 4 random digits, then `$` (for example `Raj4821$`). | Owner |
 | CRW-ACC-05 | Passwords are never sent by SMS or WhatsApp. After the admin onboards a crew member or resets their password, the admin screen shows the login ID and the generated password once, with a Copy button, and the admin gives them to the crew member outside the app. The app stores only a hash, so the password cannot be shown again. | Owner |
 | CRW-ACC-06 | Crew cannot change their password. If it is lost, the admin resets it: a new password is generated in the same format and shown to the admin once (CRW-ACC-05, ADM-CRW-18 in the admin file). | Owner (reset: Derived) |
-| CRW-ACC-07 | A wrong password shows an error. After 5 wrong attempts the login is locked until the admin resets the password (ADM-CRW-18). This applies to crew and admin logins. | Owner |
+| CRW-ACC-07 | A wrong password shows an error. After 5 wrong attempts the login is blocked for 15 minutes. Each further block within 24 hours lasts longer: 1 hour, then 24 hours. The error says how long is left. A block ends by itself, so nobody can lock a login for good by guessing. The admin can end a crew block early by unlocking the login or resetting the password (ADM-CRW-18). This applies to crew and admin logins. | Owner (revised 18-Oct-26) |
 | CRW-ACC-08 | A deactivated crew member cannot sign in (ADM-CRW-15). Their past visits and records stay. | Derived |
 | CRW-ACC-09 | Log out. | Derived |
 | CRW-ACC-10 | A mobile number can belong to only one crew member (ADM-CRW-06). A customer's email or contact mobile number has no effect on crew sign-in. | Owner |
@@ -209,7 +209,7 @@ For your reference when you write the data model. This is a reading of the requi
 
 1. The starting checklists for Cleaning-Internal and Deep Spa (ADM-CHK-07), to be supplied by the owner.
 
-Answered: the wrong-password limit (5, then locked until the admin resets); one role identifiers; the crew notifications; how Cleaning-Internal and Deep Spa are planned; the Trainee pairing; Missed visits; ratings and comments are not shown to crew; privileges for Manager, Member and Trainee.
+Answered: the wrong-password limit (5, then a block of 15 minutes, 1 hour, then 24 hours; revised 18 Oct 2026); one role identifiers; the crew notifications; how Cleaning-Internal and Deep Spa are planned; the Trainee pairing; Missed visits; ratings and comments are not shown to crew; privileges for Manager, Member and Trainee.
 
 ---
 

@@ -425,7 +425,10 @@ class CrewService:
                     society=society,
                     role=crew.role,
                     active=login.active,
-                    locked=login.locked,
+                    # Blocked after wrong attempts, or locked before blocks
+                    # became timed. Either way the admin can lift it.
+                    locked=login.locked or bool(
+                        login.blocked_until and login.blocked_until > utcnow()),
                     working_hours=[DayHours(**h) for h in crew.working_hours],
                     paired_member_id=str(mate.id) if mate else None,
                     paired_member=mate.name if mate else "",
@@ -1037,6 +1040,7 @@ class CrewService:
         login.password_changed_at = now
         login.failed_attempts = 0
         login.locked = False
+        login.blocked_until = None
         self._end_sessions(login.id, "password_reset")
         self._db.add(AuthEvent(login_id=login.id, kind="password_reset_by_admin"))
         self._commit()
@@ -1046,9 +1050,10 @@ class CrewService:
         )
 
     def unlock(self, crew_id: uuid.UUID) -> CrewOut:
-        """Lifts a lock after wrong attempts, keeping the same password."""
+        """Lifts a block after wrong attempts, keeping the same password."""
         crew, login = self._get(crew_id)
         login.locked = False
+        login.blocked_until = None
         login.failed_attempts = 0
         self._db.add(AuthEvent(login_id=login.id, kind="unlocked_by_admin"))
         self._commit()
