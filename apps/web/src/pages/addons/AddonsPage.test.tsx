@@ -89,9 +89,9 @@ it("sends the site and the filters to the API", async () => {
     String(p).includes("status=Scheduled&society_id=s1&date_from=2026-10-19&date_to=2026-10-21&service=Deep+Spa"))).toBe(true));
 });
 
-it("requests Deep Spa for a standalone or Active vehicle found by search", async () => {
+it("requests an add-on for a standalone or Active vehicle found by search", async () => {
   page();
-  await userEvent.click(await screen.findByRole("button", { name: "Request Deep Spa" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Request add-on" }));
   const dialog = screen.getByRole("dialog");
   await userEvent.type(within(dialog).getByRole("combobox", { name: "Customer" }), "Asha");
   await userEvent.click(await within(dialog).findByRole("option", { name: /Asha Rao/ }));
@@ -101,7 +101,32 @@ it("requests Deep Spa for a standalone or Active vehicle found by search", async
   await userEvent.click(screen.getByRole("option", { name: /HR01/ }));
   fireEvent.change(within(dialog).getByLabelText("Proposed date"), { target: { value: "2026-10-20" } });
   await choose("Finish by", "13:00");
-  await userEvent.click(within(dialog).getByRole("button", { name: "Request Deep Spa" }));
+  await userEvent.click(within(dialog).getByRole("button", { name: "Request add-on" }));
   await waitFor(() => expect(fetchMock.mock.calls.some(([p, o]) => p === "/v1/admin/addons" && o?.method === "POST"
     && JSON.stringify(JSON.parse(o.body)) === JSON.stringify({ vehicle_id: "v1", service: "Deep Spa", date: "2026-10-20", finish_by: "13:00" }))).toBe(true));
+});
+
+it("lets the admin choose which add-on to request when the catalogue has several", async () => {
+  const base = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, options?: RequestInit) =>
+    path.endsWith("/directory/addons") && options?.method !== "POST"
+      ? new Response(JSON.stringify([
+        { id: "a1", code: "ADN-0001", name: "Deep Spa", service: "Deep Spa", active: true },
+        { id: "a2", code: "ADN-0002", name: "Interior shine", service: "Cleaning-Internal", active: true },
+        { id: "a3", code: "ADN-0003", name: "Retired", service: "Deep Spa", active: false }]))
+      : base(path, options));
+  page();
+  await userEvent.click(await screen.findByRole("button", { name: "Request add-on" }));
+  const dialog = screen.getByRole("dialog");
+  await within(dialog).findByRole("combobox", { name: "Add-on" });
+  await choose("Add-on", "Interior shine");
+  await userEvent.type(within(dialog).getByRole("combobox", { name: "Customer" }), "Asha");
+  await userEvent.click(await within(dialog).findByRole("option", { name: /Asha Rao/ }));
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "Vehicle" }));
+  await userEvent.click(await screen.findByRole("option", { name: /HR01/ }));
+  fireEvent.change(within(dialog).getByLabelText("Proposed date"), { target: { value: "2026-10-20" } });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Request add-on" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([p, o]) => p === "/v1/admin/addons" && o?.method === "POST"
+    && JSON.stringify(JSON.parse(o.body)) === JSON.stringify({
+      vehicle_id: "v1", service: "Cleaning-Internal", addon: "ADN-0002", date: "2026-10-20", finish_by: "12:00" }))).toBe(true));
 });

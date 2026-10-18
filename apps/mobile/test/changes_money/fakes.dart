@@ -191,11 +191,12 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<AddonRequestDto> requestAddon(
-      String v, DateTime date, String finishBy) async {
-    calls.add('addon ${date.day} $finishBy');
+      String v, DateTime date, String finishBy,
+      {String addon = '', String service = 'Deep Spa'}) async {
+    calls.add('addon ${date.day} $finishBy${addon.isEmpty ? '' : ' $addon'}');
     return AddonRequestDto(
         id: 'a1',
-        service: 'Deep Spa',
+        service: service,
         standalone: false,
         date: date,
         finishBy: finishBy,
@@ -212,8 +213,10 @@ class FakeMoneyRepository implements MoneyRepository {
       required DateTime date,
       required String finishBy,
       required String mobile,
-      required String notes}) async {
-    calls.add('standalone $mobile');
+      required String notes,
+      String addon = '',
+      String service = 'Deep Spa'}) async {
+    calls.add('standalone $mobile${addon.isEmpty ? '' : ' $addon'}');
     return AddonRequestDto(
         id: 'a2',
         service: 'Deep Spa',

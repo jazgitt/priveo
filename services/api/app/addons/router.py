@@ -54,7 +54,8 @@ def request_addon(
     svc: AddonService = Depends(get_addon_service),
 ):
     c, vehicle, sub = owned_vehicle(db, user.id, vehicle_id)
-    return svc.request(c, vehicle, sub, body.service, body.date, body.finish_by, idempotency_key)
+    return svc.request(c, vehicle, sub, body.service, body.date, body.finish_by,
+                       idempotency_key, addon=body.addon)
 
 
 @customer.post("/addons/standalone", response_model=AddonOut, status_code=201)
@@ -133,9 +134,11 @@ def admin_request_addon(
     c, vehicle, sub = any_vehicle(db, body.vehicle_id)
     if sub is None:
         result = svc.standalone(c, c.login_id, StandaloneIn(vehicle_id=str(vehicle.id),
-            service=body.service, date=body.date, finish_by=body.finish_by), None, admin=True)
+            service=body.service, addon=body.addon, date=body.date,
+            finish_by=body.finish_by), None, admin=True)
     else:
-        result = svc.request(c, vehicle, sub, body.service, body.date, body.finish_by, None, admin=True)
+        result = svc.request(c, vehicle, sub, body.service, body.date, body.finish_by, None,
+                             admin=True, addon=body.addon)
     audit(db, user.id, "addon", result.id, "create", body.model_dump(mode="json"))
     db.commit()
     return svc._admin_out(db.get(AddonBooking, parse_id(result.id, "request")))

@@ -100,31 +100,31 @@ void main() {
     expect(wire.AddonChangeIn.fromJson(input).toJson(), equals(input));
   });
   test('AddonOffer preserves populated wire fields', () {
-    final input = jsonDecode('{"service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"code":"wire-value","service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1}') as Map<String, dynamic>;
     expect(wire.AddonOffer.fromJson(input).toJson(), equals(input));
   });
   test('AddonOffer preserves nullable wire fields', () {
-    final input = jsonDecode('{"service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":null,"duration_minutes":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"code":"wire-value","service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":null,"duration_minutes":1}') as Map<String, dynamic>;
     expect(wire.AddonOffer.fromJson(input).toJson(), equals(input));
   });
   test('AddonOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","addon_name":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AddonOut.fromJson(input).toJson(), equals(input));
   });
   test('AddonOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","vehicle_id":null,"standalone":false,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":null,"payment_id":null,"payment_status":null,"can_change":false,"created_at":"2026-10-20T07:30:00+00:00","requested_date":null,"requested_finish_by":null,"change_requested":false,"crew_name":null,"start_time":null,"visit_id":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","addon_name":"wire-value","vehicle_id":null,"standalone":false,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":null,"payment_id":null,"payment_status":null,"can_change":false,"created_at":"2026-10-20T07:30:00+00:00","requested_date":null,"requested_finish_by":null,"change_requested":false,"crew_name":null,"start_time":null,"visit_id":null}') as Map<String, dynamic>;
     expect(wire.AddonOut.fromJson(input).toJson(), equals(input));
   });
   test('AddonRequestIn preserves populated wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","date":"2026-10-20","finish_by":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","date":"2026-10-20","finish_by":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AddonRequestIn.fromJson(input).toJson(), equals(input));
   });
   test('AddonRequestIn preserves nullable wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","date":"2026-10-20","finish_by":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","date":"2026-10-20","finish_by":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AddonRequestIn.fromJson(input).toJson(), equals(input));
   });
   test('AddonsOut preserves populated wire fields', () {
-    final input = jsonDecode('{"offers":[{"service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1}],"requests":[{"id":"wire-value","service":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value"}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"offers":[{"code":"wire-value","service":"wire-value","name":"wire-value","description":"wire-value","price_rupees":1,"list_price_rupees":1,"duration_minutes":1}],"requests":[{"id":"wire-value","service":"wire-value","addon_name":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value"}]}') as Map<String, dynamic>;
     expect(wire.AddonsOut.fromJson(input).toJson(), equals(input));
   });
   test('AddonsOut preserves nullable wire fields', () {
@@ -132,11 +132,11 @@ void main() {
     expect(wire.AddonsOut.fromJson(input).toJson(), equals(input));
   });
   test('AdminAddonCreate preserves populated wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","date":"2026-10-20","finish_by":"wire-value","vehicle_id":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","date":"2026-10-20","finish_by":"wire-value","vehicle_id":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AdminAddonCreate.fromJson(input).toJson(), equals(input));
   });
   test('AdminAddonCreate preserves nullable wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","date":"2026-10-20","finish_by":"wire-value","vehicle_id":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","date":"2026-10-20","finish_by":"wire-value","vehicle_id":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AdminAddonCreate.fromJson(input).toJson(), equals(input));
   });
   test('AdminAddonIn preserves populated wire fields', () {
@@ -148,11 +148,11 @@ void main() {
     expect(wire.AdminAddonIn.fromJson(input).toJson(), equals(input));
   });
   test('AdminAddonOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value","customer_name":"wire-value","flat":"wire-value","society":"wire-value","vehicle":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","addon_name":"wire-value","vehicle_id":"wire-value","standalone":true,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":1,"payment_id":"wire-value","payment_status":"wire-value","can_change":true,"created_at":"2026-10-20T07:30:00+00:00","requested_date":"2026-10-20","requested_finish_by":"wire-value","change_requested":true,"crew_name":"wire-value","start_time":"wire-value","visit_id":"wire-value","customer_name":"wire-value","flat":"wire-value","society":"wire-value","vehicle":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AdminAddonOut.fromJson(input).toJson(), equals(input));
   });
   test('AdminAddonOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"wire-value","service":"wire-value","vehicle_id":null,"standalone":false,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":null,"payment_id":null,"payment_status":null,"can_change":false,"created_at":"2026-10-20T07:30:00+00:00","requested_date":null,"requested_finish_by":null,"change_requested":false,"crew_name":null,"start_time":null,"visit_id":null,"customer_name":"wire-value","flat":"wire-value","society":"wire-value","vehicle":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"wire-value","service":"wire-value","addon_name":"wire-value","vehicle_id":null,"standalone":false,"date":"2026-10-20","finish_by":"wire-value","status":"wire-value","price_rupees":null,"payment_id":null,"payment_status":null,"can_change":false,"created_at":"2026-10-20T07:30:00+00:00","requested_date":null,"requested_finish_by":null,"change_requested":false,"crew_name":null,"start_time":null,"visit_id":null,"customer_name":"wire-value","flat":"wire-value","society":"wire-value","vehicle":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AdminAddonOut.fromJson(input).toJson(), equals(input));
   });
   test('AdminComplaintDetail preserves populated wire fields', () {
@@ -332,11 +332,11 @@ void main() {
     expect(wire.ChangeOut.fromJson(input).toJson(), equals(input));
   });
   test('ChangesOut preserves populated wire fields', () {
-    final input = jsonDecode('{"vehicle_id":"wire-value","skips":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"pauses":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"cutoff_changes":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"renewal_date":"2026-10-20"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"vehicle_id":"wire-value","skips":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"pauses":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"cutoff_changes":[{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}],"renewal_date":"2026-10-20","plan_ends_on":"2026-10-20"}') as Map<String, dynamic>;
     expect(wire.ChangesOut.fromJson(input).toJson(), equals(input));
   });
   test('ChangesOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"vehicle_id":"wire-value","skips":[],"pauses":[],"cutoff_changes":[],"renewal_date":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"vehicle_id":"wire-value","skips":[],"pauses":[],"cutoff_changes":[],"renewal_date":null,"plan_ends_on":null}') as Map<String, dynamic>;
     expect(wire.ChangesOut.fromJson(input).toJson(), equals(input));
   });
   test('CheckInAdmin preserves populated wire fields', () {
@@ -1620,11 +1620,11 @@ void main() {
     expect(wire.SkipVisit.fromJson(input).toJson(), equals(input));
   });
   test('StandaloneIn preserves populated wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
     expect(wire.StandaloneIn.fromJson(input).toJson(), equals(input));
   });
   test('StandaloneIn preserves nullable wire fields', () {
-    final input = jsonDecode('{"service":"Deep Spa","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
     expect(wire.StandaloneIn.fromJson(input).toJson(), equals(input));
   });
   test('StartRequest preserves populated wire fields', () {

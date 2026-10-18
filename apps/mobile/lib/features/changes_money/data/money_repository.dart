@@ -26,13 +26,16 @@ abstract class MoneyRepository {
 
   Future<AddonsDto> addons();
   Future<AddonRequestDto> requestAddon(
-      String vehicleId, DateTime date, String finishBy);
+      String vehicleId, DateTime date, String finishBy,
+      {String addon = '', String service = 'Deep Spa'});
   Future<AddonRequestDto> requestStandalone(
       {String? vehicleId,
       required DateTime date,
       required String finishBy,
       required String mobile,
-      required String notes});
+      required String notes,
+      String addon = '',
+      String service = 'Deep Spa'});
   Future<AddonRequestDto> cancelAddon(String addonId);
 }
 
@@ -137,10 +140,16 @@ class DioMoneyRepository implements MoneyRepository {
       () => _dio.get<dynamic>('/v1/customer/addons'), (d) => AddonsDto.fromJson(_map(d)));
 
   @override
-  Future<AddonRequestDto> requestAddon(String v, DateTime date, String finishBy) =>
+  Future<AddonRequestDto> requestAddon(String v, DateTime date, String finishBy,
+          {String addon = '', String service = 'Deep Spa'}) =>
       _call(
           () => _dio.post<dynamic>('/v1/customer/vehicles/$v/addons',
-              data: {'service': 'Deep Spa', 'date': _ymd(date), 'finish_by': finishBy},
+              data: {
+                'service': service,
+                if (addon.isNotEmpty) 'addon': addon,
+                'date': _ymd(date),
+                'finish_by': finishBy,
+              },
               options: _key()),
           (d) => AddonRequestDto.fromJson(_map(d)));
 
@@ -150,11 +159,14 @@ class DioMoneyRepository implements MoneyRepository {
           required DateTime date,
           required String finishBy,
           required String mobile,
-          required String notes}) =>
+          required String notes,
+          String addon = '',
+          String service = 'Deep Spa'}) =>
       _call(
           () => _dio.post<dynamic>('/v1/customer/addons/standalone',
               data: {
-                'service': 'Deep Spa',
+                'service': service,
+                if (addon.isNotEmpty) 'addon': addon,
                 'vehicle_id': vehicleId,
                 'date': _ymd(date),
                 'finish_by': finishBy,

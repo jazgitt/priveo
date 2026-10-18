@@ -17,10 +17,11 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
 import { times } from "../customers/api";
+import { useDirectory } from "../reference/api";
 import { CustomerPicker, VehiclePicker, type PickedCustomer } from "../customers/picker";
 
 interface Booking {
-  id: string; service: string; customer_name: string; vehicle: string; society: string; date: string;
+  id: string; service: string; addon_name?: string; customer_name: string; vehicle: string; society: string; date: string;
   finish_by: string; status: string; payment_id: string | null; payment_status: string | null;
   price_rupees: number | null; standalone: boolean; contact_mobile: string; notes: string;
   change_requested: boolean; requested_date: string | null; requested_finish_by: string | null;
@@ -61,15 +62,15 @@ export function AddonsPage() {
   return (
     <>
       <PageHeader title="Add on Service Requests" site={site.name || undefined}
-                  description={changes > 0 ? `${changes} ${changes === 1 ? "booking has" : "bookings have"} a change requested by the customer.` : "Deep Spa bookings for subscribers and standalone customers."}
-                  actions={<Button onClick={() => setRequesting(true)}><Plus aria-hidden /> Request Deep Spa</Button>} />
+                  description={changes > 0 ? `${changes} ${changes === 1 ? "booking has" : "bookings have"} a change requested by the customer.` : "Add-on bookings for subscribers and standalone customers."}
+                  actions={<Button onClick={() => setRequesting(true)}><Plus aria-hidden /> Request add-on</Button>} />
       {bookings.isError && <div className="mb-4"><ErrorState message={errorMessage(bookings.error)} onRetry={() => void bookings.refetch()} /></div>}
       <DataTable
         rows={bookings.data}
         loading={bookings.isPending}
         rowKey={(b) => b.id}
         onRowClick={(b) => setOpenId(b.id)}
-        rowLabel={(b) => `Open ${b.service} for ${b.vehicle || b.customer_name}`}
+        rowLabel={(b) => `Open ${b.addon_name || b.service} for ${b.vehicle || b.customer_name}`}
         toolbar={(
           <div className="grid grid-cols-2 items-end gap-3 rounded-xl border bg-card p-4 shadow-xs md:grid-cols-[11rem_10rem_10rem_11rem_auto]">
             <Field label="Status filter">
@@ -80,7 +81,7 @@ export function AddonsPage() {
             <Field label="To date">{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
             <Field label="Add-on filter">
               {(p) => <SelectBox {...p} value={service || NONE} onChange={(v) => setService(v === NONE ? "" : v)}
-                                 choices={[{ value: NONE, label: "All add-ons" }, { value: "Deep Spa", label: "Deep Spa" }]} />}
+                                 choices={[{ value: NONE, label: "All add-ons" }, ...["Deep Spa", "Cleaning-External", "Cleaning-Internal"].map((v) => ({ value: v, label: v }))]} />}
             </Field>
             <Button variant="ghost" className="justify-self-start" disabled={!status && !from && !to && !service}
                     onClick={() => { setStatus(""); setFrom(""); setTo(""); setService(""); }}>Clear</Button>
@@ -92,7 +93,7 @@ export function AddonsPage() {
             <div className="min-w-0"><span className="reg block truncate">{b.vehicle || "-"}</span>
               <span className="block truncate text-xs text-muted-foreground">{b.customer_name}</span></div>) },
           { key: "service", header: "Add-on", width: "8rem", cell: (b) => (
-            <div><span className="block">{b.service}</span>{b.standalone && <span className="text-xs text-muted-foreground">Standalone</span>}</div>) },
+            <div><span className="block">{b.addon_name || b.service}</span>{b.standalone && <span className="text-xs text-muted-foreground">Standalone</span>}</div>) },
           { key: "date", header: "Date", width: "9rem", cell: (b) => (
             <div><span className="block">{showDate(b.date)}</span><span className="text-xs text-muted-foreground">Finish by {b.finish_by}</span></div>) },
           { key: "crew", header: "Assigned", width: "11rem", cell: (b) => (b.crew_name ? `${b.crew_name} at ${b.start_time}` : <span className="text-muted-foreground">Waiting for assignment</span>) },
@@ -109,23 +110,32 @@ export function AddonsPage() {
   );
 }
 
-/** Ask for Deep Spa for a subscriber or a standalone customer (ADM-ADD-*). */
+/** Ask for an add-on (Deep Spa or any other the catalogue offers) for a subscriber or a standalone customer (ADM-ADD-*). */
 function RequestDialog({ onClose }: { onClose: () => void }) {
   const refresh = useBookingRefresh();
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const [vehicleId, setVehicleId] = useState("");
   const [date, setDate] = useState("");
   const [finish, setFinish] = useState("12:00");
+  const catalogue = useDirectory<{ code: string; name: string; service: string; active: boolean }[]>("/addons");
+  const offered = (catalogue.data ?? []).filter((a) => a.active);
+  const [chosen, setChosen] = useState("");
+  const addon = offered.find((a) => a.code === chosen) ?? offered[0];
   const create = useAppMutation<void>({
-    mutationFn: () => api("/v1/admin/addons", { method: "POST", body: { vehicle_id: vehicleId, service: "Deep Spa", date, finish_by: finish } }),
-    pending: "Requesting Deep Spa…", success: "Deep Spa requested. It is placed when its date is scheduled.",
+    mutationFn: () => api("/v1/admin/addons", { method: "POST", body: {
+      vehicle_id: vehicleId, service: addon?.service ?? "Deep Spa", ...(addon ? { addon: addon.code } : {}), date, finish_by: finish } }),
+    pending: "Requesting the add-on…", success: "Add-on requested. It is placed when its date is scheduled.",
     onSuccess: () => { void refresh(); onClose(); },
   });
   return (
-    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Request Deep Spa" size="lg"
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Request add-on" size="lg"
                 description="For an Active subscriber's vehicle or a standalone vehicle. Scheduling does not wait for payment."
-                submitLabel="Request Deep Spa" busy={create.isPending} disabled={!vehicleId || !date} onSubmit={() => create.mutate()}>
+                submitLabel="Request add-on" busy={create.isPending} disabled={!vehicleId || !date} onSubmit={() => create.mutate()}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {offered.length > 1 && (
+          <Field label="Add-on">{(p) => <SelectBox {...p} value={addon?.code ?? ""} onChange={setChosen}
+                                                    choices={offered.map((a) => ({ value: a.code, label: a.name }))} />}</Field>
+        )}
         <CustomerPicker value={customer} onChange={(c) => { setCustomer(c); setVehicleId(""); }} />
         <VehiclePicker customerId={customer?.id ?? null} value={vehicleId} onChange={(id) => setVehicleId(id)}
                        allow={(v) => !v.subscription || v.subscription.status === "Active"}
@@ -153,7 +163,7 @@ function BookingDialog({ b, onClose }: { b: Booking; onClose: () => void }) {
   };
 
   return (
-    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${b.service}, ${b.vehicle || b.customer_name}`} size="lg"
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${b.addon_name || b.service}, ${b.vehicle || b.customer_name}`} size="lg"
                 submitLabel="Close" cancelLabel={null} onSubmit={onClose}>
       <DetailList columns={3} items={[
         { label: "Customer", value: b.customer_name },
@@ -200,7 +210,7 @@ function BookingDialog({ b, onClose }: { b: Booking; onClose: () => void }) {
             </BusyButton>
           </div>
           <Button type="button" variant="ghost" className="self-start text-destructive" disabled={act.isPending}
-                  onClick={() => void ask("Cancel this booking?", `${b.service} for ${b.vehicle || b.customer_name} on ${showDate(b.date)} is cancelled and its job removed.`, "Cancel booking", { status: "Cancelled" }, "Booking cancelled.", true)}>
+                  onClick={() => void ask("Cancel this booking?", `${b.addon_name || b.service} for ${b.vehicle || b.customer_name} on ${showDate(b.date)} is cancelled and its job removed.`, "Cancel booking", { status: "Cancelled" }, "Booking cancelled.", true)}>
             Cancel booking
           </Button>
         </section>

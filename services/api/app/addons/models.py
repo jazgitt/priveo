@@ -20,6 +20,10 @@ class AddonBooking(Base):
     customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
     vehicle_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("vehicles.id"))
     service: Mapped[str] = mapped_column(String(40))
+    # The catalogue add-on bought (its ID, like ADN-0002, and its name then). Older
+    # bookings have neither and are Deep Spa.
+    addon_code: Mapped[str] = mapped_column(String(16), default="")
+    addon_name: Mapped[str] = mapped_column(String(80), default="")
     # A customer without a subscription (ADD-14). How these are paid is open (ADD-15).
     standalone: Mapped[bool] = mapped_column(Boolean, default=False)
     proposed_date: Mapped[date] = mapped_column(Date)

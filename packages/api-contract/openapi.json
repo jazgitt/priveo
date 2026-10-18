@@ -16813,6 +16813,11 @@
       },
       "AddonOffer": {
         "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "default": ""
+          },
           "service": {
             "type": "string",
             "title": "Service"
@@ -16865,6 +16870,11 @@
           "service": {
             "type": "string",
             "title": "Service"
+          },
+          "addon_name": {
+            "type": "string",
+            "title": "Addon Name",
+            "default": ""
           },
           "vehicle_id": {
             "anyOf": [
@@ -17022,6 +17032,11 @@
             "title": "Service",
             "default": "Deep Spa"
           },
+          "addon": {
+            "type": "string",
+            "title": "Addon",
+            "default": ""
+          },
           "date": {
             "type": "string",
             "format": "date",
@@ -17069,6 +17084,11 @@
             "type": "string",
             "title": "Service",
             "default": "Deep Spa"
+          },
+          "addon": {
+            "type": "string",
+            "title": "Addon",
+            "default": ""
           },
           "date": {
             "type": "string",
@@ -17151,6 +17171,11 @@
           "service": {
             "type": "string",
             "title": "Service"
+          },
+          "addon_name": {
+            "type": "string",
+            "title": "Addon Name",
+            "default": ""
           },
           "vehicle_id": {
             "anyOf": [
@@ -24961,6 +24986,11 @@
             "type": "string",
             "title": "Service",
             "default": "Deep Spa"
+          },
+          "addon": {
+            "type": "string",
+            "title": "Addon",
+            "default": ""
           },
           "vehicle_id": {
             "type": "string",

@@ -23,6 +23,8 @@ class MoneyStrings {
   static const pauseFrom = 'From';
   static const pauseTo = 'To';
   static const pauseChoose = 'Choose the start and end dates first.';
+  static const addonChoose = 'Choose an add-on';
+  static const addonChooseAnother = 'Choose a different add-on';
   static String planEndsNote(String date) =>
       'You can pause only up to the end of your current plan, $date.';
   static const planEndsNoDays = 'Your plan ends tomorrow or earlier, so there is nothing left to pause.';
