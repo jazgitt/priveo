@@ -1611,6 +1611,7 @@ class ChangesOut {
     required this.pauses,
     required this.cutoffChanges,
     required this.renewalDate,
+    required this.planEndsOn,
   });
 
   final String vehicleId;
@@ -1618,6 +1619,7 @@ class ChangesOut {
   final List<ChangeOut> pauses;
   final List<ChangeOut> cutoffChanges;
   final DateTime? renewalDate;
+  final DateTime? planEndsOn;
 
   factory ChangesOut.fromJson(Map<String, dynamic> j) => ChangesOut(
         vehicleId: j['vehicle_id'] as String,
@@ -1625,6 +1627,7 @@ class ChangesOut {
         pauses: [for (final x in j['pauses'] as List) ChangeOut.fromJson(x as Map<String, dynamic>)],
         cutoffChanges: [for (final x in j['cutoff_changes'] as List) ChangeOut.fromJson(x as Map<String, dynamic>)],
         renewalDate: j['renewal_date'] == null ? null : DateTime.parse(j['renewal_date'] as String),
+        planEndsOn: j['plan_ends_on'] == null ? null : DateTime.parse(j['plan_ends_on'] as String),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1633,6 +1636,7 @@ class ChangesOut {
         'pauses': [for (final x in pauses) x.toJson()],
         'cutoff_changes': [for (final x in cutoffChanges) x.toJson()],
         'renewal_date': renewalDate == null ? null : _date(renewalDate!),
+        'plan_ends_on': planEndsOn == null ? null : _date(planEndsOn!),
       };
 }
 

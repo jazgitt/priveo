@@ -209,6 +209,23 @@ void main() {
       expect(repo.calls, isEmpty);
     });
 
+    testWidgets('the pause screen says the plan limit (PAUSE-08)', (tester) async {
+      final repo = FakeMoneyRepository()..planEndsOn = d(25);
+      await openAt(tester, pausePath(vehicle), money: repo);
+      expect(find.text('You can pause only up to the end of your current plan, 25-Oct-26.'),
+          findsOneWidget);
+    });
+
+    testWidgets('no pause dates are offered once the plan is over', (tester) async {
+      final repo = FakeMoneyRepository()..planEndsOn = DateTime(2000, 1, 1);
+      await openAt(tester, pausePath(vehicle), money: repo);
+      await tester.tap(find.textContaining('From'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your plan ends tomorrow or earlier, so there is nothing left to pause.'),
+          findsOneWidget);
+      expect(find.byType(DatePickerDialog), findsNothing);
+    });
+
     testWidgets('a running pause can be ended', (tester) async {
       final repo = FakeMoneyRepository()
         ..pauses = [

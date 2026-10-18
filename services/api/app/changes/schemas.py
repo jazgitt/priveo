@@ -40,6 +40,9 @@ class ChangesOut(BaseModel):
     pauses: list[ChangeOut]
     cutoff_changes: list[ChangeOut]
     renewal_date: dt.date | None = None
+    # The last day the current plan covers. A customer can skip or pause only
+    # up to this date (SKIP-09, PAUSE-08).
+    plan_ends_on: dt.date | None = None
 
 
 class UpcomingDay(BaseModel):

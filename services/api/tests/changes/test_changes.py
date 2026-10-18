@@ -259,3 +259,31 @@ def test_only_active_subscriptions_and_own_vehicles(money):
     assert m.client.post(f"{base(m)}/skips", json={"date": "2026-10-13"},
                          headers=m.admin).status_code == 403
     assert m.client.post(f"{base(m)}/skips", json={"date": "2026-10-13"}).status_code == 401
+
+
+def test_a_customer_can_skip_or_pause_only_inside_the_current_plan(money):
+    """The plan here ends on 30-Oct-26 (SKIP-09, PAUSE-08): later dates are refused,
+    the last day is allowed, and the admin is not held to it."""
+    m = money
+    changes = m.client.get(f"{base(m)}/changes", headers=m.customer).json()
+    assert changes["plan_ends_on"] == "2026-10-30"
+    r = m.client.post(f"{base(m)}/skips", json={"date": "2026-10-31"}, headers=m.customer)
+    assert r.status_code == 422 and r.json()["code"] == "beyond_plan"
+    assert "30-Oct-26" in r.json()["message"] and r.json()["fields"] == {"date": "beyond_plan"}
+    r = m.client.post(f"{base(m)}/pauses", headers=m.customer,
+                      json={"from_date": "2026-10-29", "to_date": "2026-11-02"})
+    assert r.status_code == 422 and r.json()["fields"] == {"to_date": "beyond_plan"}
+    assert not m.gateway.skipped
+    ok = m.client.post(f"{base(m)}/pauses", headers=m.customer,
+                       json={"from_date": "2026-10-29", "to_date": "2026-10-30"})
+    assert ok.status_code == 201, ok.text
+    skip = m.client.post(f"/v1/admin/vehicles/{m.vehicle_id}/skips",
+                         json={"date": "2026-11-05"}, headers=m.admin)
+    assert skip.status_code == 201, skip.text
+
+
+def test_the_days_offered_to_skip_stop_at_the_end_of_the_plan(money):
+    m = money
+    m.clock.now = at(28, 10)
+    days = m.client.get(f"{base(m)}/upcoming", headers=m.customer).json()
+    assert [d["date"] for d in days][-1] == "2026-10-30"

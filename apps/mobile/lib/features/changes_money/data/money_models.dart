@@ -45,11 +45,15 @@ class ChangesDto {
     required this.skips,
     required this.pauses,
     this.renewalDate,
+    this.planEndsOn,
   });
 
   final List<ChangeDto> skips;
   final List<ChangeDto> pauses;
   final DateTime? renewalDate;
+
+  /// The last day the current plan covers: skip and pause stop here.
+  final DateTime? planEndsOn;
 
   factory ChangesDto.fromJson(Map<String, dynamic> j) => ChangesDto(
     skips: [
@@ -61,6 +65,7 @@ class ChangesDto {
         ChangeDto.fromJson(s as Map<String, dynamic>),
     ],
     renewalDate: _dateOrNull(j['renewal_date']),
+    planEndsOn: _dateOrNull(j['plan_ends_on']),
   );
 }
 

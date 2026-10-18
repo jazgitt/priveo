@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/api/api.g.dart' hide AppConfig;
 import 'package:priveo/core/auth/session.dart';
+import 'package:priveo/core/ui/widgets.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
 import 'package:priveo/features/splash/startup_progress.dart';
 
@@ -142,10 +143,30 @@ void main() {
         expect(login.top, greaterThanOrEqualTo(button.bottom));
         expect(tagline.top - logo.bottom, greaterThanOrEqualTo(8));
         expect(login.bottom, lessThanOrEqualTo(screen.height));
+        expect(button.height, 44);
         expect(button.left, greaterThanOrEqualTo(24));
         expect(button.right, lessThanOrEqualTo(screen.width - 24));
       });
     }
+
+    testWidgets('the sign-in screen shows the whole logo, inside the screen', (tester) async {
+      tester.view.physicalSize = const Size(720, 1280);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await pumpApp(tester);
+      await tester.pump(const Duration(milliseconds: 3100));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Get started'));
+      await tester.pumpAndSettle();
+      final logo = tester.getRect(find.byType(BrandLogo));
+      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(find.descendant(of: find.byType(BrandLogo), matching: find.byType(Image)), findsNWidgets(3));
+      expect(logo.top, greaterThanOrEqualTo(0));
+      expect(logo.bottom, lessThanOrEqualTo(screen.height));
+      expect(logo.height, closeTo(BrandLogo.heightFor(200), 0.01));
+      // The title sits below the whole logo, not over its last line.
+      expect(tester.getRect(find.text('Sign in')).top, greaterThanOrEqualTo(logo.bottom));
+    });
 
     testWidgets('with reduce motion the scene is skipped and only the bar remains', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =

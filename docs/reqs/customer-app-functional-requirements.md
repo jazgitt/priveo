@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.25 (every history row opens its details, imported records in the same newest-first list, and the crew's reason, note and photo for a job not done, 17 Oct 2026; vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.26 (a customer can skip or pause only dates the current plan covers, 18 Oct 2026; every history row opens its details, imported records in the same newest-first list, and the crew's reason, note and photo for a job not done, 17 Oct 2026; vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -235,6 +235,7 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 | SKIP-06 | The screen has no upcoming-schedule list. A "View Service Calendar" button below opens the service calendar. This button has the same label and look everywhere it appears in the app. | Owner (16 Oct 2026) |
 | SKIP-07 | The customer can undo a skip (un-skip) until 9 PM the previous day (SCHED-01). The date returns to Scheduled, in the list and the calendar, and the crew is told. | Owner |
 | SKIP-08 | A date that falls inside a pause cannot be skipped separately. A skip is treated as a subset of a pause (PAUSE-06). | Owner |
+| SKIP-09 | A customer can skip only dates up to the last day the current plan covers (the "Expires on" date). Later days are not offered, and the API refuses them with the plan's end date. The admin is not held to this. | Owner |
 
 ### 6.2 Pause service
 
@@ -247,6 +248,7 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 | PAUSE-05 | The customer can end an active or upcoming pause early, until 9 PM the previous day (SCHED-01). Visits resume, the status returns to Active, and the renewal date is recalculated to match the days actually paused. A pause that ends today or tomorrow has nothing left to end: the message says "That pause ends today already." or "That pause ends tomorrow already." to match. | Owner |
 | PAUSE-06 | If a pause overlaps dates the customer has already skipped, those skips become part of the pause. Each date is counted once, as a paused day, when the renewal date is moved forward. A skip is by definition a few dates and a pause can be longer. | Owner |
 | PAUSE-07 | The "From" date of a pause must still be before its 9 PM cutoff (SCHED-01). No minimum or maximum pause length is set in MVP. | Owner |
+| PAUSE-08 | A pause must start and end on or before the last day the current plan covers. The date pickers stop at that day and say so, and the API refuses a later end date. A pause moves the plan end forward by its days, but that does not open dates beyond today's end. The admin is not held to this. | Owner |
 
 ### 6.3 Cutoff for schedule changes
 

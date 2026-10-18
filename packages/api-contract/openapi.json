@@ -18762,6 +18762,18 @@
               }
             ],
             "title": "Renewal Date"
+          },
+          "plan_ends_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Ends On"
           }
         },
         "type": "object",

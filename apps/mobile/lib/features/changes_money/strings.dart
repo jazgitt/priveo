@@ -23,6 +23,9 @@ class MoneyStrings {
   static const pauseFrom = 'From';
   static const pauseTo = 'To';
   static const pauseChoose = 'Choose the start and end dates first.';
+  static String planEndsNote(String date) =>
+      'You can pause only up to the end of your current plan, $date.';
+  static const planEndsNoDays = 'Your plan ends tomorrow or earlier, so there is nothing left to pause.';
   static const pauseConfirm = 'Confirm pause';
   static String pauseDone(String from, String to, String renewal) =>
       'Paused $from to $to. Plan now renews $renewal.';

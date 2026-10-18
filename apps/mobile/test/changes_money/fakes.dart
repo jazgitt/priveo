@@ -70,6 +70,8 @@ class FakeMoneyRepository implements MoneyRepository {
     payment('p1'),
     payment('p0', status: 'Received', invoice: 'PRV102643210001', due: d(8)),
   ];
+  /// The last day the plan covers (PAUSE-08); null leaves the dates unlimited.
+  DateTime? planEndsOn;
   AddonsDto addonList = const AddonsDto(offers: [
     AddonOfferDto(
         service: 'Deep Spa',
@@ -87,7 +89,7 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<ChangesDto> changes(String v) async =>
-      ChangesDto(skips: const [], pauses: pauses);
+      ChangesDto(skips: const [], pauses: pauses, planEndsOn: planEndsOn);
 
   @override
   Future<List<UpcomingDayDto>> upcoming(String v) async {
