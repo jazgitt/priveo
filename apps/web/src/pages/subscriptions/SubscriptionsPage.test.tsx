@@ -20,7 +20,7 @@ const err = (status: number, message: string) => json(status, { code: "x", messa
 const row = (over: Record<string, unknown> = {}) => ({
   subscription_id: "s1", vehicle_id: "v1", customer_name: "Asha Rao", flat: "B-12",
   society: "Lake View", vehicle: "Swift KA01", plan_name: "Daily", status: "Activating",
-  first_service_date: null, renewal_date: null, ...over,
+  first_service_date: null, renewal_date: null, payment_status: null, payment_due: false, ...over,
 });
 let rows = [row()];
 
@@ -60,7 +60,7 @@ describe("subscriptions", () => {
     expect(allowedMoves("Activating")).toEqual(["Inactive", "Active"]);
   });
 
-  it("lists the site's subscriptions, filters by status on the server and searches in the page", async () => {
+  it("lists the site's subscriptions, filters by status tab and searches in the page", async () => {
     rows = [row(), row({ subscription_id: "s2", vehicle_id: "v2", customer_name: "Ravi Kumar", vehicle: "Creta HR01" })];
     server();
     renderPage();
@@ -69,8 +69,8 @@ describe("subscriptions", () => {
     await userEvent.type(screen.getByLabelText("Search subscriptions"), "creta");
     expect(screen.queryByText("Asha Rao")).not.toBeInTheDocument();
     expect(screen.getByText("Ravi Kumar")).toBeInTheDocument();
-    await choose("Status", "Inactive");
-    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("status=Inactive"))).toBe(true));
+    await userEvent.click(screen.getByRole("tab", { name: /^Inactive\s*\d/ }));
+    expect(await screen.findByText("No subscriptions match")).toBeInTheDocument();
   });
 
   it("activates with a first service date and shows the history", async () => {
@@ -128,4 +128,39 @@ describe("subscriptions", () => {
     expect(await screen.findByText("The server failed.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
+});
+
+it("counts subscriptions in tiles and filters from a status, payment due or plan tile", async () => {
+  rows = [row({ status: "Active" }), row({ subscription_id: "s2", vehicle_id: "v2", customer_name: "Ravi Kumar", plan_name: "Weekly",
+    status: "Inactive", payment_due: true, payment_status: "Over due" })];
+  server();
+  renderPage();
+  const tiles = await screen.findByRole("region", { name: "Subscription summary" });
+  expect(await within(tiles).findByRole("button", { name: "Total subscriptions: 2" })).toBeInTheDocument();
+  expect(within(tiles).getByRole("button", { name: "Active: 1" })).toBeInTheDocument();
+  expect(within(tiles).getByRole("button", { name: "Payment due: 1" })).toBeInTheDocument();
+  await userEvent.click(within(tiles).getByRole("button", { name: "Payment due: 1" }));
+  expect(screen.queryByText("Asha Rao")).not.toBeInTheDocument();
+  expect(screen.getByText("Ravi Kumar")).toBeInTheDocument();
+  await userEvent.click(within(tiles).getByRole("button", { name: "Total subscriptions: 2" }));
+  expect(screen.getByText("Asha Rao")).toBeInTheDocument();
+  const byPlan = screen.getByRole("region", { name: "Subscriptions by plan" });
+  await userEvent.click(within(byPlan).getByRole("button", { name: "Plan: Weekly: 1" }));
+  expect(screen.queryByText("Asha Rao")).not.toBeInTheDocument();
+  await userEvent.click(within(tiles).getByRole("button", { name: "Active: 1" }));
+  expect(await screen.findByText("No subscriptions match")).toBeInTheDocument();
+});
+
+it("shows each subscription as a tile, for every tab, and opens it", async () => {
+  server();
+  renderPage();
+  await screen.findByText("Asha Rao");
+  await userEvent.click(screen.getByRole("button", { name: "Tiles" }));
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /^Activating\s*\d/ }));
+  expect(screen.getByText("Asha Rao")).toBeInTheDocument();
+  expect(localStorage.getItem("priveo.view.subscriptions")).toBe("tiles");
+  await userEvent.click(screen.getByRole("button", { name: "Manage Asha Rao, Swift KA01" }));
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  localStorage.removeItem("priveo.view.subscriptions");
 });

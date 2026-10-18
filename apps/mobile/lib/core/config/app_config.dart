@@ -4,12 +4,10 @@ class AppConfig {
   const AppConfig({
     required this.flavor,
     required this.apiBaseUrl,
-    required this.showDemoAccounts,
   });
 
   final Flavor flavor;
   final String apiBaseUrl;
-  final bool showDemoAccounts;
 
   /// The dev API address is set at build time:
   /// `--dart-define=API_BASE_URL=https://api-dev.example.com`.
@@ -25,12 +23,10 @@ class AppConfig {
   static const dev = AppConfig(
     flavor: Flavor.dev,
     apiBaseUrl: _devUrl,
-    showDemoAccounts: true,
   );
 
   static const prod = AppConfig(
     flavor: Flavor.prod,
     apiBaseUrl: _prodUrl,
-    showDemoAccounts: false,
   );
 }

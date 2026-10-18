@@ -381,7 +381,7 @@ def list_audit(
     actor_id: uuid.UUID | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ):
     from app.platform.clock import IST
 

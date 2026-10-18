@@ -45,9 +45,13 @@ export function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** The value of the <option> in a select whose text contains `text`. */
-export async function optionValue(select: import("@playwright/test").Locator, text: string): Promise<string> {
-  const value = await select.locator("option", { hasText: text }).first().getAttribute("value");
-  if (!value) throw new Error(`No option containing "${text}"`);
-  return value;
+/** Chooses `option` in the drop-down called `label` (the portal's drop-downs are not native selects). */
+export async function choose(page: Page, label: string | RegExp, option: string | RegExp) {
+  await page.getByRole("combobox", { name: label }).click();
+  await page.getByRole("option", { name: option }).click();
+}
+
+/** Works on one site: the Site selector at the top of the sidebar, as the pages follow it. */
+export async function chooseSite(page: Page, site: string | RegExp) {
+  await choose(page, "Site", site);
 }

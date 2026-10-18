@@ -16,10 +16,11 @@ import '../../support/widgets.dart' show linkOpenerProvider;
 import '../data/support_contact.dart';
 import 'auth_strings.dart';
 
-/// The steps of signing in. Everyone starts at [id]. A customer who has no
+/// The steps of signing in. Everyone starts at [id]: the welcome buttons are
+/// on the splash screen, which opens this screen. A customer who has no
 /// password yet, or has forgotten it, goes through [code] and [newPassword]
 /// (AUTH-03, AUTH-16). Everyone else goes to [password].
-enum _Step { welcome, id, password, code, newPassword }
+enum _Step { id, password, code, newPassword }
 
 /// AUTH-12: at least 8 characters, with a letter and a number.
 bool isAcceptablePassword(String p) =>
@@ -38,7 +39,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _code = TextEditingController();
   final _newPassword = TextEditingController();
   final _confirm = TextEditingController();
-  _Step _step = _Step.welcome;
+  _Step _step = _Step.id;
   bool _notRegistered = false;
   late final _termsTap = TapGestureRecognizer()
     ..onTap = () => openLegalLink(ref, 'terms');
@@ -310,31 +311,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  /// The first screen (AUTH-01): the tagline and two buttons. Both lead to the
-  /// email screen.
-  List<Widget> _welcomeStep(AppLocalizations l) {
-    final t = const AuthText();
-    return [
-      Text(l.tagline, style: Theme.of(context).textTheme.bodyLarge),
-      const SizedBox(height: 32),
-      PrimaryButton(label: t.getStarted, onPressed: () => _go(_Step.id)),
-      const SizedBox(height: 8),
-      Center(
-        child: TextButton(
-          onPressed: () => _go(_Step.id),
-          child: Text(t.alreadyMember),
-        ),
-      ),
-    ];
-  }
-
   List<Widget> _idStep(AppLocalizations l) {
-    final config = ref.watch(appConfigProvider);
-    final demos = {
-      l.demoCustomer: 'customer@priveo.test',
-      l.demoCrew: '9000000002',
-      l.demoAdmin: 'priveopapa',
-    };
     return [
       _Field(
         label: l.loginIdLabel,
@@ -352,22 +329,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       PrimaryButton(label: l.continueButton, busy: _busy, onPressed: _continue),
       const SizedBox(height: 16),
       _termsNotice(),
-      if (config.showDemoAccounts) ...[
-        const SizedBox(height: 24),
-        SectionLabel(l.demoAccounts),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final e in demos.entries)
-              OutlinedButton(
-                onPressed:
-                    _busy ? null : () => setState(() => _id.text = e.value),
-                child: Text(e.key),
-              ),
-          ],
-        ),
-      ],
     ];
   }
 
@@ -462,7 +423,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final (title, body) = switch (_step) {
-      _Step.welcome => (const AuthText().welcomeTitle, _welcomeStep(l)),
       _Step.id => (l.loginTitle, _idStep(l)),
       _Step.password => (l.loginTitle, _passwordStep(l)),
       _Step.code => (l.codeTitle, _codeStep(l)),
@@ -479,7 +439,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: BrandLogo(width: 160)),
+                    const Center(child: BrandLogo(width: 200)),
                     const SizedBox(height: 32),
                     Text(
                       title,

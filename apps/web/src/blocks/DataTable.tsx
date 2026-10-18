@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/ui/skeleton";
+import { TileGrid, type ViewMode } from "./view";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 
 export interface DataColumn<T> {
@@ -23,7 +24,7 @@ export interface DataColumn<T> {
  */
 export function DataTable<T>({
   columns, rows, rowKey, loading, empty, onRowClick, rowLabel, toolbar, footer, className,
-  skeletonRows = 6,
+  skeletonRows = 6, view = "list", renderTile,
 }: {
   columns: DataColumn<T>[];
   rows: T[] | undefined;
@@ -37,8 +38,36 @@ export function DataTable<T>({
   footer?: ReactNode;
   className?: string;
   skeletonRows?: number;
+  /** "tiles" shows each row as the tile `renderTile` draws, in a grid that follows the screen width. */
+  view?: ViewMode;
+  renderTile?: (row: T) => ReactNode;
 }) {
   const showSkeleton = loading && !rows;
+  if (view === "tiles" && renderTile) {
+    return (
+      <div className={cn("flex flex-col gap-3", className)}>
+        {toolbar}
+        <TileGrid>
+          {showSkeleton && Array.from({ length: skeletonRows }, (_, i) => <Skeleton key={`s${i}`} className="h-28 rounded-xl" />)}
+          {!showSkeleton && rows?.map((row) => {
+            const tile = (
+              <div className="h-full rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:bg-accent/50">
+                {renderTile(row)}
+              </div>
+            );
+            return onRowClick ? (
+              <button key={rowKey(row)} type="button" aria-label={rowLabel?.(row)} onClick={() => onRowClick(row)}
+                      className="block h-full w-full cursor-pointer rounded-xl text-left focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+                {tile}
+              </button>
+            ) : <div key={rowKey(row)}>{tile}</div>;
+          })}
+        </TileGrid>
+        {!showSkeleton && rows?.length === 0 && <div>{empty}</div>}
+        {footer}
+      </div>
+    );
+  }
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       {toolbar}
@@ -103,19 +132,30 @@ export function DataTable<T>({
   );
 }
 
-/** Previous / next paging for a list fetched in pages of `size`. */
-export function Pager({ page, size, count, busy, onPage }: {
-  page: number; size: number; count: number; busy?: boolean; onPage: (page: number) => void;
+/**
+ * Previous / next paging for a list fetched in pages of `size`. Give `total`
+ * when the API can count the list: the pager then says "1-50 of 123" and stops
+ * at the last page.
+ */
+export function Pager({ page, size, count, total, busy, onPage }: {
+  page: number; size: number; count: number; total?: number; busy?: boolean; onPage: (page: number) => void;
 }) {
-  if (page === 0 && count < size) return null;
+  const known = total !== undefined;
+  const last = known ? Math.max(0, Math.ceil(total / size) - 1) : undefined;
+  if (known ? total === 0 : page === 0 && count < size) return null;
+  const hasNext = known ? page < last! : count >= size;
   return (
-    <nav aria-label="Pages" className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-      <span>Page {page + 1}</span>
+    <nav aria-label="Pages" className="flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
+      <span>
+        {known
+          ? `${page * size + 1}-${page * size + count} of ${total} · Page ${page + 1} of ${last! + 1}`
+          : `Page ${page + 1}`}
+      </span>
       <button type="button" disabled={page === 0 || busy} onClick={() => onPage(page - 1)}
               className="h-8 rounded-md border bg-card px-3 font-medium text-foreground hover:bg-accent disabled:opacity-50">
         Previous
       </button>
-      <button type="button" disabled={busy || count < size} onClick={() => onPage(page + 1)}
+      <button type="button" disabled={busy || !hasNext} onClick={() => onPage(page + 1)}
               className="h-8 rounded-md border bg-card px-3 font-medium text-foreground hover:bg-accent disabled:opacity-50">
         Next
       </button>

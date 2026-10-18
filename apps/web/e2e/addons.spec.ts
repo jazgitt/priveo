@@ -1,33 +1,42 @@
 import { expect, test } from "@playwright/test";
-import { optionValue, signInAsAdmin } from "./helpers";
+import { choose, chooseSite, signInAsAdmin } from "./helpers";
 
 // C21 has Requested, Scheduled, Missed and Cancelled Deep Spa bookings.
-test.describe("Add-ons (scenario C21)", () => {
+test.describe("Add on Service Requests (scenario C21)", () => {
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
-    await page.getByRole("link", { name: "Add-ons", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Add-ons" })).toBeVisible();
-    const society = page.getByLabel("Society filter");
-    await society.selectOption(await optionValue(society, "TEST C21"));
+    await page.getByRole("link", { name: "Add on Service Requests", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Add on Service Requests" })).toBeVisible();
+    await chooseSite(page, /TEST C21/);
   });
 
+  const bookings = (page: import("@playwright/test").Page) => page.locator("tbody tr").filter({ hasText: "Deep Spa" });
+
   test("lists the four seeded bookings", async ({ page }) => {
-    const cards = page.locator(".card", { hasText: "Deep Spa ·" });
-    await expect(cards).toHaveCount(4);
+    const rows = bookings(page);
+    await expect(rows).toHaveCount(4);
     for (const status of ["Requested", "Scheduled", "Missed", "Cancelled"]) {
-      await expect(cards.filter({ hasText: status }).first()).toBeVisible();
+      await expect(rows.filter({ hasText: status }).first()).toBeVisible();
     }
   });
 
   test("cancels a requested booking", async ({ page }) => {
-    const cards = page.locator(".card", { hasText: "Deep Spa ·" });
-    await expect(cards).toHaveCount(4);
-    await page.getByLabel("Status filter").selectOption("Requested");
-    await expect(cards).toHaveCount(1);
-    await cards.first().getByRole("button", { name: "Cancel booking" }).click();
+    const rows = bookings(page);
+    await expect(rows).toHaveCount(4);
+    await choose(page, "Status filter", "Requested");
+    await expect(rows).toHaveCount(1);
+    await rows.first().getByRole("button", { name: "Open" }).click();
 
-    await expect(cards).toHaveCount(0);
-    await page.getByLabel("Status filter").selectOption("Cancelled");
-    await expect(cards).toHaveCount(2);
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Cancel booking" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Cancel booking" }).click();
+    await expect(page.getByText("Booking cancelled.")).toBeVisible();
+    // The dialog may stay open on the cancelled booking: close it either way.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await expect(rows).toHaveCount(0);
+    await choose(page, "Status filter", "Cancelled");
+    await expect(rows).toHaveCount(2);
   });
 });

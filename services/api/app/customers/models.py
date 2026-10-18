@@ -25,6 +25,9 @@ class Customer(Base):
     mobile: Mapped[str] = mapped_column(String(10))
     society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
     flat: Mapped[str] = mapped_column(String(40), default="")
+    # Optional. The society's own details fill them in the portal until the admin changes them.
+    address_line1: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    address_line2: Mapped[str] = mapped_column(String(120), default="", server_default="")
     # Set when the customer accepts the terms at first sign-in (AUTH-04).
     terms_accepted_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     # Set when the customer confirms the review of their details (ONB-25).

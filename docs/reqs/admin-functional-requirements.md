@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.21 (wrong passwords block admin and crew logins for a growing time instead of locking them, 18 Oct 2026; Schedule page led by one chosen day; Board as Cards with a view-only Timeline, 18 Oct 2026; skipped and paused jobs on their own tab; Board shows all days and several chosen days; job status colours and counts on the Board; site selector; multiple working slots a day; crew page tabs and edit icon; Trainees move with their Member; crew society moves from a date; plan and add-on IDs; complaint 4-hour target is internal only; welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.23 (summary tiles that filter, list and tile views, Capacity Utilisation, Site Setup, Settings tabs and a manual Audit refresh, 18 Oct 2026; customer page in tabs with summary numbers and status tabs, vehicle tiles, vehicle deactivation, address lines; RC document and mandatory vehicle photo removed for the admin, 18 Oct 2026; wrong passwords block admin and crew logins for a growing time instead of locking them, 18 Oct 2026; Schedule page led by one chosen day; Board as Cards with a view-only Timeline, 18 Oct 2026; skipped and paused jobs on their own tab; Board shows all days and several chosen days; job status colours and counts on the Board; site selector; multiple working slots a day; crew page tabs and edit icon; Trainees move with their Member; crew society moves from a date; plan and add-on IDs; complaint 4-hour target is internal only; welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -75,24 +75,29 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADM-CUS-01 | The admin can create a customer on the customer's behalf. The form follows the customer's own onboarding: first name, last name, email (required), mobile number (required contact number); society; vehicle (make, model, variant, registration number, optional RC document); parking (basement, number); plan; service cutoff time; interior care day (only when the plan includes it). | Owner |
+| ADM-CUS-01 | The admin can create a customer on the customer's behalf. The form follows the customer's own onboarding: first name, last name, email (required), mobile number (required contact number); society (starts as the site the admin is working on; a society must already exist, so a customer cannot be created without one); vehicle (make, model, variant, registration number, optional photo); parking (basement, number); plan; service cutoff time; interior care day (only when the plan includes it). | Owner |
 | ADM-CUS-02 | The same validation as customer onboarding applies: valid email address, 10-digit mobile number, registration number format, required fields. | Derived |
 | ADM-CUS-03 | An email can belong to only one customer. If it already exists, the app opens that customer instead of creating a duplicate. The mobile number is a contact detail and is not checked for duplicates. | Derived and Owner |
 | ADM-CUS-04 | After the admin creates the customer, a welcome email is sent to the customer's email. It says the account is ready and asks them to open the app and sign in with that email. It contains no code or password. The customer then enters their email in the app, gets a 6-digit verification code, sets a password and reviews the details the admin entered (AUTH-14, ONB-25 in the customer file). No SMS is sent. | Owner |
 | ADM-CUS-05 | The admin can add further vehicles to an existing customer. Each vehicle has its own subscription. | Derived |
 | ADM-CUS-06 | The admin can set the first payment's status when onboarding (see section 6). | Owner |
-| ADM-CUS-07 | The vehicle photo is mandatory. When the admin onboards a customer, the admin can upload it. The customer can replace it later in their own app. | Owner |
+| ADM-CUS-07 | The vehicle photo is optional when the admin adds a vehicle. The admin can upload it then or later, and the customer can replace it in their own app. A customer adding a vehicle in their own app still has to give a photo. | Owner (admin); Derived (customer rule unchanged) |
 
 ### 2.2 Find and view customers
 
 | ID | Requirement | Status |
 |---|---|---|
-| ADM-CUS-08 | The admin can search the customer list by name, mobile number, registration number or society, and open a customer to see their vehicles, subscriptions, schedule settings and payment statuses. | Derived |
-| ADM-CUS-17 | In the customer view the admin sees whether the customer has verified their email, set a password and confirmed the onboarding review. | Derived |
+| ADM-CUS-08 | The admin can search the customer list by name, mobile number, registration number or society, and open a customer to see their vehicles, subscriptions, schedule settings and payment statuses. The list is paged and says how many customers there are and which page the admin is on. | Derived |
+| ADM-CUS-17 | In the customer view the admin sees the customer's **app onboarding**: whether they have verified their email, set a password and confirmed the onboarding review. | Derived |
 | ADM-CUS-18 | Removed (owner, 16 Oct 2026): the admin cannot resend the welcome email. The welcome email is sent once, when the customer is created (ADM-CUS-04) or the email is corrected (ADM-CUS-19). | Owner |
-| ADM-CUS-19 | The admin can correct a customer's email. The customer's password is cleared, a new welcome email is sent, and the customer verifies the new email and sets a new password. The change is audited (ADM-CUS-16). | Owner |
+| ADM-CUS-19 | The admin can update a customer's email. The customer's password is cleared, a new welcome email is sent, and the customer verifies the new email and sets a new password. The change is audited (ADM-CUS-16). | Owner |
 | ADM-CUS-20 | The admin can reset a customer's password by clearing it. The customer then gets an emailed code at the next sign-in, as for a first sign-in. The change is audited (ADM-CUS-16). | Derived |
 | ADM-CUS-21 | The admin can manage a customer's signed-in sessions. The admin sees each active session with its device name, platform, app version and last-active time, and can sign out one session or all of the customer's sessions. The customer is signed out at once and sees the sign-in screen the next time the app contacts the server. Each sign-out is recorded with the admin and the time (ADM-CUS-16). Changing a customer's email or clearing their password (ADM-CUS-19, ADM-CUS-20) also ends all their sessions. | Owner |
+| ADM-CUS-22 | At the top of the customer list the admin sees the total number of customers, how many have a subscription, how many have only add-ons (no subscription) and how many are Active, Activating and Inactive. The numbers follow the search and the site. Choosing a tile filters the list to what it counts, and choosing it again clears the filter. | Owner |
+| ADM-CUS-23 | The customer list has tabs for All, Active, Activating, Inactive and No subscription, each with its count. A customer's status is that of their best subscription (Active, then Activating, then Inactive); a customer with none is No subscription. | Owner (tabs); Derived (how a status is chosen) |
+| ADM-CUS-24 | A customer opens in tabs. **Account details** holds the fixed details (first and last name, email, mobile, flat, society, address lines 1 and 2, app onboarding), notifications, signed-in sessions and the account actions (update email, clear password, sign out all sessions), and each part can be edited there. **Vehicles** holds the vehicles. Address lines and society are optional; empty address lines start from what was entered when the society was created, and the society starts as the site the admin is working on. | Owner |
+| ADM-CUS-25 | In the Vehicles tab the admin sees one vehicle at a time. With more than one vehicle, small tiles with the vehicle's photo and registration number let the admin pick one. The admin can add, edit and **deactivate** a vehicle, and reactivate it. A deactivated vehicle gets no new visits, is hidden from the customer's app and the schedule, and keeps its history. A vehicle whose subscription is Active or Activating cannot be deactivated until the subscription is made Inactive. | Owner (deactivate); Derived (the subscription rule) |
+| ADM-CUS-26 | The customer list and the subscription list (ADM-SUB-07) can be shown as a table or as a grid of tiles, one for each customer or subscription. The grid fits as many columns as the screen width allows. The choice applies to every tab of that page and is remembered in the browser. | Owner |
 
 ### 2.3 Update plan and schedule settings (item g)
 
@@ -123,6 +128,8 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-SUB-03 | The backend sets a subscription to Inactive automatically when its plan payment has been **Over due for 7 days**. An Over due add-on payment does not do this. The admin is alerted (ADM-SCH-24). The admin can override it. | Owner |
 | ADM-SUB-04 | The admin can reactivate an Inactive subscription: it returns to Activating, and the admin then sets the first service date and activates it as in ADM-SUB-01. A new billing cycle and a new Due payment start from that date. Renewal by the customer is V2. | Derived |
 | ADM-SUB-05 | Every change of subscription status is recorded with the admin, or the backend, and the time. | Derived |
+| ADM-SUB-06 | At the top of the Subscriptions page the admin sees summary tiles: total subscriptions, how many are Active, Activating, Paused and Inactive, how many have a payment due (the latest plan payment is Due or Over due), and how many there are on each plan. Choosing a tile filters the list to what it counts. Tabs for All, Active, Activating, Paused and Inactive sit above the list, with their counts. | Owner |
+| ADM-SUB-07 | The Subscriptions page can be shown as a table or as tiles, as in ADM-CUS-26. | Owner |
 
 ## 3. Crew
 
@@ -162,6 +169,7 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-CRW-10 | The admin can edit or remove an exception. | Derived |
 | ADM-CRW-11 | Capacity is recalculated as soon as an exception is saved, edited or removed, so it is always accurate (section 5). | Owner |
 | ADM-CRW-12 | If an exception affects visits that are already scheduled, the app lists the affected visits so the admin can reassign them. On a frozen schedule the exception removes the crew member's visits without the code (ADM-SCH-29). The visits then go to the Needs scheduling list (ADM-SCH-28), and reassigning them needs the code (ADM-SCH-17) or happens automatically if a crew member fits (ADM-SCH-27). | Derived |
+| ADM-CRW-27 | At the top of the Crew page the admin sees summary tiles: total crew, Active, Inactive, Locked, with exceptions, and how many Managers, Members and Trainees. Choosing a tile filters the list. Tabs for All, Managers, Members and Trainees sit above the list. The page can be shown as a table or as tiles, as in ADM-CUS-26. | Owner |
 
 ---
 
@@ -179,6 +187,7 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-SVS-08 | Changes to working slots apply to scheduling from then on. A frozen schedule is not changed by them. | Derived |
 | ADM-SVS-09 | Planning durations: **Cleaning-External** about 20 minutes (one crew member does 3 in 1 hour), **Cleaning-Internal** about 20 minutes, and **Deep Spa** 2 hours (120 minutes). These apply to every vehicle category for now. | Owner |
 | ADM-SVS-10 | The scheduler plans all three services with these durations (ADM-SVS-09), each as its own job. Cleaning-External is due every day and Cleaning-Internal on the customer's interior care day. A Deep Spa job is planned when a customer buys it, as an add-on or as a standalone service (ADM-ADD-10), on the date and finish-by time proposed (ADM-SCH-30). | Owner |
+| ADM-SVS-11 | The page is called **Site Working slots**. It lists the working slots of every service together, with tabs for All and each service, as a table or as tiles (ADM-CUS-26). The admin can add, edit and delete a slot from either view, as before. | Owner |
 
 ---
 
@@ -193,7 +202,8 @@ Capacity is worked out for each society, because crew and working slots belong t
 | ADM-CAP-03 | Next to capacity the admin sees the demand for that date in the same minutes: one Cleaning-External for each active vehicle (after skips and pauses), plus the Cleaning-Internal and Deep Spa jobs due that day, and how many of them have been scheduled so far. | Derived |
 | ADM-CAP-04 | Dates where demand is higher than capacity are marked, so the admin can act before scheduling. | Derived |
 | ADM-CAP-05 | The capacity figure is always current. It updates immediately when crew are added or deactivated, working hours change, or an exception is saved. | Owner |
-| ADM-CAP-06 | On the Capacity page, hovering over a date's "Crew available" shows each counted crew member with their hours and slots for that date. Hovering over "Demand" shows the work due that date by service, with the number of jobs and the hours, and marks add-on work. | Owner (18 Oct 2026) |
+| ADM-CAP-06 | On the Capacity Utilisation page, hovering over a date's "Crew available" shows each counted crew member with their hours and slots for that date. Hovering over "Demand" shows the work due that date by service, with the number of jobs and the hours, and marks add-on work. | Owner (18 Oct 2026) |
+| ADM-CAP-07 | The page is called **Capacity Utilisation**. At the top the admin sees summary tiles for the dates shown: days shown, days over capacity, crew hours available, demand, scheduled hours and overall use. The page no longer lists the crew; crew hours and exceptions are on the Crew page. The page has no tile view. | Owner |
 
 ---
 
@@ -212,6 +222,7 @@ Capacity is worked out for each society, because crew and working slots belong t
 | ADM-PAY-09 | The invoice number is **PRV** + the month + the year as two digits (YY) + the last 4 digits of the customer's mobile number + 4 random digits. The month is two digits (01 to 12). Example for October 2026, mobile ending 4321: `PRV10264321` followed by 4 random digits such as `8052`. The backend generates it and makes sure it is unique, drawing new random digits if the number already exists. | Owner |
 | ADM-PAY-10 | Every payment has a type: **Plan** or **Add-on**. The payment list can be filtered by type, and the status rules, audit and GST invoice (ADM-PAY-02 to ADM-PAY-08) work the same for both. | Derived |
 | ADM-PAY-11 | When a customer marks a plan or add-on payment as paid and its status becomes Initiated, the admin is alerted (ADM-ACC-09). | Owner |
+| ADM-PAY-12 | At the top of the Payments page the admin sees summary tiles: all payments, and for each status (Due, Over due, Initiated, Received) the number of payments and their total in rupees, for the chosen site. Choosing a status tile filters the list to that status. | Owner |
 
 ---
 
@@ -293,6 +304,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-CMP-06 | The team's own target is a reply within 4 hours. It is not promised to the customer (ISS-06 in the customer file). A complaint still in Raised after 4 hours is highlighted in the list. | Derived |
 | ADM-CMP-07 | Each status change and note records which admin made it and when. | Derived |
 | ADM-CMP-08 | The admin is alerted when a customer raises a complaint (ADM-ACC-09), and again when a complaint is still Raised after 4 hours (ADM-CMP-06). The alert email gives the customer's first name, the category, the visit date if one is linked, the start of the description, and a link that opens the complaint in the web portal. Photos are not attached; the admin sees them in the portal. | Owner |
+| ADM-CMP-09 | At the top of the Complaints page the admin sees summary tiles: total complaints, how many are Raised, In progress and Resolved, and how many are overdue. Choosing a tile filters the list. | Owner |
 
 ### 8.2 Visits skipped by operations
 
@@ -324,6 +336,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-FDB-05 | Entries where the customer gave testimonial permission are marked, so Priveo knows which ones it may quote. Entries without permission are never marked usable. | Derived |
 | ADM-FDB-06 | The admin can add, rename, edit the description of, and deactivate the **feedback categories**, the **positive rating tags** and the **check-in categories**. The customer app loads these lists from the backend (FDBK-06, SVC-11, CHK-03 in the customer file). | Owner |
 | ADM-FDB-07 | A category or tag that is deactivated no longer appears for customers, but feedback already given with it stays and is still readable. | Derived |
+| ADM-FDB-08 | At the top of the Feedback tab the admin sees summary tiles: total feedback, the average rating, how many ratings of 5, 4, 3, 2 and 1 stars, and how many customers allow a quote. Choosing a star tile filters the list to that rating. | Owner |
 
 ---
 
@@ -335,11 +348,14 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-REF-02 | The "cars serviced" figure shown in the society list is calculated from the active vehicles in that society. | Derived |
 | ADM-REF-03 | The admin can maintain the **vehicle catalogue**: makes, models and variants, and the vehicle category for each. They can add, edit and deactivate them. The customer onboarding dropdowns and the auto-detected category come from it (ONB-09, ONB-11). | Owner |
 | ADM-REF-04 | The admin can edit a customer's car details: registration number, make, model, variant and category. Customers cannot change these themselves (VEH-04 in the customer file). | Owner |
-| ADM-REF-05 | The admin can open a vehicle's uploaded RC document and mark it **Verified**. The customer sees the status in My vehicles (VEH-03). | Derived |
+| ADM-REF-05 | Removed (owner, 18 Oct 2026): the admin portal no longer shows, uploads or verifies an RC document. The customer app's optional RC upload and status (ONB-12, VEH-03) are not changed by this; the owner has not yet said whether they stay. | Owner |
+| ADM-REF-07 | The page for societies, plans, vehicle catalogue, services, checklists, reasons and the add-on catalogue is called **Site Setup**. | Owner |
 | ADM-SET-01 | **Plans**: the admin keeps a list of plans and can add, edit and deactivate them. For each plan: the plan name, the monthly price, the struck-through list price, the inclusions shown on the review screen (PAY-01, PAY-02), and whether it includes interior cleaning. The interior care day step in the customer's onboarding appears only when the plan includes interior cleaning (ONB-18). The customer chooses one plan when subscribing and when adding a vehicle (PAY-12). A deactivated plan is no longer offered, and subscriptions already on it continue. Only Premium Care exists to start with. Each plan has a unique, permanent plan ID (PLN-0001, PLN-0002 and so on), shown in the Plans list; new plans get the next number. | Owner |
 | ADM-SET-02 | **Payment settings**: the UPI ID and the UPI QR code image shown on the payment screen (PAY-05). | Owner |
 | ADM-SET-03 | **Support settings**: the helpline number and the WhatsApp number used by "Call support" and "WhatsApp support", and the support hours shown (SUP-02, SUP-03, SUP-04). | Owner |
 | ADM-SET-04 | **Invoice settings**: the seller's legal name, address and GSTIN used on the GST invoices (ADM-PAY-08). The values are loaded into the database by an initial seed, and are not edited in the app in MVP. | Owner |
+| ADM-SET-05 | The Settings page shows each section as its own tab: the setting groups (Support, Payment, Invoice, Schedule, Billing), Alert emails and Automatic planning. | Owner |
+| ADM-SET-06 | The Audit page does not reload by itself. It tells the admin to press **Refresh** to see newer events. It loads only the last 1000 events and shows them in pages of 50. | Owner |
 | ADM-REF-06 | A society can be deactivated only when it has no active subscriptions and no active crew. The admin first deactivates those. Deactivating the society then only removes it from the customer's society list. | Owner |
 
 ### 9.1 Service checklists and proof minimums
@@ -372,6 +388,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-ADD-10 | Deep Spa is also a standalone service: a customer who has no subscription can take it (ADD-14 in the customer file). | Owner |
 | ADM-ADD-11 | A customer can therefore exist with a vehicle and no subscription. The one-time load of existing customers brings in the people who have taken only a Deep Spa in this way, with their Deep Spa as history. | Derived |
 | ADM-ADD-12 | Admin creates a customer/vehicle without a subscription; standalone Spa follows the subscriber Spa booking, UPI, scheduling, proof and history rules. Admin can create its booking too (owner decision 13 Oct 2026). | Owner |
+| ADM-ADD-13 | The Add-ons page is called **Add on Service Requests**. | Owner |
 
 ## 10. Business rules
 

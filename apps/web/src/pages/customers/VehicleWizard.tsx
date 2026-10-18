@@ -8,6 +8,7 @@ import { DetailList, ErrorState } from "@/blocks/layout";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { inr } from "@/components/format";
 import { cn } from "@/lib/utils";
+import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Switch } from "@/ui/switch";
@@ -23,7 +24,9 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
 }) {
   const [step, setStep] = useState(0);
   const [withSubscription, setWithSubscription] = useState(true);
-  const [vehicle, setVehicle] = useState(newVehicle);
+  const site = useSite();
+  // The society starts as the site the admin is working on.
+  const [vehicle, setVehicle] = useState(() => ({ ...newVehicle(), society_id: site.id }));
   const [person, setPerson] = useState({ first_name: "", last_name: "", email: "", mobile: "", flat: "" });
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<unknown>(null);
@@ -42,16 +45,20 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
     : ["Customer", "Society", "Vehicle", "Parking", "Plan", "Preferences", "Review"];
   const stage = stages[step];
 
-  const upload = async (file: File | undefined, purpose: "vehicle" | "rc") => {
+  const upload = async (file: File | undefined) => {
     if (!file) return;
     setUploading(true); setUploadError(null);
     try {
-      const r = await uploadCustomerAsset(file, purpose);
-      set(purpose === "vehicle" ? "photo_upload_id" : "rc_upload_id", r.id);
-      if (purpose === "vehicle") setPhotoUrl(r.url);
+      const r = await uploadCustomerAsset(file);
+      set("photo_upload_id", r.id);
+      setPhotoUrl(r.url);
     } catch (e) { setUploadError(e); } finally { setUploading(false); }
   };
-  const payload = () => (withSubscription ? vehicle : { ...vehicle, plan_id: null, cutoff_time: null, interior_day: null });
+  // The photo is optional: no photo is sent as null, not as an empty string.
+  const payload = () => {
+    const car = { ...vehicle, photo_upload_id: vehicle.photo_upload_id || null };
+    return withSubscription ? car : { ...car, plan_id: null, cutoff_time: null, interior_day: null };
+  };
   const save = useAppMutation<void, { id: string; existing?: boolean }>({
     mutationFn: () => api(customerId ? `/v1/admin/customers/${customerId}/vehicles` : "/v1/admin/customers", {
       method: "POST", body: customerId ? payload() : { ...person, vehicle: payload() },
@@ -67,12 +74,13 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   const mobileOk = /^\d{10}$/.test(person.mobile);
   const valid = stage === "Customer" ? Boolean(person.first_name.trim() && person.last_name.trim() && emailOk && mobileOk)
     : stage === "Society" ? Boolean(vehicle.society_id)
-    : stage === "Vehicle" ? Boolean(vehicle.catalogue_id && vehicle.registration && vehicle.photo_upload_id)
+    : stage === "Vehicle" ? Boolean(vehicle.catalogue_id && vehicle.registration)
     : stage === "Parking" ? Boolean(vehicle.parking_basement && /^\d{1,5}$/.test(vehicle.parking_number))
     : stage === "Plan" ? !withSubscription || Boolean(vehicle.plan_id)
     : stage === "Preferences" ? !withSubscription || Boolean(vehicle.cutoff_time && (!plan?.includes_interior || vehicle.interior_day))
     : true;
   const lookupError = societies.error ?? catalogue.error ?? plans.error ?? uploadError;
+  const noSociety = societies.data !== undefined && societies.data.every((s) => !s.active);
 
   return (
     <FormDialog
@@ -110,6 +118,9 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
         </div>
       )}
 
+      {stage === "Society" && noSociety && (
+        <ErrorState message="There is no active society yet. Create a society under Site Setup first; a customer needs one." />
+      )}
       {stage === "Society" && (
         <Field label="Society" hint="A vehicle's society cannot be changed after creation.">
           {(p) => (
@@ -139,16 +150,10 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
                            onChange={(e) => set("registration", e.target.value.toUpperCase().replaceAll(" ", ""))} />}
           </Field>
           <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/40 p-4 sm:col-span-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
-            <div className="flex flex-col gap-4">
-              <Field label="Vehicle photo" hint={uploading ? "Uploading…" : "Required. JPG, PNG, HEIC or WebP."}>
-                {(p) => <Input {...p} type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/webp" disabled={uploading}
-                               onChange={(e) => void upload(e.target.files?.[0], "vehicle")} />}
-              </Field>
-              <Field label="RC document" optional hint={vehicle.rc_upload_id ? "RC uploaded." : "JPG, PNG or PDF up to 5 MB."}>
-                {(p) => <Input {...p} type="file" accept="image/jpeg,image/png,application/pdf" disabled={uploading}
-                               onChange={(e) => void upload(e.target.files?.[0], "rc")} />}
-              </Field>
-            </div>
+            <Field label="Vehicle photo" optional hint={uploading ? "Uploading…" : "JPG, PNG, HEIC or WebP, under 10 MB."}>
+              {(p) => <Input {...p} type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.heic,.heif" disabled={uploading}
+                             onChange={(e) => void upload(e.target.files?.[0])} />}
+            </Field>
             {photoUrl
               ? <img src={photoUrl} alt="Vehicle" className="aspect-[4/3] w-36 self-center rounded-md border object-cover" />
               : <div className="flex aspect-[4/3] w-36 items-center justify-center self-center rounded-md border border-dashed text-xs text-muted-foreground">No photo yet</div>}

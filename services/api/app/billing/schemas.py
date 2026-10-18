@@ -138,6 +138,9 @@ class SubscriptionRowOut(BaseModel):
     first_service_date: dt.date | None
     # The end of the current billing cycle.
     renewal_date: dt.date | None
+    # The status of the latest plan payment, and whether it is waiting (Due or Over due).
+    payment_status: str | None = None
+    payment_due: bool = False
 
 
 class SubscriptionEventOut(BaseModel):

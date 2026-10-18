@@ -17,12 +17,14 @@ const customer = { id: "c1", first_name: "Asha", last_name: "Rao", email: "asha@
 const car = (sub: Partial<NonNullable<Vehicle["subscription"]>> = {}): Vehicle => ({
   id: "v1", society_id: "s1", society: "DLF Meadows", registration: "HR01ZZ1234",
   make: "Tata", model: "Nexon", variant: "Pure", category: "Compact SUV",
-  parking_basement: "B1", parking_number: "17", photo_url: null, rc_url: null,
-  rc_verified: false, payments: [{ id: "pay1", status: "Due", amount_rupees: 999, due_date: "2026-11-01" }],
+  parking_basement: "B1", parking_number: "17", photo_url: null,
+  payments: [{ id: "pay1", status: "Due", amount_rupees: 999, due_date: "2026-11-01" }],
   subscription: { id: "sub1", status: "Active", plan_id: "p1", plan_name: "Premium", price_rupees: 999,
     cutoff_time: "09:00", interior_day: "Monday", first_service_date: "2026-10-01", pending_plan_id: null,
     pending_from: null, ...sub },
 });
+const summary = { total: 120, with_subscription: 90, addons_only: 7,
+  by_status: { Active: 60, Activating: 20, Inactive: 10, "No subscription": 30 } };
 let created: Record<string, unknown> | null;
 const reply = (body: unknown, status = 200) => new Response(status === 204 ? null : JSON.stringify(body), { status });
 const sentTo = (path: string, method: string) => fetchMock.mock.calls.filter(([p, o]) => p === path && (o?.method ?? "GET") === method);
@@ -43,6 +45,7 @@ beforeEach(() => {
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
     if (path === "/v1/admin/customers/c1" && method === "GET") return reply(customer);
+    if (path.startsWith("/v1/admin/customers/summary")) return reply(summary);
     if (path.startsWith("/v1/admin/customers?")) return reply([{ id: "c1", name: "Asha Rao", email: customer.email, mobile: customer.mobile, flat: "A-12", email_verified: false, password_set: false, onboarding_confirmed: false, vehicles: [{ id: "v1", registration: "HR01ZZ1234", status: "Activating" }] }]);
     return reply({ saved: true });
   });
@@ -61,7 +64,7 @@ function detail(vehicles: Vehicle[], extra: (path: string, o?: RequestInit) => R
   const original = fetchMock.getMockImplementation()!;
   fetchMock.mockImplementation(async (path: string, o?: RequestInit) =>
     extra(path, o) ?? (path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET" ? reply({ ...customer, vehicles }) : original(path, o)));
-  page("/customers/c1");
+  page("/customers/c1?tab=vehicles");
 }
 
 it("lists vehicles and sign-in state, pages the search and resets the offset when it changes", async () => {
@@ -107,7 +110,9 @@ it("opens a customer from the row and shows their onboarding state", async () =>
   await userEvent.click(await screen.findByRole("link", { name: "Asha Rao" }));
   expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeInTheDocument();
   expect(screen.getByText(/Email not verified/)).toHaveTextContent("Review pending");
-  expect(screen.getAllByRole("button", { name: "Add vehicle" }).length).toBeGreaterThan(0);
+  expect(screen.getByText("Personal details")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Vehicles/ }));
+  expect((await screen.findAllByRole("button", { name: "Add vehicle" })).length).toBeGreaterThan(0);
 });
 
 it("shows imported Spa history without inventing completion or a date", async () => {
@@ -117,19 +122,20 @@ it("shows imported Spa history without inventing completion or a date", async ()
       id: "old1", date: null, service: "Deep Spa", vehicle: "Unmatched vehicle",
       payment_status: "Received", notes: "Date as given: unclear" }] }) : original(path, options));
   page("/customers/c1");
+  await userEvent.click(await screen.findByRole("tab", { name: "Service history" }));
   expect(await screen.findByText(/Date unknown/)).toBeInTheDocument();
   expect(screen.getAllByText(/Completion not recorded/).length).toBeGreaterThan(0);
   expect(screen.getByText("Date as given: unclear")).toBeInTheDocument();
 });
 
-it.each([true, false])("creates a customer with subscription=%s and a required photo", async (subscribed) => {
+it.each([true, false])("creates a customer with subscription=%s and a photo", async (subscribed) => {
   page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
   for (const [label, value] of [["First name", "Asha"], ["Last name", "Rao"], ["Email", "asha@example.com"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   await choose("Make", "Tata"); await choose("Model", "Nexon"); await choose("Variant", "Pure");
   await userEvent.type(screen.getByLabelText("Registration"), "hr01zz1234");
-  expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
   await userEvent.upload(screen.getByLabelText("Vehicle photo"), new File(["photo"], "car.jpg", { type: "image/jpeg" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled());
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
@@ -244,28 +250,178 @@ it("edits details, corrects the email, and confirms password, notification and s
   const edit = screen.getByRole("dialog");
   await userEvent.clear(within(edit).getByLabelText("First name")); await userEvent.type(within(edit).getByLabelText("First name"), "Ash");
   await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
-  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12", address_line1: "", address_line2: "" }));
 
-  await userEvent.click(screen.getByRole("button", { name: "Account actions" }));
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Correct email" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Update email" })[0]);
   const email = await screen.findByRole("dialog");
-  await userEvent.clear(within(email).getByLabelText("Correct email")); await userEvent.type(within(email).getByLabelText("Correct email"), "new@example.com");
-  await userEvent.click(within(email).getByRole("button", { name: "Correct email" }));
+  await userEvent.clear(within(email).getByLabelText("New email")); await userEvent.type(within(email).getByLabelText("New email"), "new@example.com");
+  await userEvent.click(within(email).getByRole("button", { name: "Update email" }));
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/email", "PATCH")).toEqual({ email: "new@example.com" }));
 
-  await userEvent.click(screen.getByRole("button", { name: "Account actions" }));
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Clear password" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Clear password" }));
   expect(sentTo("/v1/admin/customers/c1/reset-password", "POST")).toHaveLength(0);
   await confirmWith("Clear password");
   await waitFor(() => expect(sentTo("/v1/admin/customers/c1/reset-password", "POST")).toHaveLength(1));
 
-  await userEvent.click(screen.getByRole("switch", { name: "Payments" }));
+  await userEvent.click(await screen.findByRole("switch", { name: "Payments" }));
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/notification-preferences", "PUT")).toEqual({ items: [{ event: "payment_due", enabled: false }] }));
 
   await userEvent.click(screen.getAllByRole("button", { name: "Sign out session" })[0]);
   await confirmWith("Sign out session");
   await waitFor(() => expect(sentTo("/v1/admin/customers/c1/sessions/t1/logout", "POST")).toHaveLength(1));
-  await userEvent.click(screen.getByRole("button", { name: "Sign out all sessions" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Sign out all sessions" })[0]);
   await confirmWith("Sign out all sessions");
   await waitFor(() => expect(sentTo("/v1/admin/customers/c1/sessions/logout", "POST")).toHaveLength(1));
+});
+
+it("shows the summary numbers, filters by status tab and counts the pages", async () => {
+  page();
+  expect(await screen.findByText("Total customers")).toBeInTheDocument();
+  const tiles = screen.getByRole("region", { name: "Customer summary" });
+  expect(await within(tiles).findByRole("button", { name: "Total customers: 120" })).toBeInTheDocument();
+  expect(within(tiles).getByRole("button", { name: "With a subscription: 90" })).toBeInTheDocument();
+  expect(within(tiles).getByRole("button", { name: "Add-ons only: 7" })).toBeInTheDocument();
+  expect(await screen.findByText(/1-1 of 120 · Page 1 of 3/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /^Active\s*\d/ }));
+  await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("&status=Active&limit=50&offset=0"))).toBe(true));
+  expect(await screen.findByText(/of 60 · Page 1 of 2/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /No subscription/ }));
+  await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("status=No%20subscription"))).toBe(true));
+});
+
+it("opens a customer from any cell of the row", async () => {
+  page();
+  await userEvent.click(await screen.findByText("asha@example.com"));
+  expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeInTheDocument();
+});
+
+it("shows account details first, with onboarding wording, and keeps the chosen tab", async () => {
+  page("/customers/c1");
+  expect(await screen.findByText("First name")).toBeInTheDocument();
+  expect(screen.getByText("9876543210")).toBeInTheDocument();
+  expect(screen.getByText("App onboarding")).toBeInTheDocument();
+  expect(screen.queryByText("App sign-in")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Account actions" })).not.toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "Account details" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.queryByRole("tab", { name: "Account" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Vehicles/ }));
+  expect(screen.getByRole("tab", { name: /Vehicles/ })).toHaveAttribute("aria-selected", "true");
+});
+
+it("cannot deactivate a vehicle while its subscription runs", async () => {
+  detail([car({ status: "Active" })]);
+  expect(await screen.findByRole("button", { name: "Deactivate" })).toBeDisabled();
+});
+
+it("deactivates after confirming, shows deactivated vehicles on request and reactivates one", async () => {
+  detail([car({ status: "Inactive" }), { ...car(), id: "v2", registration: "HR02AB0002", active: false }]);
+  expect(screen.queryByText("HR02AB0002")).not.toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
+  expect(sentTo("/v1/admin/vehicles/v1", "PATCH")).toHaveLength(0);
+  await confirmWith("Deactivate vehicle");
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ active: false }));
+
+  await userEvent.click(screen.getByRole("switch", { name: "Show deactivated vehicles" }));
+  await userEvent.click(await screen.findByRole("radio", { name: "HR02AB0002" }));
+  expect(screen.getByText("Deactivated")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Reactivate vehicle" }));
+  await waitFor(() => expect(sentTo("/v1/admin/vehicles/v2", "PATCH")).toHaveLength(1));
+  expect(bodyOf("/v1/admin/vehicles/v2", "PATCH")).toEqual({ active: true });
+});
+
+it("says why a photo is refused instead of sending it", async () => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Last name", "Rao"], ["Email", "asha@example.com"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.upload(screen.getByLabelText("Vehicle photo"), new File(["x"], "notes.txt", { type: "text/plain" }), { applyAccept: false });
+  expect(await screen.findByText("Choose a JPG, PNG, HEIC or WebP photo.")).toBeInTheDocument();
+  expect(sentTo("/v1/admin/customer-uploads", "POST")).toHaveLength(0);
+});
+
+it("shows no vehicle tiles for a single vehicle", async () => {
+  detail([car()]);
+  await screen.findByRole("button", { name: "Edit car and parking" });
+  expect(screen.queryByRole("radiogroup", { name: "Choose a vehicle" })).not.toBeInTheDocument();
+});
+
+it("chooses between several vehicles with tiles, one selected at a time", async () => {
+  detail([car(), { ...car(), id: "v2", registration: "HR02AB0002", parking_number: "88", subscription: null, payments: [] }]);
+  const group = await screen.findByRole("radiogroup", { name: "Choose a vehicle" });
+  const first = within(group).getByRole("radio", { name: "HR01ZZ1234" });
+  const second = within(group).getByRole("radio", { name: "HR02AB0002" });
+  expect(first).toHaveAttribute("aria-checked", "true");
+  expect(second).toHaveAttribute("aria-checked", "false");
+  expect(screen.getByText("B1-17")).toBeInTheDocument();
+  await userEvent.click(second);
+  expect(second).toHaveAttribute("aria-checked", "true");
+  expect(first).toHaveAttribute("aria-checked", "false");
+  expect(screen.getByText("B1-88")).toBeInTheDocument();
+  expect(screen.queryByText("B1-17")).not.toBeInTheDocument();
+});
+
+it("has no RC document anywhere on the vehicle", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Edit car and parking" }));
+  expect(screen.queryByText(/RC/)).not.toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/RC document/);
+  expect(screen.getByLabelText(/Vehicle photo/)).toBeInTheDocument();
+});
+
+it("creates a customer without a vehicle photo, sending no photo", async () => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Last name", "Rao"], ["Email", "asha@example.com"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Make", "Tata"); await choose("Model", "Nexon"); await choose("Variant", "Pure");
+  await userEvent.type(screen.getByLabelText("Registration"), "hr01zz1234");
+  expect(screen.getByText("(optional)")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Basement", "B2"); await userEvent.type(screen.getByLabelText("Parking number"), "17");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("switch", { name: "Create a subscription" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(created).not.toBeNull());
+  expect((created as unknown as { vehicle: Record<string, unknown> }).vehicle.photo_upload_id).toBeNull();
+}, 30000);
+
+it("fills empty address lines from the society and saves them with the society", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, o?: RequestInit) =>
+    path.includes("/directory/societies") ? reply([{ ...society, sector: "Sector 9", city: "Gurugram" }])
+      : path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET" ? reply({ ...customer, society_id: "s1" })
+      : original(path, o));
+  page("/customers/c1");
+  await userEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  const dialog = screen.getByRole("dialog");
+  await waitFor(() => expect(within(dialog).getByLabelText(/Address line 1/)).toHaveValue("DLF Meadows"));
+  expect(within(dialog).getByLabelText(/Address line 2/)).toHaveValue("Sector 9, Gurugram");
+  await userEvent.clear(within(dialog).getByLabelText(/Address line 2/));
+  await userEvent.type(within(dialog).getByLabelText(/Address line 2/), "Tower 4");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save customer" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toMatchObject({
+    address_line1: "DLF Meadows", address_line2: "Tower 4", society_id: "s1" }));
+});
+
+it("filters from a summary tile with a chip to clear it, and switches to tiles", async () => {
+  page();
+  const tiles = await screen.findByRole("region", { name: "Customer summary" });
+  await userEvent.click(await within(tiles).findByRole("button", { name: "Add-ons only: 7" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("&scope=addons_only&limit=50&offset=0"))).toBe(true));
+  expect(await screen.findByText(/of 7 · Page 1 of 1/)).toBeInTheDocument();
+  expect(within(tiles).getByRole("button", { name: "Add-ons only: 7" })).toHaveAttribute("aria-pressed", "true");
+  await userEvent.click(screen.getByRole("button", { name: /Clear this filter/ }));
+  expect(screen.queryByRole("button", { name: /Clear this filter/ })).not.toBeInTheDocument();
+  await userEvent.click(within(tiles).getByRole("button", { name: "Active: 60" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("&status=Active&limit=50&offset=0"))).toBe(true));
+
+  await userEvent.click(screen.getByRole("button", { name: "Tiles" }));
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(await screen.findByText("Asha Rao")).toBeInTheDocument();
+  expect(localStorage.getItem("priveo.view.customers")).toBe("tiles");
+  await userEvent.click(screen.getByRole("button", { name: "Open Asha Rao" }));
+  expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeInTheDocument();
+  localStorage.removeItem("priveo.view.customers");
 });

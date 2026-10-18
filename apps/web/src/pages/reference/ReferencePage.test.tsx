@@ -121,8 +121,10 @@ describe("settings", () => {
     handlers["PUT /v1/admin/directory/settings/billing.cycle_days"] = () => err(
       422, "validation_failed", "Please check the details.", { value: "Enter 1 to 366." });
     renderUi(<SettingsPage />);
+    // Each group is a tab; Support is first, Billing is its own tab.
+    await userEvent.click(await screen.findByRole("tab", { name: "Billing" }));
     const input = await screen.findByLabelText("Billing cycle in days");
-    expect(screen.getAllByText("Default").length).toBe(2);
+    expect(screen.getAllByText("Default").length).toBe(1);
     await userEvent.clear(input);
     await userEvent.type(input, "999");
     await userEvent.click(screen.getByRole("button", { name: "Save Billing cycle in days" }));
@@ -145,7 +147,7 @@ describe("audit", () => {
     await waitFor(() => {
       const last = String(fetchMock.mock.calls.at(-1)![0]);
       expect(last).toContain("entity=plan");
-      expect(last).toContain("limit=100");
+      expect(last).toContain("limit=1000");
     });
   });
 });

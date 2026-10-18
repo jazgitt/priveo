@@ -78,8 +78,8 @@ describe("portal shell", () => {
     const nav = screen.getByRole("navigation", { name: "Admin areas" });
     expect(within(nav).getByText("This site")).toBeInTheDocument();
     expect(within(nav).getByText("All sites")).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Working slots" })).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Master data" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Site Working slots" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Site Setup" })).toBeInTheDocument();
     localStorage.removeItem("priveo.site");
   });
 

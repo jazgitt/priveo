@@ -50,27 +50,22 @@ Future<List<Uri>> pumpLogin(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('the welcome screen has two buttons that open the email screen',
+  testWidgets('the sign-in screen opens on the email step, with no welcome step or demo accounts',
       (tester) async {
     await pumpLogin(tester);
-    expect(find.text('Car care, at your doorstep'), findsOneWidget);
-    expect(find.text('Already a member? Log in'), findsOneWidget);
-    await tester.tap(find.text('Get started'));
-    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Email, mobile or user ID'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
-  });
-
-  testWidgets('already a member also opens the email screen', (tester) async {
-    await pumpLogin(tester);
-    await tester.tap(find.text('Already a member? Log in'));
-    await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Already a member? Log in'), findsNothing);
+    expect(find.text('Use demo account'), findsNothing);
+    expect(find.text('Customer'), findsNothing);
+    expect(find.text('Crew'), findsNothing);
+    expect(find.text('Admin'), findsNothing);
   });
 
   testWidgets('an email with a bad format shows an error', (tester) async {
     await pumpLogin(tester);
-    await tester.tap(find.text('Get started'));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'asha@example');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -79,8 +74,6 @@ void main() {
 
   testWidgets('not registered shows the support buttons', (tester) async {
     final opened = await pumpLogin(tester);
-    await tester.tap(find.text('Get started'));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'stranger@priveo.test');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -94,8 +87,6 @@ void main() {
 
   testWidgets('the Terms and Privacy Policy words open links', (tester) async {
     final opened = await pumpLogin(tester);
-    await tester.tap(find.text('Get started'));
-    await tester.pumpAndSettle();
     final rich = tester.widget<RichText>(find
         .byWidgetPredicate((w) =>
             w is RichText && w.text.toPlainText().contains('Privacy Policy'))

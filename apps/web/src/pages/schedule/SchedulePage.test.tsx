@@ -566,8 +566,11 @@ describe("capacity page", () => {
     server();
     wrap(<CapacityPage />);
     expect(await screen.findByText("Over capacity")).toBeInTheDocument();
-    expect(screen.getByText("10 h")).toBeInTheDocument();
-    expect(screen.getByText("Asha")).toBeInTheDocument();
+    expect(screen.getAllByText("10 h").length).toBeGreaterThan(0);
+    // The crew list moved to the Crew page; this page has the summary tiles instead.
+    expect(screen.queryByText("Asha")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Capacity Utilisation" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Capacity summary" })).toBeInTheDocument();
   });
 
   it("gives the breakup of crew hours and demand in a tooltip", async () => {

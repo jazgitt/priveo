@@ -653,6 +653,14 @@ class BillingService:
                 continue
             found.append((sub, vehicle, customer, shown))
         page = found[offset: offset + limit]
+        latest: dict[uuid.UUID, str] = {}
+        for sub_id, pay_status in self._db.execute(
+            select(Payment.subscription_id, Payment.status)
+            .where(Payment.subscription_id.in_([x[0].id for x in page]),
+                   Payment.kind == "Plan", Payment.voided_at.is_(None))
+            .order_by(Payment.due_date, Payment.created_at)
+        ) if page else []:
+            latest[sub_id] = pay_status  # the last one in date order is the latest
         societies = {s.id: s.name for s in self._db.scalars(select(Society))}
         plans = {p.id: p.name for p in self._db.scalars(select(Plan))}
         out = []
@@ -666,8 +674,27 @@ class BillingService:
                 vehicle=vehicle_label(vehicle),
                 plan_name=plans.get(sub.plan_id) if sub.plan_id else None,
                 status=shown, first_service_date=sub.first_service_date,
-                renewal_date=renewal))
+                renewal_date=renewal, payment_status=latest.get(sub.id),
+                payment_due=latest.get(sub.id) in ("Due", "Over due")))
         return out
+
+    def payments_summary(self, society: str | None = None) -> dict:
+        """How many payments, and how many rupees, there are in each status (ADM-PAY-*)."""
+        q = (select(Payment.status, func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
+             .where(Payment.voided_at.is_(None)))
+        if society:
+            q = q.join(Customer, Payment.customer_id == Customer.id).outerjoin(
+                Vehicle, Payment.vehicle_id == Vehicle.id).join(
+                Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id)
+            ).where(Society.name == society)
+        by_status = {s: {"count": 0, "rupees": 0} for s in PAYMENT_STATUSES}
+        for status, count, rupees in self._db.execute(q.group_by(Payment.status)):
+            by_status[status] = {"count": count, "rupees": int(rupees)}
+        return {
+            "total": sum(v["count"] for v in by_status.values()),
+            "total_rupees": sum(v["rupees"] for v in by_status.values()),
+            "by_status": by_status,
+        }
 
     def subscription_events(self, subscription_id: str) -> "list[SubscriptionEventOut]":
         """The status changes of one subscription, newest first (ADM-SUB-05)."""

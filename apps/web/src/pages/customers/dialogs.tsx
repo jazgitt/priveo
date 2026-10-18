@@ -6,8 +6,8 @@ import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
 import { useAppMutation } from "@/blocks/mutation";
 import { inr, showDate } from "@/components/format";
+import { useSite } from "@/site/SiteContext";
 import { Input } from "@/ui/input";
-import { Switch } from "@/ui/switch";
 import { Textarea } from "@/ui/textarea";
 
 import {
@@ -39,23 +39,56 @@ export function CustomerDialog({ customer: c, open, onClose }: { customer: Custo
 }
 
 function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
-  const [v, setV] = useState({ first_name: c.first_name, last_name: c.last_name, mobile: c.mobile, flat: c.flat ?? "" });
+  const site = useSite();
+  const societies = useSocietyList();
+  const list = (societies.data ?? []).filter((s) => s.active || s.id === c.society_id);
+  // The customer's society, or the selected site when they have none yet.
+  const societyId = c.society_id ?? site.id;
+  const home = list.find((s) => s.id === societyId);
+  // Empty address lines start from what was entered when the society was created.
+  const fromSociety = { line1: home?.name ?? "", line2: [home?.sector, home?.city].filter(Boolean).join(", ") };
+  const [v, setV] = useState({
+    first_name: c.first_name, last_name: c.last_name, mobile: c.mobile, flat: c.flat ?? "",
+    address_line1: c.address_line1 ?? "", address_line2: c.address_line2 ?? "", society_id: societyId,
+  });
+  const [touched, setTouched] = useState(false);
+  const shown = touched ? v : {
+    ...v,
+    address_line1: v.address_line1 || fromSociety.line1,
+    address_line2: v.address_line2 || fromSociety.line2,
+    society_id: v.society_id || site.id,
+  };
   const save = useCustomerSave(c.id, "Customer details saved.", onClose);
   const mobileOk = /^\d{10}$/.test(v.mobile);
-  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setV({ ...shown, [k]: e.target.value }); setTouched(true);
+  };
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title="Edit customer details"
                 description="The customer is not notified. The change is recorded in the audit log."
                 submitLabel="Save customer" busy={save.isPending}
-                disabled={!v.first_name.trim() || !v.last_name.trim() || !mobileOk}
-                onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}`, method: "PATCH", body: v })}>
+                disabled={!shown.first_name.trim() || !shown.last_name.trim() || !mobileOk}
+                onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}`, method: "PATCH", body: { ...shown, society_id: shown.society_id || undefined } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="First name">{(p) => <Input {...p} value={v.first_name} onChange={set("first_name")} />}</Field>
-        <Field label="Last name">{(p) => <Input {...p} value={v.last_name} onChange={set("last_name")} />}</Field>
-        <Field label="Mobile" hint="10 digits" error={v.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
-          {(p) => <Input {...p} inputMode="numeric" value={v.mobile} onChange={set("mobile")} />}
+        <Field label="First name">{(p) => <Input {...p} value={shown.first_name} onChange={set("first_name")} />}</Field>
+        <Field label="Last name">{(p) => <Input {...p} value={shown.last_name} onChange={set("last_name")} />}</Field>
+        <Field label="Mobile" hint="10 digits" error={shown.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
+          {(p) => <Input {...p} inputMode="numeric" value={shown.mobile} onChange={set("mobile")} />}
         </Field>
-        <Field label="Flat" optional>{(p) => <Input {...p} value={v.flat} onChange={set("flat")} />}</Field>
+        <Field label="Flat" optional>{(p) => <Input {...p} value={shown.flat} onChange={set("flat")} />}</Field>
+        <Field label="Address line 1" optional className="sm:col-span-2">
+          {(p) => <Input {...p} value={shown.address_line1} onChange={set("address_line1")} />}
+        </Field>
+        <Field label="Address line 2" optional className="sm:col-span-2">
+          {(p) => <Input {...p} value={shown.address_line2} onChange={set("address_line2")} />}
+        </Field>
+        <Field label="Society" className="sm:col-span-2">
+          {(p) => (
+            <SelectBox {...p} value={shown.society_id}
+                       onChange={(id) => { setV({ ...shown, society_id: id }); setTouched(true); }}
+                       choices={list.map((s) => ({ value: s.id, label: s.name }))} />
+          )}
+        </Field>
       </div>
     </FormDialog>
   );
@@ -67,14 +100,14 @@ export function EmailDialog({ customer: c, open, onClose }: { customer: Customer
 
 function EmailForm({ c, onClose }: { c: Customer; onClose: () => void }) {
   const [email, setEmail] = useState(c.email);
-  const save = useCustomerSave(c.id, "Email corrected. A new welcome email is on its way.", onClose);
+  const save = useCustomerSave(c.id, "Email updated. A new welcome email is on its way.", onClose);
   const ok = /^\S+@\S+\.\S+$/.test(email) && email.trim().toLowerCase() !== c.email.toLowerCase();
   return (
-    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Correct the email" danger
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Update email" danger
                 description="The customer's password is cleared and they are signed out everywhere. A new welcome email goes to the new address; they verify it and set a new password (ADM-CUS-19)."
-                submitLabel="Correct email" busy={save.isPending} disabled={!ok}
+                submitLabel="Update email" busy={save.isPending} disabled={!ok}
                 onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}/email`, method: "PATCH", body: { email: email.trim() } })}>
-      <Field label="Correct email" hint={`Now ${c.email}`}>
+      <Field label="New email" hint={`Now ${c.email}`}>
         {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
       </Field>
     </FormDialog>
@@ -91,20 +124,20 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
   const [catalogueId, setCatalogueId] = useState(NONE);
   const [basement, setBasement] = useState(v.parking_basement);
   const [parking, setParking] = useState(v.parking_number);
-  const [uploading, setUploading] = useState<"vehicle" | "rc" | null>(null);
+  const [uploading, setUploading] = useState(false);
   const save = useCustomerSave(customerId, "Car details saved.", onClose);
   const instant = useCustomerSave(customerId, "Saved.", () => {});
-  const upload = async (file: File | undefined, purpose: "vehicle" | "rc") => {
+  const upload = async (file: File | undefined) => {
     if (!file) return;
-    setUploading(purpose);
+    setUploading(true);
     try {
       await instant.mutateAsync({
         path: `/v1/admin/vehicles/${v.id}`, method: "PATCH",
-        body: { [purpose === "vehicle" ? "photo_upload_id" : "rc_upload_id"]: (await uploadCustomerAsset(file, purpose)).id },
+        body: { photo_upload_id: (await uploadCustomerAsset(file)).id },
       });
     } catch {
       // The toast from the save says what went wrong.
-    } finally { setUploading(null); }
+    } finally { setUploading(false); }
   };
   const valid = reg.trim() !== "" && basement && /^\d{1,5}$/.test(parking);
   return (
@@ -138,23 +171,11 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
           {(p) => <Input {...p} inputMode="numeric" value={parking} onChange={(e) => setParking(e.target.value)} />}
         </Field>
       </div>
-      <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/40 p-4 sm:grid-cols-2">
-        <Field label="Replace vehicle photo" hint={uploading === "vehicle" ? "Uploading…" : "Saved as soon as it is uploaded."}>
-          {(p) => <Input {...p} type="file" accept="image/*" disabled={uploading !== null} onChange={(e) => void upload(e.target.files?.[0], "vehicle")} />}
+      <div className="rounded-lg border bg-muted/40 p-4">
+        <Field label={v.photo_url ? "Replace vehicle photo" : "Vehicle photo"} optional
+               hint={uploading ? "Uploading…" : "Saved as soon as it is uploaded."}>
+          {(p) => <Input {...p} type="file" accept="image/*,.heic,.heif" disabled={uploading} onChange={(e) => void upload(e.target.files?.[0])} />}
         </Field>
-        <Field label="Upload RC document" hint={uploading === "rc" ? "Uploading…" : "JPG, PNG or PDF up to 5 MB."}>
-          {(p) => <Input {...p} type="file" accept="image/jpeg,image/png,application/pdf" disabled={uploading !== null} onChange={(e) => void upload(e.target.files?.[0], "rc")} />}
-        </Field>
-        {v.rc_url && (
-          <div className="flex items-center justify-between gap-3 sm:col-span-2">
-            <a href={v.rc_url} target="_blank" rel="noreferrer">Open RC</a>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch aria-label="RC verified" checked={v.rc_verified} disabled={instant.isPending}
-                      onCheckedChange={(on) => instant.mutate({ path: `/v1/admin/vehicles/${v.id}`, method: "PATCH", body: { rc_verified: on } })} />
-              RC verified
-            </label>
-          </div>
-        )}
       </div>
     </FormDialog>
   );

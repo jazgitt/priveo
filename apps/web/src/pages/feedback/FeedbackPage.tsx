@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { api } from "@/api/client";
 import { DataTable } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
-import { EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { EmptyState, ErrorState, PageHeader, Panel, StatRow, StatTile } from "@/blocks/layout";
 import { StatusBadge } from "@/blocks/status";
 import { Tabs } from "@/components";
 import { useSite } from "@/site/SiteContext";
@@ -55,12 +55,7 @@ function Stars({ n }: { n: number | null }) {
 }
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-xl border bg-card px-5 py-4 shadow-xs">
-      <p className="m-0 text-sm text-muted-foreground">{label}</p>
-      <p className="m-0 mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-    </div>
-  );
+  return <StatTile label={label} value={value} />;
 }
 
 const quote = (ok: boolean) => (ok ? <StatusBadge status="May quote" tone="ok" /> : <span className="text-muted-foreground">No</span>);
@@ -76,11 +71,28 @@ function FeedbackTab() {
   const list = useQuery({ queryKey: ["admin", "feedback", q], queryFn: () => api<FeedbackItem[]>(`/v1/admin/feedback${q ? `?${q}` : ""}`) });
   const options = useQuery({ queryKey: ["admin", "support-options"], queryFn: () => api<OptionAdmin[]>("/v1/admin/support/options") });
   const rows = list.data?.filter((f) => inRange(range, f.society, f.created_at));
+  // The tiles count all feedback of the site and dates, whatever the category and rating filters say.
+  const every = useQuery({ queryKey: ["admin", "feedback", ""], queryFn: () => api<FeedbackItem[]>("/v1/admin/feedback") });
+  const counted = every.data?.filter((f) => inRange(range, f.society, f.created_at));
+  const rated = counted?.filter((f) => f.rating !== null) ?? [];
+  const average = rated.length ? rated.reduce((t, f) => t + (f.rating ?? 0), 0) / rated.length : null;
   const cats = (options.data ?? []).filter((o) => o.kind === "feedback_category");
 
   return (
     <>
       {list.isError && <div className="mb-4"><ErrorState message="Could not load the feedback." /></div>}
+      <StatRow label="Feedback summary">
+        <StatTile label="Total feedback" value={counted?.length} loading={every.isPending}
+                  selected={!rating && !category} onSelect={() => { setRating(""); setCategory(""); }} />
+        <StatTile label="Average rating" value={average === null ? "-" : average.toFixed(2)} loading={every.isPending}
+                  hint={`${rated.length} rated`} />
+        {[5, 4, 3, 2, 1].map((n) => (
+          <StatTile key={n} label={`${n} ${n === 1 ? "star" : "stars"}`} value={rated.filter((f) => f.rating === n).length}
+                    loading={every.isPending} selected={rating === String(n)}
+                    onSelect={() => setRating(rating === String(n) ? "" : String(n))} />
+        ))}
+        <StatTile label="May be quoted" value={counted?.filter((f) => f.testimonial_permission).length} loading={every.isPending} />
+      </StatRow>
       <DataTable<FeedbackItem>
         rows={rows}
         loading={list.isLoading}

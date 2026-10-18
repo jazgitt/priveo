@@ -151,6 +151,16 @@ def list_payments(
     )
 
 
+@admin.get("/payments/summary")
+def payments_summary(
+    society: str | None = None,
+    user: User = Depends(require_role("admin")),
+    svc: BillingService = Depends(get_billing_service),
+):
+    """The numbers above the payments list: payments and rupees in each status."""
+    return svc.payments_summary(society)
+
+
 @admin.post("/payments", response_model=AdminPaymentOut, status_code=201)
 def create_payment(
     body: AdminPaymentIn,

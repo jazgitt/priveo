@@ -10,6 +10,6 @@ export const routes: RouteObject[] = [
 
 export const nav: NavItem = {
   path: "/reference",
-  label: "Master data",
+  label: "Site Setup",
   about: "Societies, base plans, services, checklists and the add-on catalogue.",
 };

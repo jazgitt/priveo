@@ -315,3 +315,29 @@ def test_a_changed_pay_ahead_window_and_upi_id_are_shown(money):
     pid = r.json()["payment"]["id"]
     detail = m.client.get(f"/v1/customer/payments/{pid}", headers=m.customer).json()
     assert detail["instructions"]["upi_id"] == "pay@bank"
+
+
+def test_subscription_rows_say_whether_a_plan_payment_is_waiting(money):
+    m = money
+    row = next(r for r in m.client.get("/v1/admin/subscriptions", headers=m.admin).json()
+               if r["vehicle_id"] == m.vehicle_id)
+    assert row["payment_due"] is False
+    admin_payment(m, kind="Plan")
+    row = next(r for r in m.client.get("/v1/admin/subscriptions", headers=m.admin).json()
+               if r["vehicle_id"] == m.vehicle_id)
+    assert row["payment_status"] == "Due" and row["payment_due"] is True
+
+
+def test_payments_summary_counts_and_adds_up_each_status(money):
+    m = money
+    admin_payment(m, amount_rupees=1000)
+    admin_payment(m, amount_rupees=500, status="Received", kind="Add-on", description="Spa")
+    s = m.client.get("/v1/admin/payments/summary", headers=m.admin).json()
+    assert s["by_status"]["Due"]["count"] >= 1 and s["by_status"]["Received"] == {
+        "count": 1, "rupees": 500}
+    assert s["total"] == sum(v["count"] for v in s["by_status"].values())
+    assert s["total_rupees"] == sum(v["rupees"] for v in s["by_status"].values())
+    none = m.client.get("/v1/admin/payments/summary", params={"society": "Nowhere"},
+                        headers=m.admin).json()
+    assert none["total"] == 0
+    assert m.client.get("/v1/admin/payments/summary", headers=m.customer).status_code == 403

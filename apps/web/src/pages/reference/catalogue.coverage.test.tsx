@@ -120,7 +120,7 @@ it('reactivates a vehicle and cancels an edit',async()=>{
 });
 it('creates, edits and deletes working slots of the chosen site with ordered weekdays',async()=>{
   const slot={id:'t1',service:'Cleaning-External',start:'05:00',end:'11:00',days:['Monday','Tuesday']};
-  responses['/v1/admin/directory/societies/s1/slots?service=Cleaning-External']=[slot];
+  responses['/v1/admin/directory/societies/s1/slots']=[slot];
   mount(<SlotsTab/>); await screen.findByText('05:00 to 11:00');
   await userEvent.click(screen.getByRole('button',{name:'Add a slot'}));
   await choose('Service','Cleaning-Internal');
@@ -135,6 +135,23 @@ it('creates, edits and deletes working slots of the chosen site with ordered wee
   expect(calls('/slots/t1','DELETE')).toHaveLength(0);
   await confirmWith('Delete');
   await waitFor(()=>expect(calls('/slots/t1','DELETE')).toHaveLength(1));
+});
+it('shows every service together, filters by a service tab and switches to tiles',async()=>{
+  responses['/v1/admin/directory/societies/s1/slots']=[
+    {id:'a',service:'Cleaning-External',start:'05:00',end:'11:00',days:['Monday']},
+    {id:'b',service:'Deep Spa',start:'12:00',end:'14:00',days:['Tuesday']}];
+  mount(<SlotsTab/>); await screen.findByText('05:00 to 11:00');
+  expect(screen.getByText('12:00 to 14:00')).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Site Working slots'})).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('tab',{name:/Deep Spa/}));
+  expect(screen.queryByText('05:00 to 11:00')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button',{name:'Tiles'}));
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  expect(screen.getByText('12:00 to 14:00')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button',{name:'Edit'}));
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Edit working slot');
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Cancel'}));
+  localStorage.removeItem('priveo.view.slots');
 });
 it('disables slot creation without a society',async()=>{
   mount(<SlotsTab/>,'');
