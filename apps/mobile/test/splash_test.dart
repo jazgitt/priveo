@@ -122,6 +122,31 @@ void main() {
       expect(find.text('Still loading. Check your connection.'), findsNothing);
     });
 
+    for (final size in const [Size(720, 1520), Size(720, 1280), Size(1080, 2400)]) {
+      testWidgets('the tagline, the welcome buttons and the logo keep apart on a ${size.width.toInt()}x${size.height.toInt()} screen',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = size.width > 800 ? 3 : 2;
+        addTearDown(tester.view.reset);
+        await pumpApp(tester);
+        await tester.pump(const Duration(milliseconds: 3100));
+        await tester.pumpAndSettle();
+        final tagline = tester.getRect(find.text('Care that shows.\nEvery time you drive.'));
+        final button = tester.getRect(find.widgetWithText(InkWell, 'Get started'));
+        final login = tester.getRect(find.text('Already a member? Log in'));
+        final logo = tester.getRect(find.byWidgetPredicate(
+            (w) => w is Image && w.image is AssetImage && (w.image as AssetImage).assetName.endsWith('splash_sub.png')));
+        final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+        // Space between each part and the next: at least 16 logical pixels.
+        expect(button.top - tagline.bottom, greaterThanOrEqualTo(16));
+        expect(login.top, greaterThanOrEqualTo(button.bottom));
+        expect(tagline.top - logo.bottom, greaterThanOrEqualTo(8));
+        expect(login.bottom, lessThanOrEqualTo(screen.height));
+        expect(button.left, greaterThanOrEqualTo(24));
+        expect(button.right, lessThanOrEqualTo(screen.width - 24));
+      });
+    }
+
     testWidgets('with reduce motion the scene is skipped and only the bar remains', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);

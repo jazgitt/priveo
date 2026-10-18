@@ -211,43 +211,71 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           label: 'Priveo',
           child: LayoutBuilder(builder: (context, box) {
             final w = box.maxWidth, h = box.maxHeight;
+            final gap = math.max(22.0, h * .035);
+            // Where the drawn car ends, and how tall the logo is (from its images).
+            final carBottom = h * .19 + w * .86 * 170 / 400;
+            final logoHeight = BrandLogo.heightFor(w * .8);
             return Stack(children: [
               Positioned.fill(child: CustomPaint(painter: ShowroomPainter(_intro))),
-              Positioned(
-                left: w * .10,
-                right: w * .10,
-                top: h * .47,
-                child: AnimatedBuilder(
-                  animation: _intro,
-                  builder: (_, _) => _Logo(t: _intro.value, width: w * .8, h: h),
+              // Two parts, top to bottom: an area that takes the room that is left,
+              // holding the logo, and below it one block (tagline, gap, then the bar
+              // or the two buttons) that takes the height it needs. So the two can
+              // never overlap, whatever the screen height or the text size.
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: h * .03),
+                  child: Column(children: [
+                    Expanded(
+                      child: LayoutBuilder(builder: (context, room) {
+                        // The design puts the logo at 47% of the height. It moves up only
+                        // as far as the room demands, and not above the car.
+                        final lowest = room.maxHeight - logoHeight - 18;
+                        final top = math.max(
+                          0.0,
+                          math.max(math.min(h * .47, lowest), math.min(carBottom + 14, lowest)),
+                        );
+                        return Stack(clipBehavior: Clip.none, children: [
+                          Positioned(
+                            left: w * .10,
+                            right: w * .10,
+                            top: top,
+                            child: AnimatedBuilder(
+                              animation: _intro,
+                              builder: (_, _) => _Logo(t: _intro.value, width: w * .8, h: h),
+                            ),
+                          ),
+                        ]);
+                      }),
+                    ),
+                    AnimatedBuilder(
+                      animation: _intro,
+                      builder: (_, _) => _Tagline(t: _intro.value, w: w, h: h),
+                    ),
+                    SizedBox(height: gap),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: _bottomZone),
+                      child: _ctas
+                          ? FadeTransition(
+                              opacity: CurvedAnimation(parent: _ctaIn, curve: Curves.easeOut),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: _Welcome(
+                                  onGetStarted: _openSignIn,
+                                  onLogIn: _openSignIn,
+                                  width: w,
+                                ),
+                              ),
+                            )
+                          : FadeTransition(
+                              opacity: _barIn,
+                              child: Align(
+                                alignment: const Alignment(0, -.2),
+                                child: _Progress(fill: _fill, label: _label, width: w * .26),
+                              ),
+                            ),
+                    ),
+                  ]),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: h * .19,
-                child: AnimatedBuilder(
-                  animation: _intro,
-                  builder: (_, _) => _Tagline(t: _intro.value, w: w, h: h),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: h * .04,
-                child: _ctas
-                    ? FadeTransition(
-                        opacity: CurvedAnimation(parent: _ctaIn, curve: Curves.easeOut),
-                        child: _Welcome(
-                          onGetStarted: _openSignIn,
-                          onLogIn: _openSignIn,
-                          width: w,
-                        ),
-                      )
-                    : FadeTransition(
-                        opacity: _barIn,
-                        child: _Progress(fill: _fill, label: _label, width: w * .26),
-                      ),
               ),
             ]);
           }),
@@ -258,6 +286,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 }
 
 const double _span = ShowroomPainter.span;
+
+/// Room for the two welcome buttons (56 + 6 + 48), which the progress bar shares.
+/// It grows if large text needs more.
+const double _bottomZone = 112;
 
 /// 0 to 1 for an animation that starts [delay] seconds into the design's
 /// timeline and lasts [dur] seconds.

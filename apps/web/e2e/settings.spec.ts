@@ -6,9 +6,12 @@ test.describe("Settings", () => {
     await signInAsAdmin(page);
     await page.getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    // Each section is its own tab.
+    await expect(page.getByRole("tablist", { name: "Settings sections" })).toBeVisible();
   });
 
   test("seller identity is read-only", async ({ page }) => {
+    await page.getByRole("tab", { name: "Invoice" }).click();
     await expect(page.getByText(/Seller GSTIN/)).toBeVisible();
     await expect(page.getByLabel(/Seller GSTIN/)).toHaveCount(0);
   });

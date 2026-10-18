@@ -1,6 +1,10 @@
 # Builds the dev app and copies it to the Downloads folder of the phone
 # plugged in by USB. Then open Files > Downloads on the phone and tap
-# priveo-dev.apk to install it.
+# priveo-dev-<version>.apk to install it.
+#
+# Every build gets a new version first (see tool\bump_version.ps1): 0.0.1,
+# 0.0.2 and so on, so the phone always treats it as an update, and the version
+# is in the file name and on the phone under Settings > Apps > Priveo.
 #
 # From any folder:
 #   powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1
@@ -29,7 +33,13 @@ $phones = @(& $adb devices | Select-String "`tdevice$")
 if ($phones.Count -eq 0) { throw "No phone found. Plug it in and allow USB debugging." }
 if ($phones.Count -gt 1) { throw "More than one phone or emulator is connected. Leave only one." }
 
-Write-Host "Building the dev app ($mode) for $ApiUrl ..."
+# A new version for every build, before the build reads it.
+& (Join-Path $PSScriptRoot "bump_version.ps1")
+if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "The version could not be raised." }
+$version = (Select-String -Path (Join-Path $mobile "pubspec.yaml") -Pattern '^version:\s*(\d+\.\d+\.\d+)').Matches[0].Groups[1].Value
+$remote = "/sdcard/Download/priveo-dev-$version.apk"
+
+Write-Host "Building the dev app $version ($mode) for $ApiUrl ..."
 Push-Location $mobile
 try {
     flutter build apk "--$mode" --flavor dev -t lib/main_dev.dart "--dart-define=API_BASE_URL=$ApiUrl"
@@ -38,8 +48,8 @@ try {
 finally { Pop-Location }
 
 Write-Host "Copying to the phone ..."
-& $adb push $apk /sdcard/Download/priveo-dev.apk
+& $adb push $apk $remote
 if ($LASTEXITCODE -ne 0) { throw "The copy failed." }
 
 Write-Host ""
-Write-Host "Done. On the phone: Files > Downloads > priveo-dev.apk > Install."
+Write-Host "Done. Version $version. On the phone: Files > Downloads > priveo-dev-$version.apk > Install."

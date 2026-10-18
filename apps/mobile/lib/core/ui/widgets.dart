@@ -4,18 +4,40 @@ import '../../l10n/app_localizations.dart';
 import 'theme.dart';
 import 'tokens.g.dart';
 
-/// The Priveo logo, white with gold. It is only shown on the dark look.
+/// The Priveo logo, white with gold: the monogram, the name and "Car Concierge",
+/// the same three whole images the splash screen draws. It is only shown on the
+/// dark look. Its height follows its width ([heightFor]), so nothing is cut off.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, required this.width});
 
   final double width;
 
+  /// The height of the whole logo for a width, from the images' own shapes.
+  static double heightFor(double width) => width * _ratio;
+
+  // Monogram 420x285 at 38.9% of the width, the name 1080x145, "Car Concierge"
+  // 1080x70, and the two gaps the splash uses.
+  static const _markShare = .389;
+  static const _gapAfterMark = .0125;
+  static const _gapAfterName = .0375;
+  static const _ratio = _markShare * 285 / 420 + _gapAfterMark + 145 / 1080 + _gapAfterName + 70 / 1080;
+
   @override
-  Widget build(BuildContext context) => Image.asset(
-    'assets/brand/priveo-logo.png',
-    width: width,
-    excludeFromSemantics: true,
-  );
+  Widget build(BuildContext context) {
+    Image image(String name, double w) => Image.asset(
+          'assets/brand/$name.png', width: w, fit: BoxFit.fitWidth, excludeFromSemantics: true);
+    return SizedBox(
+      width: width,
+      height: heightFor(width),
+      child: Column(children: [
+        image('splash_mark', width * _markShare),
+        SizedBox(height: width * _gapAfterMark),
+        image('splash_word', width),
+        SizedBox(height: width * _gapAfterName),
+        image('splash_sub', width),
+      ]),
+    );
+  }
 }
 
 /// A small gold heading in capitals, above a group of content.
