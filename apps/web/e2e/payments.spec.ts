@@ -36,9 +36,10 @@ test.describe("Payments (scenario A01)", () => {
   test("a summary tile filters the list by status", async ({ page }) => {
     const tiles = page.getByRole("region", { name: "Payment summary" });
     await expect(tiles.getByRole("button", { name: /^All payments: [1-9]/ })).toBeVisible();
-    await tiles.getByRole("button", { name: /^Initiated: [1-9]/ }).click();
+    // The earlier test confirms the one Initiated payment, so Received is what A01 has.
+    await tiles.getByRole("button", { name: /^Received: [1-9]/ }).click();
     await expect(page.locator("tbody tr").first()).toBeVisible();
-    await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Initiated" })).toHaveCount(0);
+    await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Received" })).toHaveCount(0);
   });
 
   test("a filter with no matches shows the empty state", async ({ page }) => {

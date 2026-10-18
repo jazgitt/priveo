@@ -31,7 +31,9 @@ test.describe("Add on Service Requests (scenario C21)", () => {
     await dialog.getByRole("button", { name: "Cancel booking" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Cancel booking" }).click();
     await expect(page.getByText("Booking cancelled.")).toBeVisible();
-    await dialog.getByRole("button", { name: "Close" }).click();
+    // The dialog may stay open on the cancelled booking: close it either way.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await expect(rows).toHaveCount(0);
     await choose(page, "Status filter", "Cancelled");
