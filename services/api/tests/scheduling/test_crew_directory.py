@@ -97,14 +97,14 @@ def test_weekday_hours_and_exceptions_shape_the_window(world):
     monday, tuesday = date(2026, 10, 12), date(2026, 10, 13)
     assert monday.weekday() == 0
     out = service.availability(world.db, {crew.id: crew}, [monday, tuesday])
-    assert out[monday][crew.id] == (420, 540)
+    assert out[monday][crew.id] == [(420, 540)]
     assert crew.id not in out[tuesday]
 
     world.db.add(SchedulingCrewException(crew_id=crew.id, on_date=monday, kind="Late start",
                                          from_minute=480))
     world.db.flush()
-    assert service.availability(world.db, {crew.id: crew}, [monday])[monday][crew.id] == (
-        480, 540)
+    assert service.availability(world.db, {crew.id: crew}, [monday])[monday][crew.id] == [
+        (480, 540)]
     world.db.add(SchedulingCrewException(crew_id=crew.id, on_date=date(2026, 10, 14),
                                          kind="Leave"))
     world.db.flush()

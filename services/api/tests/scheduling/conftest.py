@@ -1,11 +1,12 @@
 """A society with crew and subscribed cars, and the app with scheduling wired in."""
-from datetime import date, time
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 import app.scheduling  # noqa: F401  (registers the tables before they are created)
+from app.changes.rules import get_now
 from app.customers.models import Customer, Subscription, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
@@ -17,6 +18,7 @@ from app.scheduling.models import SchedulingCrew
 from tests.test_api import auth, login
 
 SUNDAY = date(2026, 10, 18)  # a week starts on Sunday (ADM-SCH-09)
+PINNED_NOW = datetime(2026, 10, 17, 10, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
 
 
 class World:
@@ -94,6 +96,9 @@ def api(world, engine):
     app = create_app()
     register(app)
     app.dependency_overrides[get_db] = _get_db
+    # The tests plan the week of SUNDAY. Pin the clock to the day before, so the
+    # 9 PM change rule does not depend on the date the tests are run on.
+    app.dependency_overrides[get_now] = lambda: lambda: PINNED_NOW
     return TestClient(app)
 
 
