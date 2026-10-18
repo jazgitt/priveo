@@ -1,22 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, KeyRound, LogOut, Mail, MoreHorizontal, Pencil, Plus } from "lucide-react";
+import { Car, ChevronLeft, KeyRound, LogOut, Mail, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { api } from "@/api/client";
 import { useConfirm } from "@/blocks/confirm";
 import { DetailList, EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
+import { useSite } from "@/site/SiteContext";
 import { showDate, showDateTime } from "@/components/format";
 import { Button } from "@/ui/button";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/ui/dropdown-menu";
 import { Skeleton } from "@/ui/skeleton";
 import { Switch } from "@/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
-import { onboardingState, type Customer, type Session } from "./api";
+import { cn } from "@/lib/utils";
+
+import { onboardingState, type Customer, type Session, type Vehicle } from "./api";
 import { CustomerDialog, EmailDialog } from "./dialogs";
 import { VehiclePanel } from "./VehiclePanel";
 import { VehicleWizard } from "./VehicleWizard";
@@ -24,11 +25,26 @@ import { VehicleWizard } from "./VehicleWizard";
 type Call = { path: string; method?: string; body?: unknown };
 const call = (r: Call) => api<unknown>(r.path, { method: r.method ?? "POST", body: r.body });
 
-/** One customer: vehicles, subscriptions, schedule settings, payments and account (ADM-CUS-08 to -21). */
+const TABS = ["account", "vehicles", "history"] as const;
+type TabName = (typeof TABS)[number];
+
+/**
+ * One customer, in tabs: their account details (personal details, onboarding,
+ * notifications, sessions and account actions), their vehicles (each with its
+ * subscription, schedule and payments), and imported history (ADM-CUS-08 to
+ * -21). The tab is kept in the address as `?tab=`.
+ */
 export function CustomerDetailPage() {
   const { id = "" } = useParams();
   const confirm = useConfirm();
+  const site = useSite();
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("tab");
+  const tab: TabName = TABS.includes(asked as TabName) ? (asked as TabName) : "account";
+  const openTab = (t: string) => setParams(t === "account" ? {} : { tab: t }, { replace: true });
+  const [picked, setPicked] = useState("");
   const [adding, setAdding] = useState(false);
+  const [showOff, setShowOff] = useState(false);
   const [editing, setEditing] = useState<"details" | "email" | null>(null);
   const details = useQuery({ queryKey: ["customer", id], queryFn: () => api<Customer>(`/v1/admin/customers/${id}`) });
   const sessions = useQuery({ queryKey: ["customer", id, "sessions"], queryFn: () => api<Session[]>(`/v1/admin/customers/${id}/sessions`) });
@@ -62,6 +78,11 @@ export function CustomerDetailPage() {
   }
   const name = `${c.first_name} ${c.last_name}`;
   const signIn = onboardingState(c);
+  const liveVehicles = c.vehicles.filter((v) => v.active !== false);
+  const offVehicles = c.vehicles.filter((v) => v.active === false);
+  const shownVehicles: Vehicle[] = showOff ? [...liveVehicles, ...offVehicles] : liveVehicles;
+  const selected = shownVehicles.find((v) => v.id === picked) ?? shownVehicles[0];
+  const hasHistory = (c.imported_history?.length ?? 0) > 0;
 
   const clearPassword = async () => {
     if (await confirm({
@@ -91,36 +112,144 @@ export function CustomerDetailPage() {
         back={back}
         title={name}
         description={<>{c.mobile} · {c.email}</>}
-        actions={(
-          <>
-            <Button variant="outline" onClick={() => setEditing("details")}><Pencil aria-hidden /> Edit details</Button>
-            <Button onClick={() => setAdding(true)}><Plus aria-hidden /> Add vehicle</Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Account actions"><MoreHorizontal /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onSelect={() => setEditing("email")}><Mail aria-hidden /> Correct email</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => void clearPassword()}><KeyRound aria-hidden /> Clear password</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onSelect={() => void signOutAll()}>
-                  <LogOut aria-hidden /> Sign out all sessions
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        )}
       />
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex min-w-0 flex-col gap-6">
+      <Tabs value={tab} onValueChange={openTab}>
+        <TabsList variant="line" aria-label="Customer sections" className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="account" className="flex-none px-3">Account details</TabsTrigger>
+          <TabsTrigger value="vehicles" className="flex-none px-3">
+            Vehicles <span className="text-xs text-muted-foreground tabular-nums">{liveVehicles.length}</span>
+          </TabsTrigger>
+          {hasHistory && <TabsTrigger value="history" className="flex-none px-3">Service history</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="vehicles" className="mt-4 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="m-0 text-sm text-muted-foreground">
+              {liveVehicles.length === 0 ? "No active vehicle." : `${liveVehicles.length} active ${liveVehicles.length === 1 ? "vehicle" : "vehicles"}.`}
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              {offVehicles.length > 0 && (
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch aria-label="Show deactivated vehicles" checked={showOff} onCheckedChange={setShowOff} />
+                  Show deactivated ({offVehicles.length})
+                </label>
+              )}
+              <Button onClick={() => setAdding(true)}><Plus aria-hidden /> Add vehicle</Button>
+            </div>
+          </div>
           {c.vehicles.length === 0 && (
             <EmptyState title="No vehicle yet" action={<Button onClick={() => setAdding(true)}>Add vehicle</Button>}>
               Add the customer's vehicle to start a subscription.
             </EmptyState>
           )}
-          {c.vehicles.map((v) => <VehiclePanel key={v.id} v={v} customerId={id} />)}
-          {(c.imported_history?.length ?? 0) > 0 && (
+          {shownVehicles.length > 1 && (
+            <div role="radiogroup" aria-label="Choose a vehicle" className="flex flex-wrap gap-2">
+              {shownVehicles.map((v) => {
+                const on = v.id === selected?.id;
+                return (
+                  <button key={v.id} type="button" role="radio" aria-checked={on}
+                          onClick={() => setPicked(v.id)}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-lg border bg-card p-1.5 pr-3 text-left transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                            on && "border-foreground ring-1 ring-foreground", v.active === false && "opacity-60",
+                          )}>
+                    {v.photo_url
+                      ? <img src={v.photo_url} alt="" className="h-9 w-12 rounded-md border object-cover" />
+                      : <span className="flex h-9 w-12 items-center justify-center rounded-md border border-dashed text-muted-foreground"><Car className="size-4" aria-hidden /></span>}
+                    <span className="reg text-[0.8125rem]">{v.registration || "No registration"}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {selected && <VehiclePanel key={selected.id} v={selected} customerId={id} />}
+        </TabsContent>
+
+        <TabsContent value="account" className="mt-4 flex flex-col gap-6">
+          <Panel
+            title="Personal details"
+            description="The customer's fixed details. Vehicles are on their own tab."
+            actions={(
+              <>
+                <Button size="sm" variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> Update email</Button>
+                <Button size="sm" onClick={() => setEditing("details")}><Pencil aria-hidden /> Edit details</Button>
+              </>
+            )}
+          >
+            <DetailList columns={2} items={[
+              { label: "First name", value: c.first_name },
+              { label: "Last name", value: c.last_name },
+              { label: "Email", value: <span className="break-all">{c.email}</span> },
+              { label: "Mobile", value: c.mobile },
+              { label: "Flat", value: c.flat },
+              { label: "Society", value: c.society_id ? site.sites.find((x) => x.id === c.society_id)?.name : undefined },
+              { label: "Address line 1", value: c.address_line1 },
+              { label: "Address line 2", value: c.address_line2 },
+              { label: "App onboarding", value: (
+                <div className="flex flex-col gap-1.5">
+                  <StatusBadge status={signIn.label} tone={signIn.tone} className="self-start" />
+                  <span className="text-xs text-muted-foreground">
+                    Email {c.email_verified ? "verified" : "not verified"} · Password {c.password_set ? "set" : "not set"} · Review {c.onboarding_confirmed ? "confirmed" : "pending"}
+                  </span>
+                </div>
+              ) },
+            ]} />
+          </Panel>
+
+          <Panel title="Account actions" description="These end the customer's sign-in. They are recorded in the audit log.">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> Update email</Button>
+              <Button variant="outline" onClick={() => void clearPassword()}><KeyRound aria-hidden /> Clear password</Button>
+              <Button variant="outline" className="text-destructive" onClick={() => void signOutAll()}>
+                <LogOut aria-hidden /> Sign out all sessions
+              </Button>
+            </div>
+          </Panel>
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            <Panel title="Notifications" description="The same switches as the customer's own Settings.">
+              {preferences.error && <ErrorState message={errorMessage(preferences.error)} />}
+              {preferences.isPending && <Skeleton className="h-24 w-full" />}
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {preferences.data?.items.map((p) => {
+                  const label = p.label || p.event.replaceAll("_", " ");
+                  return (
+                    <li key={p.event} className="flex items-center justify-between gap-3">
+                      <label htmlFor={`pref-${p.event}`} className="text-sm first-letter:uppercase">{label}</label>
+                      <Switch id={`pref-${p.event}`} aria-label={label} checked={p.enabled}
+                              disabled={notify.isPending}
+                              onCheckedChange={(on) => notify.mutate({ event: p.event, enabled: on, label })} />
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+
+            <Panel title="Signed-in sessions">
+              {sessions.error && <ErrorState message={errorMessage(sessions.error)} />}
+              {sessions.data?.length === 0 && <p className="text-sm text-muted-foreground">No active sessions.</p>}
+              <ul className="m-0 flex list-none flex-col divide-y p-0">
+                {sessions.data?.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="m-0 truncate text-sm font-medium">{s.device_name || s.channel}</p>
+                      <p className="m-0 text-xs text-muted-foreground">{s.platform} {s.app_version} · Last active {showDateTime(s.last_active)}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => void signOutOne(s)}>Sign out session</Button>
+                  </li>
+                ))}
+              </ul>
+              {(sessions.data?.length ?? 0) > 1 && (
+                <Button variant="ghost" size="sm" className="mt-3 text-destructive" onClick={() => void signOutAll()}>
+                  Sign out all sessions
+                </Button>
+              )}
+            </Panel>
+          </div>
+        </TabsContent>
+
+        {hasHistory && (
+          <TabsContent value="history" className="mt-4">
             <Panel title="Imported service history" description="From the records before Priveo's app. Completion was not recorded.">
               <ul className="m-0 flex list-none flex-col divide-y p-0">
                 {c.imported_history!.map((h) => (
@@ -132,71 +261,15 @@ export function CustomerDetailPage() {
                 ))}
               </ul>
             </Panel>
-          )}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-6">
-          <Panel title="Customer">
-            <DetailList columns={1} items={[
-              { label: "Email", value: <span className="break-all">{c.email}</span> },
-              { label: "Mobile", value: c.mobile },
-              { label: "Flat", value: c.flat },
-              { label: "App sign-in", value: (
-                <div className="flex flex-col gap-1.5">
-                  <StatusBadge status={signIn.label} tone={signIn.tone} className="self-start" />
-                  <span className="text-xs text-muted-foreground">
-                    Email {c.email_verified ? "verified" : "not verified"} · Password {c.password_set ? "set" : "not set"} · Review {c.onboarding_confirmed ? "confirmed" : "pending"}
-                  </span>
-                </div>
-              ) },
-            ]} />
-          </Panel>
-
-          <Panel title="Notifications" description="The same switches as the customer's own Settings.">
-            {preferences.error && <ErrorState message={errorMessage(preferences.error)} />}
-            {preferences.isPending && <Skeleton className="h-24 w-full" />}
-            <ul className="m-0 flex list-none flex-col gap-3 p-0">
-              {preferences.data?.items.map((p) => {
-                const label = p.label || p.event.replaceAll("_", " ");
-                return (
-                  <li key={p.event} className="flex items-center justify-between gap-3">
-                    <label htmlFor={`pref-${p.event}`} className="text-sm first-letter:uppercase">{label}</label>
-                    <Switch id={`pref-${p.event}`} aria-label={label} checked={p.enabled}
-                            disabled={notify.isPending}
-                            onCheckedChange={(on) => notify.mutate({ event: p.event, enabled: on, label })} />
-                  </li>
-                );
-              })}
-            </ul>
-          </Panel>
-
-          <Panel title="Signed-in sessions">
-            {sessions.error && <ErrorState message={errorMessage(sessions.error)} />}
-            {sessions.data?.length === 0 && <p className="text-sm text-muted-foreground">No active sessions.</p>}
-            <ul className="m-0 flex list-none flex-col divide-y p-0">
-              {sessions.data?.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="m-0 truncate text-sm font-medium">{s.device_name || s.channel}</p>
-                    <p className="m-0 text-xs text-muted-foreground">{s.platform} {s.app_version} · Last active {showDateTime(s.last_active)}</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => void signOutOne(s)}>Sign out session</Button>
-                </li>
-              ))}
-            </ul>
-            {(sessions.data?.length ?? 0) > 1 && (
-              <Button variant="ghost" size="sm" className="mt-3 text-destructive" onClick={() => void signOutAll()}>
-                Sign out all sessions
-              </Button>
-            )}
-          </Panel>
-        </div>
-      </div>
+          </TabsContent>
+        )}
+      </Tabs>
 
       <CustomerDialog customer={c} open={editing === "details"} onClose={() => setEditing(null)} />
       <EmailDialog customer={c} open={editing === "email"} onClose={() => setEditing(null)} />
       {adding && (
-        <VehicleWizard customerId={id} onClose={() => setAdding(false)} onSaved={() => setAdding(false)} />
+        <VehicleWizard customerId={id} onClose={() => setAdding(false)}
+                       onSaved={() => { setAdding(false); openTab("vehicles"); }} />
       )}
     </>
   );

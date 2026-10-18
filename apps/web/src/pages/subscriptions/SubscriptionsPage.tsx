@@ -3,17 +3,19 @@ import { useState } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
 import { DataTable } from "@/blocks/DataTable";
-import { Field, NONE, SelectBox } from "@/blocks/fields";
+import { Field, SelectBox } from "@/blocks/fields";
 import { BusyButton } from "@/blocks/FormDialog";
-import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { EmptyState, ErrorState, PageHeader, StatRow, StatTile } from "@/blocks/layout";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
+import { useViewMode, ViewToggle } from "@/blocks/view";
 import { showDate } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/ui/sheet";
 import { Skeleton } from "@/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
 
 import {
@@ -21,51 +23,121 @@ import {
   useSubscriptions, type SubscriptionRow,
 } from "./api";
 
-const STATUS_FILTERS = ["Active", "Activating", "Paused", "Inactive"];
+const STATUS_FILTERS = ["Active", "Activating", "Paused", "Inactive"] as const;
+const NO_PLAN = "No plan set";
+
+/** One subscription as a tile. */
+function SubscriptionTile({ s }: { s: SubscriptionRow }) {
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="m-0 truncate font-medium">{s.customer_name}</p>
+          <p className="m-0 truncate text-xs text-muted-foreground">Flat {s.flat}</p>
+        </div>
+        <StatusBadge status={s.status} />
+      </div>
+      <p className="m-0 truncate text-sm">{s.vehicle}</p>
+      <p className="m-0 truncate text-sm text-muted-foreground">{s.plan_name ?? NO_PLAN}</p>
+      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">
+        <span>First {showDate(s.first_service_date)}</span>
+        <span>Renews {showDate(s.renewal_date)}</span>
+        {s.payment_due && <StatusBadge status={s.payment_status ?? "Due"} />}
+      </div>
+    </div>
+  );
+}
 
 /** Every subscription of the site, its status and its skips and pauses (ADM-SUB-01 to -05, ADM-CUS-09). */
 export function SubscriptionsPage() {
   const [status, setStatus] = useState("");
+  const [plan, setPlan] = useState("");
+  const [dueOnly, setDueOnly] = useState(false);
+  const [view, setView] = useViewMode("subscriptions");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<SubscriptionRow | null>(null);
   const site = useSite();
-  const list = useSubscriptions(status, site.id);
+  // The whole list is loaded once, so every tile and tab can count and filter it.
+  const list = useSubscriptions("", site.id);
   const q = search.trim().toLowerCase();
   // The panel follows the list, so a status change shows there at once.
   const shown = open && (list.data?.find((s) => s.subscription_id === open.subscription_id) ?? open);
-  const rows = list.data?.filter((s) => !q || `${s.customer_name} ${s.flat} ${s.vehicle} ${s.plan_name ?? ""}`.toLowerCase().includes(q));
+  const all = list.data;
+  const count = (f: (s: SubscriptionRow) => boolean) => all?.filter(f).length;
+  const plans = [...new Set((all ?? []).map((s) => s.plan_name ?? NO_PLAN))].sort();
+  const rows = all?.filter((s) =>
+    (!status || s.status === status)
+    && (!plan || (s.plan_name ?? NO_PLAN) === plan)
+    && (!dueOnly || s.payment_due)
+    && (!q || `${s.customer_name} ${s.flat} ${s.vehicle} ${s.plan_name ?? ""}`.toLowerCase().includes(q)));
+  const filtered = Boolean(status || plan || dueOnly);
+  const clear = () => { setStatus(""); setPlan(""); setDueOnly(false); };
+  const loading = list.isPending;
 
   return (
     <>
       <PageHeader title="Subscriptions" site={site.name || undefined}
                   description="Start, stop and reactivate subscriptions, and skip or pause on a customer's behalf." />
       {list.isError && <div className="mb-4"><ErrorState message={errorMessage(list.error)} onRetry={() => void list.refetch()} /></div>}
+      <StatRow label="Subscription summary">
+        <StatTile label="Total subscriptions" value={all?.length} loading={loading} selected={!filtered} onSelect={clear} />
+        {STATUS_FILTERS.map((st) => (
+          <StatTile key={st} label={st} value={count((s) => s.status === st)} loading={loading}
+                    selected={status === st} onSelect={() => setStatus(status === st ? "" : st)} />
+        ))}
+        <StatTile label="Payment due" value={count((s) => Boolean(s.payment_due))} loading={loading} hint="Due or over due"
+                  selected={dueOnly} onSelect={() => setDueOnly(!dueOnly)} />
+      </StatRow>
+      {plans.length > 0 && (
+        <StatRow label="Subscriptions by plan" className="-mt-2">
+          {plans.map((p) => (
+            <StatTile key={p} label={`Plan: ${p}`} value={count((s) => (s.plan_name ?? NO_PLAN) === p)} loading={loading}
+                      selected={plan === p} onSelect={() => setPlan(plan === p ? "" : p)} />
+          ))}
+        </StatRow>
+      )}
       <DataTable
+        view={view}
+        renderTile={(s) => <SubscriptionTile s={s} />}
         rows={rows}
         loading={list.isPending}
         rowKey={(s) => s.subscription_id}
         onRowClick={setOpen}
         rowLabel={(s) => `Manage ${s.customer_name}, ${s.vehicle}`}
         toolbar={(
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="relative w-full max-w-sm">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input aria-label="Search subscriptions" placeholder="Search by customer, flat, vehicle or plan" className="bg-card pl-9"
-                     value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex flex-col gap-3">
+            <Tabs value={status || "All"} onValueChange={(t) => setStatus(t === "All" ? "" : t)}>
+              <TabsList variant="line" aria-label="Subscription status" className="h-auto flex-wrap justify-start">
+                {["All", ...STATUS_FILTERS].map((t) => (
+                  <TabsTrigger key={t} value={t} className="flex-none px-3">
+                    {t}
+                    {all && <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                      {t === "All" ? all.length : count((s) => s.status === t)}
+                    </span>}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full max-w-sm">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input aria-label="Search subscriptions" placeholder="Search by customer, flat, vehicle or plan" className="bg-card pl-9"
+                       value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              {plan && <button type="button" onClick={() => setPlan("")} className="inline-flex h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-sm hover:bg-accent">Plan: {plan} <span aria-hidden>×</span><span className="sr-only">Clear this filter</span></button>}
+              {dueOnly && <button type="button" onClick={() => setDueOnly(false)} className="inline-flex h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-sm hover:bg-accent">Payment due <span aria-hidden>×</span><span className="sr-only">Clear this filter</span></button>}
+              <div className="ml-auto"><ViewToggle value={view} onChange={setView} /></div>
             </div>
-            <Field label="Status" className="w-44">
-              {(p) => <SelectBox {...p} value={status || NONE} onChange={(v) => setStatus(v === NONE ? "" : v)}
-                                 choices={[{ value: NONE, label: "All" }, ...STATUS_FILTERS.map((s) => ({ value: s, label: s }))]} />}
-            </Field>
           </div>
         )}
-        empty={<EmptyState title="No subscriptions match">Change the status filter or the search.</EmptyState>}
+        empty={<EmptyState title="No subscriptions match">Change the tab, the tile filter or the search.</EmptyState>}
         columns={[
           { key: "customer", header: "Customer", width: "20%", cell: (s) => (
             <div className="min-w-0"><span className="block truncate font-medium">{s.customer_name}</span>
               <span className="block truncate text-xs text-muted-foreground">Flat {s.flat}</span></div>) },
           { key: "vehicle", header: "Vehicle", width: "20%", cell: (s) => s.vehicle },
-          { key: "plan", header: "Plan", cell: (s) => s.plan_name ?? "No plan set" },
+          { key: "plan", header: "Plan", cell: (s) => s.plan_name ?? NO_PLAN },
+          { key: "pay", header: "Payment", width: "7.5rem", cell: (s) => (s.payment_status ? <StatusBadge status={s.payment_status} /> : "-") },
           { key: "status", header: "Status", width: "8rem", cell: (s) => <StatusBadge status={s.status} /> },
           { key: "first", header: "First service", width: "8rem", cell: (s) => showDate(s.first_service_date) },
           { key: "renewal", header: "Renewal", width: "8rem", cell: (s) => showDate(s.renewal_date) },

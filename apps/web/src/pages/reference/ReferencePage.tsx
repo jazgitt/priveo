@@ -20,13 +20,13 @@ const TABS = [
   { id: "addons", label: "Add-on catalogue", view: AddonsTab },
 ] as const;
 
-/** Master data (all sites): societies, plans, vehicles, services, checklists, reasons, add-ons. */
+/** Site Setup (all sites): societies, plans, vehicles, services, checklists, reasons, add-ons. */
 export function ReferencePage() {
   const [tab, setTab] = useState<string>(TABS[0].id);
   const View = (TABS.find((t) => t.id === tab) ?? TABS[0]).view;
   return (
     <>
-      <PageHeader title="Master data" description="Lists every site uses. Changes are recorded in the Audit log." />
+      <PageHeader title="Site Setup" description="Lists every site uses. Changes are recorded in the Audit log." />
       <Tabs tabs={TABS} active={tab} label="Reference data" onChange={setTab}>
         <View />
       </Tabs>

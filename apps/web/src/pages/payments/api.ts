@@ -29,6 +29,20 @@ export function usePayments(f: PaymentFilters, page = 0, society = "") {
   });
 }
 
+/** The numbers above the payments list: payments and rupees in each status. */
+export interface PaymentsSummary {
+  total: number;
+  total_rupees: number;
+  by_status: Record<string, { count: number; rupees: number }>;
+}
+
+export function usePaymentsSummary(society = "") {
+  return useQuery({
+    queryKey: ["admin-payments", "summary", society],
+    queryFn: () => api<PaymentsSummary>(`/v1/admin/payments/summary${society ? `?society=${encodeURIComponent(society)}` : ""}`),
+  });
+}
+
 export function useAlerts() {
   return useQuery({
     queryKey: ["payment-alerts"],

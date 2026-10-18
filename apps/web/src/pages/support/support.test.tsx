@@ -143,7 +143,8 @@ describe("complaints", () => {
   it("marks overdue rows and filters by status on the server", async () => {
     handlers["/v1/admin/complaints"] = () => [complaint];
     renderAt("/complaints");
-    expect(await screen.findByText("Overdue")).toBeInTheDocument();
+    await screen.findByText("Streaks on the glass");
+    expect(screen.getAllByText("Overdue").length).toBeGreaterThan(1);
     await choose("Status", "Resolved");
     await waitFor(() => expect(calls.some((c) =>
       c.url === "/v1/admin/complaints?status=Resolved")).toBe(true));
@@ -167,6 +168,36 @@ describe("complaints", () => {
     await confirmWith("Change status");
     await waitFor(() => expect(calls.some((c) =>
       c.url.endsWith("/status") && (c.body as { status: string }).status === "In progress")).toBe(true));
+  });
+});
+
+describe("complaint and feedback summary tiles", () => {
+  it("counts complaints in tiles and filters from a status tile", async () => {
+    handlers["/v1/admin/complaints"] = () => [complaint, { ...complaint, id: "c2", status: "Resolved", overdue: false }];
+    renderAt("/complaints");
+    const tiles = await screen.findByRole("region", { name: "Complaint summary" });
+    expect(await within(tiles).findByRole("button", { name: "Total complaints: 2" })).toBeInTheDocument();
+    expect(within(tiles).getByRole("button", { name: "Raised: 1" })).toBeInTheDocument();
+    expect(within(tiles).getByRole("button", { name: "Overdue: 1" })).toBeInTheDocument();
+    await userEvent.click(within(tiles).getByRole("button", { name: "Resolved: 1" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/v1/admin/complaints?status=Resolved")).toBe(true));
+    await userEvent.click(within(tiles).getByRole("button", { name: "Overdue: 1" }));
+    expect(within(tiles).getByRole("button", { name: "Overdue: 1" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("counts feedback by rating and filters from a star tile", async () => {
+    handlers["/v1/admin/feedback"] = () => [
+      { id: "f1", category: "Timing", rating: 5, comment: "Great", testimonial_permission: true,
+        customer_name: "Asha", society: "Green Park", created_at: "2026-10-10T05:00:00Z" },
+      { id: "f2", category: "Timing", rating: 3, comment: "Late", testimonial_permission: false,
+        customer_name: "Ravi", society: "Green Park", created_at: "2026-10-10T05:00:00Z" }];
+    handlers["/v1/admin/support/options"] = () => [];
+    renderAt("/feedback");
+    const tiles = await screen.findByRole("region", { name: "Feedback summary" });
+    expect(await within(tiles).findByRole("button", { name: "Total feedback: 2" })).toBeInTheDocument();
+    expect(within(tiles).getByText("4.00")).toBeInTheDocument();
+    await userEvent.click(within(tiles).getByRole("button", { name: "5 stars: 1" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/v1/admin/feedback?rating=5")).toBe(true));
   });
 });
 

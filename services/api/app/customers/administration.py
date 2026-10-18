@@ -6,12 +6,19 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.billing.models import Payment, PaymentEvent
 from app.changes.cycle import renewal_date
-from app.customers.models import WEEKDAYS, Customer, EmailChange, Subscription, Vehicle
+from app.customers.models import (
+    WEEKDAYS,
+    AddonRequest,
+    Customer,
+    EmailChange,
+    Subscription,
+    Vehicle,
+)
 from app.customers.service import _NAME, read_cutoff, show_registration
 from app.customers.welcome import send_welcome
 from app.directory import lookup
@@ -46,7 +53,8 @@ class VehicleCreate(Input):
     plan_id: uuid.UUID | None = None
     cutoff_time: str | None = None
     interior_day: str | None = None
-    photo_upload_id: uuid.UUID
+    # The admin may add a vehicle without a photo; the customer route still needs one.
+    photo_upload_id: uuid.UUID | None = None
     rc_upload_id: uuid.UUID | None = None
     first_payment_status: str = "Due"
 
@@ -65,6 +73,9 @@ class CustomerEdit(Input):
     last_name: str
     mobile: str
     flat: str = Field(default="", max_length=40)
+    address_line1: str = Field(default="", max_length=120)
+    address_line2: str = Field(default="", max_length=120)
+    society_id: uuid.UUID | None = None
 
 
 class EmailCorrection(Input):
@@ -79,6 +90,7 @@ class VehicleEdit(Input):
     photo_upload_id: uuid.UUID | None = None
     rc_upload_id: uuid.UUID | None = None
     rc_verified: bool | None = None
+    active: bool | None = None
 
 
 class SubscriptionEdit(Input):
@@ -192,7 +204,7 @@ def add_vehicle(db, c, body, owner, by=None):
     ):
         raise ApiError("validation_failed", "Check the parking location.", 422)
     reg = registration(db, body.registration)
-    photo = asset(db, body.photo_upload_id, owner, "vehicle")
+    photo = asset(db, body.photo_upload_id, owner, "vehicle") if body.photo_upload_id else None
     rc = asset(db, body.rc_upload_id, owner, "rc") if body.rc_upload_id else None
     if body.first_payment_status not in ("Due", "Over due", "Initiated", "Received"):
         raise ApiError("validation_failed", "Choose a payment status.", 422)
@@ -274,6 +286,7 @@ def vehicle_out(db, v, store):
     photo = media.vehicle_photo_urls(db, store, [v.id]).get(v.id)
     return {
         "id": str(v.id),
+        "active": v.active,
         "society_id": str(society.id),
         "society": society.name,
         "registration": show_registration(v.registration),
@@ -324,6 +337,9 @@ def detail(db, c, store):
         "email": c.email,
         "mobile": c.mobile,
         "flat": c.flat,
+        "address_line1": c.address_line1,
+        "address_line2": c.address_line2,
+        "society_id": str(c.society_id),
         "email_verified": c.email_verified_at is not None,
         "password_set": login.password_hash is not None,
         "onboarding_confirmed": c.onboarding_confirmed_at is not None,
@@ -332,24 +348,38 @@ def detail(db, c, store):
             vehicle_out(db, v, store)
             for v in db.scalars(
                 select(Vehicle)
-                .where(Vehicle.customer_id == c.id, Vehicle.active.is_(True))
-                .order_by(Vehicle.created_at)
+                .where(Vehicle.customer_id == c.id)
+                .order_by(Vehicle.active.desc(), Vehicle.created_at)
             )
         ],
     }
 
 
-@admin.get("/customers")
-def list_customers(
-    q: str = "",
-    society_id: uuid.UUID | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    user: User = Depends(require_role("admin")),
-    db: Session = Depends(get_db),
-):
+# What a customer's subscriptions add up to: the best one wins (Active, then
+# Activating, then Inactive). A customer with none has "No subscription".
+CUSTOMER_STATUSES = ("Active", "Activating", "Inactive", "No subscription")
+_RANK = {"Active": 3, "Activating": 2, "Inactive": 1}
+_RANK_NAME = {v: k for k, v in _RANK.items()}
+
+
+def _status_rank():
+    """One row per customer that has a subscription on an active vehicle."""
+    rank = case(
+        *[(Subscription.status == name, n) for name, n in _RANK.items()], else_=0
+    )
+    return (
+        select(Vehicle.customer_id.label("customer_id"), func.max(rank).label("rank"))
+        .join(Subscription, Subscription.vehicle_id == Vehicle.id)
+        .where(Vehicle.active.is_(True))
+        .group_by(Vehicle.customer_id)
+        .subquery()
+    )
+
+
+def _matching(q: str, society_id: uuid.UUID | None):
+    """The customers that match a search and a society, as a query of IDs."""
     query = (
-        select(Customer)
+        select(Customer.id)
         .outerjoin(Vehicle, Vehicle.customer_id == Customer.id)
         .outerjoin(Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id))
     )
@@ -367,7 +397,80 @@ def list_customers(
         )
     if society_id:
         query = query.where(Society.id == society_id)
-    found = list(db.scalars(query.distinct().order_by(
+    return query.distinct()
+
+
+@admin.get("/customers/summary")
+def customers_summary(
+    q: str = "",
+    society_id: uuid.UUID | None = None,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """The numbers above the customer list, for the same search and society."""
+    ranks = _status_rank()
+    addons = select(AddonRequest.customer_id.label("customer_id")).distinct().subquery()
+    has_addon = addons.c.customer_id.is_not(None)
+    ids = _matching(q, society_id).subquery()
+    rows = db.execute(
+        select(ranks.c.rank, has_addon, func.count())
+        .select_from(Customer)
+        .join(ids, ids.c.id == Customer.id)
+        .outerjoin(ranks, ranks.c.customer_id == Customer.id)
+        .outerjoin(addons, addons.c.customer_id == Customer.id)
+        .group_by(ranks.c.rank, has_addon)
+    ).all()
+    by_status = dict.fromkeys(CUSTOMER_STATUSES, 0)
+    addons_only = 0
+    for rank, addon, n in rows:
+        by_status[_RANK_NAME.get(rank, "No subscription")] += n
+        if not rank and addon:
+            addons_only += n
+    total = sum(by_status.values())
+    return {
+        "total": total,
+        "with_subscription": total - by_status["No subscription"],
+        "addons_only": addons_only,
+        "by_status": by_status,
+    }
+
+
+@admin.get("/customers")
+def list_customers(
+    q: str = "",
+    society_id: uuid.UUID | None = None,
+    status: str | None = Query(
+        default=None, description="Active, Activating, Inactive or No subscription"
+    ),
+    scope: str | None = Query(
+        default=None, description="with_subscription or addons_only"
+    ),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    if status is not None and status not in CUSTOMER_STATUSES:
+        raise ApiError("validation_failed", "Choose a status from the list.", 422)
+    if scope is not None and scope not in ("with_subscription", "addons_only"):
+        raise ApiError("validation_failed", "Choose with_subscription or addons_only.", 422)
+    ranks = _status_rank()
+    ids_query = _matching(q, society_id).subquery()
+    query = (
+        select(Customer)
+        .join(ids_query, ids_query.c.id == Customer.id)
+        .outerjoin(ranks, ranks.c.customer_id == Customer.id)
+    )
+    if scope == "with_subscription":
+        query = query.where(ranks.c.rank.is_not(None))
+    elif scope == "addons_only":
+        addons = select(AddonRequest.customer_id).distinct().scalar_subquery()
+        query = query.where(ranks.c.rank.is_(None), Customer.id.in_(addons))
+    if status == "No subscription":
+        query = query.where(ranks.c.rank.is_(None))
+    elif status:
+        query = query.where(ranks.c.rank == _RANK[status])
+    found = list(db.scalars(query.order_by(
         Customer.first_name, Customer.last_name, Customer.id).limit(limit).offset(offset)))
     # Each row also carries its vehicles and onboarding state, so the portal list
     # shows them without opening every customer (one query each, not per row).
@@ -400,6 +503,8 @@ def list_customers(
         }
         for c in found
     ]
+
+
 
 
 @admin.get("/customers/{customer_id}")
@@ -457,8 +562,15 @@ def edit_customer(
     c = get_customer(db, customer_id)
     c.first_name, c.last_name, c.mobile = valid_person(body.first_name, body.last_name, body.mobile)
     c.flat = body.flat
+    c.address_line1 = body.address_line1.strip()
+    c.address_line2 = body.address_line2.strip()
+    if body.society_id is not None and body.society_id != c.society_id:
+        society = db.get(Society, body.society_id)
+        if society is None or not society.active:
+            raise ApiError("validation_failed", "Choose an active society.", 422)
+        c.society_id = society.id
     db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
-    audit(db, user.id, "customer", c.id, "update", body.model_dump())
+    audit(db, user.id, "customer", c.id, "update", body.model_dump(mode="json"))
     db.commit()
     return detail(db, c, store)
 
@@ -489,7 +601,12 @@ def customer_add_vehicle(
     if c is None:
         raise ApiError("not_found", "Customer not found.", 404)
     if body.plan_id is None:
-        raise ApiError("validation_failed", "Choose a plan; standalone vehicles are created by admin.", 422)
+        raise ApiError(
+            "validation_failed", "Choose a plan; standalone vehicles are created by admin.", 422
+        )
+    if body.photo_upload_id is None:
+        raise ApiError("validation_failed", "Add a photo of the vehicle.", 422,
+                       {"photo_upload_id": "A photo is required."})
     v, _, payment = add_vehicle(db, c, body, user.id)
     db.commit()
     return {**vehicle_out(db, v, store), "payment_id": str(payment.id)}
@@ -718,6 +835,15 @@ def edit_vehicle(
         if not v.rc_upload_id:
             raise ApiError("validation_failed", "An RC document is required.", 422)
         v.rc_verified = body.rc_verified
+    if body.active is not None and body.active != v.active:
+        sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == v.id))
+        if not body.active and sub is not None and sub.status in ("Active", "Activating"):
+            raise ApiError(
+                "validation_failed",
+                "Make the subscription inactive before deactivating this vehicle.",
+                422,
+            )
+        v.active = body.active
     audit(db, user.id, "vehicle", v.id, "update", body.model_dump(mode="json"))
     db.commit()
     return vehicle_out(db, v, store)

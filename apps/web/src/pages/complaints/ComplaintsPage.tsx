@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/api/client";
 import { DataTable } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
-import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { EmptyState, ErrorState, PageHeader, StatRow, StatTile } from "@/blocks/layout";
 import { StatusBadge, type Tone } from "@/blocks/status";
 import { useSite } from "@/site/SiteContext";
 
@@ -24,6 +24,7 @@ export function ComplaintsPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const site = useSite();
 
   const params = new URLSearchParams();
@@ -38,14 +39,29 @@ export function ComplaintsPage() {
   // Category choices come from the rows seen so far.
   const all = useQuery({ queryKey: [...KEYS.complaints, ""], queryFn: () => api<ComplaintSummary[]>("/v1/admin/complaints") });
   const categories = [...new Set((all.data ?? []).map((c) => c.category))].sort();
-  const rows = list.data?.filter((c) => !site.name || c.society === site.name);
-  const overdue = rows?.filter((c) => c.overdue).length ?? 0;
+  const rows = list.data?.filter((c) => (!site.name || c.society === site.name) && (!overdueOnly || c.overdue));
+  // The tiles count every complaint of the site, whatever the filters below say.
+  const ofSite = all.data?.filter((c) => !site.name || c.society === site.name);
+  const count = (f: (c: ComplaintSummary) => boolean) => ofSite?.filter(f).length;
+  const overdue = count((c) => c.overdue) ?? 0;
+  const loading = all.isPending;
+  const clear = () => { setStatus(""); setCategory(""); setOverdueOnly(false); };
 
   return (
     <>
       <PageHeader title="Complaints" site={site.name || undefined}
                   description={overdue > 0 ? `${overdue} overdue: raised more than 4 hours ago with no reply.` : "Customer complaints, newest first."} />
       {list.isError && <div className="mb-4"><ErrorState message="Could not load the complaints." onRetry={() => void list.refetch()} /></div>}
+      <StatRow label="Complaint summary">
+        <StatTile label="Total complaints" value={ofSite?.length} loading={loading}
+                  selected={!status && !overdueOnly} onSelect={clear} />
+        {STATUSES.map((st) => (
+          <StatTile key={st} label={st} value={count((c) => c.status === st)} loading={loading}
+                    selected={status === st} onSelect={() => { setOverdueOnly(false); setStatus(status === st ? "" : st); }} />
+        ))}
+        <StatTile label="Overdue" value={overdue} loading={loading} hint="Raised over 4 hours ago, no reply"
+                  selected={overdueOnly} onSelect={() => { setStatus(""); setOverdueOnly(!overdueOnly); }} />
+      </StatRow>
       <DataTable
         rows={rows}
         loading={list.isLoading}

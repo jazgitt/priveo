@@ -23,7 +23,7 @@ const pay = (over: Record<string, unknown> = {}) => ({
 const customerDetail = { id: "c1", first_name: "Asha", last_name: "Rao", email: "a@x.com", mobile: "9876543210", flat: "B-12",
   email_verified: true, password_set: true, onboarding_confirmed: true,
   vehicles: [{ id: "v9", society: "Lake View", registration: "KA01AB1234", make: "Maruti", model: "Swift", variant: "", category: "",
-    parking_basement: "B1", parking_number: "1", photo_url: null, rc_url: null, rc_verified: false, subscription: null, payments: [] }] };
+    parking_basement: "B1", parking_number: "1", photo_url: null, subscription: null, payments: [] }] };
 
 let payments: ReturnType<typeof pay>[] = [];
 
@@ -32,6 +32,11 @@ function route(path: string, init?: RequestInit) {
   if (path.startsWith("/v1/admin/payment-alerts")) return json(200, []);
   if (path.startsWith("/v1/admin/customers?")) return json(200, [{ id: "c1", name: "Asha Rao", email: "a@x.com", mobile: "9876543210", vehicles: [] }]);
   if (path === "/v1/admin/customers/c1") return json(200, customerDetail);
+  if (path.startsWith("/v1/admin/payments/summary")) {
+    return json(200, { total: 3, total_rupees: 4500, by_status: {
+      Due: { count: 1, rupees: 1500 }, "Over due": { count: 0, rupees: 0 },
+      Initiated: { count: 1, rupees: 1500 }, Received: { count: 1, rupees: 1500 } } });
+  }
   if (path.startsWith("/v1/admin/payments") && method === "GET") return json(200, payments);
   return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
 }
@@ -86,7 +91,7 @@ describe("payments page", () => {
   it("lists payments and sends the filters, the customer and vehicle by search", async () => {
     renderPage();
     expect(await screen.findByText("Asha Rao")).toBeInTheDocument();
-    expect(screen.getByText("₹1,500")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("₹1,500")).toBeInTheDocument();
     await choose("Status", "Over due");
     await choose("Type", "Add-on");
     await pickCustomer();
@@ -184,5 +189,19 @@ describe("payments page", () => {
     expect((await screen.findAllByText(/That vehicle was not found/)).length).toBeGreaterThan(0);
     const post = calls("/v1/admin/payments").find((c) => c[1]?.method === "POST")!;
     expect(JSON.parse(post[1].body)).toMatchObject({ vehicle_id: "v9", amount_rupees: 1500, due_date: "2026-11-07" });
+  });
+});
+
+describe("payment summary tiles", () => {
+  it("counts payments and rupees by status, and filters the list from a tile", async () => {
+    renderPage();
+    const tiles = await screen.findByRole("region", { name: "Payment summary" });
+    expect(await within(tiles).findByRole("button", { name: "All payments: 3" })).toBeInTheDocument();
+    expect(within(tiles).getByText("₹4,500")).toBeInTheDocument();
+    await userEvent.click(within(tiles).getByRole("button", { name: "Initiated: 1" }));
+    await waitFor(() => expect(lastList()).toContain("status=Initiated"));
+    expect(within(tiles).getByRole("button", { name: "Initiated: 1" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(tiles).getByRole("button", { name: "All payments: 3" }));
+    await waitFor(() => expect(lastList()).not.toContain("status="));
   });
 });

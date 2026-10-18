@@ -16,6 +16,9 @@ export interface SubscriptionRow {
   status: string; // Active | Activating | Paused | Inactive
   first_service_date: string | null;
   renewal_date: string | null;
+  /** The latest plan payment's status, and whether it is waiting (Due or Over due). */
+  payment_status?: string | null;
+  payment_due?: boolean;
 }
 
 /** Expected row of GET /v1/admin/subscriptions/{id}/events (ADM-SUB-05). */
@@ -48,7 +51,7 @@ export function useSubscriptions(status: string, societyId = "") {
   return useQuery({
     queryKey: ["admin-subscriptions", status, societyId],
     queryFn: () => api<SubscriptionRow[]>(
-      `/v1/admin/subscriptions?${new URLSearchParams({ ...(status && { status }), ...(societyId && { society_id: societyId }) })}`),
+      `/v1/admin/subscriptions?${new URLSearchParams({ limit: "500", ...(status && { status }), ...(societyId && { society_id: societyId }) })}`),
     retry: false,
   });
 }

@@ -10,7 +10,8 @@ import { ToastProvider } from "../components";
 import { PortalProviders } from "../test/portal";
 import { useConfirm } from "./confirm";
 import { DataTable, Pager } from "./DataTable";
-import { DetailList, EmptyState, ErrorState, PageHeader } from "./layout";
+import { useViewMode, ViewToggle } from "./view";
+import { DetailList, EmptyState, ErrorState, PageHeader, StatTile } from "./layout";
 import { errorMessage, useAppMutation } from "./mutation";
 import { StatusBadge, toneOf } from "./status";
 import { TaskTray, useTasks } from "./tasks";
@@ -157,4 +158,69 @@ it("lays out the page header, details and errors", async () => {
   expect(screen.getByText("Flat").nextSibling).toHaveTextContent("-");
   await userEvent.click(screen.getByRole("button", { name: "Try again" }));
   expect(retry).toHaveBeenCalled();
+});
+
+it("counts a pager's pages when the total is known, and stops at the last page", async () => {
+  const onPage = vi.fn();
+  const { rerender } = render(<Pager page={0} size={50} count={50} total={120} onPage={onPage} />);
+  expect(screen.getByText("1-50 of 120 · Page 1 of 3")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  rerender(<Pager page={2} size={50} count={20} total={120} onPage={onPage} />);
+  expect(screen.getByText("101-120 of 120 · Page 3 of 3")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  rerender(<Pager page={0} size={50} count={0} total={0} onPage={onPage} />);
+  expect(screen.queryByRole("navigation", { name: "Pages" })).not.toBeInTheDocument();
+});
+
+it("shows a headline number, or a dash while it loads", () => {
+  render(<><StatTile label="Total" value={12} hint="All" /><StatTile label="Waiting" value={5} loading /></>);
+  expect(screen.getByText("12")).toBeInTheDocument();
+  expect(screen.getByText("All")).toBeInTheDocument();
+  expect(screen.queryByText("5")).not.toBeInTheDocument();
+  expect(screen.getByText("–")).toBeInTheDocument();
+});
+
+it("makes a summary tile a button that reports its selection", async () => {
+  const onSelect = vi.fn();
+  render(<StatTile label="Active" value={3} selected onSelect={onSelect} />);
+  const tile = screen.getByRole("button", { name: "Active: 3" });
+  expect(tile).toHaveAttribute("aria-pressed", "true");
+  await userEvent.click(tile);
+  expect(onSelect).toHaveBeenCalledTimes(1);
+});
+
+it("switches a table to tiles, opens a tile, and remembers the choice", async () => {
+  const open = vi.fn();
+  function Demo() {
+    const [view, setView] = useViewMode("demo");
+    return (
+      <>
+        <ViewToggle value={view} onChange={setView} />
+        <DataTable view={view} rows={[{ id: "a", n: "One" }]} rowKey={(r) => r.id} empty={<p>none</p>}
+                   onRowClick={open} rowLabel={(r) => `Open ${r.n}`} renderTile={(r) => <span>{r.n} tile</span>}
+                   columns={[{ key: "n", header: "Name", cell: (r) => r.n }]} />
+      </>
+    );
+  }
+  const { unmount } = render(<Demo />);
+  expect(screen.getByRole("table")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "true");
+  await userEvent.click(screen.getByRole("button", { name: "Tiles" }));
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Open One" }));
+  expect(open).toHaveBeenCalledWith({ id: "a", n: "One" });
+  expect(localStorage.getItem("priveo.view.demo")).toBe("tiles");
+  unmount();
+  render(<Demo />);
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.getByText("One tile")).toBeInTheDocument();
+  localStorage.removeItem("priveo.view.demo");
+});
+
+it("shows the empty state and skeleton tiles in the tile view", () => {
+  const { rerender } = render(<DataTable view="tiles" rows={undefined} loading rowKey={() => ""} empty={<p>none</p>}
+                                         renderTile={() => null} columns={[]} />);
+  expect(screen.queryByText("none")).not.toBeInTheDocument();
+  rerender(<DataTable view="tiles" rows={[]} rowKey={() => ""} empty={<p>none</p>} renderTile={() => null} columns={[]} />);
+  expect(screen.getByText("none")).toBeInTheDocument();
 });

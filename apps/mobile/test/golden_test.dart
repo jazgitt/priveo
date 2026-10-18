@@ -63,8 +63,8 @@ void main() {
   testWidgets('splash end state', (tester) async {
     await _open(tester);
     await _loadImages(tester);
-    // The animation takes 2 seconds, then the app leaves the splash.
-    await tester.pump(const Duration(milliseconds: 1950));
+    // The scene takes 3 seconds; this is its end state, before the progress bar.
+    await tester.pump(const Duration(milliseconds: 2950));
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('goldens/splash.png'));
     await passSplash(tester);

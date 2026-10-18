@@ -26,7 +26,7 @@ void main() {
   String crew(String id, int i) =>
       (scenarios[id]!['crew_logins'] as List)[i] as String;
 
-  /// Starts on the welcome screen and opens the email step.
+  /// Starts on the splash, which has the welcome buttons, and opens the email step.
   Future<void> openSignIn(WidgetTester tester) async {
     await openApp(tester);
     await untilFound(tester, find.text('Get started'));
@@ -52,8 +52,8 @@ void main() {
       tester,
     ) async {
       await openApp(tester);
-      await untilFound(tester, find.text('Welcome to Priveo'));
-      expect(find.text('Car care, at your doorstep'), findsOneWidget);
+      await untilFound(tester, find.text('Get started'));
+      expect(find.text('Care that shows.\nEvery time you drive.'), findsOneWidget);
       expect(find.text('Get started'), findsOneWidget);
       expect(find.text('Already a member? Log in'), findsOneWidget);
 

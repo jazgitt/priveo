@@ -8,6 +8,6 @@ export const routes: RouteObject[] = [{ path: "/capacity", element: createElemen
 
 export const nav: NavItem = {
   path: "/capacity",
-  label: "Capacity",
-  about: "Working slots and capacity by society.",
+  label: "Capacity Utilisation",
+  about: "Crew hours against the work due, by day.",
 };

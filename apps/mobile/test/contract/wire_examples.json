@@ -321,7 +321,9 @@
     "finish_by": "wire-value",
     "late": true,
     "manual": true,
-    "reason": "wire-value"
+    "reason": "wire-value",
+    "skip_kind": "wire-value",
+    "skip_reason": "wire-value"
   },
   "AdminPaymentIn": {
     "vehicle_id": "wire-value",
@@ -472,7 +474,9 @@
         "finish_by": "wire-value",
         "late": true,
         "manual": true,
-        "reason": "wire-value"
+        "reason": "wire-value",
+        "skip_kind": "wire-value",
+        "skip_reason": "wire-value"
       }
     ]
   },
@@ -1287,7 +1291,10 @@
     "first_name": "wire-value",
     "last_name": "wire-value",
     "mobile": "wire-value",
-    "flat": "wire-value"
+    "flat": "wire-value",
+    "address_line1": "wire-value",
+    "address_line2": "wire-value",
+    "society_id": "11111111-1111-1111-1111-111111111111"
   },
   "CustomerHome": {
     "greeting_name": "wire-value",
@@ -1992,7 +1999,9 @@
         "finish_by": "wire-value",
         "late": true,
         "manual": true,
-        "reason": "wire-value"
+        "reason": "wire-value",
+        "skip_kind": "wire-value",
+        "skip_reason": "wire-value"
       }
     ],
     "pending_addons": [
@@ -2466,7 +2475,9 @@
     "plan_name": "wire-value",
     "status": "wire-value",
     "first_service_date": "2026-10-20",
-    "renewal_date": "2026-10-20"
+    "renewal_date": "2026-10-20",
+    "payment_status": "wire-value",
+    "payment_due": true
   },
   "SubscriptionStatusIn": {
     "status": "wire-value",
@@ -2754,7 +2765,8 @@
     "parking_number": "wire-value",
     "photo_upload_id": "11111111-1111-1111-1111-111111111111",
     "rc_upload_id": "11111111-1111-1111-1111-111111111111",
-    "rc_verified": true
+    "rc_verified": true,
+    "active": true
   },
   "VehicleInfo": {
     "id": "wire-value",

@@ -110,3 +110,45 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     </div>
   );
 }
+
+/**
+ * A headline number with its label, for the summary row at the top of a page.
+ * With `onSelect` it is a button that filters the list below to what it counts;
+ * `selected` marks the tile whose filter is on.
+ */
+export function StatTile({ label, value, hint, loading, onSelect, selected }: {
+  label: string; value: ReactNode; hint?: ReactNode; loading?: boolean;
+  onSelect?: () => void; selected?: boolean;
+}) {
+  const body = (
+    <>
+      <p className="m-0 truncate text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="m-0 mt-1 text-2xl font-semibold tabular-nums" aria-busy={loading || undefined}>
+        {loading ? "–" : value}
+      </p>
+      {hint && <p className="m-0 mt-0.5 truncate text-xs text-muted-foreground">{hint}</p>}
+    </>
+  );
+  const frame = "min-w-0 rounded-xl border bg-card px-4 py-3 text-left shadow-xs";
+  if (!onSelect) return <div className={frame}>{body}</div>;
+  return (
+    <button type="button" onClick={onSelect} aria-pressed={selected ?? false}
+            aria-label={loading ? label : `${label}: ${value}`}
+            className={cn(frame, "cursor-pointer transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+              selected && "border-foreground ring-1 ring-foreground")}>
+      {body}
+    </button>
+  );
+}
+
+/** The grid the summary tiles sit in. */
+export function StatRow({ children, label = "Summary", className }: {
+  children: ReactNode; label?: string; className?: string;
+}) {
+  return (
+    <section aria-label={label}
+             className={cn("mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]", className)}>
+      {children}
+    </section>
+  );
+}

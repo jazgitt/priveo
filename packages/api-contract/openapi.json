@@ -1380,6 +1380,81 @@
         }
       }
     },
+    "/v1/admin/customers/summary": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Customers Summary",
+        "description": "The numbers above the customer list, for the same search and society.",
+        "operationId": "customers_summary_v1_admin_customers_summary_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/customers": {
       "get": {
         "tags": [
@@ -1414,6 +1489,42 @@
               ],
               "title": "Society Id"
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Active, Activating, Inactive or No subscription",
+              "title": "Status"
+            },
+            "description": "Active, Activating, Inactive or No subscription"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "with_subscription or addons_only",
+              "title": "Scope"
+            },
+            "description": "with_subscription or addons_only"
           },
           {
             "name": "limit",
@@ -11720,6 +11831,70 @@
         }
       }
     },
+    "/v1/admin/payments/summary": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Payments Summary",
+        "description": "The numbers above the payments list: payments and rupees in each status.",
+        "operationId": "payments_summary_v1_admin_payments_summary_get",
+        "parameters": [
+          {
+            "name": "society",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/payments/{payment_id}": {
       "get": {
         "tags": [
@@ -16018,7 +16193,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 500,
+              "maximum": 1000,
               "minimum": 1,
               "default": 100,
               "title": "Limit"
@@ -20325,6 +20500,30 @@
             "maxLength": 40,
             "title": "Flat",
             "default": ""
+          },
+          "address_line1": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Address Line1",
+            "default": ""
+          },
+          "address_line2": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Address Line2",
+            "default": ""
+          },
+          "society_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Society Id"
           }
         },
         "additionalProperties": false,
@@ -24987,6 +25186,22 @@
               }
             ],
             "title": "Renewal Date"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "payment_due": {
+            "type": "boolean",
+            "title": "Payment Due",
+            "default": false
           }
         },
         "type": "object",
@@ -26058,8 +26273,15 @@
             "title": "Interior Day"
           },
           "photo_upload_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Photo Upload Id"
           },
           "rc_upload_id": {
@@ -26087,8 +26309,7 @@
           "catalogue_id",
           "registration",
           "parking_basement",
-          "parking_number",
-          "photo_upload_id"
+          "parking_number"
         ],
         "title": "VehicleCreate"
       },
@@ -26366,6 +26587,17 @@
               }
             ],
             "title": "Rc Verified"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
           }
         },
         "additionalProperties": false,

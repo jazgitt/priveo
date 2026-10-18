@@ -64,13 +64,42 @@ describe("crew list", () => {
     renderAt("/crew");
     expect(await screen.findByText("Raj Kumar")).toBeInTheDocument();
     expect(screen.getByText("Asha Devi")).toBeInTheDocument();
-    await choose("Role", "Trainee");
+    await userEvent.click(screen.getByRole("tab", { name: /Trainees/ }));
     expect(screen.queryByText("Raj Kumar")).not.toBeInTheDocument();
-    await choose("Role", "All");
+    await userEvent.click(screen.getByRole("tab", { name: /^All/ }));
     await userEvent.type(screen.getByLabelText("Search"), "9000000001");
     expect(screen.queryByText("Asha Devi")).not.toBeInTheDocument();
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew?society_id=s1")).toBe(true));
+  });
+
+  it("counts crew in tiles, filters from a tile and shows the crew as tiles", async () => {
+    const lena = { ...raj, id: "c3", name: "Lena Roy", mobile: "9000000003", role: "Manager", active: false, locked: true,
+      exceptions: [{ id: "e1", date: "2026-10-20", kind: "Sick", start: "" }] };
+    fetchMock.mockImplementation(async (p: string) => {
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj, asha, lena]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew");
+    const tiles = await screen.findByRole("region", { name: "Crew summary" });
+    expect(await within(tiles).findByRole("button", { name: "Total crew: 3" })).toBeInTheDocument();
+    expect(within(tiles).getByRole("button", { name: "Inactive: 1" })).toBeInTheDocument();
+    expect(within(tiles).getByRole("button", { name: "With exceptions: 1" })).toBeInTheDocument();
+    expect(within(tiles).getByRole("button", { name: "Trainees: 1" })).toBeInTheDocument();
+    await userEvent.click(within(tiles).getByRole("button", { name: "Inactive: 1" }));
+    expect(screen.queryByText("Raj Kumar")).not.toBeInTheDocument();
+    expect(screen.getByText("Lena Roy")).toBeInTheDocument();
+    await userEvent.click(within(tiles).getByRole("button", { name: "Inactive: 1" }));
+    expect(screen.getByText("Raj Kumar")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Tiles" }));
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /Managers/ }));
+    expect(screen.getByText("Lena Roy")).toBeInTheDocument();
+    expect(screen.queryByText("Raj Kumar")).not.toBeInTheDocument();
+    expect(localStorage.getItem("priveo.view.crew")).toBe("tiles");
+    localStorage.removeItem("priveo.view.crew");
   });
 
   it("onboards a Trainee with a paired Member and shows the password once", async () => {

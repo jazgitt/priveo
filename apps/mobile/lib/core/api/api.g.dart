@@ -3082,18 +3082,27 @@ class CustomerEdit {
     required this.lastName,
     required this.mobile,
     this.flat,
+    this.addressLine1,
+    this.addressLine2,
+    required this.societyId,
   });
 
   final String firstName;
   final String lastName;
   final String mobile;
   final String? flat;
+  final String? addressLine1;
+  final String? addressLine2;
+  final String? societyId;
 
   factory CustomerEdit.fromJson(Map<String, dynamic> j) => CustomerEdit(
         firstName: j['first_name'] as String,
         lastName: j['last_name'] as String,
         mobile: j['mobile'] as String,
         flat: j['flat'] == null ? null : j['flat'] as String,
+        addressLine1: j['address_line1'] == null ? null : j['address_line1'] as String,
+        addressLine2: j['address_line2'] == null ? null : j['address_line2'] as String,
+        societyId: j['society_id'] == null ? null : j['society_id'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -3101,6 +3110,9 @@ class CustomerEdit {
         'last_name': lastName,
         'mobile': mobile,
         'flat': flat,
+        'address_line1': addressLine1,
+        'address_line2': addressLine2,
+        'society_id': societyId,
       };
 }
 
@@ -6556,6 +6568,8 @@ class SubscriptionRowOut {
     required this.status,
     required this.firstServiceDate,
     required this.renewalDate,
+    required this.paymentStatus,
+    this.paymentDue,
   });
 
   final String subscriptionId;
@@ -6568,6 +6582,8 @@ class SubscriptionRowOut {
   final String status;
   final DateTime? firstServiceDate;
   final DateTime? renewalDate;
+  final String? paymentStatus;
+  final bool? paymentDue;
 
   factory SubscriptionRowOut.fromJson(Map<String, dynamic> j) => SubscriptionRowOut(
         subscriptionId: j['subscription_id'] as String,
@@ -6580,6 +6596,8 @@ class SubscriptionRowOut {
         status: j['status'] as String,
         firstServiceDate: j['first_service_date'] == null ? null : DateTime.parse(j['first_service_date'] as String),
         renewalDate: j['renewal_date'] == null ? null : DateTime.parse(j['renewal_date'] as String),
+        paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
+        paymentDue: j['payment_due'] == null ? null : j['payment_due'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -6593,6 +6611,8 @@ class SubscriptionRowOut {
         'status': status,
         'first_service_date': firstServiceDate == null ? null : _date(firstServiceDate!),
         'renewal_date': renewalDate == null ? null : _date(renewalDate!),
+        'payment_status': paymentStatus,
+        'payment_due': paymentDue,
       };
 }
 
@@ -7327,7 +7347,7 @@ class VehicleCreate {
   final String? planId;
   final String? cutoffTime;
   final String? interiorDay;
-  final String photoUploadId;
+  final String? photoUploadId;
   final String? rcUploadId;
   final String? firstPaymentStatus;
 
@@ -7340,7 +7360,7 @@ class VehicleCreate {
         planId: j['plan_id'] == null ? null : j['plan_id'] as String,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
-        photoUploadId: j['photo_upload_id'] as String,
+        photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
         firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
       );
@@ -7481,6 +7501,7 @@ class VehicleEdit {
     required this.photoUploadId,
     required this.rcUploadId,
     required this.rcVerified,
+    required this.active,
   });
 
   final String? registration;
@@ -7490,6 +7511,7 @@ class VehicleEdit {
   final String? photoUploadId;
   final String? rcUploadId;
   final bool? rcVerified;
+  final bool? active;
 
   factory VehicleEdit.fromJson(Map<String, dynamic> j) => VehicleEdit(
         registration: j['registration'] == null ? null : j['registration'] as String,
@@ -7499,6 +7521,7 @@ class VehicleEdit {
         photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
         rcVerified: j['rc_verified'] == null ? null : j['rc_verified'] as bool,
+        active: j['active'] == null ? null : j['active'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7509,6 +7532,7 @@ class VehicleEdit {
         'photo_upload_id': photoUploadId,
         'rc_upload_id': rcUploadId,
         'rc_verified': rcVerified,
+        'active': active,
       };
 }
 

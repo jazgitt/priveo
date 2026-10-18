@@ -8,7 +8,7 @@ import { useConfirm } from "@/blocks/confirm";
 import { DataTable, Pager } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { BusyButton, FormDialog } from "@/blocks/FormDialog";
-import { DetailList, EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { DetailList, EmptyState, ErrorState, PageHeader, Panel, StatRow, StatTile } from "@/blocks/layout";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
@@ -17,7 +17,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
 import { CustomerPicker, VehiclePicker, type PickedCustomer } from "../customers/picker";
-import { useAction, useAlerts, useCreatePayment, useInvoice, usePayments, useReadAlert, useSetStatus } from "./api";
+import { useAction, useAlerts, useCreatePayment, useInvoice, usePayments, usePaymentsSummary, useReadAlert, useSetStatus } from "./api";
 import { NO_FILTERS, STATUSES, canConfirm, canReject, type AdminPayment, type Invoice, type PaymentFilters } from "./types";
 
 const ALL = NONE;
@@ -31,6 +31,8 @@ export function PaymentsPage() {
   const [open, setOpen] = useState<AdminPayment | null>(null);
   const [recording, setRecording] = useState(false);
   const list = usePayments(filters, page, site.name);
+  const summary = usePaymentsSummary(site.name);
+  const counts = summary.data;
   const alerts = useAlerts();
   const readAlert = useReadAlert();
 
@@ -67,6 +69,16 @@ export function PaymentsPage() {
         </Panel>
       )}
 
+      <StatRow label="Payment summary">
+        <StatTile label="All payments" value={counts?.total} loading={summary.isPending}
+                  hint={counts ? inr(counts.total_rupees) : undefined}
+                  selected={!filters.status} onSelect={() => setFilter("status", ALL)} />
+        {STATUSES.map((st) => (
+          <StatTile key={st} label={st} value={counts?.by_status[st]?.count ?? 0} loading={summary.isPending}
+                    hint={counts ? inr(counts.by_status[st]?.rupees ?? 0) : undefined}
+                    selected={filters.status === st} onSelect={() => setFilter("status", filters.status === st ? ALL : st)} />
+        ))}
+      </StatRow>
       <DataTable
         rows={list.data}
         loading={list.isPending}

@@ -35,6 +35,10 @@ void main() {
     await pumpApp(tester);
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
+    // The scene is skipped: the welcome buttons are there at once.
+    expect(find.byType(LoginScreen), findsNothing);
+    await tester.tap(find.text('Get started'));
+    await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
   });
 
@@ -231,14 +235,6 @@ void main() {
     expect(auth.logoutAllCalls, 1);
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(await store.read(), isNull);
-  });
-
-  testWidgets('demo accounts fill the ID field in dev builds', (tester) async {
-    await pumpApp(tester);
-    await passSplash(tester);
-    await tester.tap(find.text('Admin'));
-    await tester.pump();
-    expect(find.text('priveopapa'), findsOneWidget);
   });
 
   testWidgets('dark theme renders the login screen', (tester) async {

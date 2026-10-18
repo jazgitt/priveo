@@ -6,6 +6,7 @@ import { BusyButton } from "@/blocks/FormDialog";
 import { ErrorState, PageHeader, Panel } from "@/blocks/layout";
 import { useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
+import { Tabs } from "@/components";
 import { showDateTime } from "@/components/format";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
@@ -87,32 +88,32 @@ function SettingRow({ setting }: { setting: Setting }) {
   );
 }
 
-/** Settings by group, each saved on its own (ADM-SET-01 to -04, ADM-SCH-18, -25). */
+/** Settings, one tab for each section; each setting is saved on its own (ADM-SET-01 to -04, ADM-SCH-18, -25). */
 export function SettingsPage() {
   const list = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<Setting[]>(PATH) });
+  const [tab, setTab] = useState("");
+  const groups = Object.entries(GROUPS).filter(([group]) => (list.data ?? []).some((s) => s.group === group));
+  const tabs = [
+    ...groups.map(([id, label]) => ({ id, label })),
+    { id: "alert-email", label: "Alert emails" },
+    { id: "planning", label: "Automatic planning" },
+  ];
+  const active = tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
   return (
     <>
       <PageHeader title="Settings" description="Portal-wide settings. Each one is saved on its own and recorded in the Audit log." />
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="flex min-w-0 flex-col gap-6">
-          {list.isLoading && <Skeleton className="h-64" />}
-          {list.isError && <ErrorState message="Could not load the settings." onRetry={() => void list.refetch()} />}
-          {Object.entries(GROUPS).map(([group, title]) => {
-            const rows = (list.data ?? []).filter((s) => s.group === group);
-            if (rows.length === 0) return null;
-            return (
-              <Panel key={group} title={title} bodyClassName="divide-y py-1">
-                {/* Keep drafts while another client changes the server value. */}
-                {rows.map((s) => <SettingRow key={s.key} setting={s} />)}
-              </Panel>
-            );
-          })}
-        </div>
-        <div className="flex flex-col gap-6">
-          <AlertEmailSettings />
-          <AutomaticPlanningSettings />
-        </div>
-      </div>
+      {list.isLoading && <Skeleton className="h-64" />}
+      {list.isError && <ErrorState message="Could not load the settings." onRetry={() => void list.refetch()} />}
+      <Tabs tabs={tabs} active={active} label="Settings sections" onChange={setTab}>
+        {active === "alert-email" && <AlertEmailSettings />}
+        {active === "planning" && <AutomaticPlanningSettings />}
+        {GROUPS[active] && (
+          <Panel title={GROUPS[active]} bodyClassName="divide-y py-1">
+            {/* Keep drafts while another client changes the server value. */}
+            {(list.data ?? []).filter((s) => s.group === active).map((s) => <SettingRow key={s.key} setting={s} />)}
+          </Panel>
+        )}
+      </Tabs>
     </>
   );
 }

@@ -65,7 +65,6 @@ Future<Session> signInApi(
           const AppConfig(
             flavor: Flavor.dev,
             apiBaseUrl: scenarioUrl,
-            showDemoAccounts: false,
           ),
         ),
       ],
@@ -102,7 +101,6 @@ Future<void> openApp(WidgetTester tester, [Session? session]) async {
         const AppConfig(
           flavor: Flavor.dev,
           apiBaseUrl: scenarioUrl,
-          showDemoAccounts: false,
         ),
       ),
       sessionStoreProvider.overrideWithValue(store),

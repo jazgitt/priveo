@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarOff, Car, PauseCircle, Pencil, Settings2 } from "lucide-react";
+import { CalendarOff, Car, PauseCircle, Pencil, Power, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -41,6 +41,21 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
     invalidate: [["customer", customerId], ["customers"]],
   });
 
+  const setActive = useAppMutation<boolean>({
+    mutationFn: (active) => api(`/v1/admin/vehicles/${v.id}`, { method: "PATCH", body: { active } }),
+    success: (_d, active) => (active ? `${v.registration} reactivated.` : `${v.registration} deactivated.`),
+    invalidate: [["customer", customerId], ["customers"]],
+  });
+  const deactivate = async () => {
+    if (await confirm({
+      title: `Deactivate ${v.registration}?`,
+      description: "It leaves the customer's app and the schedule, and gets no new visits. Its history is kept and you can reactivate it later.",
+      confirmLabel: "Deactivate vehicle", tone: "danger",
+    })) setActive.mutate(false);
+  };
+  const live = v.active !== false;
+  const blocked = sub?.status === "Active" || sub?.status === "Activating";
+
   const unskip = async (s: { id: string; start_date: string }) => {
     if (await confirm({
       title: `Un-skip ${showDate(s.start_date)}?`,
@@ -78,7 +93,23 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           <span className="font-normal text-muted-foreground">{v.make} {v.model} {v.variant}</span>
         </span>
       )}
-      actions={<Button size="sm" variant="outline" onClick={() => setOpen("car")}><Pencil aria-hidden /> Edit car and parking</Button>}
+      actions={(
+        <>
+          {!live && <StatusBadge status="Deactivated" tone="neutral" />}
+          {live && <Button size="sm" variant="outline" onClick={() => setOpen("car")}><Pencil aria-hidden /> Edit car and parking</Button>}
+          {live
+            ? (
+              <span title={blocked ? "Make the subscription inactive first." : undefined}>
+                <Button size="sm" variant="ghost" className="text-destructive" disabled={blocked || setActive.isPending}
+                        onClick={() => void deactivate()}>
+                  <Power aria-hidden /> Deactivate
+                </Button>
+              </span>
+            )
+            : <Button size="sm" variant="outline" disabled={setActive.isPending} onClick={() => setActive.mutate(true)}>Reactivate vehicle</Button>}
+        </>
+      )}
+      className={live ? undefined : "opacity-80"}
       bodyClassName="flex flex-col gap-6"
     >
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-[10rem_minmax(0,1fr)]">
@@ -89,12 +120,10 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           { label: "Society", value: v.society },
           { label: "Parking", value: `${v.parking_basement}-${v.parking_number}` },
           { label: "Category", value: v.category },
-          { label: "RC document", value: v.rc_url
-            ? <span className="flex items-center gap-2"><a href={v.rc_url} target="_blank" rel="noreferrer">Open RC</a><StatusBadge status={v.rc_verified ? "Verified" : "Not verified"} tone={v.rc_verified ? "ok" : "warn"} /></span>
-            : "Not uploaded" },
         ]} />
       </div>
 
+      {live && (
       <section className="border-t pt-5">
         <SubHeading actions={sub ? <>{statusActions}<Button size="sm" variant="outline" onClick={() => setOpen("settings")}><Settings2 aria-hidden /> Schedule settings</Button></> : undefined}>
           Subscription
@@ -112,8 +141,9 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           ]} />
         )}
       </section>
+      )}
 
-      {sub && (
+      {live && sub && (
         <section className="border-t pt-5">
           <SubHeading actions={(
             <>

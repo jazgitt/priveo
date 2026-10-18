@@ -60,7 +60,7 @@ export function AddonsPage() {
 
   return (
     <>
-      <PageHeader title="Add-ons" site={site.name || undefined}
+      <PageHeader title="Add on Service Requests" site={site.name || undefined}
                   description={changes > 0 ? `${changes} ${changes === 1 ? "booking has" : "bookings have"} a change requested by the customer.` : "Deep Spa bookings for subscribers and standalone customers."}
                   actions={<Button onClick={() => setRequesting(true)}><Plus aria-hidden /> Request Deep Spa</Button>} />
       {bookings.isError && <div className="mb-4"><ErrorState message={errorMessage(bookings.error)} onRetry={() => void bookings.refetch()} /></div>}

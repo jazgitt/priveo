@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
-import { EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { EmptyState, ErrorState, PageHeader, StatRow, StatTile } from "@/blocks/layout";
 import { StatusBadge } from "@/blocks/status";
 import { HoverTip, TipRows, type TipRow } from "@/components";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { useSite } from "@/site/SiteContext";
 import { Input } from "@/ui/input";
 
 import {
-  errorText, fmtDate, fmtHours, nextSunday, useCapacity, useCrewList, weekday,
+  errorText, fmtDate, fmtHours, nextSunday, useCapacity, weekday,
 } from "../schedule/api";
 
 /** A capacity figure with its breakup on hover (ADM-CAP-06). */
@@ -26,21 +26,36 @@ const SPANS = [{ value: "1", label: "1 day" }, { value: "7", label: "7 days" }, 
 
 /** Crew hours against the work due, by date, for the chosen site (ADM-CAP-01 to -06). */
 export function CapacityPage() {
-  const crewQ = useCrewList();
   const site = useSite();
   const societyId = site.id;
   const [startDate, setStartDate] = useState(nextSunday());
   const [days, setDays] = useState("7");
   const capQ = useCapacity(societyId, startDate, Number(days));
-  const crew = (crewQ.data ?? []).filter((c) => c.society_id === societyId);
-  const over = capQ.data?.filter((d) => d.over_capacity).length ?? 0;
+  const days_ = capQ.data;
+  const over = days_?.filter((d) => d.over_capacity).length ?? 0;
+  const sum = (f: (d: NonNullable<typeof days_>[number]) => number) => days_?.reduce((t, d) => t + f(d), 0) ?? 0;
+  const use = (d: NonNullable<typeof days_>[number]) =>
+    d.capacity_minutes > 0 ? Math.round((d.demand_minutes / d.capacity_minutes) * 100) : d.demand_minutes > 0 ? 100 : 0;
+  const capacity = sum((d) => d.capacity_minutes);
+  const demand = sum((d) => d.demand_minutes);
+  const peak = days_?.reduce((m, d) => Math.max(m, use(d)), 0) ?? 0;
+  const loading = capQ.isLoading;
 
   return (
     <>
-      <PageHeader title="Capacity" site={site.name || undefined}
+      <PageHeader title="Capacity Utilisation" site={site.name || undefined}
                   description="Crew hours available against the work due. Act on red days before scheduling." />
       {!societyId ? <EmptyState title="Choose a site">Pick a site at the top left.</EmptyState> : (
-        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <>
+          <StatRow label="Capacity summary">
+            <StatTile label="Days shown" value={days_?.length} loading={loading} />
+            <StatTile label="Days over capacity" value={over} loading={loading} hint={over > 0 ? "Act before scheduling" : "None"} />
+            <StatTile label="Crew available" value={fmtHours(capacity)} loading={loading} />
+            <StatTile label="Demand" value={fmtHours(demand)} loading={loading} />
+            <StatTile label="Scheduled" value={fmtHours(sum((d) => d.scheduled_minutes))} loading={loading} />
+            <StatTile label="Overall use" value={`${capacity > 0 ? Math.round((demand / capacity) * 100) : demand > 0 ? 100 : 0}%`}
+                      loading={loading} hint={`Busiest day ${peak}%`} />
+          </StatRow>
           <DataTable
             rows={capQ.data}
             loading={capQ.isLoading}
@@ -83,19 +98,7 @@ export function CapacityPage() {
               { key: "o", header: "", width: "8.5rem", cell: (d) => (d.over_capacity ? <StatusBadge status="Over capacity" tone="error" /> : null) },
             ]}
           />
-          <Panel title="Crew" description="Trainees add no capacity. Hours and exceptions are on the Crew page." bodyClassName="p-0">
-            {crew.length === 0 ? <p className="m-0 px-5 py-4 text-sm text-muted-foreground">No crew in this society.</p> : (
-              <ul className="m-0 list-none divide-y p-0">
-                {crew.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                    <span><span className="font-medium">{c.name}</span> <span className="text-muted-foreground">{c.role}</span></span>
-                    <StatusBadge status={c.active ? "Active" : "Inactive"} tone={c.active ? "ok" : "neutral"} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </div>
+        </>
       )}
     </>
   );
