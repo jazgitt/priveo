@@ -33,7 +33,8 @@
 | Calls and WhatsApp | `url_launcher` | `SUP-02`, `SUP-03` |
 | UPI QR and ID | Show the QR image and a copyable UPI ID, no payment SDK | `PAY-05`: MVP has no payment gateway |
 | Dates | `intl`, one shared formatter for `dd-Mon-yy` | Rule 28 in the customer file. India Standard Time throughout |
-| Error and crash reports | Firebase Crashlytics | |
+| Error and crash reports | Firebase Crashlytics | Native crashes. Added with the Firebase and FCM setup |
+| Product analytics and session replay | PostHog Cloud **EU** (Frankfurt): `posthog_flutter` in the app, `posthog-js` in the portal | Owner decision, 19 Oct 2026. PostHog has no India region. The app sends only the login UUID and role, masks all text, images and platform views, and does not capture touches. Replay is off in release builds (`POSTHOG_REPLAY=false`) and never runs for crew. The customer can switch usage data off in Settings (`SET-05`). PostHog cannot read obfuscated Dart traces, so release builds are not obfuscated |
 | Testing | `flutter_test`, `integration_test`, golden tests for key screens | |
 
 ### API

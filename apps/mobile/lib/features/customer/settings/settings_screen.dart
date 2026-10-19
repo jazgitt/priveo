@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/analytics_consent.dart';
 import '../../../core/network/api_failure.dart';
+import '../../../core/providers.dart';
 import '../../../core/ui/theme.dart';
 import '../cust_strings.dart';
 import '../cust_ui.dart';
@@ -26,6 +28,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // The value shown while a change is being saved.
   final Map<String, bool> _pending = {};
+  bool? _pendingUsage;
 
   Future<void> _change(NotificationPrefDto pref, bool value) async {
     setState(() => _pending[pref.event] = value);
@@ -47,6 +50,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     } finally {
       if (mounted) setState(() => _pending.remove(pref.event));
+    }
+  }
+
+  /// SET-05. Shown only when analytics is set up in this build.
+  List<Widget> _usageSection(TextTheme text) {
+    final shared = ref.watch(analyticsEnabledProvider).value ?? true;
+    return [
+      const SizedBox(height: 20),
+      Text(
+        CustStrings.settingsUsageHeading,
+        style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        child: SwitchListTile(
+          title: const Text(CustStrings.settingsUsageTitle),
+          subtitle: const Text(CustStrings.settingsUsageHelp),
+          value: _pendingUsage ?? shared,
+          onChanged: _changeUsage,
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _changeUsage(bool value) async {
+    setState(() => _pendingUsage = value);
+    try {
+      await ref.read(analyticsEnabledProvider.notifier).set(value);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(CustStrings.settingsSaveFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _pendingUsage = null);
     }
   }
 
@@ -83,6 +121,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onChanged: (v) => _change(p, v),
                   ),
                 ),
+              if (ref.watch(analyticsProvider).isActive) ..._usageSection(text),
             ],
           ),
         ),

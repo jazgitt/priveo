@@ -73,6 +73,10 @@ class CustStrings {
   static const settingsSaveFailed =
       'Could not save this choice. Please try again.';
   static const accountSettings = 'Notification settings';
+  static const settingsUsageHeading = 'Usage data';
+  static const settingsUsageTitle = 'Share usage data';
+  static const settingsUsageHelp =
+      'Helps us find and fix problems. Never includes your name, number or address.';
 
   static const notificationsTitle = 'Notifications';
   static const notificationsEmpty = 'No notifications yet.';

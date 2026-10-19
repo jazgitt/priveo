@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/analytics/analytics.dart';
+import 'core/analytics/analytics_binding.dart';
+import 'core/analytics/analytics_consent.dart';
+import 'core/analytics/posthog_analytics.dart';
 import 'core/config/app_config.dart';
 import 'core/providers.dart';
 import 'core/routing/router.dart';
@@ -14,10 +18,25 @@ import 'features/support/feedback_tab.dart';
 import 'features/support/feedback_sheet.dart';
 
 /// Starts the app for one flavor.
-void runPriveo(AppConfig config) {
+Future<void> runPriveo(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
+  Analytics analytics = const NoopAnalytics();
+  if (config.posthogKey.isNotEmpty) {
+    final candidate = PostHogAnalytics(config);
+    try {
+      await candidate.init();
+      // Do not rely on the SDK remembering an opt-out (SET-05).
+      if (!await SecureConsentStore().read()) await candidate.setEnabled(false);
+      analytics = candidate;
+    } catch (_) {
+      // Analytics must never stop the app from starting.
+    }
+  }
   runApp(ProviderScope(
-    overrides: [appConfigProvider.overrideWithValue(config)],
+    overrides: [
+      appConfigProvider.overrideWithValue(config),
+      analyticsProvider.overrideWithValue(analytics),
+    ],
     child: const PriveoApp(),
   ));
 }
@@ -28,10 +47,12 @@ class PriveoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    ref.watch(analyticsBindingProvider);
+    final analytics = ref.watch(analyticsProvider);
     final session = ref.watch(authControllerProvider).value;
     final confirmed = session?.role == Role.customer
         && (ref.watch(customerHomeProvider).value?.onboardingConfirmed ?? false);
-    return MaterialApp.router(
+    return analytics.wrap(MaterialApp.router(
       builder: (context, child) => ListenableBuilder(
         listenable: router.routeInformationProvider,
         builder: (context, _) {
@@ -56,6 +77,6 @@ class PriveoApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-    );
+    ));
   }
 }

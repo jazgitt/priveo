@@ -18,6 +18,11 @@ class AuthText {
     'auth_whatsapp_support': 'WhatsApp support',
   };
 
+  /// AUTH-18. Shown only when analytics is set up. Not in [all], so it needs no
+  /// ARB entry.
+  static const usageNotice =
+      'Priveo also collects app usage data to improve the app. You can switch this off in Settings.';
+
   String get welcomeTitle => all['auth_welcome_title']!;
   String get getStarted => all['auth_get_started']!;
   String get alreadyMember => all['auth_already_member']!;

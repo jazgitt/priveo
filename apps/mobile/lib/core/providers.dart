@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/data/auth_repository.dart';
+import 'analytics/analytics.dart';
+import 'analytics/analytics_consent.dart' show ConsentStore, SecureConsentStore;
 import 'api/api.g.dart' show PriveoApi;
 import 'auth/auth_controller.dart';
 import 'auth/session.dart';
@@ -10,6 +12,12 @@ import 'network/api_client.dart';
 
 /// Overridden in `main_dev.dart` and `main_prod.dart`.
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.dev);
+
+/// Overridden in `runPriveo`. Tests keep this no-op.
+final analyticsProvider = Provider<Analytics>((ref) => const NoopAnalytics());
+
+final consentStoreProvider =
+    Provider<ConsentStore>((ref) => SecureConsentStore());
 
 final sessionStoreProvider =
     Provider<SessionStore>((ref) => SecureSessionStore());

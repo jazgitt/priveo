@@ -69,6 +69,8 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 | `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY` | The `dev` ECS names |
 | `API_DEV_URL` | The public address of the `dev` API: the project's production domain on Vercel (for example `https://priveo-api.vercel.app`), or `https://api-dev.<your-domain>` on AWS. The app and the smoke test both use it |
 
+The mobile release build also reads `POSTHOG_KEY`, the PostHog EU project key (a repository variable). Without it the app sends no analytics. The host (`https://eu.i.posthog.com`) and `POSTHOG_REPLAY=false` are fixed in `mobile-android-release.yml`.
+
 The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) are needed only when `DEPLOY_PROVIDER` is `aws`.
 
 **Secrets:**

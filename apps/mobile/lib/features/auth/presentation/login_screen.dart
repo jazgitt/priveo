@@ -299,7 +299,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: TextDecoration.underline,
       color: Theme.of(context).colorScheme.primary,
     );
-    return Text.rich(
+    final terms = Text.rich(
       TextSpan(style: base, children: [
         TextSpan(text: t.termsPrefix),
         TextSpan(text: t.termsLink, style: link, recognizer: _termsTap),
@@ -309,6 +309,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ]),
       textAlign: TextAlign.center,
     );
+    if (!ref.watch(analyticsProvider).isActive) return terms;
+    return Column(children: [
+      terms,
+      const SizedBox(height: 6),
+      Text(AuthText.usageNotice, style: base, textAlign: TextAlign.center),
+    ]);
   }
 
   List<Widget> _idStep(AppLocalizations l) {
