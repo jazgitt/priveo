@@ -72,7 +72,7 @@ Flow for a customer the admin has created: Welcome, Email, Verification code (fi
 | AUTH-15 | If the email is not one the admin has created, the app shows "This email is not registered. Contact Priveo", with "Call support" and "WhatsApp support" buttons (SUP-02, SUP-03). No code is sent. | Owner |
 | AUTH-16 | "Forgot password": the customer enters their email and, if the admin has created it, a 6-digit code is sent. After the code is verified the customer sets a new password (AUTH-12). The old password stops working. | Owner and Derived |
 | AUTH-17 | The app keeps the customer signed in on the phone, with no inactivity time-out. The customer signs in again only after logging out, after the password is changed or reset, after the admin signs them out (ADM-CUS-21), or on a new phone or after a reinstall. | Owner and Derived |
-| AUTH-18 | The email screen also tells the customer that Priveo collects app usage data to improve the app, and that it can be switched off in Settings (SET-05). The notice is plain text, with no extra tick box. | Derived |
+| AUTH-18 | The email screen also tells the customer that Priveo records how the app is used, including what is on screen, to improve it, and that the customer can switch this off in Settings (SET-05). The notice is plain text, with no extra tick box. | Derived |
 | AUTH-09 | The user can go back from every onboarding screen to edit a previous step. | Defined |
 
 ### 1.1 Personal details (Step 1 of 7)
@@ -287,7 +287,7 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 | SET-02 | Notification preferences: one on/off switch for each notification event (NOTIF-02). Each can be changed independently. | Owner |
 | SET-03 | All switches are on by default for a new customer. | Owner |
 | SET-04 | In MVP, Settings holds the notification switches and the usage-data switch (SET-05). | Owner (usage-data switch: Derived) |
-| SET-05 | A "Share usage data" switch, on by default. Off stops usage analytics, session replay and error reports from this phone at once, and the choice is kept on the phone. Usage data never includes the customer's name, mobile number, email, address or vehicle number, and screens are masked in any recording. The switch shows only when analytics is set up in the build. The data is processed in the PostHog EU region (Frankfurt). | Derived (EU region: Owner) |
+| SET-05 | A "Share usage data" switch, on by default. Off stops usage analytics, session replay and error reports from this phone at once, and the choice is kept on the phone. Usage events never carry the customer's name, mobile number, email, address or vehicle number as properties. A session recording, when switched on in the build, shows the screens as they are, with nothing masked except password fields (owner decision, 19 Oct 2026; what to mask is still to be decided). The switch shows only when analytics is set up in the build. The data is processed in the PostHog EU region (Frankfurt). | Derived (EU region: Owner) |
 | NOTIF-01 | Notifications are push notifications delivered to the customer's phone. The app asks for notification permission from the operating system. | Owner |
 | NOTIF-02 | MVP events: **Service completed**, **Service skipped**, **Complaint update** (status change or new update note on a complaint), **Renewal reminder**, **Monthly check-in**. No other events notify in MVP. | Owner |
 | NOTIF-03 | A notification is sent only if the customer has that event switched on in Settings. | Owner |

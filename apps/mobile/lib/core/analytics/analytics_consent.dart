@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../auth/auth_controller.dart';
-import '../auth/session.dart';
 import '../providers.dart';
-import 'analytics_binding.dart' show replayAllowedFor;
 
 /// Keeps the customer's "Share usage data" choice on the phone (SET-05).
 /// On by default.
@@ -53,16 +50,8 @@ class AnalyticsEnabled extends AsyncNotifier<bool> {
   Future<void> set(bool enabled) async {
     await ref.read(consentStoreProvider).write(enabled);
     state = AsyncData(enabled);
-    final analytics = ref.read(analyticsProvider);
-    await analytics.setEnabled(enabled);
-    if (!enabled) {
-      await analytics.stopReplay();
-      return;
-    }
-    final Session? session = ref.read(authControllerProvider).value;
-    if (session != null && replayAllowedFor(session.role)) {
-      await analytics.startReplay();
-    }
+    // The SDK stops recording on opt-out and restarts it on opt-in.
+    await ref.read(analyticsProvider).setEnabled(enabled);
   }
 }
 

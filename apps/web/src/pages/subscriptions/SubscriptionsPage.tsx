@@ -6,6 +6,7 @@ import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
 import { BusyButton } from "@/blocks/FormDialog";
 import { EmptyState, ErrorState, PageHeader, StatRow, StatTile } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { useViewMode, ViewToggle } from "@/blocks/view";
@@ -182,6 +183,7 @@ function StatusSection({ row }: { row: SubscriptionRow }) {
   const set = useSetSubscriptionStatus();
   const events = useSubscriptionEvents(row.subscription_id);
   const save = useAppMutation<void>({
+    event: EVENTS.subscriptionStatusChanged,
     mutationFn: () => set.mutateAsync({ id: row.subscription_id, status: next, reason: reason.trim(), first_service_date: next === "Active" ? first || null : null }),
     success: `Subscription is now ${next}.`,
     onSuccess: () => { setReason(""); setFirst(""); },

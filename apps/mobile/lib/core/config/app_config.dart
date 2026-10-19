@@ -7,6 +7,7 @@ class AppConfig {
     this.posthogKey = _posthogKey,
     this.posthogHost = _posthogHost,
     this.posthogReplay = _posthogReplay,
+    this.buildStamp = _buildStamp,
   });
 
   final Flavor flavor;
@@ -24,6 +25,11 @@ class AppConfig {
   /// Session replay is off unless `--dart-define=POSTHOG_REPLAY=true`.
   final bool posthogReplay;
 
+  /// Set by `tool\push_apk.ps1` to the time of the build, and printed in the
+  /// dev startup log. The script looks for it inside the APK to prove the APK
+  /// holds the code just compiled, not an old copy.
+  final String buildStamp;
+
   /// The dev API address is set at build time:
   /// `--dart-define=API_BASE_URL=https://api-dev.example.com`.
   static const _devUrl = String.fromEnvironment(
@@ -40,6 +46,7 @@ class AppConfig {
     defaultValue: 'https://eu.i.posthog.com',
   );
   static const _posthogReplay = bool.fromEnvironment('POSTHOG_REPLAY');
+  static const _buildStamp = String.fromEnvironment('BUILD_STAMP');
 
   static const dev = AppConfig(
     flavor: Flavor.dev,

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
+import { EVENTS } from "@/analytics/events";
 import { useAppMutation } from "@/blocks/mutation";
 import { useToast } from "@/components";
 import { useSite } from "@/site/SiteContext";
@@ -42,6 +43,7 @@ export function OnboardDialog({ onClose }: { onClose: () => void }) {
   const valid = name.trim() !== "" && mobileOk && societyId !== "" && (role !== "Trainee" || mate !== "");
 
   const save = useAppMutation<void, CrewPassword>({
+    event: EVENTS.crewOnboarded,
     mutationFn: () => create.mutateAsync({
       name: name.trim(), mobile: mobile.trim(), society_id: societyId, role,
       working_hours: hoursBody(hours), paired_member_id: role === "Trainee" ? mate : null,

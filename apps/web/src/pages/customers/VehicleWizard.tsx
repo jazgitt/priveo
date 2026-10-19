@@ -5,6 +5,7 @@ import { api } from "@/api/client";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
 import { DetailList, ErrorState } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { inr } from "@/components/format";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
     return withSubscription ? car : { ...car, plan_id: null, cutoff_time: null, interior_day: null };
   };
   const save = useAppMutation<void, { id: string; existing?: boolean }>({
+    event: EVENTS.customerOrVehicleAdded,
     mutationFn: () => api(customerId ? `/v1/admin/customers/${customerId}/vehicles` : "/v1/admin/customers", {
       method: "POST", body: customerId ? payload() : { ...person, vehicle: payload() },
     }),

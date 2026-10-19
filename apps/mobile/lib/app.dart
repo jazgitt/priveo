@@ -21,15 +21,24 @@ import 'features/support/feedback_sheet.dart';
 Future<void> runPriveo(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
   Analytics analytics = const NoopAnalytics();
-  if (config.posthogKey.isNotEmpty) {
+  // One line in the log of a dev build says whether analytics started. The
+  // key itself is never printed.
+  final say = config.flavor == Flavor.dev ? debugPrint : (String _) {};
+  if (config.posthogKey.isEmpty) {
+    say('[analytics] off: this build has no POSTHOG_KEY (build ${config.buildStamp})');
+  } else {
     final candidate = PostHogAnalytics(config);
     try {
       await candidate.init();
       // Do not rely on the SDK remembering an opt-out (SET-05).
-      if (!await SecureConsentStore().read()) await candidate.setEnabled(false);
+      final shared = await SecureConsentStore().read();
+      if (!shared) await candidate.setEnabled(false);
       analytics = candidate;
-    } catch (_) {
+      say('[analytics] on: host ${config.posthogHost}, replay ${config.posthogReplay}, '
+          'usage sharing ${shared ? 'on' : 'off'}, build ${config.buildStamp}');
+    } catch (e) {
       // Analytics must never stop the app from starting.
+      say('[analytics] failed to start: $e (build ${config.buildStamp})');
     }
   }
   runApp(ProviderScope(

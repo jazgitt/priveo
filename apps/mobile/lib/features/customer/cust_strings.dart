@@ -76,7 +76,7 @@ class CustStrings {
   static const settingsUsageHeading = 'Usage data';
   static const settingsUsageTitle = 'Share usage data';
   static const settingsUsageHelp =
-      'Helps us find and fix problems. Never includes your name, number or address.';
+      'Helps us find and fix problems. Includes the screens you see in the app.';
 
   static const notificationsTitle = 'Notifications';
   static const notificationsEmpty = 'No notifications yet.';

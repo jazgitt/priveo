@@ -26,10 +26,7 @@ class _Recorder extends NoopAnalytics {
   void reset() => calls.add('reset');
 
   @override
-  Future<void> startReplay() async => calls.add('replay on');
-
-  @override
-  Future<void> stopReplay() async => calls.add('replay off');
+  Future<void> setEnabled(bool enabled) async => calls.add('enabled $enabled');
 
   @override
   void screen(String name) => calls.add('screen $name');
@@ -45,10 +42,30 @@ void main() {
     expect(screenNameFor('/customer/settings'), '/customer/settings');
   });
 
-  test('crew are left out of replay', () {
-    expect(replayAllowedFor(Role.customer), isTrue);
-    expect(replayAllowedFor(Role.admin), isTrue);
-    expect(replayAllowedFor(Role.crew), isFalse);
+  test('every role is identified, crew included', () async {
+    for (final role in Role.values) {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      final payload = base64Url
+          .encode(utf8.encode(jsonEncode({'sub': id})))
+          .replaceAll('=', '');
+      final rec = _Recorder();
+      final store = MemorySessionStore();
+      await store.write(Session(
+        role: role,
+        displayName: 'Someone',
+        accessToken: 'h.$payload.s',
+        refreshToken: 'r',
+      ));
+      final container = ProviderContainer(overrides: [
+        analyticsProvider.overrideWithValue(rec),
+        sessionStoreProvider.overrideWithValue(store),
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      ]);
+      addTearDown(container.dispose);
+      await container.read(authControllerProvider.future);
+      container.listen(analyticsBindingProvider, (_, _) {});
+      expect(rec.calls, contains('identify $id ${role.name}'), reason: role.name);
+    }
   });
 
   test('the no-op analytics is inactive and returns widgets unchanged', () {
@@ -59,36 +76,23 @@ void main() {
     expect(a.mask(child), same(child));
   });
 
-  test('replay is not started while usage sharing is off, and returns when on',
-      () async {
-    const id = '123e4567-e89b-12d3-a456-426614174000';
-    final payload =
-        base64Url.encode(utf8.encode(jsonEncode({'sub': id}))).replaceAll('=', '');
-    final signedIn = Session(
-      role: Role.customer,
-      displayName: 'Aarav Mehta',
-      accessToken: 'h.$payload.s',
-      refreshToken: 'r',
-    );
+  test('the usage choice defaults to on, is saved, and reaches the SDK', () async {
     final rec = _Recorder();
-    final store = MemorySessionStore();
-    await store.write(signedIn);
+    final consent = MemoryConsentStore();
     final container = ProviderContainer(overrides: [
       analyticsProvider.overrideWithValue(rec),
-      sessionStoreProvider.overrideWithValue(store),
-      consentStoreProvider.overrideWithValue(MemoryConsentStore(false)),
-      authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      consentStoreProvider.overrideWithValue(consent),
     ]);
     addTearDown(container.dispose);
-    await container.read(analyticsEnabledProvider.future);
-    await container.read(authControllerProvider.future);
-    container.listen(analyticsBindingProvider, (_, _) {});
+    expect(await container.read(analyticsEnabledProvider.future), isTrue);
 
-    expect(rec.calls, contains('identify $id customer'));
-    expect(rec.calls, isNot(contains('replay on')));
+    await container.read(analyticsEnabledProvider.notifier).set(false);
+    expect(await consent.read(), isFalse);
+    expect(rec.calls, contains('enabled false'));
 
     await container.read(analyticsEnabledProvider.notifier).set(true);
-    expect(rec.calls, contains('replay on'));
+    expect(await consent.read(), isTrue);
+    expect(rec.calls, contains('enabled true'));
   });
 
   test('sign-in identifies by login id only, sign-out resets', () async {
@@ -114,10 +118,9 @@ void main() {
     container.listen(analyticsBindingProvider, (_, _) {});
 
     expect(rec.calls, contains('identify $id customer'));
-    expect(rec.calls, contains('replay on'));
     expect(rec.calls.join(), isNot(contains('Aarav')));
 
     await container.read(authControllerProvider.notifier).logout();
-    expect(rec.calls, containsAllInOrder(['replay off', 'reset']));
+    expect(rec.calls, contains('reset'));
   });
 }

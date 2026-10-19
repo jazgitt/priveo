@@ -21,7 +21,7 @@ class AuthText {
   /// AUTH-18. Shown only when analytics is set up. Not in [all], so it needs no
   /// ARB entry.
   static const usageNotice =
-      'Priveo also collects app usage data to improve the app. You can switch this off in Settings.';
+      'Priveo also records how the app is used, including what is on screen, to improve it. Customers can switch this off in Settings.';
 
   String get welcomeTitle => all['auth_welcome_title']!;
   String get getStarted => all['auth_get_started']!;

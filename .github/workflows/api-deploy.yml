@@ -74,8 +74,15 @@ jobs:
       # The admin portal is served by the API at /portal/ (same origin). Its
       # build goes into services/api/portal, which the deploy uploads with the
       # API. That folder is not in .vercelignore or .gitignore on purpose.
+      # VITE_ values are baked into the build here, not read from Vercel. The
+      # PostHog key is public by design. Without POSTHOG_KEY the portal sends
+      # nothing. Replay stays off until this line says "true".
       - name: Build the admin portal
         working-directory: apps/web
+        env:
+          VITE_POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: https://eu.i.posthog.com
+          VITE_POSTHOG_REPLAY: "false"
         run: |
           npm ci
           npm run build -- --outDir ../../services/api/portal --emptyOutDir

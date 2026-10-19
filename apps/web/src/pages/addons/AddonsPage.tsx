@@ -9,6 +9,7 @@ import { DataTable } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { BusyButton, FormDialog } from "@/blocks/FormDialog";
 import { DetailList, EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
@@ -122,6 +123,7 @@ function RequestDialog({ onClose }: { onClose: () => void }) {
   const [chosen, setChosen] = useState("");
   const addon = offered.find((a) => a.code === chosen) ?? offered[0];
   const create = useAppMutation<void>({
+    event: EVENTS.addonBooked,
     mutationFn: () => api("/v1/admin/addons", { method: "POST", body: {
       vehicle_id: vehicleId, service: addon?.service ?? "Deep Spa", ...(addon ? { addon: addon.code } : {}), date, finish_by: finish } }),
     pending: "Requesting the add-on…", success: "Add-on requested. It is placed when its date is scheduled.",

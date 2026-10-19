@@ -2,6 +2,8 @@
 // plain same-origin fetch: the browser adds the httpOnly session cookie, and
 // this file adds the CSRF header on every call that changes data.
 
+import { track } from "../analytics/analytics";
+
 const CSRF_COOKIE = "priveo_csrf";
 const SAFE = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -80,11 +82,14 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     });
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
+    track("api error", { status: 0, code: "network_error" });
     throw new ApiError(0, "network_error", "Cannot reach the server. Check the connection.");
   }
 
   if (!res.ok) {
     const err = await toError(res);
+    // Server faults only, and never the message or fields: they can name a customer.
+    if (res.status >= 500) track("api error", { status: err.status, code: err.code, request_id: err.requestId });
     if (res.status === 401 && !opts.quiet401) onUnauthorized?.();
     throw err;
   }

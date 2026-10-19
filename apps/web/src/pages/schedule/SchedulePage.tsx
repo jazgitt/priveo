@@ -9,6 +9,7 @@ import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
 import { DetailList, EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { useTasks } from "@/blocks/tasks";
@@ -206,6 +207,7 @@ export function SchedulePage() {
   const onMove = (job: AdminJob, crewId: string | null, startMinute: number | null) => move.mutate({ job, crewId, startMinute });
 
   const freeze = useAppMutation<string>({
+    event: EVENTS.scheduleFrozen,
     mutationFn: (id) => api(`/v1/admin/scheduling/schedules/${id}/freeze`, { method: "POST" }),
     pending: "Freezing…",
     success: "The schedule is frozen. Crew can now see it.",

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { track } from "@/analytics/analytics";
 import { ApiError } from "@/api/client";
 
 /** The message of an API error envelope, or a general one. */
@@ -23,6 +24,8 @@ export interface AppMutationOptions<TVars, TData> {
   invalidate?: QueryKey[];
   onSuccess?: (data: TData, vars: TVars) => void;
   onError?: (error: unknown, vars: TVars) => void;
+  /** Analytics name (see analytics/events.ts). Sent when it worked; "<name> failed" when not. */
+  event?: string;
 }
 
 /**
@@ -39,11 +42,16 @@ export function useAppMutation<TVars = void, TData = unknown>(o: AppMutationOpti
     onSuccess: async (data, vars, ctx) => {
       toast.success(typeof o.success === "function" ? o.success(data, vars) : o.success,
         { id: ctx?.toastId });
+      if (o.event) track(o.event);
       o.onSuccess?.(data, vars);
       await Promise.all((o.invalidate ?? []).map((queryKey) => qc.invalidateQueries({ queryKey })));
     },
     onError: (e, vars, ctx) => {
       toast.error(errorMessage(e), { id: ctx?.toastId, duration: 8000 });
+      // Status and code only: the message and fields can name a customer.
+      if (o.event) {
+        track(`${o.event} failed`, e instanceof ApiError ? { status: e.status, code: e.code } : {});
+      }
       o.onError?.(e, vars);
     },
   });

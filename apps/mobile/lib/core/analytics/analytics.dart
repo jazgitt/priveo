@@ -22,11 +22,8 @@ abstract class Analytics {
   /// Records a handled error. [stack] may be null.
   void captureError(Object error, StackTrace? stack);
 
+  /// Opt out or back in. The SDK stops and restarts any recording itself.
   Future<void> setEnabled(bool enabled);
-
-  Future<void> startReplay();
-
-  Future<void> stopReplay();
 
   /// Wraps the whole app so the vendor can see its frames. Returns [child]
   /// unchanged when inactive.
@@ -62,12 +59,6 @@ class NoopAnalytics implements Analytics {
 
   @override
   Future<void> setEnabled(bool enabled) async {}
-
-  @override
-  Future<void> startReplay() async {}
-
-  @override
-  Future<void> stopReplay() async {}
 
   @override
   Widget wrap(Widget child) => child;

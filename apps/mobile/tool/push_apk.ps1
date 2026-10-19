@@ -21,7 +21,7 @@
 #   setx POSTHOG_KEY phc_xxx          (then open a new terminal)
 #   ... push_apk.ps1 -PosthogKey phc_xxx
 # Without a key the app sends nothing. Session replay is off unless you add
-# -Replay (customer and admin only, never crew).
+# -Replay (every signed-in role: customer, crew and admin).
 param(
     [string]$ApiUrl = "https://priveo-api.vercel.app",
     [switch]$Debug,
@@ -48,7 +48,10 @@ if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "The version could
 $version = (Select-String -Path (Join-Path $mobile "pubspec.yaml") -Pattern '^version:\s*(\d+\.\d+\.\d+)').Matches[0].Groups[1].Value
 $remote = "/sdcard/Download/priveo-dev-$version.apk"
 
-$defines = @("--dart-define=API_BASE_URL=$ApiUrl")
+# A unique stamp for this run, compiled into the app. After the build the
+# script looks for it inside the APK: old code cannot contain it.
+$stamp = Get-Date -Format "yyMMdd-HHmmss"
+$defines = @("--dart-define=API_BASE_URL=$ApiUrl", "--dart-define=BUILD_STAMP=$stamp")
 if ($PosthogKey) {
     $defines += "--dart-define=POSTHOG_KEY=$PosthogKey"
     $defines += "--dart-define=POSTHOG_HOST=https://eu.i.posthog.com"
@@ -61,14 +64,42 @@ if ($PosthogKey) {
 Write-Host "Building the dev app $version ($mode) for $ApiUrl ..."
 Push-Location $mobile
 try {
+    # Gradle once packed an old copy of the app's code into every APK, so new
+    # code never reached the phone. These folders only hold packed copies of
+    # the compiled app and are rebuilt in seconds, so clear them every time.
+    foreach ($d in "merged_jni_libs", "merged_native_libs", "stripped_native_libs") {
+        Remove-Item -Recurse -Force (Join-Path $mobile "build\app\intermediates\$d") -ErrorAction SilentlyContinue
+    }
     flutter build apk "--$mode" --flavor dev -t lib/main_dev.dart @defines
     if ($LASTEXITCODE -ne 0) { throw "The build failed." }
 }
 finally { Pop-Location }
+
+# Prove the APK holds the code compiled in this run. The stamp is new every
+# run, so an APK packed from an old copy of the code cannot contain it.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($apk)
+try {
+    $entry = $zip.GetEntry("lib/arm64-v8a/libapp.so")
+    $ms = New-Object System.IO.MemoryStream
+    $s = $entry.Open(); $s.CopyTo($ms); $s.Dispose()
+    # ISO-8859-1 (Latin1) keeps one char per byte. Windows PowerShell 5.1
+    # has no [Encoding]::Latin1, so ask for it by code page.
+    $text = [System.Text.Encoding]::GetEncoding(28591).GetString($ms.ToArray())
+}
+finally { $zip.Dispose() }
+if (-not $text.Contains($stamp)) {
+    throw "The APK does not hold the code just built (build stamp $stamp is missing), so it is an old copy. Run 'flutter clean' in apps\mobile and try again. Nothing was copied to the phone."
+}
+if ($PosthogKey -and -not $text.Contains($PosthogKey)) {
+    throw "The PostHog key is not inside the APK. Nothing was copied to the phone."
+}
+Write-Host "Checked: the APK holds the code built just now (build $stamp)."
+if ($PosthogKey) { Write-Host "Checked: the PostHog key is inside the APK." }
 
 Write-Host "Copying to the phone ..."
 & $adb push $apk $remote
 if ($LASTEXITCODE -ne 0) { throw "The copy failed." }
 
 Write-Host ""
-Write-Host "Done. Version $version. On the phone: Files > Downloads > priveo-dev-$version.apk > Install."
+Write-Host "Done. Version $version, build $stamp. On the phone: Files > Downloads > priveo-dev-$version.apk > Install."

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, ApiError } from "@/api/client";
 import { BusyButton } from "@/blocks/FormDialog";
 import { ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { Tabs } from "@/components";
@@ -49,6 +50,7 @@ function SettingRow({ setting }: { setting: Setting }) {
   const [draft, setValue] = useState<string>();
   const value = draft ?? String(setting.value ?? "");
   const save = useAppMutation<void>({
+    event: EVENTS.settingSaved,
     mutationFn: () => api(`${PATH}/${setting.key}`, { method: "PUT", body: { value: setting.kind === "int" ? Number(value) : value } }),
     success: `${setting.label} saved.`,
     onSuccess: () => { setValue(undefined); void qc.invalidateQueries({ queryKey: ["admin-settings"] }); },

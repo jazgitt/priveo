@@ -71,6 +71,8 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 
 The mobile release build also reads `POSTHOG_KEY`, the PostHog EU project key (a repository variable). Without it the app sends no analytics. The host (`https://eu.i.posthog.com`) and `POSTHOG_REPLAY=false` are fixed in `mobile-android-release.yml`.
 
+The admin portal reads the same `POSTHOG_KEY` variable. `api-deploy.yml` passes it to the portal build as `VITE_POSTHOG_KEY`, because the portal is built in GitHub Actions and Vite bakes the value in. The host (EU) and `VITE_POSTHOG_REPLAY=false` are fixed in that step. Without the variable the portal sends nothing. To try it on your PC: `VITE_POSTHOG_KEY=phc_... VITE_POSTHOG_REPLAY=true npm run dev` in `apps/web`.
+
 The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) are needed only when `DEPLOY_PROVIDER` is `aws`.
 
 **Secrets:**

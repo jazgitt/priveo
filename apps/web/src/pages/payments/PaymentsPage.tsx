@@ -9,6 +9,7 @@ import { DataTable, Pager } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { BusyButton, FormDialog } from "@/blocks/FormDialog";
 import { DetailList, EmptyState, ErrorState, PageHeader, Panel, StatRow, StatTile } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
@@ -229,6 +230,7 @@ function RecordDialog({ onClose }: { onClose: () => void }) {
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const fe = create.error instanceof ApiError ? create.error.fields : {};
   const save = useAppMutation<void>({
+    event: EVENTS.paymentRecorded,
     mutationFn: () => create.mutateAsync({
       vehicle_id: f.vehicle_id, kind: f.kind, description: f.description,
       amount_rupees: Number(f.amount), due_date: f.due_date, cycle_start: f.cycle_start || null, status: f.status,

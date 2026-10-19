@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
+import { analyticsActive } from "../analytics/analytics";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Field } from "../blocks/fields";
@@ -50,6 +51,11 @@ export function SignIn() {
         </Field>
         {error && <p role="alert" className="m-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
         <BusyButton type="submit" busy={busy} className="w-full">Sign in</BusyButton>
+        {analyticsActive() && (
+          <p className="m-0 text-center text-xs text-muted-foreground">
+            Priveo records how this portal is used, including what is on screen, to improve it.
+          </p>
+        )}
       </form>
     </main>
   );

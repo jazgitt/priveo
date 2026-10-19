@@ -4,9 +4,10 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 import '../config/app_config.dart';
 import 'analytics.dart';
 
-/// PostHog behind [Analytics]. Replay stays off until [startReplay] is called,
-/// and text, images and platform views are masked. Touch positions are not
-/// captured, because masking does not hide them.
+/// PostHog behind [Analytics]. Replay records only when the build sets
+/// `POSTHOG_REPLAY=true`. For now nothing is masked: recordings show every
+/// screen as it is, touches included. What to mask is still to be decided.
+/// The SDK itself always hides password fields.
 class PostHogAnalytics implements Analytics {
   PostHogAnalytics(this._config);
 
@@ -25,11 +26,15 @@ class PostHogAnalytics implements Analytics {
       ..debug = _config.flavor == Flavor.dev
       ..captureApplicationLifecycleEvents = true
       ..personProfiles = PostHogPersonProfiles.identifiedOnly
-      ..sessionReplay = false;
+      // The SDK builds its recorder only when this is true at setup. It then
+      // records from app start, so the sign-in screens are recorded too, for
+      // every role.
+      ..sessionReplay = _config.posthogReplay;
     c.sessionReplayConfig
-      ..maskAllTexts = true
-      ..maskAllImages = true
-      ..captureTouches = false;
+      ..maskAllTexts = false
+      ..maskAllImages = false
+      ..maskAllPlatformViews = false
+      ..captureTouches = true;
     c.errorTrackingConfig
       ..captureFlutterErrors = true
       ..capturePlatformDispatcherErrors = true
@@ -65,14 +70,6 @@ class PostHogAnalytics implements Analytics {
   @override
   Future<void> setEnabled(bool enabled) =>
       enabled ? Posthog().optIn() : Posthog().optOut();
-
-  @override
-  Future<void> startReplay() async {
-    if (_config.posthogReplay) await Posthog().startSessionRecording();
-  }
-
-  @override
-  Future<void> stopReplay() => Posthog().stopSessionRecording();
 
   @override
   Widget wrap(Widget child) => PostHogWidget(child: child);

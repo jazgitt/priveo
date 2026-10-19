@@ -8,6 +8,7 @@ import { useConfirm } from "@/blocks/confirm";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { BusyButton } from "@/blocks/FormDialog";
 import { DetailList, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { EVENTS } from "@/analytics/events";
 import { useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { showDateTime } from "@/components/format";
@@ -42,6 +43,7 @@ export function ComplaintDetailPage() {
     queryFn: () => api<LinkedVisit>(`${path}/visit`) });
 
   const save = useAppMutation<{ kind: "status" | "note"; status?: string; note: string }, ComplaintDetail>({
+    event: EVENTS.complaintUpdated,
     mutationFn: (v) => api(`${path}/${v.kind === "status" ? "status" : "notes"}`, {
       method: "POST", body: v.kind === "status" ? { status: v.status, note: v.note } : { note: v.note },
     }),

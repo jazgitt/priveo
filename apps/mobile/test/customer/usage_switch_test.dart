@@ -29,9 +29,6 @@ class _Active extends NoopAnalytics {
 
   @override
   Future<void> setEnabled(bool enabled) async => calls.add('enabled $enabled');
-
-  @override
-  Future<void> stopReplay() async => calls.add('replay off');
 }
 
 Future<void> _pump(WidgetTester tester, List<Override> overrides) async {
@@ -82,7 +79,7 @@ void main() {
 
     expect(tester.widget<SwitchListTile>(tile).value, isFalse);
     expect(await store.read(), isFalse);
-    expect(analytics.calls, containsAllInOrder(['enabled false', 'replay off']));
+    expect(analytics.calls, contains('enabled false'));
   });
 
   testWidgets('a saved opt-out shows the switch off', (tester) async {
