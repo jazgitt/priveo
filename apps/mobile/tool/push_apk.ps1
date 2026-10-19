@@ -15,9 +15,18 @@
 # phone shows a blank screen for 5 to 9 seconds before the first Flutter frame),
 # so judge the splash screen and any speed on a release build. Add -Debug only
 # when you need a debug build.
+#
+# Analytics (PostHog EU). The key is public by design, but it is not kept in
+# the repo. Set it once for your user, or pass it for one build:
+#   setx POSTHOG_KEY phc_xxx          (then open a new terminal)
+#   ... push_apk.ps1 -PosthogKey phc_xxx
+# Without a key the app sends nothing. Session replay is off unless you add
+# -Replay (customer and admin only, never crew).
 param(
     [string]$ApiUrl = "https://priveo-api.vercel.app",
-    [switch]$Debug
+    [switch]$Debug,
+    [string]$PosthogKey = $env:POSTHOG_KEY,
+    [switch]$Replay
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,10 +48,20 @@ if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "The version could
 $version = (Select-String -Path (Join-Path $mobile "pubspec.yaml") -Pattern '^version:\s*(\d+\.\d+\.\d+)').Matches[0].Groups[1].Value
 $remote = "/sdcard/Download/priveo-dev-$version.apk"
 
+$defines = @("--dart-define=API_BASE_URL=$ApiUrl")
+if ($PosthogKey) {
+    $defines += "--dart-define=POSTHOG_KEY=$PosthogKey"
+    $defines += "--dart-define=POSTHOG_HOST=https://eu.i.posthog.com"
+    $defines += "--dart-define=POSTHOG_REPLAY=$(if ($Replay) { 'true' } else { 'false' })"
+    Write-Host "Analytics: PostHog EU, replay $(if ($Replay) { 'ON' } else { 'off' })"
+} else {
+    Write-Host "Analytics: off (no POSTHOG_KEY)"
+}
+
 Write-Host "Building the dev app $version ($mode) for $ApiUrl ..."
 Push-Location $mobile
 try {
-    flutter build apk "--$mode" --flavor dev -t lib/main_dev.dart "--dart-define=API_BASE_URL=$ApiUrl"
+    flutter build apk "--$mode" --flavor dev -t lib/main_dev.dart @defines
     if ($LASTEXITCODE -ne 0) { throw "The build failed." }
 }
 finally { Pop-Location }
