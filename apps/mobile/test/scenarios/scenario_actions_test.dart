@@ -28,7 +28,7 @@ void main() {
   }
 
   group('report an issue', () {
-    testWidgets('C09 reports a problem and sees it raised', (tester) async {
+    testWidgets('C09 reports a problem and sees it raised [ISS-01, ISS-03, ISS-06]', (tester) async {
       await home(tester, 'C09');
       await tapFinder(tester, find.text('Report an Issue'));
       await untilFound(tester, find.text('What went wrong?'));
@@ -59,7 +59,7 @@ void main() {
       await untilFound(tester, find.text('Confirm skip'));
     }
 
-    testWidgets('C03 skips a day and undoes it', (tester) async {
+    testWidgets('C03 skips a day and undoes it [SKIP-03, SKIP-05, SKIP-07]', (tester) async {
       await openSkipPause(tester, 'C03');
 
       // A date must be picked first.
@@ -86,12 +86,12 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('C04 pauses for dates and ends the pause', (tester) async {
+    testWidgets('C04 pauses for dates and ends the pause [PAUSE-01, PAUSE-03, PAUSE-05]', (tester) async {
       // Pausing has its own screen, opened from My subscription.
       await home(tester, 'C04');
       await tapFinder(tester, find.text('My subscription'));
-      await untilFound(tester, find.text('Pause service'));
-      await tapFinder(tester, find.text('Pause service'));
+      await untilFound(tester, find.text('PLAN DETAILS'));
+      await tapScrolling(tester, find.text('Pause service'));
       await untilFound(tester, find.text('Confirm pause'));
 
       // Both dates are needed.
@@ -120,7 +120,7 @@ void main() {
   });
 
   group('Deep Spa', () {
-    testWidgets('C05 books a spa date and reaches the payment', (tester) async {
+    testWidgets('C05 books a spa date and reaches the payment [ADD-04, ADD-05]', (tester) async {
       await home(tester, 'C05');
       await tapFinder(tester, find.text('Deep Spa'));
       await untilFound(tester, find.text('Confirm & pay'));
@@ -131,7 +131,12 @@ void main() {
 
       await tapFinder(tester, find.textContaining('Preferred date'));
       await tapFinder(tester, find.text('OK'));
-      await untilFound(tester, find.textContaining('Preferred date: 1'));
+      await untilFound(
+        tester,
+        find.byWidgetPredicate(
+          (w) => w is Text && RegExp(r'^Preferred date: \d{2}-').hasMatch(w.data ?? ''),
+        ),
+      );
       // The date the picker chose, as the screen shows it (dd-Mon-yy).
       final chosen = RegExp(
         r'Preferred date: (\d{2}-\w{3}-\d{2})',

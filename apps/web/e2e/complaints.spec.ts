@@ -10,7 +10,7 @@ test.describe("Complaints (scenario C12)", () => {
     await chooseSite(page, /TEST C12/);
   });
 
-  test("filters by status and marks the overdue complaint", async ({ page }) => {
+  test("filters by status and marks the overdue complaint [ADM-CMP-01, ADM-CMP-06]", async ({ page }) => {
     const rows = page.locator("tbody tr");
     await expect(rows.first()).toBeVisible();
     await expect(page.locator("tbody").getByText("Overdue", { exact: true }).first()).toBeVisible();
@@ -21,14 +21,14 @@ test.describe("Complaints (scenario C12)", () => {
     await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Resolved" })).toHaveCount(0);
   });
 
-  test("a summary tile filters the list too", async ({ page }) => {
+  test("a summary tile filters the list too [ADM-CMP-09]", async ({ page }) => {
     const tiles = page.getByRole("region", { name: "Complaint summary" });
     await expect(tiles.getByRole("button", { name: /^Total complaints: \d+/ })).toBeVisible();
     await tiles.getByRole("button", { name: /^Resolved: \d+/ }).click();
     await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Resolved" })).toHaveCount(0);
   });
 
-  test("resolves a raised complaint with a note", async ({ page }) => {
+  test("resolves a raised complaint with a note [ADM-CMP-03, ADM-CMP-04]", async ({ page }) => {
     await choose(page, "Status", "Raised");
     await page.locator("tbody tr").filter({ hasText: "Raised" }).first().getByRole("link").click();
     await expect(page).toHaveURL(/\/complaints\/[0-9a-f-]{36}$/);

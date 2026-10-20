@@ -12,7 +12,7 @@ test.describe("Add on Service Requests (scenario C21)", () => {
 
   const bookings = (page: import("@playwright/test").Page) => page.locator("tbody tr").filter({ hasText: "Deep Spa" });
 
-  test("lists the four seeded bookings", async ({ page }) => {
+  test("lists the four seeded bookings [ADM-ADD-02, ADM-ADD-13]", async ({ page }) => {
     const rows = bookings(page);
     await expect(rows).toHaveCount(4);
     for (const status of ["Requested", "Scheduled", "Missed", "Cancelled"]) {
@@ -20,7 +20,7 @@ test.describe("Add on Service Requests (scenario C21)", () => {
     }
   });
 
-  test("cancels a requested booking", async ({ page }) => {
+  test("cancels a requested booking [ADM-ADD-02, ADM-ADD-09]", async ({ page }) => {
     const rows = bookings(page);
     await expect(rows).toHaveCount(4);
     await choose(page, "Status filter", "Requested");

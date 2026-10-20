@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 
+import pytest
 from sqlalchemy import select
 
 from app.addons.models import AddonBooking
@@ -11,8 +12,14 @@ from app.notifications.models import Notification
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
 from app.visits.models import JobOutcome, OperationsDecision
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import PINNED_NOW, SUNDAY
 from tests.test_api import auth, login
+
+
+@pytest.fixture(autouse=True)
+def pinned_today(monkeypatch):
+    # The retry date rule reads today's date; pin it with the clock the API tests use.
+    monkeypatch.setattr("app.visits.operations.today_ist", lambda: PINNED_NOW.date())
 
 
 def setup(world, api, admin):

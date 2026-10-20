@@ -34,7 +34,7 @@ void main() {
   );
 
   group('payments', () {
-    testWidgets('confirming a payment removes it from the list', (
+    testWidgets('confirming a payment removes it from the list [ADM-PAY-02, ADM-PAY-03]', (
       tester,
     ) async {
       await home(tester);
@@ -54,7 +54,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('rejecting a payment sends it back and removes it', (
+    testWidgets('rejecting a payment sends it back and removes it [ADM-PAY-02, ADM-PAY-07]', (
       tester,
     ) async {
       await home(tester);
@@ -74,7 +74,7 @@ void main() {
   });
 
   group('complaints', () {
-    testWidgets('moving a complaint to In progress with a note', (
+    testWidgets('moving a complaint to In progress with a note [ADM-CMP-03, ADM-CMP-04]', (
       tester,
     ) async {
       await home(tester);
@@ -102,13 +102,18 @@ void main() {
 
       await tapFinder(tester, find.text('In progress'));
       await tapFinder(tester, find.text('Save status'));
-      await untilFound(tester, find.text('Saved.'));
+      // The earlier note already showed 'Saved.', so wait for this request to
+      // reach the API; the fixture API serves one request at a time.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 2)),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
       await letTimersFinish(tester);
     });
   });
 
   group('crew', () {
-    testWidgets('adding a sick exception for a crew member', (tester) async {
+    testWidgets('adding a sick exception for a crew member [ADM-CRW-08, ADM-CRW-09]', (tester) async {
       await home(tester);
       await openTile(tester, 'Crew');
       await untilFound(tester, find.text('TEST A01 Member 1 · Member'));

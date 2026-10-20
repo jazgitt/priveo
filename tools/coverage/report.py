@@ -60,7 +60,7 @@ def main():
     results["All application sources"] = lines(mobile_hit + results["Backend shared"]["covered"] + results["Admin Web"]["covered"], mobile_total + results["Backend shared"]["total"] + results["Admin Web"]["total"])
     # These two Dart libraries contain only exports/constants, not executable
     # statements. Everything else must appear in LCOV, even if uncovered.
-    declarative = {"lib/core/ui/tokens.g.dart", "lib/main.dart"}
+    declarative = {"lib/core/ui/tokens.g.dart", "lib/features/splash/splash_strings.dart", "lib/main.dart"}
     sources = {p.relative_to(ROOT / "apps/mobile").as_posix() for p in (ROOT / "apps/mobile/lib").rglob("*.dart")}
     missing_sources = sorted(sources - files.keys() - declarative)
     branch = backend["totals"]

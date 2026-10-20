@@ -16,7 +16,7 @@ test.describe("Schedule (scenario R06)", () => {
     await page.getByLabel("Day", { exact: true }).fill(date);
   }
 
-  test("freezes a draft schedule", async ({ page }) => {
+  test("freezes a draft schedule [ADM-SCH-16]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 1));
     const board = page.getByRole("group", { name: "Schedule of this day" });
     await expect(board.getByText("Draft", { exact: true })).toBeVisible();
@@ -29,7 +29,7 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(board.getByRole("button", { name: "Unfreeze" })).toBeVisible();
   });
 
-  test("a frozen schedule refuses a wrong unfreeze code", async ({ page }) => {
+  test("a frozen schedule refuses a wrong unfreeze code [ADM-SCH-18]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     const board = page.getByRole("group", { name: "Schedule of this day" });
     await expect(board.getByText("Frozen", { exact: true })).toBeVisible();

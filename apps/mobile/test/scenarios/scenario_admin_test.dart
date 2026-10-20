@@ -30,7 +30,7 @@ void main() {
       tapScrolling(tester, find.text(label));
 
   group('home', () {
-    testWidgets('shows the counts, the payments waiting and the entries', (
+    testWidgets('shows the counts, the payments waiting and the entries [ADM-ACC-07]', (
       tester,
     ) async {
       await home(tester);
@@ -54,7 +54,7 @@ void main() {
   });
 
   group('payments', () {
-    testWidgets('lists every payment to confirm with Reject and Confirm', (
+    testWidgets('lists every payment to confirm with Reject and Confirm [ADM-PAY-01]', (
       tester,
     ) async {
       await home(tester);
@@ -68,7 +68,7 @@ void main() {
   });
 
   group('complaints', () {
-    testWidgets('lists complaints with a status filter and an overdue mark', (
+    testWidgets('lists complaints with a status filter and an overdue mark [ADM-CMP-01, ADM-CMP-06]', (
       tester,
     ) async {
       await home(tester);
@@ -84,7 +84,7 @@ void main() {
   });
 
   group('ratings and check-ins', () {
-    testWidgets('shows the average rating and its stars filter', (
+    testWidgets('shows the average rating and its stars filter [ADM-FDB-02, ADM-FDB-03]', (
       tester,
     ) async {
       await home(tester);
@@ -97,7 +97,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('shows the monthly check-in results', (tester) async {
+    testWidgets('shows the monthly check-in results [ADM-FDB-04]', (tester) async {
       await home(tester);
       await openTile(tester, 'Monthly check-in results');
       await untilFound(tester, find.textContaining('Value for money'));
@@ -107,7 +107,7 @@ void main() {
   });
 
   group('scheduling', () {
-    testWidgets('the day schedule counts the jobs and shows the crew rows', (
+    testWidgets('the day schedule counts the jobs and shows the crew rows [ADM-SCH-12]', (
       tester,
     ) async {
       await home(tester);
@@ -119,7 +119,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('capacity shows crew minutes against work for each day', (
+    testWidgets('capacity shows crew minutes against work for each day [ADM-CAP-01, ADM-CAP-03]', (
       tester,
     ) async {
       await home(tester);
@@ -133,7 +133,7 @@ void main() {
   });
 
   group('customers, crew and add-ons', () {
-    testWidgets('customer search narrows the list', (tester) async {
+    testWidgets('customer search narrows the list [ADM-CUS-08]', (tester) async {
       await home(tester);
       await openTile(tester, 'Customers');
       await untilFound(tester, find.text('Test A01'));
@@ -148,7 +148,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('the crew list shows roles and an exception action', (
+    testWidgets('the crew list shows roles and an exception action [ADM-CRW-07, ADM-CRW-08]', (
       tester,
     ) async {
       await home(tester);
@@ -160,7 +160,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('add-on requests show their statuses and payments', (
+    testWidgets('add-on requests show their statuses and payments [ADM-ADD-02]', (
       tester,
     ) async {
       await home(tester);
@@ -175,7 +175,7 @@ void main() {
   });
 
   group('operations', () {
-    testWidgets('the missed queue offers a skip only with a reason', (
+    testWidgets('the missed queue offers a skip only with a reason [ADM-OPS-01, ADM-OPS-02]', (
       tester,
     ) async {
       await home(tester);

@@ -9,14 +9,14 @@ test.describe("Customers (scenario C02)", () => {
     await chooseSite(page, /TEST C02/);
   });
 
-  test("lists seeded test customers and finds one by search", async ({ page }) => {
+  test("lists seeded test customers and finds one by search [ADM-CUS-08]", async ({ page }) => {
     await expect(page.getByRole("link", { name: /^Test / }).first()).toBeVisible();
     await page.getByLabel(/Search by name/).fill("test.c02@priveo.test");
     await expect(page.locator("tbody tr").filter({ hasText: "test.c02@priveo.test" })).toBeVisible();
     await expect(page.locator("tbody tr").filter({ hasText: "test.c07@priveo.test" })).toHaveCount(0);
   });
 
-  test("shows the summary numbers and the status tabs", async ({ page }) => {
+  test("shows the summary numbers and the status tabs [ADM-CUS-22, ADM-CUS-23]", async ({ page }) => {
     const tiles = page.getByRole("region", { name: "Customer summary" });
     await expect(tiles.getByRole("button", { name: /^Total customers: [1-9]/ })).toBeVisible();
     await expect(page.getByRole("tab", { name: /^All/ })).toHaveAttribute("aria-selected", "true");
@@ -24,12 +24,12 @@ test.describe("Customers (scenario C02)", () => {
     await expect(page.getByRole("tab", { name: /^No subscription/ })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("an unknown search shows the empty state", async ({ page }) => {
+  test("an unknown search shows the empty state [ADM-CUS-08]", async ({ page }) => {
     await page.getByLabel(/Search by name/).fill("zzz-no-such-customer");
     await expect(page.getByText("No customers found")).toBeVisible();
   });
 
-  test("opens a customer detail page, in tabs", async ({ page }) => {
+  test("opens a customer detail page, in tabs [ADM-CUS-24]", async ({ page }) => {
     await page.getByLabel(/Search by name/).fill("test.c02@priveo.test");
     await page.locator("tbody tr").filter({ hasText: "test.c02@priveo.test" }).getByRole("link").first().click();
     await expect(page).toHaveURL(/\/customers\/[0-9a-f-]{36}$/);

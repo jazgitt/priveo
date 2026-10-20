@@ -5,19 +5,20 @@
 Based on jazgitt's usage over the last 30 days:
 
 Work Type Breakdown:
-  Plan Design      █████████░░░░░░░░░░░  43%
-  Build Feature    ███████░░░░░░░░░░░░░  33%
-  Debug Fix        ██░░░░░░░░░░░░░░░░░░  10%
-  Improve Quality  ██░░░░░░░░░░░░░░░░░░  10%
-  Write Docs       █░░░░░░░░░░░░░░░░░░░   5%
+  Plan Design      ████████░░░░░░░░░░░░  40%
+  Build Feature    ██████░░░░░░░░░░░░░░  32%
+  Debug Fix        ██░░░░░░░░░░░░░░░░░░  8%
+  Improve Quality  ██░░░░░░░░░░░░░░░░░░  8%
+  Write Docs       ██░░░░░░░░░░░░░░░░░░  4%
+  Other            ██░░░░░░░░░░░░░░░░░░  8%
 
 Top Skills & Commands:
   /plugin           ████████████████████  12x/month
-  /clear            █████████████░░░░░░░   8x/month
-  /model            ████████████░░░░░░░░   7x/month
-  /exit             ████████████░░░░░░░░   7x/month
-  /context          ██████████░░░░░░░░░░   6x/month
-  /reload-plugins   ████████░░░░░░░░░░░░   5x/month
+  /clear            ██████████████████░░  11x/month
+  /model            ████████████░░░░░░░░  7x/month
+  /context          ████████████░░░░░░░░  7x/month
+  /exit             ████████████░░░░░░░░  7x/month
+  /reload-plugins   ████████░░░░░░░░░░░░  5x/month
 
 Top MCP Servers:
   plugin_vercel_vercel  ████████████████████  4 calls

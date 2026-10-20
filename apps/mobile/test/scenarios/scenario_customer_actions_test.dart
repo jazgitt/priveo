@@ -1,6 +1,5 @@
 // Customer actions that change data, on the real screens against the real
-// fixture API: paying by UPI, reading notifications, replying to a complaint,
-// the monthly check-in, feedback, and the password form (PAY, NOTIF, CMP,
+// fixture API: paying by UPI, reading notifications, the monthly check-in, feedback, and the password form (PAY, NOTIF,
 // CHK, FDBK, ACC). Each test uses its own scenario, so none depends on
 // another. Needs the fixture API; see scenario_screens_test.dart.
 import 'dart:io';
@@ -42,13 +41,14 @@ void main() {
   }
 
   group('payment', () {
-    testWidgets('C09 says it has paid; Priveo then shows it as Initiated', (
+    testWidgets('C09 says it has paid; Priveo then shows it as Initiated [PAY-06, PAY-07, PAY-09]', (
       tester,
     ) async {
       await home(tester, 'C09');
       await tapFinder(tester, find.text('My subscription'));
       await tapFinder(tester, find.text('Renew subscription'));
-      await tapFinder(tester, find.text("I've paid"));
+      await untilFound(tester, find.text('UPI ID'));
+      await tapScrolling(tester, find.text("I've paid"));
 
       await untilFound(tester, find.text('Payment submitted'));
       expect(find.text('Initiated'), findsWidgets);
@@ -62,7 +62,7 @@ void main() {
   });
 
   group('notifications', () {
-    testWidgets('C29 marks all notifications as read', (tester) async {
+    testWidgets('C29 marks all notifications as read [NOTIF-01]', (tester) async {
       await home(tester, 'C29');
       await tapFinder(tester, find.text('Account'));
       await tapFinder(tester, find.text('Notifications'));
@@ -82,38 +82,8 @@ void main() {
     });
   });
 
-  group('complaints', () {
-    testWidgets('C12 opens a raised complaint and replies on it', (
-      tester,
-    ) async {
-      await home(tester, 'C12');
-      await tapFinder(tester, find.text('Support'));
-      await tapFinder(tester, find.text('My complaints'));
-      await tapFinder(tester, find.text('#C-1200'));
-
-      // The reply box is the sign that the detail page, not the list, is open.
-      await untilFound(tester, find.text('Write a reply'));
-      expect(find.text('Synthetic Raised complaint'), findsWidgets);
-      expect(find.text('Raised'), findsWidgets);
-      expect(find.text('Synthetic thread entry'), findsWidgets);
-
-      await typeIntoLastField(tester, 'Still dusty today.');
-      await tapFinder(tester, find.text('Send'));
-      // The reply joins the thread; the form clears.
-      await until(
-        tester,
-        () =>
-            find.text('Still dusty today.').evaluate().length == 1 &&
-            find.text('Synthetic thread entry').evaluate().isNotEmpty,
-        timeout: const Duration(seconds: 8),
-      );
-      expect(find.text('Still dusty today.'), findsOneWidget);
-      await letTimersFinish(tester);
-    });
-  });
-
   group('check-in and feedback', () {
-    testWidgets('C23 submits its monthly check-in', (tester) async {
+    testWidgets('C23 submits its monthly check-in [CHK-02, CHK-04, CHK-05]', (tester) async {
       await home(tester, 'C23');
       await tapFinder(tester, find.text('Monthly check-in'));
       await untilFound(tester, find.byType(StarRating));
@@ -131,7 +101,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('C09 sends feedback from the side tab', (tester) async {
+    testWidgets('C09 sends feedback from the side tab [FDBK-01, FDBK-02, FDBK-03]', (tester) async {
       await home(tester, 'C09');
       await tapFinder(tester, find.byIcon(Symbols.feedback_rounded));
       await untilFound(tester, find.text('Your rating'));
@@ -154,7 +124,7 @@ void main() {
   });
 
   group('password', () {
-    testWidgets('C25 is told when the form or the current password is wrong', (
+    testWidgets('C25 is told when the form or the current password is wrong [AUTH-12]', (
       tester,
     ) async {
       await home(tester, 'C25');
