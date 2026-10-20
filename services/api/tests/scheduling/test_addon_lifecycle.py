@@ -15,8 +15,8 @@ def test_standalone_without_subscription_is_scheduled_unpaid_and_tracks_completi
     from app.changes.rules import get_now
     from tests.changes.money_fixtures import at
     api.app.dependency_overrides[get_now] = lambda: lambda: at(17, 10)
-    from app.customers.models import Vehicle, Subscription
     from app.billing.models import Payment
+    from app.customers.models import Subscription, Vehicle
     world.add_crew(start=360, end=840)
     car = Vehicle(customer_id=world.customer.id, society_id=world.society.id,
                   registration='HR01SP1234', model='Spa car', parking_basement='B2', parking_number='1')

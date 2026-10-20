@@ -332,7 +332,9 @@ class SupportService:
                 visit = None
             vehicle = self.db.get(Vehicle, visit.vehicle_id) if visit else None
             if vehicle is not None:
-                vehicle_label = f"{vehicle.registration or ''} · {vehicle.make} {vehicle.model} {vehicle.variant}".strip()
+                vehicle_label = (
+                    f"{vehicle.registration or ''} · {vehicle.make} {vehicle.model} {vehicle.variant}"
+                ).strip()
             if vehicle is not None and vehicle.society_id:
                 society = self.db.get(Society, vehicle.society_id).name
         overdue = c.status == "Raised" and self._now() - c.created_at > REPLY_WITHIN

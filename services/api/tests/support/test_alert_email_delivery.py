@@ -118,6 +118,7 @@ def test_push_failure_does_not_suppress_email_or_inbox(client, db):
 def test_resend_alert_email_has_a_portal_link_in_text_and_html(monkeypatch):
     import json
     from contextlib import nullcontext
+
     from app.platform.email import ResendEmailSender
     requests = []
     monkeypatch.setattr("urllib.request.urlopen",
@@ -150,6 +151,7 @@ def test_a_complaint_email_carries_the_text_and_a_portal_link(client, customer, 
 def test_resend_alert_escapes_html_and_sends_stable_provider_key(monkeypatch):
     import json
     from contextlib import nullcontext
+
     from app.platform.email import ResendEmailSender
     requests = []
     def accept(request, **_):

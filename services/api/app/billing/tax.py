@@ -1,5 +1,5 @@
 """GST-inclusive arithmetic in paise; rates/mode come from configuration."""
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 
 def included_gst(amount_rupees: int, rate_percent: int, mode: str) -> dict:

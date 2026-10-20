@@ -1,5 +1,6 @@
 """Immutable GST snapshots, automatic draft run ledger and approved samples."""
 import uuid
+
 import sqlalchemy as sa
 from alembic import op
 

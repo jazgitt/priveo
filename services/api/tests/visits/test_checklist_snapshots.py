@@ -96,8 +96,8 @@ def test_completed_calendar_has_finish_and_check_summary(db, new_visit, make_cre
     from app.customer_reads.service import CustomerReads
     from app.customer_reads.sql_repository import SqlVisitReadRepository
     from app.customers.models import Customer, Vehicle
-    from app.visits.models import JobTiming
     from app.platform.db import utcnow
+    from app.visits.models import JobTiming
 
     member = make_crew("9000000010", "Ravi")
     visit, (job,) = new_visit(assigned=member)

@@ -1,6 +1,5 @@
 """Keep the deployment smoke journey aligned with real application routes."""
 from scripts import smoke_test
-
 from tests.conftest import PASSWORDS
 
 

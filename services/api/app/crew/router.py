@@ -2,12 +2,12 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.crew.service import (
     CrewChange,
     CrewDeactivate,
-    DayHours,
     CrewEdit,
     CrewExceptionEdit,
     CrewExceptionNew,
@@ -24,11 +24,11 @@ from app.crew.service import (
     CrewSessionsEnded,
     CrewSocietyMove,
     CrewSocietyStay,
+    DayHours,
     NewCrew,
 )
-from app.identity.service import User
 from app.identity.models import AuthSession
-from pydantic import BaseModel, Field
+from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 

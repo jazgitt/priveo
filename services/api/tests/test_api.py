@@ -36,6 +36,7 @@ def test_health_and_config(client):
 
 def test_public_legal_links_and_support_use_configured_values(client, db, monkeypatch):
     from types import SimpleNamespace
+
     from tests.directory_helpers import set_setting
     monkeypatch.setattr('app.platform.config.get_settings', lambda: SimpleNamespace(
         terms_url='https://legal.example.com/terms', privacy_url='https://legal.example.com/privacy'))

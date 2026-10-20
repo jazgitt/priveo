@@ -177,7 +177,6 @@ class AddonService:
         if again is not None:
             return self._out(again)
         now = self._now()
-        today = today_of(now)
         # ADD-01: for a vehicle whose subscription is Active. A pause blocks only
         # the dates it covers, so a spa can be booked for a date after it.
         if sub is None or sub.status != "Active":
