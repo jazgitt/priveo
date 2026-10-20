@@ -75,7 +75,7 @@ void main() {
       'C29',
     ];
     for (final id in [...expected.keys, ...plain]) {
-      testWidgets('$id opens Home', (tester) async {
+      testWidgets('$id opens Home [HOME-02]', (tester) async {
         await openApp(
           tester,
           await signInApi(tester, customer(id), scenarioPassword),
@@ -102,7 +102,7 @@ void main() {
       });
     }
 
-    testWidgets('C18 resumes onboarding at step 1 of 7', (tester) async {
+    testWidgets('C18 resumes onboarding at step 1 of 7 [ONB-25]', (tester) async {
       await openApp(
         tester,
         await signInApi(tester, customer('C18'), scenarioPassword),
@@ -128,7 +128,7 @@ void main() {
   });
 
   group('sign-in rules', () {
-    testWidgets('a wrong password gets the API message', (tester) async {
+    testWidgets('a wrong password gets the API message [AUTH-13]', (tester) async {
       Object? error;
       try {
         await signInApi(tester, customer('C01'), 'definitely-wrong');
@@ -145,7 +145,7 @@ void main() {
 
   group('crew home', () {
     for (final id in ['R01', 'R02', 'R03', 'R05', 'R06']) {
-      testWidgets('$id crew sees the day counts', (tester) async {
+      testWidgets('$id crew sees the day counts [CRW-SCH-01]', (tester) async {
         await openApp(
           tester,
           await signInApi(tester, crew(id), scenarioPassword),
@@ -156,7 +156,7 @@ void main() {
   });
 
   group('admin home', () {
-    testWidgets('admin sees payments to confirm', (tester) async {
+    testWidgets('admin sees payments to confirm [ADM-ACC-07]', (tester) async {
       await openApp(
         tester,
         await signInApi(tester, 'priveopapa', scenarioAdminPassword),
@@ -166,7 +166,7 @@ void main() {
   });
 
   group('scenario details', () {
-    testWidgets('C12 lists its complaints', (tester) async {
+    testWidgets('C12 lists its complaints [CMP-01]', (tester) async {
       await openApp(
         tester,
         await signInApi(tester, customer('C12'), scenarioPassword),

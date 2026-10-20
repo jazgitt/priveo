@@ -142,7 +142,12 @@ List<String> visibleTexts() => find
 Future<void> letTimersFinish(WidgetTester tester) async {
   // Let requests the last action started finish, then run out the clock: the
   // client's 20-second timeouts and the screens' message timers.
-  await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+  // First let the screen start what the last tap asked for: a request that is
+  // only started after the app is closed would never finish, and the fixture
+  // API (one request at a time) would wait for it and stall the next test.
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));
+  await tester.pump(const Duration(milliseconds: 100));
   // Close the app so screens cancel their own timers (the payment screen
   // polls every 10 seconds).
   await tester.pumpWidget(const SizedBox.shrink());

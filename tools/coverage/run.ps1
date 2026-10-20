@@ -4,8 +4,8 @@ $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $pythonRunner = Join-Path $taskRoot 'services\api\.venv\Scripts\python.exe'
 $previousDatabase = $env:TEST_DATABASE_URL
 try {
-    # Coverage uses a disposable in-memory database, never a developer database.
-    $env:TEST_DATABASE_URL = 'sqlite://'
+    # Unset, so the tests use their own disposable SQLite (never a developer database); the migration tests need a file database, not sqlite://.
+    Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
     Push-Location (Join-Path $taskRoot 'services\api')
     try {
         & $pythonRunner -m coverage run --branch --source=app -m pytest -q --basetemp=.pytest-tmp-coverage

@@ -11,7 +11,7 @@ test.describe("Payments (scenario A01)", () => {
     await chooseSite(page, /TEST A01/);
   });
 
-  test("confirms an Initiated payment, then issues a GST invoice", async ({ page }) => {
+  test("confirms an Initiated payment, then issues a GST invoice [ADM-PAY-03, ADM-PAY-08]", async ({ page }) => {
     await choose(page, "Status", "Initiated");
     const row = page.locator("tbody tr").filter({ hasText: "Initiated" }).first();
     await expect(row).toBeVisible();
@@ -33,7 +33,7 @@ test.describe("Payments (scenario A01)", () => {
     await expect(invoice.getByText(/GSTIN/)).toBeVisible();
   });
 
-  test("a summary tile filters the list by status", async ({ page }) => {
+  test("a summary tile filters the list by status [ADM-PAY-12]", async ({ page }) => {
     const tiles = page.getByRole("region", { name: "Payment summary" });
     await expect(tiles.getByRole("button", { name: /^All payments: [1-9]/ })).toBeVisible();
     // The earlier test confirms the one Initiated payment, so Received is what A01 has.
@@ -42,7 +42,7 @@ test.describe("Payments (scenario A01)", () => {
     await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Received" })).toHaveCount(0);
   });
 
-  test("a filter with no matches shows the empty state", async ({ page }) => {
+  test("a filter with no matches shows the empty state [ADM-PAY-01]", async ({ page }) => {
     await page.getByLabel("Due after").fill("2099-01-01");
     await expect(page.getByText("No payments match these filters")).toBeVisible();
   });

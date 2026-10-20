@@ -32,7 +32,7 @@ void main() {
   }
 
   group('team', () {
-    testWidgets('a Member and a Trainee do not see the team', (tester) async {
+    testWidgets('a Member and a Trainee do not see the team [CRW-MGR-01]', (tester) async {
       await openApp(
         tester,
         await signInApi(tester, crew('R01', 1), scenarioPassword),
@@ -42,7 +42,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('R01 Manager sees each member and how many jobs they have', (
+    testWidgets('R01 Manager sees each member and how many jobs they have [CRW-MGR-01]', (
       tester,
     ) async {
       await teamScreen(tester, 'R01');
@@ -53,7 +53,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('opening a member lists their jobs with every state', (
+    testWidgets('opening a member lists their jobs with every state [CRW-MGR-01]', (
       tester,
     ) async {
       await teamScreen(tester, 'R01');
@@ -82,7 +82,7 @@ void main() {
   });
 
   group('attendance', () {
-    testWidgets('R03 shows present, sick, leave and a late start', (
+    testWidgets('R03 shows present, sick, leave and a late start [CRW-MGR-04]', (
       tester,
     ) async {
       await teamScreen(tester, 'R03');
@@ -101,7 +101,7 @@ void main() {
 
   group('a team member job', () {
     testWidgets(
-      'a scheduled job offers reassign, could not complete and skip',
+      'a scheduled job offers reassign, could not complete and skip [CRW-MGR-02, CRW-MGR-03]',
       (tester) async {
         await teamScreen(tester, 'R01');
         await tapFinder(tester, find.text('TEST R01 Member 1'));

@@ -8,13 +8,13 @@ test.describe("Audit", () => {
     await expect(page.getByRole("heading", { name: "Audit" })).toBeVisible();
   });
 
-  test("says it does not refresh by itself, and has a Refresh button", async ({ page }) => {
+  test("says it does not refresh by itself, and has a Refresh button [ADM-SET-06]", async ({ page }) => {
     await expect(page.getByRole("note")).toContainText("does not update by itself");
     await expect(page.getByRole("note")).toContainText("last 1000 events");
     await expect(page.getByRole("button", { name: "Refresh" })).toBeEnabled();
   });
 
-  test("does not ask the server again until Refresh is pressed", async ({ page }) => {
+  test("does not ask the server again until Refresh is pressed [ADM-SET-06]", async ({ page }) => {
     await expect(page.getByRole("note")).toContainText("Loaded at");
     let calls = 0;
     page.on("request", (r) => { if (r.url().includes("/directory/audit")) calls += 1; });

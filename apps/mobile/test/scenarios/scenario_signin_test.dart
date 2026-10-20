@@ -48,7 +48,7 @@ void main() {
   }
 
   group('welcome and email step', () {
-    testWidgets('the welcome screen offers Get started and Log in', (
+    testWidgets('the welcome screen offers Get started and Log in [AUTH-01]', (
       tester,
     ) async {
       await openApp(tester);
@@ -67,7 +67,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('an email Priveo does not know is told to contact Priveo', (
+    testWidgets('an email Priveo does not know is told to contact Priveo [AUTH-15]', (
       tester,
     ) async {
       await openSignIn(tester);
@@ -84,14 +84,14 @@ void main() {
   });
 
   group('password sign-in', () {
-    testWidgets('a customer signs in by email and password', (tester) async {
+    testWidgets('a customer signs in by email and password [AUTH-13]', (tester) async {
       await openSignIn(tester);
       await enterIdAndPassword(tester, customer('C01'), scenarioPassword);
       await untilFound(tester, find.byType(GreetingLine));
       await letTimersFinish(tester);
     });
 
-    testWidgets('a wrong password does not sign in and offers a reset', (
+    testWidgets('a wrong password does not sign in and offers a reset [AUTH-13, AUTH-16]', (
       tester,
     ) async {
       await openSignIn(tester);
@@ -102,7 +102,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('crew sign in by mobile number', (tester) async {
+    testWidgets('crew sign in by mobile number [CRW-ACC-02, CRW-ACC-03]', (tester) async {
       await openSignIn(tester);
       await enterIdAndPassword(tester, crew('R01', 1), scenarioPassword);
       await untilFound(tester, find.text('TS30TT0001'));
@@ -110,7 +110,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('the admin signs in by user ID', (tester) async {
+    testWidgets('the admin signs in by user ID [ADM-ACC-06]', (tester) async {
       await openSignIn(tester);
       await enterIdAndPassword(tester, 'priveopapa', scenarioAdminPassword);
       await untilFound(tester, find.text('Payments to confirm'));
@@ -119,7 +119,7 @@ void main() {
   });
 
   group('crew accounts that cannot sign in (R04)', () {
-    testWidgets('an inactive crew account is refused', (tester) async {
+    testWidgets('an inactive crew account is refused [CRW-ACC-08]', (tester) async {
       Object? error;
       try {
         await signInApi(tester, crew('R04', 4), scenarioPassword);
@@ -131,7 +131,7 @@ void main() {
       expect(error.message, 'The ID or password is not correct.');
     });
 
-    testWidgets('a locked crew account says to ask the admin', (tester) async {
+    testWidgets('a locked crew account says to ask the admin [CRW-ACC-07]', (tester) async {
       Object? error;
       try {
         await signInApi(tester, crew('R04', 5), scenarioPassword);
@@ -148,7 +148,7 @@ void main() {
   });
 
   group('first sign-in (C30)', () {
-    testWidgets('the emailed code, a new password, then onboarding', (
+    testWidgets('the emailed code, a new password, then onboarding [AUTH-05, AUTH-08, AUTH-12]', (
       tester,
     ) async {
       await openSignIn(tester);

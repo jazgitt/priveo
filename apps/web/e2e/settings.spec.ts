@@ -10,13 +10,13 @@ test.describe("Settings", () => {
     await expect(page.getByRole("tablist", { name: "Settings sections" })).toBeVisible();
   });
 
-  test("seller identity is read-only", async ({ page }) => {
+  test("seller identity is read-only [ADM-SET-04]", async ({ page }) => {
     await page.getByRole("tab", { name: "Invoice" }).click();
     await expect(page.getByText(/Seller GSTIN/)).toBeVisible();
     await expect(page.getByLabel(/Seller GSTIN/)).toHaveCount(0);
   });
 
-  test("saves the helpline number and keeps it after a reload", async ({ page }) => {
+  test("saves the helpline number and keeps it after a reload [ADM-SET-03]", async ({ page }) => {
     const field = page.getByLabel("Helpline number", { exact: true });
     await field.fill("9876543210");
     await page.getByRole("button", { name: "Save Helpline number" }).click();
@@ -26,7 +26,7 @@ test.describe("Settings", () => {
     await expect(page.getByLabel("Helpline number", { exact: true })).toHaveValue("9876543210");
   });
 
-  test("rejects an invalid helpline number", async ({ page }) => {
+  test("rejects an invalid helpline number [ADM-SET-03]", async ({ page }) => {
     await page.getByLabel("Helpline number", { exact: true }).fill("abc");
     await page.getByRole("button", { name: "Save Helpline number" }).click();
     await expect(page.getByText("Helpline number saved.")).toHaveCount(0);

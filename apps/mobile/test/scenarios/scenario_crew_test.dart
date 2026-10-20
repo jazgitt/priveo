@@ -34,7 +34,7 @@ void main() {
   }
 
   group('day list', () {
-    testWidgets('R01 Member sees the four jobs and their states', (
+    testWidgets('R01 Member sees the four jobs and their states [CRW-SCH-01, CRW-SCH-07]', (
       tester,
     ) async {
       await member(tester);
@@ -61,7 +61,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('R02 has an empty day', (tester) async {
+    testWidgets('R02 has an empty day [CRW-SCH-06]', (tester) async {
       await openApp(
         tester,
         await signInApi(tester, crew('R02', 0), scenarioPassword),
@@ -72,7 +72,7 @@ void main() {
   });
 
   group('job card', () {
-    testWidgets('a completed job shows when it finished and has no actions', (
+    testWidgets('a completed job shows when it finished and has no actions [CRW-SCH-07, CRW-SVC-12]', (
       tester,
     ) async {
       await member(tester);
@@ -85,7 +85,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('a job that could not be completed shows why', (tester) async {
+    testWidgets('a job that could not be completed shows why [CRW-CNC-02, CRW-CNC-04]', (tester) async {
       await member(tester);
       await tapFinder(tester, find.text('TS30TT0005'));
       await untilFound(tester, find.text('Car not in the parking spot'));
@@ -94,7 +94,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('a scheduled job offers Start job and Could not complete', (
+    testWidgets('a scheduled job offers Start job and Could not complete [CRW-SVC-11, CRW-CNC-01]', (
       tester,
     ) async {
       await member(tester);
@@ -108,7 +108,7 @@ void main() {
 
   group('doing a job', () {
     testWidgets(
-      'starting a job opens its checklist; ticking updates what is missing',
+      'starting a job opens its checklist; ticking updates what is missing [CRW-SVC-01, CRW-SVC-03, CRW-SVC-08]',
       (tester) async {
         await member(tester);
         await tapFinder(tester, find.text('TS30TT0001'));
@@ -128,7 +128,7 @@ void main() {
       },
     );
 
-    testWidgets('a scheduled or in-progress job can be opened to perform', (
+    testWidgets('a scheduled or in-progress job can be opened to perform [CRW-SVC-01]', (
       tester,
     ) async {
       await member(tester);
@@ -146,7 +146,7 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('could not complete needs a reason, then marks the job', (
+    testWidgets('could not complete needs a reason, then marks the job [CRW-CNC-02, CRW-CNC-04]', (
       tester,
     ) async {
       await member(tester);
