@@ -24,6 +24,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 
 ## Layout
 
+- `docs/reqs/mani-bond-spec_final.md`: Mani Bond Chief of Staff requirements. `docs/agent-architecure.md`: proposed architecture assessment, phased implementation plan, estimates and unresolved scope decisions; read both before working on Mani Bond.
 - `docs/reqs/customer-app-functional-requirements.md`: customer app
 - `docs/reqs/admin-functional-requirements.md`: admin (functional requirements for the web portal and the mobile quick actions)
 - `docs/reqs/crew-functional-requirements.md`: crew
