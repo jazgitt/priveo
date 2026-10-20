@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.customers import account
-from app.customers import history
+from app.customers import account, history
 from app.customers.service import CustomerService, Onboarding, OnboardingAnswers, OnboardingDraft
 from app.home.schemas import CustomerHome
 from app.identity.service import User

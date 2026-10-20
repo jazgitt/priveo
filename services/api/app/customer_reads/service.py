@@ -33,8 +33,8 @@ from app.customer_reads.schemas import (
 )
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
-from app.directory.models import Society
 from app.directory import lookup
+from app.directory.models import Society
 from app.media.service import has_confirmed, vehicle_photo_urls
 from app.media.store import ObjectStore, get_object_store
 from app.platform import clock

@@ -1,4 +1,5 @@
 from sqlalchemy import select
+
 from app.addons.models import AddonBooking
 from app.billing.models import Payment
 from tests.changes.money_fixtures import at
@@ -16,7 +17,8 @@ def test_standalone_retries_create_one_booking_and_one_payment(money):
     assert first.status_code == 201 and first.json()['id'] == second.json()['id']
     assert len(m.db.scalars(select(AddonBooking)).all()) == 1
     assert len(m.db.scalars(select(Payment)).all()) == 1
-    assert m.client.post(f"/v1/customer/payments/{first.json()['payment_id']}/paid", headers=m.customer).json()['payment']['status'] == 'Initiated'
+    paid = m.client.post(f"/v1/customer/payments/{first.json()['payment_id']}/paid", headers=m.customer)
+    assert paid.json()['payment']['status'] == 'Initiated'
 
 
 def test_standalone_rejects_missing_foreign_subscribed_vehicle_and_late_booking(money):

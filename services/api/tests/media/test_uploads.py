@@ -120,8 +120,9 @@ def test_exact_media_limits_on_upload_request(
                                            ("video", 25 * MB, "video/mp4")])
 def test_exact_media_limit_refused_at_signed_put_and_confirmation(
         crew_client, make_crew, signin, new_visit, store, db, kind, limit, mime):
-    from app.media.models import MediaUpload
     import uuid
+
+    from app.media.models import MediaUpload
 
     member = make_crew("9000000010", "Ravi")
     _, (job,) = new_visit(assigned=member)

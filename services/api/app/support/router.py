@@ -20,8 +20,8 @@ from app.support.faq import SupportFaqOut, load_faq
 from app.support.models import Complaint
 from app.support.notify import (
     EmailNotifier,
-    QueuedEmailNotifier,
     PushNotifier,
+    QueuedEmailNotifier,
 )
 from app.support.schemas import (
     AdminComplaintDetail,
