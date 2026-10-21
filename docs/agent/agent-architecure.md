@@ -3,7 +3,7 @@
 Date: 20-Oct-2026  
 Status: Proposed assessment and plan; implementation has not started.  
 Audience: Founder, Claude, Codex and implementation engineers.  
-Primary requirement source: [Mani Bond final spec v3](reqs/mani-bond-spec_final.md).
+Primary requirement source: [Mani Bond final spec v3](mani-bond-spec_final.md).
 
 ## 1. Assessment
 
@@ -38,7 +38,7 @@ Relevant implementation references:
 - `services/api/app/scheduling/`: scheduling services and planning rules.
 - `services/api/app/notifications/cron.py`: existing background-job entry points.
 - `services/api/pyproject.toml`: backend dependency baseline.
-- [Current handoff](codex-handoff-plan.md), [tech stack](tech-stack.md) and [security backlog](security-backlog.md): existing integration and release constraints.
+- [Current handoff](../codex-handoff-plan.md), [tech stack](../tech-stack.md) and [security backlog](../security-backlog.md): existing integration and release constraints.
 
 Existing code and deployed configuration must be rechecked before implementation. In particular, daily cron patterns do not establish near-real-time monitoring. Follow the project's decided AWS Mumbai hosting architecture; inspect current deployment before choosing how assistant workers run.
 
