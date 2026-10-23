@@ -1,3 +1,5 @@
+import '../../core/features/feature_flags.dart';
+import '../../core/features/feature_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +33,7 @@ class HelpScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contact = ref.watch(supportContactProvider);
     final pending = ref.watch(pendingCheckInsProvider).value ?? const [];
+    bool on(String key) => ref.watch(featureOnProvider(key));
     return Scaffold(
       appBar: AppBar(title: Text(t('support_title'))),
       body: contact.when(
@@ -38,8 +41,9 @@ class HelpScreen extends ConsumerWidget {
         skipError: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorView(
-            message: failureText(context, e),
-            onRetry: () => ref.invalidate(supportContactProvider)),
+          message: failureText(context, e),
+          onRetry: () => ref.invalidate(supportContactProvider),
+        ),
         data: (c) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -47,7 +51,8 @@ class HelpScreen extends ConsumerWidget {
               icon: Symbols.call_rounded,
               label: t('support_call'),
               subtitle: c.helpline,
-              onTap: () => _open(context, ref, Uri(scheme: 'tel', path: c.helpline)),
+              onTap: () =>
+                  _open(context, ref, Uri(scheme: 'tel', path: c.helpline)),
             ),
             _Tile(
               icon: Symbols.chat_rounded,
@@ -57,35 +62,42 @@ class HelpScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              child: Text(t('support_hours', {'hours': c.hours}),
-                  style: Theme.of(context).textTheme.bodySmall),
+              child: Text(
+                t('support_hours', {'hours': c.hours}),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
             const SizedBox(height: 8),
-            _Tile(
-              icon: Symbols.help_rounded,
-              label: t('support_faq'),
-              onTap: () => context.push(SupportRoutes.faq),
-            ),
-            _Tile(
-              icon: Symbols.report_rounded,
-              label: t('support_report_issue'),
-              onTap: () => context.push(SupportRoutes.report),
-            ),
-            _Tile(
-              icon: Symbols.forum_rounded,
-              label: t('support_my_complaints'),
-              subtitle: c.complaintsInProgress > 0
-                  ? t('support_complaints_in_progress',
-                      {'count': c.complaintsInProgress})
-                  : null,
-              onTap: () => context.push(SupportRoutes.complaints),
-            ),
-            _Tile(
-              icon: Symbols.star_rounded,
-              label: t('support_give_feedback'),
-              onTap: () => showFeedbackSheet(context),
-            ),
-            if (pending.isNotEmpty)
+            if (on(FeatureKeys.help))
+              _Tile(
+                icon: Symbols.help_rounded,
+                label: t('support_faq'),
+                onTap: () => context.push(SupportRoutes.faq),
+              ),
+            if (on(FeatureKeys.reportIssue))
+              _Tile(
+                icon: Symbols.report_rounded,
+                label: t('support_report_issue'),
+                onTap: () => context.push(SupportRoutes.report),
+              ),
+            if (on(FeatureKeys.complaints))
+              _Tile(
+                icon: Symbols.forum_rounded,
+                label: t('support_my_complaints'),
+                subtitle: c.complaintsInProgress > 0
+                    ? t('support_complaints_in_progress', {
+                        'count': c.complaintsInProgress,
+                      })
+                    : null,
+                onTap: () => context.push(SupportRoutes.complaints),
+              ),
+            if (on(FeatureKeys.feedback))
+              _Tile(
+                icon: Symbols.star_rounded,
+                label: t('support_give_feedback'),
+                onTap: () => showFeedbackSheet(context),
+              ),
+            if (pending.isNotEmpty && on(FeatureKeys.checkin))
               _Tile(
                 icon: Symbols.fact_check_rounded,
                 label: t('support_monthly_checkin'),
@@ -118,15 +130,15 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Card(
-          child: ListTile(
-            leading: Icon(icon),
-            title: Text(label),
-            subtitle: subtitle == null ? null : Text(subtitle!),
-            trailing: const Icon(Symbols.chevron_right_rounded),
-            onTap: onTap,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(label),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        trailing: const Icon(Symbols.chevron_right_rounded),
+        onTap: onTap,
+      ),
+    ),
+  );
 }

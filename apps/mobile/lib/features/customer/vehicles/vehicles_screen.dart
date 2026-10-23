@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import '../../../core/ui/media_image.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
@@ -30,9 +32,12 @@ class VehiclesScreen extends ConsumerWidget {
     final b = context.brand;
     return CustPage(
       title: CustStrings.vehiclesTitle,
-      actions: [IconButton(tooltip: AppLocalizations.of(context).addVehicleTitle,
-        icon: const Icon(Icons.add), onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const AddVehicleScreen())))],
+      actions: [
+        if (ref.watch(featureOnProvider(FeatureKeys.addVehicle)))
+          IconButton(tooltip: AppLocalizations.of(context).addVehicleTitle,
+            icon: const Icon(Icons.add), onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AddVehicleScreen()))),
+      ],
       body: AsyncBody<List<VehicleSummaryDto>>(
         value: ref.watch(vehiclesProvider),
         onRetry: () => ref.invalidate(vehiclesProvider),

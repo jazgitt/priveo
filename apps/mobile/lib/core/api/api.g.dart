@@ -1316,6 +1316,26 @@ class AppConfig {
       };
 }
 
+class AppFeaturesOut {
+  const AppFeaturesOut({
+    required this.version,
+    required this.flags,
+  });
+
+  final String version;
+  final Map<String, dynamic> flags;
+
+  factory AppFeaturesOut.fromJson(Map<String, dynamic> j) => AppFeaturesOut(
+        version: j['version'] as String,
+        flags: j['flags'] as Map<String, dynamic>,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'version': version,
+        'flags': flags,
+      };
+}
+
 class AuthSupportContact {
   const AuthSupportContact({
     required this.helpline,
@@ -4425,6 +4445,58 @@ class EmailCorrection {
 
   Map<String, dynamic> toJson() => {
         'email': email,
+      };
+}
+
+class FeatureOut {
+  const FeatureOut({
+    required this.key,
+    required this.label,
+    required this.description,
+    required this.group,
+    required this.audience,
+    required this.enabled,
+  });
+
+  final String key;
+  final String label;
+  final String description;
+  final String group;
+  final String audience;
+  final bool enabled;
+
+  factory FeatureOut.fromJson(Map<String, dynamic> j) => FeatureOut(
+        key: j['key'] as String,
+        label: j['label'] as String,
+        description: j['description'] as String,
+        group: j['group'] as String,
+        audience: j['audience'] as String,
+        enabled: j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'label': label,
+        'description': description,
+        'group': group,
+        'audience': audience,
+        'enabled': enabled,
+      };
+}
+
+class FeatureUpdate {
+  const FeatureUpdate({
+    required this.enabled,
+  });
+
+  final bool enabled;
+
+  factory FeatureUpdate.fromJson(Map<String, dynamic> j) => FeatureUpdate(
+        enabled: j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
       };
 }
 

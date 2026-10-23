@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import '../../../core/network/read_refresh.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -30,26 +32,32 @@ class CrewHomeScreen extends ConsumerWidget {
     final visits = ref.watch(crewVisitsProvider(key));
     final isManager = ref.watch(crewProfileProvider).value?.isManager ?? false;
     final queued = ref.watch(queuedUploadsProvider).value ?? const [];
-    ref.watch(pushRegistrationProvider); // registers the phone for push
+    if (ref.watch(featureOnProvider(FeatureKeys.push))) {
+      ref.watch(pushRegistrationProvider); // registers the phone for push
+    }
+    final managerOn = ref.watch(featureOnProvider(FeatureKeys.managerScreens));
+    final notificationsOn =
+        ref.watch(featureOnProvider(FeatureKeys.crewNotifications));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l.appName),
         actions: [
-          if (isManager)
+          if (isManager && managerOn)
             IconButton(
               tooltip: CrewText.team,
               icon: const Icon(Symbols.groups_rounded),
               onPressed: () =>
                   Navigator.of(context).push(crewRoute(const ManagerScheduleScreen())),
             ),
-          IconButton(
-            tooltip: CrewNotificationText.tooltip,
-            icon: const Icon(Symbols.notifications_rounded),
-            onPressed: () => Navigator.of(
-              context,
-            ).push(crewRoute(const CrewNotificationsScreen())),
-          ),
+          if (notificationsOn)
+            IconButton(
+              tooltip: CrewNotificationText.tooltip,
+              icon: const Icon(Symbols.notifications_rounded),
+              onPressed: () => Navigator.of(
+                context,
+              ).push(crewRoute(const CrewNotificationsScreen())),
+            ),
           IconButton(
             tooltip: CrewText.profile,
             icon: const Icon(Symbols.person_rounded),

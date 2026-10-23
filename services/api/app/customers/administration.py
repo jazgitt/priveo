@@ -33,7 +33,7 @@ from app.notifications.router import NotificationPreferencesIn
 from app.notifications.service import NotificationService
 from app.platform.clock import today_ist
 from app.platform.db import get_db, utcnow
-from app.platform.deps import require_role
+from app.platform.deps import require_feature, require_role
 from app.platform.errors import ApiError
 
 admin = APIRouter(prefix="/v1/admin", tags=["customer-administration"])
@@ -588,7 +588,8 @@ def admin_add_vehicle(
     return {**vehicle_out(db, v, store), "payment_id": str(payment.id) if payment else None}
 
 
-@customer.post("/vehicles", status_code=201)
+@customer.post("/vehicles", status_code=201,
+               dependencies=[Depends(require_feature("customer.add_vehicle"))])
 def customer_add_vehicle(
     body: VehicleCreate,
     user: User = Depends(require_role("customer")),
