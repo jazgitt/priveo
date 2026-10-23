@@ -161,7 +161,7 @@ def _second_add_on(m, service="Cleaning-Internal", price=499):
     from app.directory.seed import seed_defaults
     seed_defaults(m.db)
     m.db.add(AddonCatalogueItem(
-        code="ADN-0002", name="Interior shine", description="Dash and seats.",
+        code="ADN-0099", name="Interior shine", description="Dash and seats.",
         service=service, price_rupees=price, duration_minutes=20, sort_order=5))
     m.db.commit()
 
@@ -172,13 +172,13 @@ def test_every_active_add_on_is_offered_whatever_its_service(money):
     offers = m.client.get("/v1/customer/addons", headers=m.customer).json()["offers"]
     assert [(o["code"], o["name"], o["service"]) for o in offers] == [
         ("ADN-0001", "Deep Spa", "Deep Spa"),
-        ("ADN-0002", "Interior shine", "Cleaning-Internal")]
+        ("ADN-0099", "Interior shine", "Cleaning-Internal")]
 
 
 def test_a_customer_buys_the_add_on_chosen_and_it_keeps_its_name_and_price(money):
     m = money
     _second_add_on(m)
-    r = request(m, addon="ADN-0002", service="Deep Spa")  # the ID decides
+    r = request(m, addon="ADN-0099", service="Deep Spa")  # the ID decides
     assert r.status_code == 201, r.text
     a = r.json()
     assert (a["service"], a["addon_name"], a["price_rupees"]) == (
@@ -196,5 +196,5 @@ def test_a_customer_buys_the_add_on_chosen_and_it_keeps_its_name_and_price(money
 def test_two_add_ons_for_one_service_are_told_apart_by_their_id(money):
     m = money
     _second_add_on(m, service="Deep Spa", price=999)
-    assert request(m, addon="ADN-0002").json()["price_rupees"] == 999
+    assert request(m, addon="ADN-0099").json()["price_rupees"] == 999
     assert request(m, addon="ADN-0001", date="2026-10-21").json()["price_rupees"] != 999
