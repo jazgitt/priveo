@@ -23,6 +23,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { isOpen, JobFlags, JobLabel, StatusSummary } from "./Board";
 import { CardBoard } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
+import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
 import { SkippedJobs } from "./SkippedJobs";
@@ -122,6 +123,8 @@ export function SchedulePage() {
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
+  const [movingDate, setMovingDate] = useState<AdminJob | null>(null);
+  const [reassigning, setReassigning] = useState(false);
   const [unfreezing, setUnfreezing] = useState<ScheduleOut | null>(null);
 
   const needsQ = useNeedsScheduling(societyId);
@@ -252,6 +255,7 @@ export function SchedulePage() {
             </span>
             <span className="text-sm text-muted-foreground">{freezeText(schedule)}</span>
             <div className="ml-auto flex gap-2">
+              <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>
               {schedule.status === "Draft" ? (
                 <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
                   <Lock aria-hidden /> Freeze
@@ -416,7 +420,15 @@ export function SchedulePage() {
 
       {open && (
         <JobDialog key={open.id} job={open} board={board} busy={move.isPending} onClose={() => setOpen(null)}
-                   onMove={onMove} />
+                   onMove={onMove} onMoveDate={(j) => { setOpen(null); setMovingDate(j); }} />
+      )}
+      {movingDate && (
+        <MoveToDateDialog job={movingDate} today={today} onClose={() => setMovingDate(null)}
+                          onDone={() => { setMovingDate(null); void refresh(); }} />
+      )}
+      {reassigning && board && (
+        <ReassignCrewDayDialog board={board} date={date} onClose={() => setReassigning(false)}
+                               onDone={() => { setReassigning(false); void refresh(); }} />
       )}
       {unfreezing && (
         <UnfreezeDialog schedule={unfreezing} onClose={() => setUnfreezing(null)}
@@ -450,7 +462,8 @@ function UnfreezeDialog({ schedule, onClose, onDone }: { schedule: ScheduleOut; 
   );
 }
 
-function JobDialog({ job, board, busy, onClose, onMove }: {
+function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
+  onMoveDate: (job: AdminJob) => void;
   job: AdminJob;
   board: Board | null;
   busy: boolean;
@@ -485,10 +498,15 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${job.registration}, ${job.service}`} size="md"
                 submitLabel={movable ? "Move here" : "Close"} cancelLabel={movable ? "Cancel" : null}
                 busy={busy} onSubmit={movable ? submit : onClose}
-                extraActions={movable && job.crew_id ? (
-                  <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void takeOff()}>
-                    Take off crew member
-                  </Button>
+                extraActions={movable ? (
+                  <>
+                    {job.crew_id && (
+                      <Button type="button" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void takeOff()}>
+                        Take off crew member
+                      </Button>
+                    )}
+                    <Button type="button" variant="outline" disabled={busy} onClick={() => onMoveDate(job)}>Move to date</Button>
+                  </>
                 ) : undefined}>
       <DetailList columns={2} items={[
         { label: "Vehicle", value: job.vehicle },
@@ -498,6 +516,8 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
         { label: "Status", value: <StatusBadge status={job.status} /> },
         { label: "Now", value: job.crew_name ? `${job.crew_name} at ${job.start_time}` : "Unscheduled" },
         { label: "Finish by", value: job.finish_by },
+        ...(job.moved_to_date ? [{ label: "Moved", wide: true, value: `Moved to ${dayText(job.moved_to_date)}.` }] : []),
+        ...(job.moved_from_date ? [{ label: "Moved", wide: true, value: `Moved from ${dayText(job.moved_from_date)}.` }] : []),
         ...(job.visit_outcome === "Partially Completed" ? [{
           label: "Visit outcome", wide: true,
           value: `Partially Completed. Delivered ${(job.delivered_services ?? []).join(", ") || "none"} of ${(job.planned_services ?? []).join(", ")}.`,

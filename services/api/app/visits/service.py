@@ -473,6 +473,20 @@ def manager_skip(db: Session, job: Job, by: uuid.UUID) -> Job:
     return skip_job(db, job, Resolution(action="Skip"), by)
 
 
+def manager_reschedule(db: Session, job: Job, by: uuid.UUID) -> Job:
+    """D-02: the admin's next-day retry, for a missed Interior or Spa job. The
+    audit row carries the manager's login."""
+    from app.visits.operations import Resolution, locked_job, reschedule
+
+    job = locked_job(db, job.id)
+    try:
+        return reschedule(
+            db, job, Resolution(action="Reschedule", reason="Crew manager", note=""), by)
+    except ApiError:
+        db.rollback()
+        raise
+
+
 def manager_reassign(
     db: Session, job: Job, manager: SchedulingCrew, crew_id: str, by: uuid.UUID
 ) -> Job:

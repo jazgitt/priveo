@@ -158,3 +158,21 @@ def upload_file(client: TestClient, headers, job_id: str, *, kind="photo", stage
     done = client.post(f"/v1/media/uploads/{ticket['id']}/confirm", headers=headers)
     assert done.status_code == 200, done.text
     return ticket["id"]
+
+
+@pytest.fixture
+def set_flag(db: Session):
+    """Switch a feature flag on or off for the test (the admin does this live)."""
+    from app.features import service as features
+    from app.features.models import FeatureFlag
+
+    def go(key: str, enabled: bool = True) -> None:
+        row = db.get(FeatureFlag, key)
+        if row is None:
+            db.add(FeatureFlag(key=key, enabled=enabled))
+        else:
+            row.enabled = enabled
+        db.commit()
+        features.invalidate(db)
+
+    return go

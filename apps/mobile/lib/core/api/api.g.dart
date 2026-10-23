@@ -1016,6 +1016,8 @@ class AdminJob {
     required this.late,
     required this.manual,
     required this.reason,
+    required this.movedToDate,
+    required this.movedFromDate,
     this.skipKind,
     this.skipReason,
     this.visitOutcome,
@@ -1047,6 +1049,8 @@ class AdminJob {
   final bool late;
   final bool manual;
   final String reason;
+  final DateTime? movedToDate;
+  final DateTime? movedFromDate;
   final String? skipKind;
   final String? skipReason;
   final String? visitOutcome;
@@ -1078,6 +1082,8 @@ class AdminJob {
         late: j['late'] as bool,
         manual: j['manual'] as bool,
         reason: j['reason'] as String,
+        movedToDate: j['moved_to_date'] == null ? null : DateTime.parse(j['moved_to_date'] as String),
+        movedFromDate: j['moved_from_date'] == null ? null : DateTime.parse(j['moved_from_date'] as String),
         skipKind: j['skip_kind'] == null ? null : j['skip_kind'] as String,
         skipReason: j['skip_reason'] == null ? null : j['skip_reason'] as String,
         visitOutcome: j['visit_outcome'] == null ? null : j['visit_outcome'] as String,
@@ -1110,6 +1116,8 @@ class AdminJob {
         'late': late,
         'manual': manual,
         'reason': reason,
+        'moved_to_date': movedToDate == null ? null : _date(movedToDate!),
+        'moved_from_date': movedFromDate == null ? null : _date(movedFromDate!),
         'skip_kind': skipKind,
         'skip_reason': skipReason,
         'visit_outcome': visitOutcome,
@@ -1425,6 +1433,94 @@ class Board {
         'days': [for (final x in days) x.toJson()],
         'crew': [for (final x in crew) x.toJson()],
         'jobs': [for (final x in jobs) x.toJson()],
+      };
+}
+
+class BulkReassign {
+  const BulkReassign({
+    required this.jobIds,
+    required this.fromCrewId,
+    required this.date,
+    required this.toCrewId,
+    required this.reason,
+  });
+
+  final List<String>? jobIds;
+  final String? fromCrewId;
+  final DateTime? date;
+  final String toCrewId;
+  final String reason;
+
+  factory BulkReassign.fromJson(Map<String, dynamic> j) => BulkReassign(
+        jobIds: j['job_ids'] == null ? null : [for (final x in j['job_ids'] as List) x as String],
+        fromCrewId: j['from_crew_id'] == null ? null : j['from_crew_id'] as String,
+        date: j['date'] == null ? null : DateTime.parse(j['date'] as String),
+        toCrewId: j['to_crew_id'] as String,
+        reason: j['reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_ids': jobIds == null ? null : [for (final x in jobIds!) x],
+        'from_crew_id': fromCrewId,
+        'date': date == null ? null : _date(date!),
+        'to_crew_id': toCrewId,
+        'reason': reason,
+      };
+}
+
+class BulkReassignOut {
+  const BulkReassignOut({
+    required this.reassigned,
+    required this.results,
+  });
+
+  final int reassigned;
+  final List<ReassignResult> results;
+
+  factory BulkReassignOut.fromJson(Map<String, dynamic> j) => BulkReassignOut(
+        reassigned: j['reassigned'] as int,
+        results: [for (final x in j['results'] as List) ReassignResult.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'reassigned': reassigned,
+        'results': [for (final x in results) x.toJson()],
+      };
+}
+
+class BulkSkip {
+  const BulkSkip({
+    required this.visitIds,
+    required this.societyId,
+    required this.date,
+    required this.reasonKey,
+    this.reason,
+    this.note,
+  });
+
+  final List<String>? visitIds;
+  final String? societyId;
+  final DateTime? date;
+  final String? reasonKey;
+  final String? reason;
+  final String? note;
+
+  factory BulkSkip.fromJson(Map<String, dynamic> j) => BulkSkip(
+        visitIds: j['visit_ids'] == null ? null : [for (final x in j['visit_ids'] as List) x as String],
+        societyId: j['society_id'] == null ? null : j['society_id'] as String,
+        date: j['date'] == null ? null : DateTime.parse(j['date'] as String),
+        reasonKey: j['reason_key'] == null ? null : j['reason_key'] as String,
+        reason: j['reason'] == null ? null : j['reason'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'visit_ids': visitIds == null ? null : [for (final x in visitIds!) x],
+        'society_id': societyId,
+        'date': date == null ? null : _date(date!),
+        'reason_key': reasonKey,
+        'reason': reason,
+        'note': note,
       };
 }
 
@@ -5112,6 +5208,46 @@ class MissedService {
       };
 }
 
+class MoveDate {
+  const MoveDate({
+    required this.date,
+    required this.reason,
+  });
+
+  final DateTime date;
+  final String reason;
+
+  factory MoveDate.fromJson(Map<String, dynamic> j) => MoveDate(
+        date: DateTime.parse(j['date'] as String),
+        reason: j['reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'date': _date(date),
+        'reason': reason,
+      };
+}
+
+class MoveDateResult {
+  const MoveDateResult({
+    required this.original,
+    required this.moved,
+  });
+
+  final AdminJob original;
+  final AdminJob moved;
+
+  factory MoveDateResult.fromJson(Map<String, dynamic> j) => MoveDateResult(
+        original: AdminJob.fromJson(j['original'] as Map<String, dynamic>),
+        moved: AdminJob.fromJson(j['moved'] as Map<String, dynamic>),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'original': original.toJson(),
+        'moved': moved.toJson(),
+      };
+}
+
 class MoveRequest {
   const MoveRequest({
     required this.crewId,
@@ -6333,6 +6469,34 @@ class Reassign {
 
   Map<String, dynamic> toJson() => {
         'crew_id': crewId,
+      };
+}
+
+class ReassignResult {
+  const ReassignResult({
+    required this.jobId,
+    required this.ok,
+    this.code,
+    this.message,
+  });
+
+  final String jobId;
+  final bool ok;
+  final String? code;
+  final String? message;
+
+  factory ReassignResult.fromJson(Map<String, dynamic> j) => ReassignResult(
+        jobId: j['job_id'] as String,
+        ok: j['ok'] as bool,
+        code: j['code'] == null ? null : j['code'] as String,
+        message: j['message'] == null ? null : j['message'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'ok': ok,
+        'code': code,
+        'message': message,
       };
 }
 
@@ -8391,6 +8555,15 @@ class PriveoApi {
     }
   }
 
+  /// Bulk Skip Visits
+  Future<void> bulkSkipVisits(BulkSkip body) async {
+    try {
+      await _dio.post<void>('/v1/admin/operations/bulk-skip', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
   /// Admin Home
   Future<AdminHome> adminHome() async {
     try {
@@ -8455,6 +8628,16 @@ class PriveoApi {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/run', data: body.toJson());
       return RunResponse.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Bulk Reassign
+  Future<BulkReassignOut> bulkReassign(BulkReassign body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/reassign', data: body.toJson());
+      return BulkReassignOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

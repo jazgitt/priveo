@@ -29,7 +29,7 @@ def test_only_admin_can_list_or_change(client, admin):
                       json={"enabled": False}).status_code == 403
     listed = client.get("/v1/admin/features", headers=admin).json()
     assert len(listed) == len(registry.FLAGS)
-    assert all(f["enabled"] for f in listed)
+    assert all(f["enabled"] == registry.BY_KEY[f["key"]].default for f in listed)
 
 
 def test_toggle_is_audited_and_reaches_the_app(client, admin, engine):

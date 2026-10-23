@@ -63,6 +63,10 @@ class FakeCrewBackend implements CrewRepository, UploadApi {
   final jobs = <String, _Job>{};
   final visitCalls = <String>[];
   final skipped = <String>[];
+  void markMissed(String id, {String service = 'Cleaning-Internal'}) => jobs[id]!
+    ..status = 'Could not complete'
+    ..service = service;
+  final rescheduled = <String>[];
   final reassigned = <String, String>{};
   final couldNot = <String, Map<String, String?>>{};
   int sendCount = 0;
@@ -82,6 +86,7 @@ class FakeCrewBackend implements CrewRepository, UploadApi {
           id: j.id,
           status: j.status,
           registration: j.registration,
+          service: j.service,
           assignedTo: j.assignedTo,
           done: j.items.values.where((c) => c).length),
       'checklist': [
@@ -259,6 +264,13 @@ class FakeCrewBackend implements CrewRepository, UploadApi {
   }
 
   @override
+  Future<CrewJobDetail> managerReschedule(String jobId) async {
+    _guard();
+    rescheduled.add(jobId);
+    return _detail(jobs[jobId]!);
+  }
+
+  @override
   Future<CrewJobDetail> managerReassign(String jobId, String crewId) async {
     _guard();
     reassigned[jobId] = crewId;
@@ -408,6 +420,7 @@ class _Job {
   final String registration;
   final int requiredPhotos;
   String status = 'Scheduled';
+  String service = 'Cleaning-External';
   int photos = 0;
   Map<String, String>? assignedTo;
   Map<String, dynamic>? outcome;

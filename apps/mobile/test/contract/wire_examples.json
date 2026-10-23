@@ -329,6 +329,8 @@
     "late": true,
     "manual": true,
     "reason": "wire-value",
+    "moved_to_date": "2026-10-20",
+    "moved_from_date": "2026-10-20",
     "skip_kind": "wire-value",
     "skip_reason": "wire-value",
     "visit_outcome": "Scheduled",
@@ -495,6 +497,8 @@
         "late": true,
         "manual": true,
         "reason": "wire-value",
+        "moved_to_date": "2026-10-20",
+        "moved_from_date": "2026-10-20",
         "skip_kind": "wire-value",
         "skip_reason": "wire-value",
         "visit_outcome": "Scheduled",
@@ -508,6 +512,36 @@
         "queue_unlocked": true
       }
     ]
+  },
+  "BulkReassign": {
+    "job_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ],
+    "from_crew_id": "11111111-1111-1111-1111-111111111111",
+    "date": "2026-10-20",
+    "to_crew_id": "11111111-1111-1111-1111-111111111111",
+    "reason": "wire-value"
+  },
+  "BulkReassignOut": {
+    "reassigned": 1,
+    "results": [
+      {
+        "job_id": "wire-value",
+        "ok": true,
+        "code": "wire-value",
+        "message": "wire-value"
+      }
+    ]
+  },
+  "BulkSkip": {
+    "visit_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ],
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "date": "2026-10-20",
+    "reason_key": "wire-value",
+    "reason": "wire-value",
+    "note": "wire-value"
   },
   "CalendarJob": {
     "service": "wire-value",
@@ -2080,6 +2114,86 @@
     "note": "wire-value",
     "rescheduled": true
   },
+  "MoveDate": {
+    "date": "2026-10-20",
+    "reason": "wire-value"
+  },
+  "MoveDateResult": {
+    "original": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "visit_id": "11111111-1111-1111-1111-111111111111",
+      "schedule_id": "11111111-1111-1111-1111-111111111111",
+      "schedule_status": "wire-value",
+      "date": "2026-10-20",
+      "vehicle_id": "11111111-1111-1111-1111-111111111111",
+      "registration": "wire-value",
+      "vehicle": "wire-value",
+      "parking": "wire-value",
+      "customer_name": "wire-value",
+      "service": "wire-value",
+      "status": "wire-value",
+      "duration_minutes": 1,
+      "crew_id": "11111111-1111-1111-1111-111111111111",
+      "crew_name": "wire-value",
+      "start_minute": 1,
+      "start_time": "wire-value",
+      "end_time": "wire-value",
+      "finish_by": "wire-value",
+      "late": true,
+      "manual": true,
+      "reason": "wire-value",
+      "moved_to_date": "2026-10-20",
+      "moved_from_date": "2026-10-20",
+      "skip_kind": "wire-value",
+      "skip_reason": "wire-value",
+      "visit_outcome": "Scheduled",
+      "planned_services": [
+        "wire-value"
+      ],
+      "delivered_services": [
+        "wire-value"
+      ],
+      "sequence": 1,
+      "queue_unlocked": true
+    },
+    "moved": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "visit_id": "11111111-1111-1111-1111-111111111111",
+      "schedule_id": "11111111-1111-1111-1111-111111111111",
+      "schedule_status": "wire-value",
+      "date": "2026-10-20",
+      "vehicle_id": "11111111-1111-1111-1111-111111111111",
+      "registration": "wire-value",
+      "vehicle": "wire-value",
+      "parking": "wire-value",
+      "customer_name": "wire-value",
+      "service": "wire-value",
+      "status": "wire-value",
+      "duration_minutes": 1,
+      "crew_id": "11111111-1111-1111-1111-111111111111",
+      "crew_name": "wire-value",
+      "start_minute": 1,
+      "start_time": "wire-value",
+      "end_time": "wire-value",
+      "finish_by": "wire-value",
+      "late": true,
+      "manual": true,
+      "reason": "wire-value",
+      "moved_to_date": "2026-10-20",
+      "moved_from_date": "2026-10-20",
+      "skip_kind": "wire-value",
+      "skip_reason": "wire-value",
+      "visit_outcome": "Scheduled",
+      "planned_services": [
+        "wire-value"
+      ],
+      "delivered_services": [
+        "wire-value"
+      ],
+      "sequence": 1,
+      "queue_unlocked": true
+    }
+  },
   "MoveRequest": {
     "crew_id": "11111111-1111-1111-1111-111111111111",
     "start_minute": 1
@@ -2109,6 +2223,8 @@
         "late": true,
         "manual": true,
         "reason": "wire-value",
+        "moved_to_date": "2026-10-20",
+        "moved_from_date": "2026-10-20",
         "skip_kind": "wire-value",
         "skip_reason": "wire-value",
         "visit_outcome": "Scheduled",
@@ -2489,6 +2605,12 @@
   },
   "Reassign": {
     "crew_id": "wire-value"
+  },
+  "ReassignResult": {
+    "job_id": "wire-value",
+    "ok": true,
+    "code": "wire-value",
+    "message": "wire-value"
   },
   "RefreshRequest": {
     "refresh_token": "wire-value"

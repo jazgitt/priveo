@@ -53,6 +53,14 @@ FLAGS: tuple[FlagDef, ...] = (
     # ---- crew ----
     FlagDef("crew.manager_screens", "Manager screens",
             "Schedule, attendance and hours for crew managers.", "Crew", CREW),
+    # D-02: starts OFF; the admin switches it on to let managers skip a job.
+    FlagDef("crew.manager_skip", "Allow crew manager to skip",
+            "A crew manager may skip a missed job from the app. The admin can always skip.",
+            "Crew", CREW, default=False),
+    # D-02: a manager may send a missed Interior job to the next day.
+    FlagDef("crew.manager_reschedule", "Allow crew manager to reschedule",
+            "A crew manager may move a missed Interior job to the next day.",
+            "Crew", CREW),
     FlagDef("crew.sequential_queue", "Sequential queue",
             "Crew must finish jobs in queue order; later jobs stay locked (S-13, C-01).",
             "Crew", CREW),

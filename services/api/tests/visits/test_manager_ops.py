@@ -231,7 +231,8 @@ def test_an_unplaced_job_gets_the_first_free_time(
 # ---- plan extension --------------------------------------------------------------
 
 def test_skipping_external_does_not_extend_the_plan(
-        crew_client, make_crew, signin, new_visit, world, db: Session):
+        crew_client, make_crew, signin, new_visit, world, db: Session, set_flag):
+    set_flag("crew.manager_skip")
     """B-01: a skip never moves the cycle or the renewal date."""
     boss = make_crew("9000000001", "Manju", role="Manager")
     ravi = make_crew("9000000010", "Ravi")
@@ -248,7 +249,8 @@ def test_skipping_external_does_not_extend_the_plan(
 
 
 def test_skipping_internal_does_not_extend_the_plan(
-        crew_client, make_crew, signin, new_visit, world, db: Session):
+        crew_client, make_crew, signin, new_visit, world, db: Session, set_flag):
+    set_flag("crew.manager_skip")
     boss = make_crew("9000000001", "Manju", role="Manager")
     ravi = make_crew("9000000010", "Ravi")
     _, jobs = new_visit(services=("Cleaning-Internal",), assigned=ravi, day=DAY)

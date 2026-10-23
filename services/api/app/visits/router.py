@@ -8,7 +8,7 @@ from app.directory import lookup
 from app.identity.service import User
 from app.platform.clock import today_ist
 from app.platform.db import get_db
-from app.platform.deps import require_role
+from app.platform.deps import require_feature, require_role
 from app.scheduling import queue
 from app.visits import manager as manager_ops
 from app.visits import manager_schemas as ms
@@ -117,11 +117,22 @@ def manager_could_not_complete(job_id: str, body: s.CouldNotComplete,
     return service.job_detail(db, j)
 
 
-@router.post("/manager/jobs/{job_id}/skip", response_model=s.JobDetail)
+@router.post("/manager/jobs/{job_id}/skip", response_model=s.JobDetail,
+             dependencies=[Depends(require_feature("crew.manager_skip"))])
 def manager_skip(job_id: str, user: User = Depends(require_role("crew")),
                  db: Session = Depends(get_db)):
     j = service.managed_job(db, user.id, job_id)
     service.manager_skip(db, j, user.id)
+    return service.job_detail(db, j)
+
+
+@router.post("/manager/jobs/{job_id}/reschedule", response_model=s.JobDetail,
+             dependencies=[Depends(require_feature("crew.manager_reschedule"))])
+def manager_reschedule(job_id: str, user: User = Depends(require_role("crew")),
+                       db: Session = Depends(get_db)):
+    """D-02: send a missed Interior job to the next day, as the admin can."""
+    j = service.managed_job(db, user.id, job_id)
+    service.manager_reschedule(db, j, user.id)
     return service.job_detail(db, j)
 
 

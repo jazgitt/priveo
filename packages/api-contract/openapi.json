@@ -3289,6 +3289,64 @@
         }
       }
     },
+    "/v1/admin/operations/bulk-skip": {
+      "post": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Bulk Skip Visits",
+        "description": "S-12: skip a list of visits, or a society's whole day, in one go.",
+        "operationId": "bulk_skip_visits_v1_admin_operations_bulk_skip_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkSkip"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/home": {
       "get": {
         "tags": [
@@ -5513,6 +5571,136 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/jobs/{job_id}/move-date": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Move Job To Date",
+        "description": "S-05: one scheduled service to any date from today on.",
+        "operationId": "move_job_to_date_v1_admin_scheduling_jobs__job_id__move_date_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveDate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveDateResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/reassign": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Bulk Reassign",
+        "description": "S-09: give several jobs, or a crew member's whole day, to someone else.",
+        "operationId": "bulk_reassign_v1_admin_scheduling_reassign_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkReassign"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkReassignOut"
                 }
               }
             }
@@ -9663,6 +9851,65 @@
         ],
         "summary": "Manager Skip",
         "operationId": "manager_skip_v1_crew_manager_jobs__job_id__skip_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/manager/jobs/{job_id}/reschedule": {
+      "post": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Manager Reschedule",
+        "description": "D-02: send a missed Interior job to the next day, as the admin can.",
+        "operationId": "manager_reschedule_v1_crew_manager_jobs__job_id__reschedule_post",
         "parameters": [
           {
             "name": "job_id",
@@ -18347,6 +18594,30 @@
             "type": "string",
             "title": "Reason"
           },
+          "moved_to_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moved To Date"
+          },
+          "moved_from_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moved From Date"
+          },
           "skip_kind": {
             "type": "string",
             "title": "Skip Kind",
@@ -18815,6 +19086,162 @@
           "jobs"
         ],
         "title": "Board"
+      },
+      "BulkReassign": {
+        "properties": {
+          "job_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Ids"
+          },
+          "from_crew_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Crew Id"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "to_crew_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "To Crew Id"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "to_crew_id",
+          "reason"
+        ],
+        "title": "BulkReassign",
+        "description": "S-09: give many jobs to one crew member. Give `job_ids`, or the crew\nmember whose day to hand over (`from_crew_id` and `date`)."
+      },
+      "BulkReassignOut": {
+        "properties": {
+          "reassigned": {
+            "type": "integer",
+            "title": "Reassigned"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ReassignResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reassigned",
+          "results"
+        ],
+        "title": "BulkReassignOut"
+      },
+      "BulkSkip": {
+        "properties": {
+          "visit_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Ids"
+          },
+          "society_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Society Id"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "reason_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Key"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Reason",
+            "default": ""
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BulkSkip",
+        "description": "S-12: skip many visits at once for a disruption. Give `visit_ids`, or a\n`society_id` and `date`. The reason is mandatory."
       },
       "CalendarJob": {
         "properties": {
@@ -23706,6 +24133,45 @@
         ],
         "title": "MissedService"
       },
+      "MoveDate": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "reason"
+        ],
+        "title": "MoveDate",
+        "description": "S-05: move one scheduled service to any date from today on."
+      },
+      "MoveDateResult": {
+        "properties": {
+          "original": {
+            "$ref": "#/components/schemas/AdminJob"
+          },
+          "moved": {
+            "$ref": "#/components/schemas/AdminJob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original",
+          "moved"
+        ],
+        "title": "MoveDateResult"
+      },
       "MoveRequest": {
         "properties": {
           "crew_id": {
@@ -25312,6 +25778,34 @@
           "crew_id"
         ],
         "title": "Reassign"
+      },
+      "ReassignResult": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "default": ""
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "ok"
+        ],
+        "title": "ReassignResult"
       },
       "RefreshRequest": {
         "properties": {

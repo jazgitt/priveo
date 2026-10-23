@@ -985,6 +985,35 @@ def _job_dict(
     }
 
 
+def _moved_dates(db: Session, result: list[dict]) -> None:
+    """S-05: a Skipped job with a follow-up job was moved. Show both dates."""
+    ids = [r["id"] for r in result]
+    if not ids:
+        return
+    follow = db.execute(
+        select(Job.source_job_id, Visit.date)
+        .join(Visit, Visit.id == Job.visit_id)
+        .where(Job.source_job_id.in_(ids))
+    ).all()
+    to_date = dict(follow)
+    sources = {
+        j.id: (j.status, v.date)
+        for j, v in db.execute(
+            select(Job, Visit).join(Visit, Visit.id == Job.visit_id).where(
+                Job.id.in_(select(Job.source_job_id).where(Job.id.in_(ids))))
+        ).all()
+    }
+    parent = dict(db.execute(
+        select(Job.id, Job.source_job_id).where(Job.id.in_(ids), Job.source_job_id.is_not(None))
+    ).all())
+    for r in result:
+        if r["status"] == "Skipped" and r["id"] in to_date:
+            r["moved_to_date"] = to_date[r["id"]]
+        src = sources.get(parent.get(r["id"]))
+        if src and src[0] == "Skipped":
+            r["moved_from_date"] = src[1]
+
+
 def job_rows(db: Session, *where) -> list[dict]:
     rows = db.execute(
         select(Job, Visit, Vehicle, Customer, Schedule, Login.display_name)
@@ -1001,6 +1030,7 @@ def job_rows(db: Session, *where) -> list[dict]:
     from app.scheduling.outcomes import visit_outcomes
 
     derived = visit_outcomes(db, {r["visit_id"] for r in result})
+    _moved_dates(db, result)
     for r in result:
         d = derived[r["visit_id"]]
         r["visit_outcome"], r["planned_services"], r["delivered_services"] = (

@@ -61,6 +61,8 @@ abstract final class CrewText {
       'The job is skipped by operations. This cannot be undone here.';
   static const cancel = 'Cancel';
   static const jobSkipped = 'Job skipped.';
+  static const reschedule = 'Reschedule to next day';
+  static const jobRescheduled = 'Job rescheduled to the next day.';
   static const reassign = 'Reassign';
   static const reassignTo = 'Reassign to';
   static const jobReassigned = 'Job reassigned.';

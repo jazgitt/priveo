@@ -17,6 +17,8 @@ import 'package:priveo/features/crew/data/manager_models.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/features/crew/manager/manager_job_screen.dart';
 import '../contract/contract_http.dart';
+import 'package:priveo/core/features/feature_flags.dart';
+import 'package:priveo/core/features/feature_keys.dart';
 import 'support.dart';
 
 class RecoveryBackend extends FakeCrewBackend {
@@ -96,5 +98,28 @@ void main(){
     final backend=RecoveryBackend();await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:backend);
     await t.tap(find.text(CrewText.skipJob));await t.pumpAndSettle();await t.tap(find.text(CrewText.cancel));await t.pumpAndSettle();expect(backend.skipped,isEmpty);
     backend.offline=true;await t.tap(find.text(CrewText.skipJob));await t.pumpAndSettle();await t.tap(find.text(CrewText.skipJob).last);await t.pumpAndSettle();expect(backend.skipped,isEmpty);expect(find.byType(SnackBar),findsOneWidget);
+  });
+  testWidgets('manager skip button follows crew.manager_skip',(t)async{
+    for(final on in [false,true]){
+      await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:RecoveryBackend(),extra:[featureOnProvider(FeatureKeys.managerSkip).overrideWithValue(on)]);
+      expect(find.text(CrewText.skipJob),on?findsOneWidget:findsNothing);
+      expect(find.text(CrewText.reassign),findsOneWidget);
+    }
+  });
+  testWidgets('manager reschedule is hidden while crew.manager_reschedule is off',(t)async{
+    final backend=RecoveryBackend()..markMissed('j1');
+    await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:backend,extra:[featureOnProvider(FeatureKeys.managerReschedule).overrideWithValue(false)]);
+    expect(find.text(CrewText.reschedule),findsNothing);
+  });
+  testWidgets('manager reschedule works for a missed Interior job',(t)async{
+    final backend=RecoveryBackend()..markMissed('j1');
+    await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:backend);
+    await t.tap(find.text(CrewText.reschedule));await t.pumpAndSettle();
+    expect(backend.rescheduled,['j1']);
+  });
+  testWidgets('manager reschedule is not offered for an Exterior job',(t)async{
+    final backend=RecoveryBackend()..markMissed('j1',service:'Cleaning-External');
+    await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:backend);
+    expect(find.text(CrewText.reschedule),findsNothing);
   });
 }
