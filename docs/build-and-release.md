@@ -35,6 +35,24 @@ The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is t
 
 Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and ends any block on the login. Five wrong passwords block the admin for 15 minutes, then 1 hour, then 24 hours (CRW-ACC-07). To get in sooner on `dev`, run the `api-deploy` workflow by hand (Actions, Run workflow): it runs the seed. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
 
+## Check before you push (macOS and Linux)
+
+`tools/dev/check-local.sh` runs the same checks as the pipelines in section 2, on your machine. A run takes minutes, where a PostgreSQL run in CI takes 15 to 25. Run it before you push or open a pull request.
+
+| Command | What it does |
+|---|---|
+| `tools/dev/check-local.sh` | API (ruff, tests on SQLite, the OpenAPI contract), the API tests again on a disposable local PostgreSQL, mobile (generated files, analyze, tests) and web (lint, tests, build) |
+| `tools/dev/check-local.sh --changed` | Only the stages that the diff against `origin/main` touches, with the same path rules as the pipelines |
+| `tools/dev/check-local.sh --only pg` | One stage: `api`, `pg`, `mobile`, `web` or `e2e` |
+| `tools/dev/check-local.sh --no-pg` | Everything except the PostgreSQL run |
+| `tools/dev/check-local.sh --e2e` | Also the Playwright browser tests (first run: `cd apps/web && npx playwright install chromium`) |
+
+- **PostgreSQL:** install it once (`brew install postgresql@16` on macOS). The script finds it, starts a throwaway cluster inside the repo folder, and stops it afterwards. It never uses `DATABASE_URL` or a hosted database, and it reads no `.env`. Set `POSTGRES_BIN` for an install in another place.
+- **Worktrees:** run it from the folder you changed. It checks that folder's code, even when the virtualenv belongs to another checkout. (Run alone, `scripts/export_openapi.py` imports the code of the checkout that made the virtualenv, which gives a wrong contract in a worktree. The script sets `PYTHONPATH` to avoid that.)
+- **Generated files:** if the OpenAPI contract, the Dart API, the theme or the translations are stale, the script regenerates them and fails. Commit the regenerated files.
+- **What it cannot run:** the golden-image tests (Linux only, skipped on macOS) and the `update-goldens` workflow. If a change moves pixels, add the label and let CI remake the images.
+- **CI stays the final gate.** A pass here means the pipelines should pass, not that they are skipped.
+
 ## Dev and production are separate deployments
 
 `dev` is the test server. It runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`), and is the only one the `api-deploy` workflow touches. Production is customer-facing: its own host, its own database, its own secrets and its own deploy workflow, with `ENVIRONMENT=prod`. In prod the server refuses to start if `SEED_DEMO_LOGINS`, `MOCK_*`, or `EMAIL_REDIRECT_TO` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins. The production workflow does not exist yet; it is created with the AWS move.

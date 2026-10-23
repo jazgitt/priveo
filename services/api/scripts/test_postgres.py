@@ -1,7 +1,8 @@
 """Run pytest on a disposable local PostgreSQL cluster, never the app database.
 
-Set POSTGRES_BIN to the installed PostgreSQL bin directory. On Windows the
-default is C:/Program Files/PostgreSQL/17/bin. Requires initdb and pg_ctl.
+Set POSTGRES_BIN to the installed PostgreSQL bin directory. Without it the
+script looks for Homebrew (macOS), a Linux package, then the Windows default
+C:/Program Files/PostgreSQL/17/bin. Requires initdb and pg_ctl.
 """
 import os
 import socket
@@ -14,8 +15,30 @@ API = Path(__file__).resolve().parents[1]
 ROOT = API.parents[1]
 
 
+def find_bin_dir() -> Path:
+    """The PostgreSQL bin directory: POSTGRES_BIN, else the first install found."""
+    if os.environ.get("POSTGRES_BIN"):
+        return Path(os.environ["POSTGRES_BIN"])
+    suffix = ".exe" if os.name == "nt" else ""
+    candidates: list[Path] = []
+    for version in (17, 16, 15, 14):
+        candidates += [
+            Path(f"/opt/homebrew/opt/postgresql@{version}/bin"),  # Homebrew, Apple silicon
+            Path(f"/usr/local/opt/postgresql@{version}/bin"),  # Homebrew, Intel
+            Path(f"/usr/lib/postgresql/{version}/bin"),  # Debian and Ubuntu
+            Path(f"C:/Program Files/PostgreSQL/{version}/bin"),
+        ]
+    for candidate in candidates:
+        if (candidate / f"initdb{suffix}").exists():
+            return candidate
+    raise RuntimeError(
+        "PostgreSQL was not found. Install it (macOS: brew install postgresql@16) "
+        "or set POSTGRES_BIN to its bin folder. Looked in: "
+        + ", ".join(str(c) for c in candidates))
+
+
 def main() -> int:
-    bin_dir = Path(os.environ.get("POSTGRES_BIN", "C:/Program Files/PostgreSQL/17/bin"))
+    bin_dir = find_bin_dir()
     suffix = ".exe" if os.name == "nt" else ""
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
