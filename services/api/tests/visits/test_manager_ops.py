@@ -230,8 +230,9 @@ def test_an_unplaced_job_gets_the_first_free_time(
 
 # ---- plan extension --------------------------------------------------------------
 
-def test_skipping_external_extends_the_plan_by_one_day_once(
+def test_skipping_external_does_not_extend_the_plan(
         crew_client, make_crew, signin, new_visit, world, db: Session):
+    """B-01: a skip never moves the cycle or the renewal date."""
     boss = make_crew("9000000001", "Manju", role="Manager")
     ravi = make_crew("9000000010", "Ravi")
     _, (job,) = new_visit(assigned=ravi)
@@ -240,10 +241,10 @@ def test_skipping_external_extends_the_plan_by_one_day_once(
     h = signin(boss)
     assert crew_client.post(f"/v1/crew/manager/jobs/{job.id}/skip", headers=h).status_code == 200
     db.expire_all()
-    assert shift_days(db, vehicle.id) == before + 1
-    # A second skip is refused and adds nothing.
+    assert shift_days(db, vehicle.id) == before
+    # A second skip is refused and changes nothing.
     assert crew_client.post(f"/v1/crew/manager/jobs/{job.id}/skip", headers=h).status_code == 409
-    assert shift_days(db, vehicle.id) == before + 1
+    assert shift_days(db, vehicle.id) == before
 
 
 def test_skipping_internal_does_not_extend_the_plan(

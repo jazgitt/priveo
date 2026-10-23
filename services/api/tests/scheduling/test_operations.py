@@ -66,7 +66,7 @@ def missed(world, job):
     service.set_job_status(world.db, job.id, "Could not complete")
 
 
-def test_skip_extends_once_moves_unreceived_payment_and_preserves_failure(world, api, admin):
+def test_skip_does_not_extend_or_move_payment_and_preserves_failure(world, api, admin):
     vehicle, _, visit, jobs = setup(world, api, admin)
     job = jobs["Cleaning-External"]
     missed(world, job)
@@ -89,12 +89,14 @@ def test_skip_extends_once_moves_unreceived_payment_and_preserves_failure(world,
     world.db.commit()
     for _ in range(2):
         result = resolve(
-            api, admin, job, "Skip", reason="Crew unavailable", note="One-day extension"
+            api, admin, job, "Skip", reason="Crew unavailable", note="No extension"
         )
         assert result.status_code == 200, result.text
     world.db.expire_all()
-    assert len(list(world.db.scalars(select(PlanExtension)))) == 1
-    assert world.db.get(Payment, due.id).due_date == SUNDAY + timedelta(days=21)
+    # B-01: a skip adds no day and moves no payment date.
+    assert world.db.scalar(select(PlanExtension)) is None
+    assert world.db.get(Payment, due.id).due_date == SUNDAY + timedelta(days=20)
+    assert world.db.get(Payment, due.id).cycle_end == SUNDAY + timedelta(days=50)
     assert (
         world.db.scalar(select(JobOutcome).where(JobOutcome.job_id == job.id)).note
         == "Car unavailable"
