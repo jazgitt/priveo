@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Admin Functional Requirements
 
-**Status:** Draft v0.26 (feature flags, 23 Oct 2026; portal usage-data notice, 19 Oct 2026; summary tiles that filter, list and tile views, Capacity Utilisation, Site Setup, Settings tabs and a manual Audit refresh, 18 Oct 2026; customer page in tabs with summary numbers and status tabs, vehicle tiles, vehicle deactivation, address lines; RC document and mandatory vehicle photo removed for the admin, 18 Oct 2026; wrong passwords block admin and crew logins for a growing time instead of locking them, 18 Oct 2026; Schedule page led by one chosen day; Board as Cards with a view-only Timeline, 18 Oct 2026; skipped and paused jobs on their own tab; Board shows all days and several chosen days; job status colours and counts on the Board; site selector; multiple working slots a day; crew page tabs and edit icon; Trainees move with their Member; crew society moves from a date; plan and add-on IDs; complaint 4-hour target is internal only; welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
+**Status:** Draft v0.27 (skip no longer extends the plan, mandatory remark, crew queue, Partially Completed, schedule patterns and other items from the owner review of 23 Oct 2026; see owner-decisions-2026-10-23.md), v0.26 (feature flags, 23 Oct 2026), v0.25 (portal usage-data notice, 19 Oct 2026; summary tiles that filter, list and tile views, Capacity Utilisation, Site Setup, Settings tabs and a manual Audit refresh, 18 Oct 2026; customer page in tabs with summary numbers and status tabs, vehicle tiles, vehicle deactivation, address lines; RC document and mandatory vehicle photo removed for the admin, 18 Oct 2026; wrong passwords block admin and crew logins for a growing time instead of locking them, 18 Oct 2026; Schedule page led by one chosen day; Board as Cards with a view-only Timeline, 18 Oct 2026; skipped and paused jobs on their own tab; Board shows all days and several chosen days; job status colours and counts on the Board; site selector; multiple working slots a day; crew page tabs and edit icon; Trainees move with their Member; crew society moves from a date; plan and add-on IDs; complaint 4-hour target is internal only; welcome email not resendable, 16 Oct 2026): owner decisions of 9 Oct 2026; crew-driven additions; email sign-in for customers; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); admin web portal in MVP with a limited set of mobile quick actions; consistency pass
 **Scope:** Phase 1, Part 2 (Admin), MVP. Customer features are in `customer-app-functional-requirements.md`. Crew features (Part 3) are in `crew-functional-requirements.md`.
 **Platforms:** A React web portal with every admin function, and a limited set of simple admin actions in the Flutter mobile app (section 1a). The web portal and the mobile app use the same backend.
 **Language:** English only
@@ -67,6 +67,7 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-ACC-13 | In the mobile app an admin stays signed in until they log out, their password is changed, or they have not used the app for 24 hours, and then they sign in again. The 60-minute inactivity time-out applies only to the web portal (ADM-ACC-12). Because the admin password is set at seed time, a lost admin phone is also handled by "Sign out of all devices" (ADM-ACC-14). | Owner |
 | ADM-ACC-14 | The admin has a **Sign out of all devices** action, on the web portal and in the mobile app. It ends every session of the admin's own login, on the web and on phones, at once, including the one in use. The admin then signs in again where needed. The action is recorded with the time. | Owner |
 | ADM-ACC-15 | When usage analytics is set up in the build, the web sign-in page tells the admin that Priveo records how the portal is used, including what is on screen, to improve it. The data goes to PostHog in the EU region. It identifies the admin by login ID and role only, never by name. A recording shows the screens as they are, with nothing masked except password fields (owner decision, 19 Oct 2026; what to mask is still to be decided), and recording is off unless switched on in the build. There is no opt-out switch yet. | Derived (EU region: Owner) |
+| ADM-ACC-16 | The admin has a daily dashboard that shows, for a chosen day, the number of services Completed, Pending, Missed and Partially Completed. The admin can filter it by crew member and by vehicle. | Draft |
 
 ---
 
@@ -99,6 +100,9 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-CUS-24 | A customer opens in tabs. **Account details** holds the fixed details (first and last name, email, mobile, flat, society, address lines 1 and 2, app onboarding), notifications, signed-in sessions and the account actions (update email, clear password, sign out all sessions), and each part can be edited there. **Vehicles** holds the vehicles. Address lines and society are optional; empty address lines start from what was entered when the society was created, and the society starts as the site the admin is working on. | Owner |
 | ADM-CUS-25 | In the Vehicles tab the admin sees one vehicle at a time. With more than one vehicle, small tiles with the vehicle's photo and registration number let the admin pick one. The admin can add, edit and **deactivate** a vehicle, and reactivate it. A deactivated vehicle gets no new visits, is hidden from the customer's app and the schedule, and keeps its history. A vehicle whose subscription is Active or Activating cannot be deactivated until the subscription is made Inactive. | Owner (deactivate); Derived (the subscription rule) |
 | ADM-CUS-26 | The customer list and the subscription list (ADM-SUB-07) can be shown as a table or as a grid of tiles, one for each customer or subscription. The grid fits as many columns as the screen width allows. The choice applies to every tab of that page and is remembered in the browser. | Owner |
+| ADM-CUS-27 | The admin can change a vehicle's parking location temporarily (with start and end dates) or permanently (from a date). The crew sees the current parking slot on the job card (CRW-SCH-17). Earlier locations are kept in history. | Draft |
+| ADM-CUS-28 | In the Vehicles tab (ADM-CUS-25) the admin sees a read-only view of the crew who serve the vehicle, taken from its scheduled jobs. | Owner |
+| ADM-CUS-29 | A vehicle's service history shows each service with one of these states: Scheduled, Completed, Partially Completed, Not Completed, Rescheduled, Cancelled (HIST-04 in the customer file). The admin can filter the history by state. | Draft |
 
 ### 2.3 Update plan and schedule settings (item g)
 
@@ -131,6 +135,8 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-SUB-05 | Every change of subscription status is recorded with the admin, or the backend, and the time. | Derived |
 | ADM-SUB-06 | At the top of the Subscriptions page the admin sees summary tiles: total subscriptions, how many are Active, Activating, Paused and Inactive, how many have a payment due (the latest plan payment is Due or Over due), and how many there are on each plan. Choosing a tile filters the list to what it counts. Tabs for All, Active, Activating, Paused and Inactive sit above the list, with their counts. | Owner |
 | ADM-SUB-07 | The Subscriptions page can be shown as a table or as tiles, as in ADM-CUS-26. | Owner |
+| ADM-SUB-08 | The admin can change a subscription's plan from a date the admin chooses. The plan history is kept with each plan and its effective date. If the owner confirms this, it replaces the "next renewal date" start in ADM-CUS-15 (section 13). | Draft |
+| ADM-SUB-09 | There is no proration. The first billing period and a plan change are not prorated: the amount is the plan's price for the period. | Owner |
 
 ## 3. Crew
 
@@ -224,6 +230,7 @@ Capacity is worked out for each society, because crew and working slots belong t
 | ADM-PAY-10 | Every payment has a type: **Plan** or **Add-on**. The payment list can be filtered by type, and the status rules, audit and GST invoice (ADM-PAY-02 to ADM-PAY-08) work the same for both. | Derived |
 | ADM-PAY-11 | When a customer marks a plan or add-on payment as paid and its status becomes Initiated, the admin is alerted (ADM-ACC-09). | Owner |
 | ADM-PAY-12 | At the top of the Payments page the admin sees summary tiles: all payments, and for each status (Due, Over due, Initiated, Received) the number of payments and their total in rupees, for the chosen site. Choosing a status tile filters the list to that status. | Owner |
+| ADM-PAY-13 | An add-on stays charged separately from the plan, as today (ADM-PAY-10). Its payment becomes **Due** if it is not paid by the scheduled service date, and **Over due** if the service is completed and the payment is not yet received. This does not make a subscription Inactive (ADM-SUB-03). | Owner |
 
 ---
 
@@ -281,6 +288,11 @@ Scheduling turns the customers' services and the crew's capacity into a plan of 
 | ADM-SCH-34 | On the Board, each job shows its current status, in both views. A Completed job is filled green, a job that Could not complete red and a job In progress blue. Above the board, the chosen day's jobs are counted by status (Scheduled, In progress, Completed, Could not complete). Choosing a status keeps only those jobs bright; choosing it again shows all. The job dialog shows the status. | Owner |
 | ADM-SCH-35 | The Schedule page is led by one chosen day. At the top, the admin steps a day back or forward, picks any date, or clicks a day in a strip that runs from 30 days back to the last scheduled day. Each day in the strip shows its schedule's status (Draft, Frozen or no schedule) and a mark when it has jobs that need scheduling or cutoff requests. Today is chosen at first, or the next scheduled day. Under the strip, the chosen day's schedule shows its status, the period it covers, its freeze time and Freeze or Unfreeze; freezing applies to every day of that schedule. Every tab shows and changes only the chosen day; Run schedules the period that contains it. A tab that lists items says how many more are on other days, with a link to each of those days. Running the scheduler does not hide the days of other schedules. | Owner (18 Oct 2026) and Derived |
 | ADM-SCH-36 | Skipped and paused jobs are not on the Board, its counts or its Unscheduled column. The Board says how many of the chosen day's jobs are skipped or paused and links to the **Skipped and paused** tab. That tab lists them for the chosen day, with the vehicle, customer, service, type (Skipped or Paused) and why: skipped or paused by the customer or the admin (with the pause dates), skipped by operations, skipped by a crew manager, or no longer due. It can show skipped only or paused only. | Owner |
+| ADM-SCH-37 | The admin can move one scheduled service to any date. The visit keeps its original date and its revised date, and both are shown on the visit and in its history. | Draft |
+| ADM-SCH-38 | Each crew member has an ordered daily queue of jobs (CRW-SCH-14). The admin can reorder the queue or unlock the next job. A reason is mandatory. Each override is recorded in the audit (ADM-SET-07) with the admin and the time, and the crew member gets a push notification (CRW-NOT-06). | Owner |
+| ADM-SCH-39 | The admin can reassign all of one crew member's jobs for a date or date range to a replacement crew member in one action. Each moved job is recorded. | Draft |
+| ADM-SCH-40 | The admin can mark every service of a society on a date or date range as Missed or Cancelled in one action, with one reason for all. Each service keeps the reason. | Draft |
+| ADM-SCH-41 | A vehicle's schedule is one of two patterns and repeats automatically every billing cycle. **Weekly:** the admin chooses the weekdays for Exterior and the weekdays for Interior. **Cycle:** the admin chooses day numbers inside each 30-day billing cycle, with a count of Exterior-only days and a count of Exterior + Interior days. The combined Exterior + Interior day can fall on any weekday. The intent is the owner's (23 Oct 2026). The model details are Derived: an Interior weekday is also an Exterior weekday, day numbers count from the cycle's first day, and the counts must match the days chosen. | Owner and Derived |
 ### 7.3 Preferences
 
 | ID | Requirement | Status |
@@ -313,7 +325,8 @@ These are the admin features the customer requirements already depend on. You co
 |---|---|---|
 | ADM-OPS-01 | The admin can mark a scheduled visit or job as skipped by operations, for example when crew are unavailable. The visit shows as Skipped for the customer, who gets a "Service skipped" push notification if they have it switched on (NOTIF-04 in the customer file). | Owner |
 | ADM-OPS-02 | The admin can add a reason when skipping a visit. | Derived |
-| ADM-OPS-03 | A Cleaning-External visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day and the customer is not charged extra. A skipped Cleaning-Internal job is lost for that week and does not extend the plan. A skipped Deep Spa add-on does not extend the plan, and any refund or rebooking is handled by the admin outside the app. | Owner |
+| ADM-OPS-03 | A visit or job skipped by operations does not extend the plan and does not change that month's cost. The renewal date does not move and the customer is not charged extra. This replaces the earlier rule that extended the plan by one day for a skipped Cleaning-External visit (owner decision of 23 Oct 2026, B-01). A skipped Deep Spa add-on is still refunded or rebooked by the admin outside the app. A pause still moves the renewal date (PAUSE-02 in the customer file). | Owner |
+| ADM-OPS-04 | Only the admin can skip a visit or job by operations. Crew cannot skip a job. A Manager can skip only when the feature flag **Allow Crew Manager to Skip** (`crew.manager_skip`) is on. It defaults to off (CRW-MGR-02). The customer-facing Skip and Pause stay controlled by the existing flag `customer.skip_pause` (SKIP-10 in the customer file). | Owner |
 
 ### 8.2a Visits the crew could not complete
 
@@ -321,10 +334,14 @@ These are the admin features the customer requirements already depend on. You co
 |---|---|---|
 | ADM-CNC-01 | The admin can add, rename, reorder and deactivate the **could-not-complete reasons** the crew choose from (for example car not in the parking spot, car locked, customer did not allow, bad weather, other). A deactivated reason no longer appears for crew, and past records keep it. | Derived |
 | ADM-CNC-02 | When a crew member marks a job Could not complete (CRW-CNC-01), the job is **Missed**. The admin can see a list of Missed jobs with the society, customer, vehicle, crew member, reason, note, photo and date, and can filter it by society, date and reason. | Derived |
-| ADM-CNC-03 | Missed is decided for each job. **Cleaning-External:** the next day's regular Cleaning-External job covers it, so there is no extra job and no plan extension and the admin needs to do nothing. The admin can instead mark it skipped by operations, which extends the plan by one day (ADM-OPS-03). **Cleaning-Internal and Deep Spa:** the admin either schedules that job again for the next day only, or marks it skipped by operations. A skipped Cleaning-Internal job is lost for that week with no plan extension, and a skipped Deep Spa is refunded or rebooked by the admin outside the app. A job cannot be scheduled again for any other day, and a job already done is not repeated. A Missed Cleaning-Internal or Deep Spa job with no outcome stays on the Missed list until the admin chooses. A Manager can mark a job skipped in the same way (CRW-MGR-02). The visit is Completed when all its jobs are done or skipped. | Owner |
+| ADM-CNC-03 | Missed is decided for each job. **Cleaning-External:** the next day's regular Cleaning-External job covers it, so there is no extra job and no plan extension and the admin needs to do nothing. The admin can instead mark it skipped by operations, which does not extend the plan (ADM-OPS-03). **Cleaning-Internal and Deep Spa:** the admin either schedules that job again for the next day only, or marks it skipped by operations. A skipped Cleaning-Internal job is lost for that week with no plan extension, and a skipped Deep Spa is refunded or rebooked by the admin outside the app. A job cannot be scheduled again for any other day, and a job already done is not repeated. A Missed Cleaning-Internal or Deep Spa job with no outcome stays on the Missed list until the admin chooses. A Manager can mark a job skipped in the same way only when `crew.manager_skip` is on (ADM-OPS-04, CRW-MGR-02). The visit is Completed when all its jobs are done or skipped. | Owner |
 | ADM-CNC-06 | A Cleaning-Internal or Deep Spa job scheduled again is added to the next day's schedule as described in ADM-SCH-26. It is planned like any job of that service, with that service's duration (ADM-SCH-03), and the customer is not charged extra. | Owner and Derived |
 | ADM-CNC-04 | The admin is alerted when a job becomes Missed (ADM-ACC-09). This is one of the admin alerts in ADM-SCH-24. The customer sees "Missed. Rescheduled on dd-Mon-yy" once the admin schedules it again (CAL-09 in the customer file). | Derived and Owner |
 | ADM-CNC-05 | The outcome and the admin who chose it are recorded with the time. | Derived |
+| ADM-CNC-07 | The remark (free-text note) is mandatory for every **Not Completed** outcome, whoever records it: a crew member, a Manager or the admin. "Not Completed" is the job outcome the crew app calls Could not complete (CRW-CNC-01), also shown to the customer as Missed. The reason stays mandatory too. The reasons stay configured by the admin (ADM-CNC-01). | Owner |
+| ADM-CNC-08 | The starting list of reasons (ADM-CNC-01) also holds: different parking location; keys or customer unavailable; access restricted; customer requested no cleaning; weather or operational issue. The admin can rename, reorder and deactivate every reason, these included. | Owner |
+| ADM-CNC-09 | When a visit planned as Exterior + Interior has its Exterior job done and its Interior job Not Completed (for example keys or customer unavailable), the visit outcome is **Partially Completed**. The record keeps what was planned and what was delivered, and the admin sees both on the Missed list and on the visit. | Owner |
+| ADM-CNC-10 | The admin, or a Manager when the feature flag `crew.manager_reschedule` is on (default on), decides whether to reschedule the missed Interior job of a Partially Completed visit. Until decided, the job stays on the Missed list. Rescheduling a Cleaning-Internal job follows ADM-CNC-03 and ADM-CNC-06 unless the owner decides otherwise (section 13). | Owner and Derived |
 
 ### 8.3 Feedback, ratings and check-ins
 
@@ -357,6 +374,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-SET-04 | **Invoice settings**: the seller's legal name, address and GSTIN used on the GST invoices (ADM-PAY-08). The values are loaded into the database by an initial seed, and are not edited in the app in MVP. | Owner |
 | ADM-SET-05 | The Settings page shows each section as its own tab: the setting groups (Support, Payment, Invoice, Schedule, Billing), Alert emails and Automatic planning. | Owner |
 | ADM-SET-06 | The Audit page does not reload by itself. It tells the admin to press **Refresh** to see newer events. It loads only the last 1000 events and shows them in pages of 50. | Owner |
+| ADM-SET-07 | The Audit page also records edits to schedules (including moved services), queue overrides (ADM-SCH-38) and service outcomes (ADM-CNC-05), each with the admin or crew member and the time. | Draft |
 | ADM-REF-06 | A society can be deactivated only when it has no active subscriptions and no active crew. The admin first deactivates those. Deactivating the society then only removes it from the customer's society list. | Owner |
 
 ### 9.1 Service checklists and proof minimums
@@ -391,6 +409,7 @@ These are the admin features the customer requirements already depend on. You co
 | ADM-ADD-12 | Admin creates a customer/vehicle without a subscription; standalone Spa follows the subscriber Spa booking, UPI, scheduling, proof and history rules. Admin can create its booking too (owner decision 13 Oct 2026). | Owner |
 | ADM-ADD-13 | The Add-ons page is called **Add on Service Requests**. | Owner |
 | ADM-ADD-14 | Every active add-on in Site Setup is offered to customers, whatever its service, not only Deep Spa (ADD-17). A request records the add-on bought. The admin's Request add-on dialog lets the admin choose the add-on, and the list and booking pages show its name. | Owner (18 Oct 2026) |
+| ADM-ADD-15 | The add-on catalogue also includes **Extra interior** and **Special exterior**. Their prices are not decided. The admin cannot activate them for customers until prices are set. | Draft and Open |
 
 ### 9.3 Feature flags
 
@@ -421,7 +440,7 @@ These are the admin features the customer requirements already depend on. You co
 12. Admin actions on payments, complaints and schedules are recorded with who and when.
 13. Customers and crew use the mobile app. Admins use the web portal, and a limited set of quick actions in the mobile app. The role on each person's login decides what they see and do.
 14. Every admin function is on the web portal. Only the simple quick actions in ADM-ACC-07 are in the mobile app, and that list is expected to shrink.
-15. A Cleaning-External visit skipped by operations is added to the end of the plan: one day of extension for each day skipped. A skipped Cleaning-Internal job or Deep Spa add-on does not extend the plan.
+15. A visit skipped by operations does not extend the plan or change that month's cost (owner decision of 23 Oct 2026, replacing the earlier extension rule). Only a pause moves the renewal date. A skipped Deep Spa add-on is refunded or rebooked by the admin outside the app.
 16. The customer's 9 PM deadline applies to customers only. The admin is not bound by it.
 17. A crew member cannot be moved to another society for now.
 18. Checklists are set by the admin for each service and only the admin can edit them. The admin also sets the minimum photos and videos for each service.
@@ -432,6 +451,11 @@ These are the admin features the customer requirements already depend on. You co
 23. The admin can move a payment back to Due or Over due, and generate a GST invoice for a Received payment.
 24. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26 (rule 28 in the customer file).
 25. Deep Spa is bought separately, as an add-on by a customer with a subscription or as a standalone service by a customer without one. It is planned by the scheduler on the date proposed, and is not dependent on payment status in MVP.
+26. Only the admin can skip a visit by operations. A Manager can skip only when `crew.manager_skip` is on (default off). Customer Skip and Pause stay behind `customer.skip_pause`.
+27. The remark is mandatory for every Not Completed outcome, and the reasons are configured by the admin. A visit with its Exterior done and its Interior Not Completed is Partially Completed. The admin, or a Manager when `crew.manager_reschedule` is on (default on), decides about rescheduling the missed Interior job.
+28. Each crew member has an ordered daily queue. Only the current job can be started. The admin can reorder or unlock with a mandatory reason, an audit entry and a notification to the crew member.
+29. The first billing period and plan changes are not prorated. An add-on is charged separately: its payment is Due if not paid by the service date and Over due if the service is completed and the payment is not received.
+30. A vehicle's schedule is a Weekly pattern or a Cycle pattern and repeats every billing cycle (ADM-SCH-41).
 
 ---
 
@@ -464,7 +488,13 @@ For your reference when you write the data model. This is a reading of the requi
 - **Session**: login (customer, crew or admin), device name, platform, app version, signed-in time, last-active time, ended time and reason (log out, password reset, deactivation, admin sign-out, inactivity). Used for session management by the admin and for "Sign out of all devices".
 - **Checklist**: service, ordered items (name, active flag), minimum photos, minimum videos.
 - **Could-not-complete reason**: name, active flag.
-- **Could-not-complete record**: as in the crew file, with the admin outcome, handled by and when.
+- **Could-not-complete record**: as in the crew file, with the admin outcome, handled by and when. The remark is mandatory.
+- **Feature flag**: key (`customer.skip_pause`, `crew.manager_skip`, `crew.manager_reschedule`), on or off. Defaults: skip_pause as today, manager_skip off, manager_reschedule on.
+- **Schedule pattern**: vehicle, type (Weekly, Cycle), Exterior weekdays and Interior weekdays (Weekly), or day numbers with counts of Exterior-only and Exterior + Interior days (Cycle). It repeats every billing cycle.
+- **Queue entry and override**: crew member, date, position, locked or unlocked, and for each override the admin, the reason and the time.
+- **Visit outcome record**: planned services and delivered services, original date and revised date (when moved), state (Scheduled, Completed, Partially Completed, Not Completed, Rescheduled, Cancelled).
+- **Parking change**: vehicle, new location, start date, end date (empty for a permanent change).
+- **Plan history**: subscription, plan, effective date, changed by.
 - **Plan**: name, monthly price, list price, inclusions, active flag. Several plans can exist.
 - **Invoice**: payment, invoice number, date, amount and GST breakdown, seller details, generated by and when.
 - **Invoice settings**: seller legal name, address, GSTIN, invoice number format.
@@ -497,6 +527,10 @@ For your reference when you write the data model. This is a reading of the requi
 | AUTH-14, ONB-25: customers sign in only if the admin created them, then review the details | Create customers, send the welcome email, manage sign-in | ADM-CUS-01, ADM-CUS-04, ADM-CUS-17 to ADM-CUS-21 |
 | ADD-01 to ADD-15: Deep Spa as an add-on and as a standalone service | Manage add-ons and requests | ADM-ADD, ADM-SCH-30, ADM-SCH-31 |
 | SUB-05, SUB-11: subscription states and Inactive | Start, stop and reactivate subscriptions | ADM-SUB |
+| Crew file: ordered daily queue, unlocking and Partially Completed | Reorder or unlock the queue and decide on a missed Interior job | ADM-SCH-38, ADM-CNC-09, ADM-CNC-10 |
+| ADD-18: add-on payment becomes Due or Over due | Payment rules for add-ons | ADM-PAY-13 |
+| HIST-04, CAL-11: service history and day states | Service history for a vehicle | ADM-CUS-29 |
+| SKIP-10: customer Skip and Pause behind a flag | Feature flags | ADM-OPS-04 |
 
 ---
 
@@ -506,6 +540,16 @@ Open from the crew work and the review:
 
 Resolved 13 Oct 2026: use editable five-step samples for ADM-CHK-07, with mobile read access.
 Resolved 13 Oct 2026: standalone Spa uses the same rules as subscriber add-on Spa; see [the owner decisions](owner-decisions-2026-10-13.md).
+Resolved 23 Oct 2026: see [the owner decisions](owner-decisions-2026-10-23.md). A skip no longer extends the plan; the remark is mandatory for every Not Completed outcome; no proration; add-on payment rule; crew queue; Partially Completed.
+
+Open from the 23 Oct 2026 review:
+
+1. The prices of Extra interior and Special exterior (ADM-ADD-15). Open.
+2. Whether the customer can choose a Weekly or Cycle pattern in their own app (ADM-SCH-41), or only the admin. Until decided, the customer keeps the single interior care day (ONB-18).
+3. Whether a plan change from a chosen date (ADM-SUB-08) replaces the rule that a new plan starts on the next renewal date (ADM-CUS-15), and what is charged for the days between.
+4. Whether a missed Interior job of a Partially Completed visit can be rescheduled for any date or only for the next day (ADM-CNC-10), and whether the customer is notified of a Partially Completed visit.
+5. The Draft items ADM-SCH-37, ADM-SCH-39, ADM-SCH-40, ADM-CUS-27, ADM-CUS-29, ADM-SUB-08, ADM-ACC-16 and ADM-SET-07 are written from the owner's scenario list and wait for the owner's confirmation.
+
 
 Answered during the review: Deep Spa is bought separately, as an add-on by subscribers and as a standalone service by others (revised 10 Oct 2026), and is separate from the day's plan visit; the customer proposes one date and a finish-by time; scheduling does not wait for payment; the customer can change or cancel until 9 PM the day before; a job that cannot fit goes to the admin's list; the plan is chosen before service preferences when a customer adds a vehicle; a Trainee has no jobs when the paired Member is absent; sign-in limits are as written in AUTH-05 to AUTH-13; the customer can change names, mobile number, parking, vehicle photo, cutoff time and interior day in the onboarding review; the first payment is asked only if Due or Over due; ratings are general; one crew card for each job; a skipped interior day is lost for that week; Deep Spa is 2 hours and Internal is 20 minutes; a plan change starts at the next renewal; Missed shows "Missed. Rescheduled on dd-Mon-yy"; crew roles and privileges.
 
