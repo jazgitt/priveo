@@ -15,6 +15,9 @@ from app.support.models import AdminAlert
 
 
 def configure(db, world):
+    # `world` flushed its rows in its own session. A second session sees them on
+    # PostgreSQL only once they are committed (SQLite shares one connection).
+    world.db.commit()
     for society in db.scalars(select(Society)):
         society.active = society.id == world.society.id
     db.commit()

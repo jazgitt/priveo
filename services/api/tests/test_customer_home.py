@@ -120,9 +120,17 @@ def test_review_draft_restores_position_and_edits_without_confirmation_or_paymen
                                  {"step": 99}, {"step": -1},
                                  {"step": 4, "vehicles": [{"id": "foreign", "plan_id": "x"}]}])
 def test_review_draft_rejects_read_only_foreign_and_invalid_position(client, asha, body):
-    before = client.get("/v1/customer/onboarding", headers=asha).json()
+    def review():
+        data = client.get("/v1/customer/onboarding", headers=asha).json()
+        # A photo link is signed with the current second, so two reads can differ
+        # in the signature alone. Compare the link without its query string.
+        for car in data["vehicles"]:
+            car["photo_url"] = (car.get("photo_url") or "").split("?")[0]
+        return data
+
+    before = review()
     assert client.patch("/v1/customer/onboarding/draft", headers=asha, json=body).status_code == 422
-    assert client.get("/v1/customer/onboarding", headers=asha).json() == before
+    assert review() == before
 
 
 def test_home_vehicle_fields_and_rate_action_match_requirements(client, asha, db):
