@@ -1,6 +1,7 @@
 """Every feature the admin can switch on or off (the code decides which exist;
-the database only stores whether each is on). A flag with no stored row is on,
-so a new flag never removes anything until the admin turns it off.
+the database only stores whether each is on). A flag with no stored row takes
+its `default` (on unless the definition says otherwise), so a new flag never
+removes anything until the admin turns it off. A stored row always wins.
 
 Keep keys in step with the app's `FeatureKeys` (apps/mobile/lib/core/features).
 Do not add flags for sign-in, the home screen or the core job flow: turning
@@ -20,6 +21,7 @@ class FlagDef:
     description: str
     group: str
     audience: str  # customer | crew | both
+    default: bool = True  # value while no row is stored
 
 
 FLAGS: tuple[FlagDef, ...] = (

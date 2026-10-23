@@ -20,6 +20,9 @@ class FeatureFlags {
   final Map<String, bool> flags;
   final String? etag;
 
+  /// Before the first server answer a missing key reads as on (fail open). A
+  /// flag that defaults to off arrives from the server as false, so it is off
+  /// once flags load; until then the server's `require_feature` is the real guard.
   bool isOn(String key) => flags[key] ?? true;
 }
 

@@ -332,10 +332,16 @@ class BillingService:
         return p
 
     def open_addon_payment(
-        self, customer: Customer, vehicle: Vehicle, description: str, amount_rupees: int
+        self,
+        customer: Customer,
+        vehicle: Vehicle,
+        description: str,
+        amount_rupees: int,
+        service_date: date | None = None,
     ) -> Payment:
-        """An add-on payment is created Due on the day it is requested and
-        becomes Over due the next day if unpaid (ADM-PAY-06, ADD-05). The caller commits."""
+        """An add-on payment is created Due, with the scheduled service date as
+        its due date. It becomes Over due only once the service is Completed and
+        the payment is not yet Received (see `mark_overdue`). The caller commits."""
         p = Payment(
             customer_id=customer.id,
             vehicle_id=vehicle.id,
@@ -343,7 +349,7 @@ class BillingService:
             description=description,
             amount_rupees=amount_rupees,
             status="Due",
-            due_date=today_of(self._now()),
+            due_date=service_date or today_of(self._now()),
         )
         self._db.add(p)
         self._db.flush()
@@ -862,13 +868,35 @@ class BillingService:
         today = today_of(now)
         due = self._db.scalars(
             select(Payment).where(
-                Payment.status == "Due", Payment.due_date < today, Payment.voided_at.is_(None)
+                Payment.status == "Due",
+                Payment.due_date < today,
+                Payment.kind != "Add-on",
+                Payment.voided_at.is_(None),
             )
         )
         for p in list(due):
             p.status = "Over due"
             p.overdue_since = p.due_date + timedelta(days=1)
             self._event(p, "Due", "Over due", None, "Due date passed")
+            report.marked_overdue += 1
+        # An add-on payment is Over due once its service is Completed and the
+        # payment is not yet Received. A service not done stays Due.
+        from app.addons.models import AddonBooking
+
+        finished = self._db.scalars(
+            select(Payment)
+            .join(AddonBooking, AddonBooking.payment_id == Payment.id)
+            .where(
+                Payment.kind == "Add-on",
+                Payment.status == "Due",
+                Payment.voided_at.is_(None),
+                AddonBooking.status == "Completed",
+            )
+        )
+        for p in list(finished):
+            p.status = "Over due"
+            p.overdue_since = today
+            self._event(p, "Due", "Over due", None, "Service completed, payment not received")
             report.marked_overdue += 1
         self._db.flush()
         # An Over due add-on payment never makes a subscription Inactive.

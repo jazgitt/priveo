@@ -94,3 +94,59 @@ def test_missing_row_means_on_and_cache_expires(db, engine):
     assert service.is_enabled(db, "customer.deep_spa") is False
     with pytest.raises(KeyError):
         service.is_enabled(db, "typo")
+
+
+# ---- flags that start off (no real flag uses this yet, so patch one in) ----
+
+@pytest.fixture
+def off_flag(monkeypatch):
+    f = registry.FlagDef("customer.test_off", "Test", "Starts off.", "Test",
+                         registry.CUSTOMER, default=False)
+    monkeypatch.setattr(registry, "FLAGS", registry.FLAGS + (f,))
+    monkeypatch.setattr(registry, "BY_KEY", {**registry.BY_KEY, f.key: f})
+    service.invalidate()
+    yield f
+    service.invalidate()
+
+
+def test_default_off_flag_is_off_without_a_row(client, admin, db, off_flag):
+    assert service.is_enabled(db, off_flag.key) is False
+    listed = {f["key"]: f for f in client.get("/v1/admin/features", headers=admin).json()}
+    assert listed[off_flag.key]["enabled"] is False
+    assert listed["customer.deep_spa"]["enabled"] is True
+
+
+def test_default_off_flag_toggles_audits_and_reaches_the_app(client, admin, engine, off_flag):
+    cust = _login(client, "customer")
+    first = client.get("/v1/customer/features", headers=cust)
+    assert first.json()["flags"][off_flag.key] is False
+    etag = first.headers["ETag"]
+    r = client.put(f"/v1/admin/features/{off_flag.key}", headers=admin, json={"enabled": True})
+    assert r.status_code == 200 and r.json()["enabled"] is True
+    after = client.get("/v1/customer/features", headers={**cust, "If-None-Match": etag})
+    assert after.status_code == 200 and after.json()["flags"][off_flag.key] is True
+    assert after.headers["ETag"] != etag
+    crew = _login(client, "crew")
+    assert off_flag.key not in client.get("/v1/crew/features", headers=crew).json()["flags"]
+    r = client.put(f"/v1/admin/features/{off_flag.key}", headers=admin, json={"enabled": False})
+    assert r.json()["enabled"] is False
+    assert client.get("/v1/customer/features", headers=cust).json()["flags"][off_flag.key] is False
+    with Session(engine) as db:
+        rows = db.query(DirectoryAudit).filter_by(entity="feature_flag").all()
+        assert sorted(str(r.detail) for r in rows) == sorted(
+            [str({"enabled": [False, True]}), str({"enabled": [True, False]})])
+
+
+def test_require_feature_follows_a_default_off_flag(client, admin, off_flag):
+    from fastapi import Depends
+
+    from app.platform.deps import require_feature
+
+    @client.app.get("/v1/_probe", dependencies=[Depends(require_feature(off_flag.key))])
+    def probe():
+        return {"ok": True}
+
+    r = client.get("/v1/_probe")
+    assert r.status_code == 403 and r.json()["code"] == "feature_disabled"
+    client.put(f"/v1/admin/features/{off_flag.key}", headers=admin, json={"enabled": True})
+    assert client.get("/v1/_probe").status_code == 200
