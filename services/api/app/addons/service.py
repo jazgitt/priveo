@@ -197,7 +197,7 @@ class AddonService:
         finish = _time(finish_by)
         require_open(day, now, bound=not admin, hour=self._hour)
         payment = self._billing.open_addon_payment(
-            customer, vehicle, f"{offer.name} on {day.strftime('%d-%b-%y')}", price
+            customer, vehicle, f"{offer.name} on {day.strftime('%d-%b-%y')}", price, day
         )
         b = AddonBooking(
             customer_id=customer.id,
@@ -234,7 +234,7 @@ class AddonService:
             raise ApiError("has_subscription", "Book Spa through the active-subscription add-on flow.", 409)
         require_open(body.date, self._now(), bound=not admin, hour=self._hour)
         payment = self._billing.open_addon_payment(
-            customer, vehicle, f"{offer.name} on {body.date:%d-%b-%y}", price)
+            customer, vehicle, f"{offer.name} on {body.date:%d-%b-%y}", price, body.date)
         mobile = (body.contact_mobile or customer.mobile).strip()
         b = AddonBooking(
             customer_id=customer.id,
@@ -299,6 +299,7 @@ class AddonService:
         if body.date is not None and body.date != b.proposed_date:
             require_open(body.date, now, bound=True, hour=self._hour)
             b.proposed_date = body.date
+            self._sync_due_date(b)
         if body.finish_by is not None:
             b.finish_by = _time(body.finish_by)
         self._db.commit()
@@ -307,6 +308,12 @@ class AddonService:
 
             reconcile_vehicle(self._db, b.vehicle_id)
         return self._out(b)
+
+    def _sync_due_date(self, b: AddonBooking) -> None:
+        """The add-on payment is due on the scheduled service date."""
+        p = self._db.get(Payment, b.payment_id) if b.payment_id else None
+        if p is not None and p.status == "Due" and p.voided_at is None:
+            p.due_date = b.proposed_date
 
     def _frozen(self, b: AddonBooking, day: date | None = None) -> bool:
         if b.vehicle_id is None:
@@ -435,6 +442,7 @@ class AddonService:
             if body.date < today_of(self._now()):
                 raise ApiError("date_in_past", "That date has passed.", 409)
             b.proposed_date = body.date
+            self._sync_due_date(b)
         if body.finish_by is not None:
             b.finish_by = _time(body.finish_by)
         if body.status == "Cancelled" and b.status != "Cancelled":

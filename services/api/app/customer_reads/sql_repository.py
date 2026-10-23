@@ -9,6 +9,7 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.addons.models import AddonBooking
 from app.customer_reads.repository import ChecklistEntry, Job, JobOutcomeEntry, ProofItem, Visit
 from app.directory import lookup
 from app.identity.models import Login
@@ -123,6 +124,9 @@ class SqlVisitReadRepository:
             for p in self.db.scalars(select(JobChecklistProgress)
                                      .where(JobChecklistProgress.job_id.in_(job_ids))):
                 ticks.setdefault(p.job_id, {})[p.item_key] = p.checked_at
+        booked = {r.addon_booking_id for r, _ in rows if r.addon_booking_id}
+        cancelled = set(self.db.scalars(select(AddonBooking.id).where(
+            AddonBooking.id.in_(booked), AddonBooking.status == "Cancelled"))) if booked else set()
         out = []
         for r, name in rows:
             timing = timings.get(r.id)
@@ -141,8 +145,16 @@ class SqlVisitReadRepository:
                 finish_by_minute=r.finish_by_minute,
                 addon_request_id=str(r.addon_booking_id or r.addon_request_id)
                     if r.addon_booking_id or r.addon_request_id else None,
-                outcome=outcomes.get(r.id)))
+                outcome=outcomes.get(r.id),
+                addon_cancelled=r.addon_booking_id in cancelled))
         return out
+
+    def followed(self, job_ids: Sequence[str]) -> set[str]:
+        ids = _ids(job_ids)
+        if not ids:
+            return set()
+        return {str(i) for i in self.db.scalars(
+            select(JobRow.source_job_id).where(JobRow.source_job_id.in_(ids)))}
 
     def _outcomes(self, job_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, JobOutcomeEntry]:
         """The crew's reason, note and photo for jobs that were not done."""

@@ -186,16 +186,57 @@ def test_over_due_then_inactive_after_seven_days(money):
     assert s["status"] == "Inactive"
 
 
-def test_an_over_due_add_on_payment_does_not_make_the_subscription_inactive(money):
+def _addon(m, day="2026-10-20"):
+    from app.addons.models import AddonBooking
+
+    r = m.client.post(f"{vehicle(m)}/addons", json={"date": day, "finish_by": "12:00"},
+                      headers=m.customer)
+    assert r.status_code == 201, r.text
+    return m.db.scalar(select(AddonBooking)), m.db.scalar(select(Payment))
+
+
+def test_an_add_on_payment_is_due_on_the_service_date_and_stays_due_until_done(money):
     m = money
-    m.client.post(f"{vehicle(m)}/addons", json={"date": "2026-10-20", "finish_by": "12:00"},
-                  headers=m.customer)
-    # Due on the day requested, Over due the next day, never Inactive.
-    mark_overdue_and_inactive(at(12, 8), m.db)
+    booking, row = _addon(m)
+    assert (row.kind, row.status, row.due_date.isoformat()) == ("Add-on", "Due", "2026-10-20")
+    # Service not done: still Due, even after the service date has passed.
+    mark_overdue_and_inactive(at(25, 8), m.db)
+    m.db.expire_all()
+    assert m.db.scalar(select(Payment)).status == "Due"
+
+
+def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(money):
+    m = money
+    booking, row = _addon(m)
+    booking.status = "Completed"
+    m.db.commit()
+    report = mark_overdue_and_inactive(at(20, 18), m.db)
+    m.db.expire_all()
     row = m.db.scalar(select(Payment))
-    assert (row.kind, row.status) == ("Add-on", "Over due")
+    assert report.marked_overdue == 1 and row.status == "Over due"
     mark_overdue_and_inactive(at(30, 8), m.db)
     assert m.subscription().status == "Active"
+
+
+def test_a_completed_add_on_already_received_is_left_alone(money):
+    m = money
+    booking, row = _addon(m)
+    row.status = "Received"
+    booking.status = "Completed"
+    m.db.commit()
+    assert mark_overdue_and_inactive(at(25, 8), m.db).marked_overdue == 0
+    m.db.expire_all()
+    assert m.db.scalar(select(Payment)).status == "Received"
+
+
+def test_changing_the_add_on_date_moves_the_payment_due_date(money):
+    m = money
+    booking, row = _addon(m)
+    r = m.client.patch(f"/v1/customer/addons/{booking.id}", json={"date": "2026-10-22"},
+                       headers=m.customer)
+    assert r.status_code == 200, r.text
+    m.db.expire_all()
+    assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-10-22"
 
 
 def test_a_received_payment_is_never_made_over_due(money):

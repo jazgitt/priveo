@@ -9,7 +9,7 @@ import '../crew_text.dart';
 import '../crew_ui.dart';
 
 /// Could not complete (CRW-CNC-01, CRW-CNC-02): a reason from the list is
-/// required. A note and a photo are optional. A Manager uses the same screen
+/// required, and so is a remark. A photo is optional. A Manager uses the same screen
 /// for another crew member's job (CRW-MGR-02).
 class CouldNotCompleteScreen extends ConsumerStatefulWidget {
   const CouldNotCompleteScreen(
@@ -122,7 +122,8 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
               controller: _note,
               maxLength: 500,
               maxLines: 3,
-              decoration: InputDecoration(labelText: CrewText.noteOptional),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(labelText: CrewText.remark),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -137,7 +138,9 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
             PrimaryButton(
               label: CrewText.confirm,
               busy: _busy,
-              onPressed: _reason == null ? null : _submit,
+              onPressed: _reason == null || _note.text.trim().isEmpty
+                  ? null
+                  : _submit,
             ),
           ],
         ),

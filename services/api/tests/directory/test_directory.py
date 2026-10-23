@@ -616,7 +616,7 @@ def test_changes_are_audited_with_the_admin(client, admin, engine):
 
 def test_seed_defaults_inserts_the_stated_defaults(engine, client, db):
     added = seed_defaults(db)
-    assert added["services"] == 3 and added["reasons"] == 5 and added["plans"] == 1
+    assert added["services"] == 3 and added["reasons"] == len(defaults.REASONS) and added["plans"] == 1
     assert added["checklist_items"] == 5 + 4 + 6
     assert added["settings"] >= 15
     assert db.scalar(select(CncReason).where(CncReason.key == "other")) is not None

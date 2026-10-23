@@ -38,7 +38,7 @@ def test_a_manager_marks_another_crews_job_could_not_complete(
     ravi = make_crew("9000000010", "Ravi")
     _, (job,) = new_visit(assigned=ravi)
     r = crew_client.post(f"/v1/crew/manager/jobs/{job.id}/could-not-complete",
-                         headers=signin(boss), json={"reason_key": "bad_weather"})
+                         headers=signin(boss), json={"reason_key": "bad_weather", "note": "Rain"})
     assert r.status_code == 200
     assert r.json()["job"]["status"] == "Could not complete"
     # Ravi sees it closed too.

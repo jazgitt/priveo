@@ -11,6 +11,7 @@ from app import (
     crew,
     customer_reads,
     directory,
+    features,
     media,
     notifications,
     scheduling,
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     addons.register(app)
     webauth.register(app)
     directory.register(app)
+    features.register(app)
     return app
 
 

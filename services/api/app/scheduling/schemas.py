@@ -126,6 +126,12 @@ class AdminJob(BaseModel):
     # A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36).
     skip_kind: str = ""
     skip_reason: str = ""
+    # Derived outcome of the whole visit (Scheduled, Completed, Partially
+    # Completed, Not Completed, Rescheduled, Cancelled) with planned and
+    # delivered services, so a partial visit is visible on the Board.
+    visit_outcome: str = "Scheduled"
+    planned_services: list[str] = []
+    delivered_services: list[str] = []
 
 
 class Board(BaseModel):

@@ -22,6 +22,7 @@ from app.customer_reads.schemas import (
     HistoryMetaOut,
     JobOut,
     JobOutcomeOut,
+    MissedService,
     NextServiceItem,
     ProofOut,
     TodayCleanOut,
@@ -39,10 +40,13 @@ from app.media.service import has_confirmed, vehicle_photo_urls
 from app.media.store import ObjectStore, get_object_store
 from app.platform import clock
 from app.platform.errors import ApiError
+from app.scheduling.outcomes import customer_summary, outcome_of
 from app.support.models import VisitRating
 
 # How far ahead the Home card looks for the next visit.
 NEXT_SERVICE_DAYS = 60
+# The customer names of job statuses, back to the scheduler's.
+_SCHEDULER_STATUS = {"Pending": "Scheduled", "Done": "Completed", "Missed": "Could not complete"}
 # History pages are read this many at a time when looking for the oldest month.
 _META_PAGE = 100
 
@@ -128,6 +132,27 @@ class CustomerReads:
         times = [j.finished_at for j in jobs if j.finished_at is not None]
         return max(times) if times else None
 
+    def _derived(self, jobs: list[Job]) -> dict:
+        """Planned against delivered, what was missed and why, and the visit
+        outcome. Derived from the jobs; nothing is stored."""
+        missed_jobs = [j for j in jobs if j.status == "Missed"]
+        followed = self._visits.followed([j.id for j in missed_jobs]) if missed_jobs else set()
+        outcome = outcome_of(
+            [_SCHEDULER_STATUS.get(j.status, j.status) for j in jobs],
+            rescheduled=bool(missed_jobs) and all(j.id in followed for j in missed_jobs),
+            cancelled=bool(jobs) and all(j.addon_cancelled for j in jobs))
+        missed = [MissedService(
+            service=j.service, reason=j.outcome.reason if j.outcome else "",
+            note=j.outcome.note if j.outcome else "", rescheduled=j.id in followed)
+            for j in missed_jobs]
+        planned = [j.service for j in jobs]
+        delivered = [j.service for j in jobs if j.status == "Done"]
+        return dict(
+            outcome=outcome, planned_services=planned, delivered_services=delivered,
+            missed_services=missed,
+            outcome_summary=customer_summary(
+                planned, delivered, [m.model_dump() for m in missed]))
+
     def _ratings(self, customer: Customer, visit_ids: list[str]) -> dict[str, VisitRating]:
         if not visit_ids:
             return {}
@@ -165,7 +190,8 @@ class CustomerReads:
                 checklist_total=len(j.checklist),
                 outcome=JobOutcomeOut(kind=j.outcome.kind, reason=j.outcome.reason,
                                       note=j.outcome.note, photo_url=j.outcome.photo_url)
-                if j.outcome else None) for j in jobs])
+                if j.outcome else None) for j in jobs],
+            **self._derived(jobs))
 
     def history(self, login_id: uuid.UUID, vehicle_id: str | None, limit: int,
                 offset: int, month: str | None = None) -> list[HistoryItem]:
@@ -180,7 +206,8 @@ class CustomerReads:
             services=[j.service for j in jobs[v.id]],
             photo_count=sum(1 for j in jobs[v.id] for p in j.proof if p.kind == "photo"),
             finished_at=self._finished_at(v, jobs[v.id]),
-            rating=ratings[v.id].rating if v.id in ratings else None)
+            rating=ratings[v.id].rating if v.id in ratings else None,
+            **self._derived(jobs[v.id]))
             for v in visits]
 
     def history_meta(self, login_id: uuid.UUID, vehicle_id: str | None) -> HistoryMetaOut:

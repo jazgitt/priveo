@@ -330,7 +330,14 @@
     "manual": true,
     "reason": "wire-value",
     "skip_kind": "wire-value",
-    "skip_reason": "wire-value"
+    "skip_reason": "wire-value",
+    "visit_outcome": "Scheduled",
+    "planned_services": [
+      "wire-value"
+    ],
+    "delivered_services": [
+      "wire-value"
+    ]
   },
   "AdminPaymentIn": {
     "vehicle_id": "wire-value",
@@ -483,7 +490,14 @@
         "manual": true,
         "reason": "wire-value",
         "skip_kind": "wire-value",
-        "skip_reason": "wire-value"
+        "skip_reason": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ]
       }
     ]
   },
@@ -976,6 +990,13 @@
     "id": "wire-value",
     "visit_id": "wire-value",
     "visit_status": "wire-value",
+    "visit_outcome": "Scheduled",
+    "planned_services": [
+      "wire-value"
+    ],
+    "delivered_services": [
+      "wire-value"
+    ],
     "date": "2026-10-20",
     "service": "wire-value",
     "status": "wire-value",
@@ -1761,7 +1782,23 @@
     ],
     "photo_count": 1,
     "finished_at": "2026-10-20T07:30:00+00:00",
-    "rating": 1
+    "rating": 1,
+    "outcome": "Scheduled",
+    "planned_services": [
+      "wire-value"
+    ],
+    "delivered_services": [
+      "wire-value"
+    ],
+    "missed_services": [
+      {
+        "service": "wire-value",
+        "reason": "wire-value",
+        "note": "wire-value",
+        "rescheduled": true
+      }
+    ],
+    "outcome_summary": "wire-value"
   },
   "HistoryMetaOut": {
     "member_since": "2026-10-20",
@@ -1802,6 +1839,13 @@
       "id": "wire-value",
       "visit_id": "wire-value",
       "visit_status": "wire-value",
+      "visit_outcome": "Scheduled",
+      "planned_services": [
+        "wire-value"
+      ],
+      "delivered_services": [
+        "wire-value"
+      ],
       "date": "2026-10-20",
       "service": "wire-value",
       "status": "wire-value",
@@ -1922,6 +1966,13 @@
             "id": "wire-value",
             "visit_id": "wire-value",
             "visit_status": "wire-value",
+            "visit_outcome": "Scheduled",
+            "planned_services": [
+              "wire-value"
+            ],
+            "delivered_services": [
+              "wire-value"
+            ],
             "date": "2026-10-20",
             "service": "wire-value",
             "status": "wire-value",
@@ -1952,6 +2003,13 @@
         "id": "wire-value",
         "visit_id": "wire-value",
         "visit_status": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ],
         "date": "2026-10-20",
         "service": "wire-value",
         "status": "wire-value",
@@ -1978,6 +2036,12 @@
   },
   "MessageCreate": {
     "note": "wire-value"
+  },
+  "MissedService": {
+    "service": "wire-value",
+    "reason": "wire-value",
+    "note": "wire-value",
+    "rescheduled": true
   },
   "MoveRequest": {
     "crew_id": "11111111-1111-1111-1111-111111111111",
@@ -2009,7 +2073,14 @@
         "manual": true,
         "reason": "wire-value",
         "skip_kind": "wire-value",
-        "skip_reason": "wire-value"
+        "skip_reason": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ]
       }
     ],
     "pending_addons": [
@@ -2598,6 +2669,13 @@
         "id": "wire-value",
         "visit_id": "wire-value",
         "visit_status": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ],
         "date": "2026-10-20",
         "service": "wire-value",
         "status": "wire-value",
@@ -2850,7 +2928,23 @@
       "tags": [
         "wire-value"
       ]
-    }
+    },
+    "outcome": "Scheduled",
+    "planned_services": [
+      "wire-value"
+    ],
+    "delivered_services": [
+      "wire-value"
+    ],
+    "missed_services": [
+      {
+        "service": "wire-value",
+        "reason": "wire-value",
+        "note": "wire-value",
+        "rescheduled": true
+      }
+    ],
+    "outcome_summary": "wire-value"
   },
   "VisitList": {
     "date": "2026-10-20",
@@ -2863,6 +2957,13 @@
         "id": "wire-value",
         "visit_id": "wire-value",
         "visit_status": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ],
         "date": "2026-10-20",
         "service": "wire-value",
         "status": "wire-value",

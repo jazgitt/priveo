@@ -72,10 +72,25 @@ void main(){
     final backend=RecoveryBackend();final capture=FakeCapture();
     await pumpCrew(t,Scaffold(body:Builder(builder:(c)=>TextButton(onPressed:()=>Navigator.of(c).push(MaterialPageRoute<void>(builder:(_)=>const CouldNotCompleteScreen(jobId:'j1',manager:true))),child:const Text('Open')))),backend:backend,capture:capture);
     await t.tap(find.text('Open'));await t.pumpAndSettle();await t.tap(find.text('Other'));await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField),'Gate shut');await t.pumpAndSettle();
     capture.next=const CapturedFile(path:'/bad.pdf',contentType:null,sizeBytes:10,video:false);await t.tap(find.text(CrewText.addPhoto));await t.pumpAndSettle();expect(find.text(CrewText.formatNotAccepted),findsOneWidget);
     capture.next=const CapturedFile(path:'/good.jpg',contentType:'image/jpeg',sizeBytes:100,video:false);await t.tap(find.text(CrewText.addPhoto));await t.pumpAndSettle();expect(find.text(CrewText.photoAttached),findsOneWidget);
     backend.offline=true;await t.tap(find.text(CrewText.confirm));await t.pumpAndSettle();expect(find.byType(CouldNotCompleteScreen),findsOneWidget);
     backend.offline=false;await t.tap(find.text(CrewText.confirm));await t.pumpAndSettle();expect(find.text('Open'),findsOneWidget);expect(backend.couldNot['j1']?['upload'],isNotNull);
+  });
+  testWidgets('could-not-complete needs a reason and a non-blank remark before Save',(t)async{
+    final backend=RecoveryBackend();
+    await pumpCrew(t,const CouldNotCompleteScreen(jobId:'j1'),backend:backend);
+    await t.pumpAndSettle();
+    bool enabled()=>t.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed!=null;
+    expect(find.text(CrewText.remark),findsOneWidget);
+    expect(enabled(),isFalse);
+    await t.tap(find.text('Other'));await t.pumpAndSettle();
+    expect(enabled(),isFalse);
+    await t.enterText(find.byType(TextField),'   ');await t.pumpAndSettle();
+    expect(enabled(),isFalse);
+    await t.enterText(find.byType(TextField),'Gate shut');await t.pumpAndSettle();
+    expect(enabled(),isTrue);
   });
   testWidgets('manager skip cancellation changes nothing and a failed skip remains actionable',(t)async{
     final backend=RecoveryBackend();await pumpCrew(t,const ManagerJobScreen(jobId:'j1'),backend:backend);

@@ -72,7 +72,7 @@ class VisitDetailsScreen extends ConsumerWidget {
                   Expanded(
                     child: Text(formatDate(v.date), style: text.headlineSmall),
                   ),
-                  StatusChip(v.status, tone: statusTone(v.status)),
+                  StatusChip(v.shownStatus, tone: statusTone(v.shownStatus)),
                 ],
               ),
               if (v.finishedAt != null) ...[
@@ -80,6 +80,14 @@ class VisitDetailsScreen extends ConsumerWidget {
                 Text(
                   VisitStrings.finishedAt(v.finishedAt!),
                   style: text.bodyMedium?.copyWith(color: b.mute),
+                ),
+              ],
+              if (v.outcomeSummary.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  v.outcomeSummary,
+                  key: const ValueKey('visit-outcome-summary'),
+                  style: text.bodyMedium,
                 ),
               ],
               const SizedBox(height: 20),

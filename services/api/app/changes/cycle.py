@@ -2,15 +2,16 @@
 
 DERIVED: each day inside a pause that is not cancelled (counted once, even
 when a skip falls in it) moves the cycle forward one day, so the renewal date
-is `first service date + paused days + 30 x cycles`. A Cleaning-External
-visit skipped by operations adds one day too (ADM-OPS-03, `PlanExtension`)."""
+is `first service date + paused days + 30 x cycles`. A skipped visit or job
+moves nothing (owner decision B-01): the old `PlanExtension` rows, all of which
+came from skips, are kept as history but no longer counted."""
 import uuid
 from datetime import date, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.changes.models import PlanExtension, ScheduleChange
+from app.changes.models import ScheduleChange
 from app.directory import lookup
 
 # The starting value; the live one is `billing.cycle_days` (see app.directory.lookup).
@@ -29,27 +30,22 @@ def paused_days(db: Session, vehicle_id: uuid.UUID) -> set[date]:
 
 
 def extension_days(db: Session, vehicle_id: uuid.UUID) -> int:
-    """Days added to the plan because operations skipped a Cleaning-External
-    visit (ADM-OPS-03). Each one moves the renewal date forward one day."""
-    return db.scalar(select(func.count()).select_from(PlanExtension)
-                     .where(PlanExtension.vehicle_id == vehicle_id)) or 0
+    """Always 0. A skipped visit no longer extends the plan (B-01). Every
+    `PlanExtension` row was created by a skip, so none is counted."""
+    return 0
 
 
 def shift_days(db: Session, vehicle_id: uuid.UUID) -> int:
-    """Everything that moves the renewal date forward: paused days and days
-    added by operations."""
+    """Everything that moves the renewal date forward: paused days only."""
     from app.customers.models import Subscription
 
     first = db.scalar(select(Subscription.first_service_date).where(
         Subscription.vehicle_id == vehicle_id))
     if first is None:
-        return len(paused_days(db, vehicle_id)) + extension_days(db, vehicle_id)
+        return len(paused_days(db, vehicle_id))
     # A reactivation starts a new billing epoch; retain prior history without
-    # applying its pauses/extensions again to the new first cycle.
-    paused = sum(day >= first for day in paused_days(db, vehicle_id))
-    extensions = db.scalar(select(func.count()).select_from(PlanExtension).where(
-        PlanExtension.vehicle_id == vehicle_id, PlanExtension.on_date >= first)) or 0
-    return paused + extensions
+    # applying its pauses again to the new first cycle.
+    return sum(day >= first for day in paused_days(db, vehicle_id))
 
 
 def cycle_window(first_service_date: date, paused: int, today: date,

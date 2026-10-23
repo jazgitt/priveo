@@ -143,6 +143,37 @@ class FakeReads implements CustomerReadsRepository {
   @override
   Future<VisitDetailDto> visit(String visitId) async => visitId == 'v-proof'
       ? richVisit(rating: rated)
+      : visitId == 'v-partial'
+      ? VisitDetailDto(
+          id: visitId,
+          vehicleId: 'v1',
+          vehicleRegistration: 'MH 12 AB 1234',
+          vehicleModel: 'Hyundai Creta',
+          date: DateTime(2026, 11, 4),
+          status: 'Missed',
+          outcome: 'Partially Completed',
+          outcomeSummary:
+              'Exterior done. Interior not done today: Car is locked.',
+          jobs: const [
+            JobDto(
+              id: 'j-1',
+              service: 'Cleaning-External',
+              status: 'Done',
+              proof: [],
+            ),
+            JobDto(
+              id: 'j-2',
+              service: 'Cleaning-Internal',
+              status: 'Missed',
+              proof: [],
+              outcome: JobOutcomeDto(
+                kind: 'could_not_complete',
+                reason: 'Car is locked',
+                note: 'Gate shut',
+              ),
+            ),
+          ],
+        )
       : visitId == 'v-missed'
       ? VisitDetailDto(
           id: visitId,
@@ -546,6 +577,17 @@ void main() {
   });
 
   group('proof on service details', () {
+    testWidgets('a partial visit says what was done and what was not, and why', (
+      tester,
+    ) async {
+      await pumpScreen(tester, const VisitDetailsScreen(visitId: 'v-partial'));
+      expect(find.text('Partially Completed'), findsOneWidget);
+      expect(
+        find.text('Exterior done. Interior not done today: Car is locked.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('shows the crew reason and note for a job not done', (
       tester,
     ) async {

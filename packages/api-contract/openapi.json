@@ -16459,6 +16459,263 @@
           }
         }
       }
+    },
+    "/v1/admin/features": {
+      "get": {
+        "tags": [
+          "features"
+        ],
+        "summary": "List Features",
+        "operationId": "list_features_v1_admin_features_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureOut"
+                  },
+                  "title": "Response List Features V1 Admin Features Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/features/{key}": {
+      "put": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Set Feature",
+        "operationId": "set_feature_v1_admin_features__key__put",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/features": {
+      "get": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Customer Features",
+        "operationId": "customer_features_v1_customer_features_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppFeaturesOut"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crew/features": {
+      "get": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Crew Features",
+        "operationId": "crew_features_v1_crew_features_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppFeaturesOut"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -17969,6 +18226,27 @@
             "type": "string",
             "title": "Skip Reason",
             "default": ""
+          },
+          "visit_outcome": {
+            "type": "string",
+            "title": "Visit Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
           }
         },
         "type": "object",
@@ -18295,6 +18573,27 @@
           "min_app_version"
         ],
         "title": "AppConfig"
+      },
+      "AppFeaturesOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "flags": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Flags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "flags"
+        ],
+        "title": "AppFeaturesOut"
       },
       "AuthSupportContact": {
         "properties": {
@@ -19264,8 +19563,7 @@
           "note": {
             "type": "string",
             "maxLength": 500,
-            "title": "Note",
-            "default": ""
+            "title": "Note"
           },
           "upload_id": {
             "anyOf": [
@@ -19281,7 +19579,8 @@
         },
         "type": "object",
         "required": [
-          "reason_key"
+          "reason_key",
+          "note"
         ],
         "title": "CouldNotComplete"
       },
@@ -19750,6 +20049,27 @@
           "visit_status": {
             "type": "string",
             "title": "Visit Status"
+          },
+          "visit_outcome": {
+            "type": "string",
+            "title": "Visit Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
           },
           "date": {
             "type": "string",
@@ -22386,6 +22706,57 @@
         ],
         "title": "EmailCorrection"
       },
+      "FeatureOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "audience": {
+            "type": "string",
+            "title": "Audience"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "description",
+          "group",
+          "audience",
+          "enabled"
+        ],
+        "title": "FeatureOut"
+      },
+      "FeatureUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "FeatureUpdate"
+      },
       "FeedbackAdmin": {
         "properties": {
           "id": {
@@ -22617,6 +22988,40 @@
               }
             ],
             "title": "Rating"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
+          },
+          "missed_services": {
+            "items": {
+              "$ref": "#/components/schemas/MissedService"
+            },
+            "type": "array",
+            "title": "Missed Services",
+            "default": []
+          },
+          "outcome_summary": {
+            "type": "string",
+            "title": "Outcome Summary",
+            "default": ""
           }
         },
         "type": "object",
@@ -23084,6 +23489,34 @@
           "note"
         ],
         "title": "MessageCreate"
+      },
+      "MissedService": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          },
+          "rescheduled": {
+            "type": "boolean",
+            "title": "Rescheduled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "service"
+        ],
+        "title": "MissedService"
       },
       "MoveRequest": {
         "properties": {
@@ -26844,6 +27277,40 @@
                 "type": "null"
               }
             ]
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
+          },
+          "missed_services": {
+            "items": {
+              "$ref": "#/components/schemas/MissedService"
+            },
+            "type": "array",
+            "title": "Missed Services",
+            "default": []
+          },
+          "outcome_summary": {
+            "type": "string",
+            "title": "Outcome Summary",
+            "default": ""
           }
         },
         "type": "object",

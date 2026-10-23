@@ -155,7 +155,7 @@ def test_a_completed_job_cannot_be_changed(crew_client, make_crew, signin, new_v
     untick = crew_client.put(f"/v1/crew/jobs/{jid}/checklist/{item['id']}", headers=headers,
                              json={"checked": False})
     assert untick.status_code == 409 and untick.json()["code"] == "job_closed"
-    body = {"reason_key": "other"}
+    body = {"reason_key": "other", "note": "x"}
     assert crew_client.post(f"/v1/crew/jobs/{jid}/could-not-complete", headers=headers,
                             json=body).status_code == 409
 
@@ -188,7 +188,7 @@ def test_could_not_complete_needs_a_listed_reason(crew_client, make_crew, signin
     reasons = crew_client.get("/v1/crew/reasons", headers=headers).json()
     assert "other" in {r["key"] for r in reasons}
     bad = crew_client.post(f"/v1/crew/jobs/{job.id}/could-not-complete", headers=headers,
-                           json={"reason_key": "tired"})
+                           json={"reason_key": "tired", "note": "x"})
     assert bad.status_code == 422
     assert "reason_key" in bad.json()["fields"]
 
@@ -201,11 +201,11 @@ def test_could_not_complete_can_carry_a_confirmed_photo(
     jid = str(job.id)
 
     unready = crew_client.post(f"/v1/crew/jobs/{jid}/could-not-complete", headers=headers,
-                               json={"reason_key": "other", "upload_id": "nope"})
+                               json={"reason_key": "other", "note": "x", "upload_id": "nope"})
     assert unready.status_code == 422
     photo = upload_file(crew_client, headers, jid, purpose="reason", stage=None)
     r = crew_client.post(f"/v1/crew/jobs/{jid}/could-not-complete", headers=headers,
-                         json={"reason_key": "other", "upload_id": photo})
+                         json={"reason_key": "other", "note": "x", "upload_id": photo})
     assert r.status_code == 200
 
 
@@ -271,7 +271,7 @@ def test_a_switched_off_checklist_item_and_reason_follow_the_admin(
     reasons = {r["key"] for r in crew_client.get("/v1/crew/reasons", headers=headers).json()}
     assert "bad_weather" not in reasons and "other" in reasons
     gone = crew_client.post(f"/v1/crew/jobs/{job.id}/could-not-complete", headers=headers,
-                            json={"reason_key": "bad_weather"})
+                            json={"reason_key": "bad_weather", "note": "x"})
     assert gone.status_code == 422
 
 

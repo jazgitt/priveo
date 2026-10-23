@@ -25,6 +25,9 @@ export interface OperationJob {
   outcome: string | null; covered_on: string | null; rescheduled_on: string | null;
   replacement_assigned: boolean | null; replacement_status: string | null;
   resolution_reason: string; resolution_note: string; resolved_by: string | null; resolved_at: string | null;
+  /** Derived for the whole visit. A partial visit has some jobs done and some not. */
+  visit_outcome?: string; partial?: boolean; planned_services?: string[]; delivered_services?: string[];
+  outcome_summary?: string; reported_by?: string | null; reported_at?: string | null;
 }
 type Reason = { key: string; label: string };
 
@@ -100,7 +103,7 @@ export function OperationsPage() {
             { key: "crew", header: "Crew", width: "9rem", cell: (j) => j.crew_name || "Unassigned" },
             { key: "why", header: "Reason", wrap: true, cell: (j) => (j.reason || j.note ? <>{j.reason}{j.reason && j.note ? " · " : ""}<span className="text-muted-foreground">{j.note}</span></> : "-") },
             { key: "status", header: "Status", width: "11rem", wrap: true, cell: (j) => (
-              <span className="flex flex-wrap gap-1.5"><StatusBadge status={shownStatus(j)} />{j.resolved_at && <StatusBadge status={j.outcome ?? "Resolved"} tone="ok" />}</span>) },
+              <span className="flex flex-wrap gap-1.5"><StatusBadge status={shownStatus(j)} />{j.partial && <StatusBadge status="Partially Completed" tone="warn" />}{j.resolved_at && <StatusBadge status={j.outcome ?? "Resolved"} tone="ok" />}</span>) },
             { key: "act", header: "", width: "6rem", align: "right", cell: (j) => <Button size="sm" variant="outline" onClick={() => setOpenId(j.id)}>Open</Button> },
           ]}
         />
@@ -139,7 +142,14 @@ function JobDialog({ job, reasons, onClose }: { job: OperationJob; reasons: Reas
         { label: "Crew", value: job.crew_name || "Unassigned" },
         { label: "Status", value: <StatusBadge status={shownStatus(job)} /> },
         { label: "Crew's reason", value: [job.reason, job.note].filter(Boolean).join(". "), wide: true },
+        ...(job.reported_by ? [{ label: "Recorded by", value: `${job.reported_by}${job.reported_at ? `, ${showDate(job.reported_at)}` : ""}` }] : []),
+        ...(job.visit_outcome ? [{ label: "Visit outcome", value: job.visit_outcome }] : []),
+        ...(job.partial ? [{
+          label: "Planned and delivered", wide: true,
+          value: `Planned ${(job.planned_services ?? []).join(", ")}. Delivered ${(job.delivered_services ?? []).join(", ") || "none"}.`,
+        }] : []),
       ]} />
+      {job.partial && job.outcome_summary && <p className="m-0 rounded-md bg-warn/10 px-3 py-2 text-sm">Partially completed visit. {job.outcome_summary}</p>}
       {job.photo_url && (
         <a href={job.photo_url} target="_blank" rel="noreferrer" className="self-start">
           <img src={job.photo_url} alt="Could not complete evidence" className="max-h-48 rounded-lg border object-cover" />

@@ -26,5 +26,6 @@ export const NAV: NavItem[] = [
   { group: "site", path: "/operations", label: "Operations", about: "Skips by operations and daily jobs." },
   { group: "master", path: "/reference", label: "Site Setup", about: "Societies, base plans, services, checklists and the add-on catalogue." },
   { group: "master", path: "/settings", label: "Settings", about: "Cutoff times, sessions and portal settings." },
+  { group: "master", path: "/features", label: "Features", about: "Switch app features on or off for customers and crew." },
   { group: "master", path: "/audit", label: "Audit", about: "Who changed reference data and settings, and what changed." },
 ];
