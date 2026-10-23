@@ -60,6 +60,8 @@ class Job:
     addon_request_id: str | None = None
     source_job_id: str | None = None
     outcome: JobOutcomeEntry | None = None
+    # The add-on booking of this job was cancelled by the customer or admin.
+    addon_cancelled: bool = False
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,10 @@ class VisitReadRepository(Protocol):
         """The jobs of these visits, in the order they are done."""
         ...
 
+    def followed(self, job_ids: Sequence[str]) -> set[str]:
+        """Which of these jobs have a follow-up job (an admin reschedule)."""
+        ...
+
 
 class InMemoryVisitReadRepository:
     """For tests, and for a deployment where the crew tables are not bound."""
@@ -119,3 +125,7 @@ class InMemoryVisitReadRepository:
     def jobs(self, visit_ids):
         wanted = set(visit_ids)
         return [j for j in self.job_rows if j.visit_id in wanted]
+
+    def followed(self, job_ids):
+        wanted = set(job_ids)
+        return {j.source_job_id for j in self.job_rows if j.source_job_id in wanted}

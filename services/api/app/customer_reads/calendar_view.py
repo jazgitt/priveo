@@ -196,6 +196,8 @@ class CalendarView:
             if covered
             else "Rescheduled"
             if rescheduled
+            else "Partially Completed"
+            if status == "Missed" and any(j.status == "Done" for j in jobs)
             else status
         )
         shown = []

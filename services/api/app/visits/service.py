@@ -20,6 +20,7 @@ from app.platform.db import utcnow
 from app.platform.errors import ApiError
 from app.scheduling import rules
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
+from app.scheduling.outcomes import visit_outcomes
 from app.scheduling.service import set_job_status
 from app.visits import manager as manager_checks
 from app.visits import schemas as s
@@ -126,6 +127,7 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
             select(Society).where(Society.id.in_({sc.society_id for sc in schedules.values()}))
         )
     }
+    derived = visit_outcomes(db, list(visits))
     checked: dict[uuid.UUID, int] = {}
     for (job_id,) in db.execute(
         select(JobChecklistProgress.job_id).where(
@@ -159,6 +161,9 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
                 id=str(job.id),
                 visit_id=str(visit.id),
                 visit_status=visit.status,
+                visit_outcome=derived[visit.id].outcome,
+                planned_services=derived[visit.id].planned,
+                delivered_services=derived[visit.id].delivered,
                 date=visit.date,
                 service=job.service,
                 status=job.status,
@@ -393,6 +398,11 @@ def _check_reason(db: Session, body: s.CouldNotComplete, job: Job) -> uuid.UUID 
 def could_not_complete(db: Session, job: Job, body: s.CouldNotComplete, by: uuid.UUID) -> Job:
     """CRW-CNC-01 to CRW-CNC-04. The other jobs of the visit are not affected."""
     _open_job(job)
+    if not body.note.strip():
+        # A remark is required for every Not Completed outcome.
+        raise ApiError(
+            "validation_failed", "Enter a remark.", 422, {"note": "Enter a remark."}
+        )
     upload_id = _check_reason(db, body, job)
     db.add(
         JobOutcome(

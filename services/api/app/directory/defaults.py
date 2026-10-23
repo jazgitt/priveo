@@ -42,6 +42,13 @@ REASONS: tuple[tuple[str, str], ...] = (
     ("customer_did_not_allow", "Customer did not allow"),
     ("bad_weather", "Bad weather"),
     ("other", "Other"),
+    # Owner decision (requirements review, Oct 26). Migration 0034 adds these to
+    # databases that were seeded before.
+    ("different_parking_location", "Different parking location"),
+    ("keys_customer_unavailable", "Keys/customer unavailable"),
+    ("access_restricted", "Access restricted"),
+    ("customer_requested_no_cleaning", "Customer requested no cleaning"),
+    ("weather_operational_issue", "Weather/operational issue"),
 )
 
 # ADM-SET-01, PAY-01, PAY-02: Premium Care is the only plan to start with.

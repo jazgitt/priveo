@@ -957,6 +957,9 @@ def _job_dict(
         "late": job.late,
         "manual": job.manual,
         "reason": job.note,
+        "visit_outcome": "Scheduled",
+        "planned_services": [],
+        "delivered_services": [],
     }
 
 
@@ -972,7 +975,15 @@ def job_rows(db: Session, *where) -> list[dict]:
         .where(*where)
         .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Vehicle.id, Job.service)
     ).all()
-    return [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
+    result = [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
+    from app.scheduling.outcomes import visit_outcomes
+
+    derived = visit_outcomes(db, {r["visit_id"] for r in result})
+    for r in result:
+        d = derived[r["visit_id"]]
+        r["visit_outcome"], r["planned_services"], r["delivered_services"] = (
+            d.outcome, d.planned, d.delivered)
+    return result
 
 
 def schedule_summary(db: Session, schedule: Schedule) -> dict:

@@ -6,7 +6,7 @@ import '../../core/ui/widgets.dart';
 
 /// The chip colour of a visit or job status. Missed is a warning.
 ChipTone statusTone(String status) => switch (status.toLowerCase()) {
-  'missed' => ChipTone.warn,
+  'missed' || 'partially completed' => ChipTone.warn,
   'done' || 'completed' => ChipTone.ok,
   'scheduled' || 'in progress' => ChipTone.info,
   'pending' => ChipTone.warn,

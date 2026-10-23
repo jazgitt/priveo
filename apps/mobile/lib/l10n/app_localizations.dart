@@ -1762,11 +1762,11 @@ abstract class AppLocalizations {
   /// **'Reason'**
   String get crew_reason;
 
-  /// No description provided for @crew_note_optional.
+  /// No description provided for @crew_remark.
   ///
   /// In en, this message translates to:
-  /// **'Note (optional)'**
-  String get crew_note_optional;
+  /// **'Remark (required)'**
+  String get crew_remark;
 
   /// No description provided for @crew_add_photo.
   ///
