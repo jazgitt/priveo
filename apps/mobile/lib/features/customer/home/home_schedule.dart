@@ -1,3 +1,5 @@
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -204,7 +206,9 @@ class MonthlyCheckInCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pending = ref.watch(homeCheckInsProvider).value ?? const [];
-    if (pending.isEmpty) return const SizedBox.shrink();
+    if (pending.isEmpty || !ref.watch(featureOnProvider(FeatureKeys.checkin))) {
+      return const SizedBox.shrink();
+    }
     final first = pending.first;
     final text = Theme.of(context).textTheme;
     final b = context.brand;

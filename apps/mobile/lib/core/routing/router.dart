@@ -16,14 +16,22 @@ import '../../features/support/routes.dart' as support;
 import '../../features/splash/splash_screen.dart';
 import '../auth/auth_controller.dart';
 import '../auth/session.dart';
+import '../features/feature_flags.dart';
+import '../features/feature_keys.dart';
 import '../ui/theme.dart';
 
 /// Redirect rule. The splash screen decides its own exit. After that:
 /// no session means login, and a session means the shell for its role.
-String? redirectFor(String location, Session? session) {
+///
+/// [isOff] says whether the admin has switched off the feature behind a path.
+/// A page that is off sends the person home, so a stale link or a screen left
+/// open shows nothing the admin has taken away.
+String? redirectFor(String location, Session? session,
+    {bool Function(String path)? isOff}) {
   if (location == '/splash') return null;
   if (session == null) return location == '/login' ? null : '/login';
   final home = session.role.homePath;
+  if (isOff != null && location != home && isOff(location)) return home;
   // The role's own pages sit under its home path. Support and alerts are
   // `/customer/support`, `/crew/ratings` and `/admin/alerts`.
   return location == home || location.startsWith('$home/') ? null : home;
@@ -34,6 +42,8 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (_, _) => refresh.value++);
+  // A flag changed on a refresh: check the open page again.
+  ref.listen(featureFlagsProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   final router = GoRouter(
@@ -43,7 +53,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null;
-      return redirectFor(state.matchedLocation, auth.value);
+      final flags = ref.read(featureFlagsProvider);
+      return redirectFor(state.matchedLocation, auth.value, isOff: (path) {
+        final key = FeatureKeys.forPath(path);
+        return key != null && !flags.isOn(key);
+      });
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),

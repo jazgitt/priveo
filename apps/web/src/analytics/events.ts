@@ -4,6 +4,7 @@ export const EVENTS = {
   paymentRecorded: "payment recorded",
   scheduleFrozen: "schedule frozen",
   settingSaved: "setting saved",
+  featureToggled: "feature toggled",
   complaintUpdated: "complaint updated",
   crewOnboarded: "crew onboarded",
   subscriptionStatusChanged: "subscription status changed",

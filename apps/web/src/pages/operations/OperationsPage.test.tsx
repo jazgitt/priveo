@@ -12,15 +12,20 @@ import { OperationsPage } from "./OperationsPage";
 const fetchMock = vi.fn();
 let service: string;
 let status: string;
+let partial = false;
 beforeEach(() => {
   service = "Cleaning-Internal";
   status = "Could not complete";
+  partial = false;
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockImplementation(async (path: string) => {
     const body = path.includes("/operations/jobs?") ? [{ id: "j1", visit_id: "v1", date: "2026-11-15",
       customer_id: "c1", customer_name: "Asha", society: "Meadows", registration: "HR01ZZ1234", vehicle: "Nexon",
       service, status, note: "Car unavailable", reason: "Other", resolved_at: null, crew_name: "Ravi",
       covered_on: service === "Cleaning-External" ? "2026-11-16" : null,
+      ...(partial ? { partial: true, visit_outcome: "Partially Completed", planned_services: ["Cleaning-External", "Cleaning-Internal"],
+        delivered_services: ["Cleaning-External"], outcome_summary: "Exterior done. Interior not done today: Other.",
+        reported_by: "Ravi", reported_at: "2026-11-15T05:00:00Z" } : {}),
     }] : path.includes("/reasons") ? [{ key: "other", label: "Other" }] : {};
     return new Response(JSON.stringify(body));
   });
@@ -76,4 +81,14 @@ it("filters the server queue by the chosen site, queue and failure reason", asyn
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("unresolved=true"))).toBe(true));
   await userEvent.click(screen.getByRole("tab", { name: "Resolution history" }));
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("queue=history"))).toBe(true));
+});
+
+it("lists a partially completed visit for follow-up with planned and delivered services", async () => {
+  partial = true;
+  page();
+  expect(await screen.findByText("Partially Completed")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Open" }));
+  expect(screen.getByText(/Planned Cleaning-External, Cleaning-Internal\. Delivered Cleaning-External\./)).toBeInTheDocument();
+  expect(screen.getByText(/Exterior done\. Interior not done today: Other\./)).toBeInTheDocument();
+  expect(screen.getByText("Recorded by")).toBeInTheDocument();
 });

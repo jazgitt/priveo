@@ -1,3 +1,5 @@
+import '../../core/features/feature_flags.dart';
+import '../../core/features/feature_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -161,16 +163,19 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   },
                   child: const Text(CalStrings.editDefaults),
                 ),
-              if (s.status == 'Active' || s.status == 'Paused')
+              if ((s.status == 'Active' || s.status == 'Paused') &&
+                  ref.watch(featureOnProvider(FeatureKeys.skipPause)))
                 OutlinedButton(
                   onPressed: () => context.push(pausePath(widget.vehicleId)),
                   child: const Text(MoneyStrings.pauseService),
                 ),
-              OutlinedButton(
-                onPressed: () => context.push(billingPath(widget.vehicleId)),
-                child: const Text(MoneyStrings.billingHistory),
-              ),
-              if (s.status == 'Active')
+              if (ref.watch(featureOnProvider(FeatureKeys.billingHistory)))
+                OutlinedButton(
+                  onPressed: () => context.push(billingPath(widget.vehicleId)),
+                  child: const Text(MoneyStrings.billingHistory),
+                ),
+              if (s.status == 'Active' &&
+                  ref.watch(featureOnProvider(FeatureKeys.addons)))
                 OutlinedButton(
                   onPressed: () => context.push(addonsPath(widget.vehicleId)),
                   child: const Text(MoneyStrings.addons),

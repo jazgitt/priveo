@@ -8,6 +8,7 @@ import 'package:priveo/app.dart';
 import 'package:priveo/core/api/api.g.dart' hide AppConfig;
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/core/config/app_config.dart';
+import 'package:priveo/core/features/feature_flags.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/providers.dart';
 import 'package:priveo/core/network/read_refresh.dart';
@@ -331,6 +332,11 @@ Future<ProviderContainer> pumpApp(
     uploadQueueProvider.overrideWithValue(uploadQueue),
     uploadQueueStoreProvider.overrideWithValue(MemoryUploadQueueStore()),
     onlineEventsProvider.overrideWithValue(null),
+    // The feature flags read the server and secure storage. A test has neither,
+    // and a real request leaves a timer pending when the test ends. Every
+    // feature is on, as before the first answer.
+    featureFlagFetchProvider.overrideWithValue((role, etag) async => null),
+    featureFlagStoreProvider.overrideWithValue(_NoFeatureFlagStore()),
     ...overrides,
   ]);
   addTearDown(container.dispose);
@@ -339,6 +345,13 @@ Future<ProviderContainer> pumpApp(
     child: const PriveoApp(),
   ));
   return container;
+}
+
+class _NoFeatureFlagStore implements FeatureFlagStore {
+  @override
+  Future<FeatureFlags?> read(Role role) async => null;
+  @override
+  Future<void> write(Role role, FeatureFlags flags) async {}
 }
 
 /// Plays the splash (about 2 seconds) and lets navigation finish.

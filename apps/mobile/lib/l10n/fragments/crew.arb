@@ -45,7 +45,7 @@
   "crew_remove_upload_title": "Remove this file?",
   "crew_remove_upload_body": "It will not be sent. You can take the photo or video again.",
   "crew_reason": "Reason",
-  "crew_note_optional": "Note (optional)",
+  "crew_remark": "Remark (required)",
   "crew_add_photo": "Add a photo (optional)",
   "crew_photo_attached": "Photo attached",
   "crew_confirm": "Confirm",

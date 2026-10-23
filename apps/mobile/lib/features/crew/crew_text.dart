@@ -50,7 +50,7 @@ abstract final class CrewText {
   static const removeUploadBody =
       'It will not be sent. You can take the photo or video again.';
   static const reason = 'Reason';
-  static const noteOptional = 'Note (optional)';
+  static const remark = 'Remark (required)';
   static const addPhoto = 'Add a photo (optional)';
   static const photoAttached = 'Photo attached';
   static const confirm = 'Confirm';

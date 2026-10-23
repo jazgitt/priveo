@@ -1,3 +1,5 @@
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,7 +120,9 @@ class _SubscriptionCard extends ConsumerWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(money.subscriptionPath(vehicle.id)),
+        onTap: ref.watch(featureOnProvider(FeatureKeys.subscription))
+            ? () => context.push(money.subscriptionPath(vehicle.id))
+            : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -202,6 +206,7 @@ class AccountMoreLinks extends ConsumerWidget {
       if (id != null && context.mounted) context.push(path(id));
     }
 
+    bool on(String key) => ref.watch(featureOnProvider(key));
     return Column(
       children: [
         link(
@@ -209,26 +214,30 @@ class AccountMoreLinks extends ConsumerWidget {
           AccountStrings.menuCalendar,
           () => openCalendarPage(context),
         ),
-        link(
-          Symbols.auto_awesome_rounded,
-          AccountStrings.menuAddons,
-          () => forVehicle(money.addonsPath),
-        ),
-        link(
-          Symbols.pause_circle_rounded,
-          AccountStrings.menuSkipPause,
-          () => forVehicle(money.skipPausePath),
-        ),
-        link(
-          Symbols.report_rounded,
-          AccountStrings.menuComplaints,
-          () => context.push(SupportRoutes.complaints),
-        ),
-        link(
-          Symbols.help_rounded,
-          AccountStrings.menuHelp,
-          () => context.push(SupportRoutes.help),
-        ),
+        if (on(FeatureKeys.addons))
+          link(
+            Symbols.auto_awesome_rounded,
+            AccountStrings.menuAddons,
+            () => forVehicle(money.addonsPath),
+          ),
+        if (on(FeatureKeys.skipPause))
+          link(
+            Symbols.pause_circle_rounded,
+            AccountStrings.menuSkipPause,
+            () => forVehicle(money.skipPausePath),
+          ),
+        if (on(FeatureKeys.complaints))
+          link(
+            Symbols.report_rounded,
+            AccountStrings.menuComplaints,
+            () => context.push(SupportRoutes.complaints),
+          ),
+        if (on(FeatureKeys.help))
+          link(
+            Symbols.help_rounded,
+            AccountStrings.menuHelp,
+            () => context.push(SupportRoutes.help),
+          ),
         link(
           Symbols.lock_rounded,
           AccountStrings.changePassword,

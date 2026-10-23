@@ -493,8 +493,12 @@ function JobDialog({ job, board, busy, onClose, onMove }: {
         { label: "Status", value: <StatusBadge status={job.status} /> },
         { label: "Now", value: job.crew_name ? `${job.crew_name} at ${job.start_time}` : "Unscheduled" },
         { label: "Finish by", value: job.finish_by },
+        ...(job.visit_outcome === "Partially Completed" ? [{
+          label: "Visit outcome", wide: true,
+          value: `Partially Completed. Delivered ${(job.delivered_services ?? []).join(", ") || "none"} of ${(job.planned_services ?? []).join(", ")}.`,
+        }] : []),
       ]} />
-      {(job.late || job.manual) && <div className="flex gap-2"><JobFlags job={job} /></div>}
+      {(job.late || job.manual || job.visit_outcome === "Partially Completed") && <div className="flex gap-2"><JobFlags job={job} /></div>}
       {job.reason && <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{job.reason}</p>}
       {!movable && (
         <p className="m-0 border-t pt-4 text-sm text-muted-foreground">

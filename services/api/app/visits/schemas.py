@@ -23,6 +23,12 @@ class CrewJobCard(BaseModel):
     id: str
     visit_id: str
     visit_status: str
+    # Derived: Scheduled, Completed, Partially Completed, Not Completed,
+    # Rescheduled or Cancelled. Planned and delivered services are listed so a
+    # partial visit is clear to the crew without any customer detail.
+    visit_outcome: str = "Scheduled"
+    planned_services: list[str] = []
+    delivered_services: list[str] = []
     date: date
     service: str
     status: str
@@ -102,7 +108,8 @@ class ChecklistTick(BaseModel):
 
 class CouldNotComplete(BaseModel):
     reason_key: str
-    note: str = Field(default="", max_length=500)
+    # Required: a blank remark is refused with a 422 on the "note" field.
+    note: str = Field(max_length=500)
     # A confirmed photo uploaded with purpose "reason" (optional).
     upload_id: str | None = None
 

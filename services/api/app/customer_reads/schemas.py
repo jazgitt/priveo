@@ -47,6 +47,13 @@ class JobOut(BaseModel):
     outcome: JobOutcomeOut | None = None
 
 
+class MissedService(BaseModel):
+    service: str
+    reason: str = ""
+    note: str = ""
+    rescheduled: bool = False
+
+
 class VisitRatingGiven(BaseModel):
     rating: int
     tags: list[str]
@@ -135,6 +142,14 @@ class VisitDetail(BaseModel):
     finished_at: datetime | None = None
     # The rating the customer gave this visit, or None (SVC-07).
     rating: VisitRatingGiven | None = None
+    # Derived: Scheduled, Completed, Partially Completed, Not Completed,
+    # Rescheduled or Cancelled. Planned against delivered services, and the
+    # plain-language account of what was not done and why (no crew names).
+    outcome: str = "Scheduled"
+    planned_services: list[str] = []
+    delivered_services: list[str] = []
+    missed_services: list[MissedService] = []
+    outcome_summary: str = ""
 
 
 class HistoryItem(BaseModel):
@@ -146,6 +161,11 @@ class HistoryItem(BaseModel):
     photo_count: int
     finished_at: datetime | None = None
     rating: int | None = None
+    outcome: str = "Scheduled"
+    planned_services: list[str] = []
+    delivered_services: list[str] = []
+    missed_services: list[MissedService] = []
+    outcome_summary: str = ""
 
 
 class HistoryMetaOut(BaseModel):

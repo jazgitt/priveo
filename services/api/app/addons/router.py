@@ -21,7 +21,7 @@ from app.changes.access import customer_of, owned_vehicle, parse_id
 from app.changes.rules import Clock, get_now
 from app.identity.service import User
 from app.platform.db import get_db
-from app.platform.deps import require_role
+from app.platform.deps import require_feature, require_role
 
 customer = APIRouter(prefix="/v1/customer", tags=["addons"])
 admin = APIRouter(prefix="/v1/admin", tags=["addons"])
@@ -44,7 +44,8 @@ def my_addons(
     return svc.mine(customer_of(db, user.id))
 
 
-@customer.post("/vehicles/{vehicle_id}/addons", response_model=AddonOut, status_code=201)
+@customer.post("/vehicles/{vehicle_id}/addons", response_model=AddonOut, status_code=201,
+               dependencies=[Depends(require_feature("customer.addons"))])
 def request_addon(
     vehicle_id: str,
     body: AddonRequestIn,
@@ -58,7 +59,8 @@ def request_addon(
                        idempotency_key, addon=body.addon)
 
 
-@customer.post("/addons/standalone", response_model=AddonOut, status_code=201)
+@customer.post("/addons/standalone", response_model=AddonOut, status_code=201,
+               dependencies=[Depends(require_feature("customer.deep_spa"))])
 def request_standalone(
     body: StandaloneIn,
     user: User = Depends(require_role("customer")),

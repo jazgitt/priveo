@@ -36,10 +36,10 @@ class ScheduleChange(Base):
 
 
 class PlanExtension(Base):
-    """One day added to a subscription's plan because a Cleaning-External
-    visit was skipped by operations (ADM-OPS-03). The renewal date moves
-    forward one day for each row and the customer pays nothing extra. One row
-    for each skipped job, so a retry never adds a second day."""
+    """LEGACY history (owner decision B-01). Each row is a day once added to a
+    plan because operations skipped a Cleaning-External visit. Nothing writes
+    these rows now and the cycle math ignores them: a skip no longer moves the
+    renewal date. Kept so no data is deleted."""
 
     __tablename__ = "plan_extensions"
 
