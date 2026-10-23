@@ -19,6 +19,7 @@ CREW_EVENTS = (
     "crew_job_removed",       # CRW-NOT-02
     "crew_job_assigned",      # CRW-NOT-04
     "crew_job_reassigned",    # CRW-NOT-05
+    "crew_queue_changed",     # B-06: the admin reordered or unlocked the queue
 )
 
 EVENTS = CUSTOMER_EVENTS + CREW_EVENTS

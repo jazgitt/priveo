@@ -9,7 +9,11 @@ import '../crew_text.dart';
 import '../crew_ui.dart';
 import '../data/crew_models.dart';
 import '../upload/upload_queue.dart';
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
+import '../../../l10n/app_localizations.dart';
 import 'could_not_complete_screen.dart';
+import 'queue_next.dart';
 
 const _stages = ['Before', 'During', 'After'];
 
@@ -77,13 +81,25 @@ class _PerformState extends ConsumerState<PerformServiceScreen> {
     }
   }
 
+  /// "Save & Next" when a later job waits and the queue is on, else the old
+  /// label (S-13).
+  String _saveLabel(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (!ref.watch(featureOnProvider(FeatureKeys.sequentialQueue))) {
+      return CrewText.markComplete;
+    }
+    return (ref.watch(hasNextJobProvider(_id)).value ?? false)
+        ? l.crewSaveNext
+        : l.crewSave;
+  }
+
   Future<void> _complete() async {
     setState(() => _completing = true);
     try {
       await ref.read(crewRepositoryProvider).complete(_id);
       if (!mounted) return;
       showSnack(context, CrewText.jobCompleted);
-      Navigator.of(context).pop(true);
+      await afterSave(ref, context, _id);
     } catch (e) {
       if (mounted) {
         showSnack(context, failureText(e));
@@ -195,7 +211,7 @@ class _PerformState extends ConsumerState<PerformServiceScreen> {
                   ]),
                 const SizedBox(height: 12),
                 PrimaryButton(
-                  label: CrewText.markComplete,
+                  label: _saveLabel(context),
                   busy: _completing,
                   onPressed: ready ? _complete : null,
                 ),
@@ -205,7 +221,7 @@ class _PerformState extends ConsumerState<PerformServiceScreen> {
                     final done = await Navigator.of(context).push<bool>(
                         crewRoute(CouldNotCompleteScreen(jobId: _id)));
                     if (done == true && context.mounted) {
-                      Navigator.of(context).pop(true);
+                      await afterSave(ref, context, _id);
                     }
                   },
                   child: Text(CrewText.couldNotComplete),

@@ -44,6 +44,11 @@ class CrewJobCard(BaseModel):
     checklist_done: int
     # Who the job is on. Shown to a Manager.
     assigned_to: CrewRef | None
+    # The crew member's queue for the day (S-13, C-01, C-02). `locked`: an
+    # earlier job is still open. `current`: the job to do now.
+    sequence: int | None = None
+    locked: bool = False
+    current: bool = False
 
 
 class VisitList(BaseModel):

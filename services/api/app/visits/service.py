@@ -18,7 +18,7 @@ from app.media.store import get_object_store
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import rules
+from app.scheduling import queue, rules
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.outcomes import visit_outcomes
 from app.scheduling.service import set_job_status
@@ -150,11 +150,13 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
     )
 
     photos = vehicle_photo_urls(db, get_object_store(), vehicles.keys())
+    states = queue.states_for(db, jobs)
 
     cards = []
     for job in jobs:
         visit = visits[job.visit_id]
         vehicle = vehicles[visit.vehicle_id]
+        state = states.get(job.id)
         parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
         cards.append(
             s.CrewJobCard(
@@ -186,6 +188,9 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
                     if job.crew_id
                     else None
                 ),
+                sequence=job.sequence,
+                locked=bool(state and state.locked),
+                current=bool(state and state.current),
             )
         )
     return cards
@@ -197,7 +202,16 @@ def _jobs_where(db: Session, *where) -> list[Job]:
         .join(Visit, Visit.id == Job.visit_id)
         .join(Schedule, Schedule.id == Visit.schedule_id)
         .where(Schedule.status == "Frozen", *where)
-        .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Job.service, Job.id)
+        .order_by(
+            Visit.date,
+            Job.crew_id,
+            Job.sequence.is_(None),
+            Job.sequence,
+            Job.start_minute.is_(None),
+            Job.start_minute,
+            Job.service,
+            Job.id,
+        )
     )
     return list(db.scalars(q))
 
@@ -483,8 +497,11 @@ def manager_reassign(
             job_id=job.id, from_crew_id=job.crew_id, to_crew_id=target.id, by_login_id=by
         )
     )
+    previous_crew_id = job.crew_id
     job.crew_id = target.id
     job.manual = True
+    job.queue_unlocked = False
+    queue.resequence_all(db, {(target.id, visit.date), (previous_crew_id, visit.date)})
     db.commit()
     emit.job_reassigned(db, job)  # notify hook
     return job

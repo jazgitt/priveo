@@ -9,7 +9,7 @@ import 'package:priveo/features/crew/job/job_card_screen.dart';
 import 'support.dart';
 
 PrimaryButton _markComplete(WidgetTester tester) => tester.widget<PrimaryButton>(
-    find.widgetWithText(PrimaryButton, CrewText.markComplete));
+    find.widgetWithText(PrimaryButton, 'Save'));
 
 Future<void> _openJob(WidgetTester tester) async {
   await tester.tap(find.text('MH12AB1234'));
@@ -81,11 +81,11 @@ void main() {
     expect(backend.sendCount, 1);
     expect(_markComplete(tester).onPressed, isNotNull);
 
-    await tester.tap(find.text(CrewText.markComplete));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(backend.jobs['j1']!.status, 'Completed');
     // Back on the job card, now closed.
-    expect(find.text(CrewText.markComplete), findsNothing);
+    expect(find.text('Save'), findsNothing);
   });
 
   testWidgets('with no connection the photo waits and completion stays off',
@@ -144,7 +144,7 @@ void main() {
     await tester.tap(find.text(CrewText.couldNotComplete));
     await tester.pumpAndSettle();
     PrimaryButton confirm() => tester.widget<PrimaryButton>(
-        find.widgetWithText(PrimaryButton, CrewText.confirm));
+        find.widgetWithText(PrimaryButton, 'Save'));
     expect(confirm().onPressed, isNull);
 
     await tester.tap(find.text('Car is locked'));
@@ -154,7 +154,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'No one around');
     await tester.pump();
     expect(confirm().onPressed, isNotNull);
-    await tester.tap(find.text(CrewText.confirm));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(backend.couldNot['j1'],

@@ -12,6 +12,7 @@ import '../../common/signout_button.dart';
 import '../crew_providers.dart';
 import '../crew_text.dart';
 import '../crew_ui.dart';
+import '../data/crew_models.dart';
 import '../job/job_card_screen.dart';
 import '../manager/manager_schedule_screen.dart';
 import '../notifications/crew_notifications.dart';
@@ -36,6 +37,7 @@ class CrewHomeScreen extends ConsumerWidget {
       ref.watch(pushRegistrationProvider); // registers the phone for push
     }
     final managerOn = ref.watch(featureOnProvider(FeatureKeys.managerScreens));
+    final queueOn = ref.watch(featureOnProvider(FeatureKeys.sequentialQueue));
     final notificationsOn =
         ref.watch(featureOnProvider(FeatureKeys.crewNotifications));
 
@@ -108,6 +110,7 @@ class CrewHomeScreen extends ConsumerWidget {
               for (final job in v.jobs) ...[
                 JobCardTile(
                   card: job,
+                  lockedBy: queueOn && job.locked ? _blocker(v.jobs, job) : null,
                   showDate: day == null,
                   onTap: () async {
                     await Navigator.of(context)
@@ -123,6 +126,18 @@ class CrewHomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The registration of the job that must be finished first: the open job
+/// before this one, in the same day (S-13). Registration only, no customer.
+String _blocker(List<CrewJobCard> jobs, CrewJobCard job) {
+  CrewJobCard? first;
+  for (final c in jobs) {
+    if (c.id == job.id) break;
+    if (c.date == job.date && c.current) first = c;
+  }
+  final v = (first ?? job).vehicle;
+  return v.registration.isNotEmpty ? v.registration : v.title;
 }
 
 class _DayBar extends ConsumerWidget {

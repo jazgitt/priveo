@@ -4,7 +4,7 @@ from datetime import date, time, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import app.media.models
@@ -128,9 +128,14 @@ def new_visit(db: Session, world: World):
         db.flush()
         jobs = []
         for service in sorted(services):
+            # A queue position, as the planner gives one (S-13): jobs made here
+            # come in the order listed, so the crew can work them in turn.
+            taken = (db.scalar(select(func.count(Job.id)).join(
+                Visit, Visit.id == Job.visit_id).where(
+                Job.crew_id == assigned.id, Visit.date == day)) if assigned else 0)
             job = Job(visit_id=visit.id, service=service, duration_minutes=20,
                       crew_id=assigned.id if assigned else None, start_minute=420,
-                      finish_by_minute=450)
+                      finish_by_minute=450, sequence=taken + 1 if assigned else None)
             db.add(job)
             jobs.append(job)
         db.commit()

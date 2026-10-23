@@ -5530,6 +5530,136 @@
         }
       }
     },
+    "/v1/admin/scheduling/queue/reorder": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Reorder Queue",
+        "description": "S-13, B-06: the admin reorders one crew member's day. A reason is\nrequired; the change is audited and the crew member is told.",
+        "operationId": "reorder_queue_v1_admin_scheduling_queue_reorder_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueReorder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueChange"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/jobs/{job_id}/unlock": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Unlock Job",
+        "description": "C-04: lets the crew action one job out of turn. A reason is required.",
+        "operationId": "unlock_job_v1_admin_scheduling_jobs__job_id__unlock_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueUnlock"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueChange"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/schedules/{schedule_id}/freeze": {
       "post": {
         "tags": [
@@ -18247,6 +18377,22 @@
             "type": "array",
             "title": "Delivered Services",
             "default": []
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "queue_unlocked": {
+            "type": "boolean",
+            "title": "Queue Unlocked",
+            "default": false
           }
         },
         "type": "object",
@@ -19794,6 +19940,27 @@
               }
             ],
             "title": "Finish By"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current",
+            "default": false
           }
         },
         "type": "object",
@@ -20134,6 +20301,27 @@
                 "type": "null"
               }
             ]
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current",
+            "default": false
           }
         },
         "type": "object",
@@ -24842,6 +25030,75 @@
           "url"
         ],
         "title": "ProofOut"
+      },
+      "QueueChange": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "ordered_job_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Ordered Job Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "ordered_job_ids"
+        ],
+        "title": "QueueChange"
+      },
+      "QueueReorder": {
+        "properties": {
+          "crew_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Crew Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "ordered_job_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Ordered Job Ids"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "crew_id",
+          "date",
+          "ordered_job_ids",
+          "reason"
+        ],
+        "title": "QueueReorder"
+      },
+      "QueueUnlock": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "QueueUnlock"
       },
       "QuickAction": {
         "properties": {

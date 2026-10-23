@@ -322,6 +322,14 @@ def job_reassigned(db: Session, job) -> None:
                key=f"reassigned:{move.id}:to")
 
 
+@_safe
+def queue_changed(db: Session, crew_id: uuid.UUID, day: date, text: str, key: str) -> None:
+    """B-06: the crew member (and a paired Trainee) is told when the admin
+    reorders or unlocks their day's queue. The text holds no customer detail."""
+    _tell_crew(db, crew_id, "crew_queue_changed", "Your job order changed",
+               f"{text} ({_show(day)})", None, key=f"queue:{key}")
+
+
 # Skip, pause and add-ons ----------------------------------------------------
 
 

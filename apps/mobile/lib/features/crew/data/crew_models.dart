@@ -88,6 +88,9 @@ class CrewJobCard {
     required this.checklistTotal,
     required this.checklistDone,
     required this.assignedTo,
+    this.sequence,
+    this.locked = false,
+    this.current = false,
   });
 
   factory CrewJobCard.fromJson(Map<String, dynamic> j) => CrewJobCard(
@@ -108,6 +111,9 @@ class CrewJobCard {
         assignedTo: j['assigned_to'] == null
             ? null
             : CrewRef.fromJson((j['assigned_to'] as Map).cast<String, dynamic>()),
+        sequence: (j['sequence'] as num?)?.toInt(),
+        locked: (j['locked'] as bool?) ?? false,
+        current: (j['current'] as bool?) ?? false,
       );
 
   final String id;
@@ -130,6 +136,12 @@ class CrewJobCard {
   final int checklistTotal;
   final int checklistDone;
   final CrewRef? assignedTo;
+
+  /// Place in the day's queue (S-13). `locked`: an earlier job is still open.
+  /// `current`: the job to do now. Both are false when the flag is off.
+  final int? sequence;
+  final bool locked;
+  final bool current;
 
   bool get isClosed => JobStatus.isClosed(status);
 }

@@ -334,6 +334,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crewLeft => 'Left';
 
   @override
+  String crewFinishFirst(String vehicle) {
+    return 'Finish $vehicle first';
+  }
+
+  @override
+  String get crewSave => 'Save';
+
+  @override
+  String get crewSaveNext => 'Save & Next';
+
+  @override
   String get adminAlerts => 'Alerts';
 
   @override

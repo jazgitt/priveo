@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/widgets.dart';
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
+import '../../../l10n/app_localizations.dart';
 import '../capture/media_capture.dart';
 import '../crew_providers.dart';
 import '../crew_text.dart';
 import '../crew_ui.dart';
+import 'queue_next.dart';
 
 /// Could not complete (CRW-CNC-01, CRW-CNC-02): a reason from the list is
 /// required, and so is a remark. A photo is optional. A Manager uses the same screen
@@ -66,6 +70,17 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
     }
   }
 
+  String _saveLabel() {
+    if (widget.manager ||
+        !ref.watch(featureOnProvider(FeatureKeys.sequentialQueue))) {
+      return CrewText.confirm;
+    }
+    final l = AppLocalizations.of(context);
+    return (ref.watch(hasNextJobProvider(widget.jobId)).value ?? false)
+        ? l.crewSaveNext
+        : l.crewSave;
+  }
+
   Future<void> _submit() async {
     setState(() => _busy = true);
     final repo = ref.read(crewRepositoryProvider);
@@ -80,7 +95,12 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
       }
       if (!mounted) return;
       showSnack(context, CrewText.markedCouldNotComplete);
-      Navigator.of(context).pop(true);
+      if (widget.manager) {
+        Navigator.of(context).pop(true);
+      } else {
+        // Records the outcome, then opens the next job when the queue is on.
+        await afterSave(ref, context, widget.jobId);
+      }
     } catch (e) {
       if (mounted) showSnack(context, failureText(e));
     } finally {
@@ -136,7 +156,7 @@ class _State extends ConsumerState<CouldNotCompleteScreen> {
             ),
             const SizedBox(height: 24),
             PrimaryButton(
-              label: CrewText.confirm,
+              label: _saveLabel(),
               busy: _busy,
               onPressed: _reason == null || _note.text.trim().isEmpty
                   ? null

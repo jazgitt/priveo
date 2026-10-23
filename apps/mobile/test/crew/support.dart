@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/network/api_failure.dart';
 import 'package:priveo/core/ui/theme.dart';
@@ -19,6 +20,8 @@ Map<String, dynamic> cardJson({
   String date = '2026-11-07',
   Map<String, dynamic>? assignedTo,
   int done = 0,
+  bool locked = false,
+  bool current = false,
 }) =>
     {
       'id': id,
@@ -41,6 +44,8 @@ Map<String, dynamic> cardJson({
       'checklist_total': 2,
       'checklist_done': done,
       'assigned_to': assignedTo,
+      'locked': locked,
+      'current': current,
     };
 
 /// A crew backend in memory. It follows the server's rules for completing a
@@ -440,6 +445,7 @@ Future<UploadQueue> pumpCrew(
   Widget home, {
   required FakeCrewBackend backend,
   FakeCapture? capture,
+  List<Override> extra = const [],
 }) async {
   tester.view.physicalSize = const Size(800, 1800);
   tester.view.devicePixelRatio = 2;
@@ -456,6 +462,7 @@ Future<UploadQueue> pumpCrew(
       uploadApiProvider.overrideWithValue(backend),
       uploadQueueProvider.overrideWithValue(queue),
       mediaCaptureProvider.overrideWithValue(capture ?? FakeCapture()),
+      ...extra,
     ],
     child: MaterialApp(
       theme: crewTheme,

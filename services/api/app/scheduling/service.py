@@ -17,7 +17,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import rules
+from app.scheduling import queue, rules
 from app.scheduling.models import (
     DURATIONS,
     Job,
@@ -639,6 +639,9 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     for job, visit in rows:
         by_day.setdefault(visit.date, []).append((job, visit))
 
+    # Where each job sits now, to renumber only the crew days that change (S-13).
+    before_place = {job.id: (job.crew_id, job.start_minute, visit.date) for job, visit in rows}
+
     for day, items in by_day.items():
         day_windows = windows.get(day, {})
         free: list[tuple[Job, Visit]] = []
@@ -696,6 +699,17 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 job.note = result.unplaced[key]
             job.late = key in result.late
     db.flush()
+    touched: set = set()
+    for job, visit in rows:
+        old = before_place[job.id]
+        if (job.crew_id, job.start_minute) != old[:2] or (
+            job.crew_id is not None and job.sequence is None
+        ):
+            touched.add((job.crew_id, visit.date))
+            touched.add((old[0], old[2]))
+        if job.crew_id is None or job.status == "Skipped":
+            job.sequence = None
+    queue.resequence_all(db, touched)
     for _job, visit in rows:
         refresh_visit_status(db, visit.id)
 
@@ -780,6 +794,8 @@ def move_job(
     if crew_id is None:
         previous_crew_id = job.crew_id  # notify hook
         job.crew_id, job.start_minute, job.late = None, None, False
+        job.sequence, job.queue_unlocked = None, False
+        queue.resequence_all(db, {(previous_crew_id, visit.date)})
         job.manual = True
         job.note = "Taken off the schedule by the admin."
         record(db, schedule.id, admin_id, "move", f"job {job.id} taken off")
@@ -831,8 +847,12 @@ def move_job(
         o_start = other.start_minute or 0
         if start_minute < o_start + other.duration_minutes and o_start < end:
             raise ApiError("overlap", "That time overlaps another job.", 409)
+    old_crew_id = job.crew_id
     job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
     job.late = job.finish_by_minute is not None and end > job.finish_by_minute
+    job.queue_unlocked = False
+    # The moved job takes its place by start time on its new day (Derived).
+    queue.resequence_all(db, {(crew_id, visit.date), (old_crew_id, visit.date)})
     record(db, schedule.id, admin_id, "move", f"job {job.id} to {rules.hhmm(start_minute)}")
     refresh_visit_status(db, visit.id)
     if commit:
@@ -957,6 +977,8 @@ def _job_dict(
         "late": job.late,
         "manual": job.manual,
         "reason": job.note,
+        "sequence": job.sequence,
+        "queue_unlocked": job.queue_unlocked,
         "visit_outcome": "Scheduled",
         "planned_services": [],
         "delivered_services": [],
@@ -1137,10 +1159,12 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
         .join(Schedule, Visit.schedule_id == Schedule.id)
         .join(Vehicle, Visit.vehicle_id == Vehicle.id)
         .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
-        .order_by(Job.start_minute, Job.id)
     ).all()
+    rows.sort(key=lambda r: queue._order_key((r[0], r[1])))
+    states = queue.states_for(db, [r[0] for r in rows])
     jobs = []
     for job, visit, vehicle in rows:
+        state = states.get(job.id)
         end = None if job.start_minute is None else job.start_minute + job.duration_minutes
         jobs.append(
             {
@@ -1159,6 +1183,9 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
                 "start_time": rules.hhmm(job.start_minute),
                 "end_time": rules.hhmm(end),
                 "finish_by": rules.hhmm(job.finish_by_minute),
+                "sequence": job.sequence,
+                "locked": bool(state and state.locked),
+                "current": bool(state and state.current),
             }
         )
     done = sum(1 for j in jobs if j["status"] in DAY_DONE)

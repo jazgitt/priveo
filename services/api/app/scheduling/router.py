@@ -11,7 +11,7 @@ from app.platform.clock import now_ist, today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
-from app.scheduling import service
+from app.scheduling import queue, service
 from app.scheduling.models import Job, Schedule
 from app.scheduling.schemas import (
     AdminJob,
@@ -22,6 +22,9 @@ from app.scheduling.schemas import (
     FreezeDue,
     MoveRequest,
     NeedsScheduling,
+    QueueChange,
+    QueueReorder,
+    QueueUnlock,
     RunRequest,
     RunResponse,
     RunResult,
@@ -142,6 +145,30 @@ def move_job(
     job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
+
+
+@admin.post("/queue/reorder", response_model=QueueChange)
+def reorder_queue(
+    body: QueueReorder, user: User = Depends(require_role("admin")), db: Session = Depends(get_db)
+):
+    """S-13, B-06: the admin reorders one crew member's day. A reason is
+    required; the change is audited and the crew member is told."""
+    ids = queue.reorder(db, user.id, body.crew_id, body.date, body.ordered_job_ids, body.reason)
+    return {"message": "The queue was reordered and the crew member was told.",
+            "ordered_job_ids": ids}
+
+
+@admin.post("/jobs/{job_id}/unlock", response_model=QueueChange)
+def unlock_job(
+    job_id: uuid.UUID,
+    body: QueueUnlock,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """C-04: lets the crew action one job out of turn. A reason is required."""
+    job = queue.unlock(db, user.id, job_id, body.reason)
+    return {"message": "The job was unlocked and the crew member was told.",
+            "ordered_job_ids": [job.id]}
 
 
 @admin.post("/schedules/{schedule_id}/freeze", response_model=ScheduleOut)

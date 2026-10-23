@@ -132,6 +132,9 @@ class AdminJob(BaseModel):
     visit_outcome: str = "Scheduled"
     planned_services: list[str] = []
     delivered_services: list[str] = []
+    # Place in the crew member's day, and whether the admin unlocked it (S-13, C-04).
+    sequence: int | None = None
+    queue_unlocked: bool = False
 
 
 class Board(BaseModel):
@@ -187,6 +190,9 @@ class CrewDayJob(BaseModel):
     start_time: str | None
     end_time: str | None
     finish_by: str | None
+    sequence: int | None = None
+    locked: bool = False
+    current: bool = False
 
 
 class CrewDay(BaseModel):
@@ -196,3 +202,19 @@ class CrewDay(BaseModel):
     done: int
     left: int
     jobs: list[CrewDayJob]
+
+
+class QueueReorder(BaseModel):
+    crew_id: uuid.UUID
+    date: date
+    ordered_job_ids: list[uuid.UUID]
+    reason: str
+
+
+class QueueUnlock(BaseModel):
+    reason: str
+
+
+class QueueChange(BaseModel):
+    message: str
+    ordered_job_ids: list[uuid.UUID]
