@@ -30,7 +30,7 @@ def test_defaults_include_every_new_reason_and_keep_the_old_ones():
 
 
 def test_revision_chain():
-    assert (m0034.revision, m0034.down_revision) == ("0034", "0032")
+    assert (m0034.revision, m0034.down_revision) == ("0034", "0033")
 
 
 def test_inserts_missing_reasons_once_and_is_idempotent(db: Session):
