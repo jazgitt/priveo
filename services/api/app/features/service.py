@@ -54,12 +54,12 @@ def is_enabled(db: Session, key: str) -> bool:
     """Unknown keys raise, so a typo in code fails in tests, not silently."""
     if key not in registry.BY_KEY:
         raise KeyError(key)
-    return _stored(db).get(key, True)
+    return _stored(db).get(key, registry.BY_KEY[key].default)
 
 
 def flags_for(db: Session, audience: str) -> dict[str, bool]:
     stored = _stored(db)
-    return {f.key: stored.get(f.key, True) for f in registry.for_audience(audience)}
+    return {f.key: stored.get(f.key, f.default) for f in registry.for_audience(audience)}
 
 
 def version_of(flags: dict[str, bool]) -> str:
@@ -72,7 +72,7 @@ def admin_list(db: Session) -> list[dict]:
     stored = _stored(db)
     return [
         {"key": f.key, "label": f.label, "description": f.description, "group": f.group,
-         "audience": f.audience, "enabled": stored.get(f.key, True)}
+         "audience": f.audience, "enabled": stored.get(f.key, f.default)}
         for f in registry.FLAGS
     ]
 
@@ -82,7 +82,7 @@ def set_enabled(db: Session, admin_id: uuid.UUID, key: str, enabled: bool) -> di
     if definition is None:
         raise ApiError("not_found", "This feature was not found.", 404)
     row = db.get(FeatureFlag, key)
-    old = True if row is None else row.enabled
+    old = definition.default if row is None else row.enabled
     if row is None:
         db.add(FeatureFlag(key=key, enabled=enabled, updated_by=admin_id))
     else:
