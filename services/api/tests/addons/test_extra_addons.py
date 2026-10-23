@@ -2,10 +2,12 @@
 """S-08: 'Extra interior cleaning' and 'Special exterior cleaning'. The owner has
 not set their prices, so they start inactive at 0 until the admin activates them."""
 import importlib.util
+import logging
 import os
 import uuid
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from alembic.migration import MigrationContext
@@ -114,7 +116,23 @@ def _rows(engine):
             "SELECT code, name, price_rupees, active FROM addon_catalogue ORDER BY code")).all()
 
 
-def test_the_migration_adds_missing_rows_once_and_keeps_admin_edits(tmp_path):
+@pytest.fixture
+def keep_logging():
+    """Alembic's env.py calls fileConfig, which switches off the loggers that
+    already exist and replaces the root handlers. Put them back, or tests that
+    run after this one (the email sender's) log nothing."""
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    loggers = [(x, x.disabled) for x in logging.root.manager.loggerDict.values()
+               if isinstance(x, logging.Logger)]
+    yield
+    root.handlers[:] = handlers
+    root.setLevel(level)
+    for logger, disabled in loggers:
+        logger.disabled = disabled
+
+
+def test_the_migration_adds_missing_rows_once_and_keeps_admin_edits(tmp_path, keep_logging):
     url = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{tmp_path / 'x.db'}"
     sqlite = url.startswith("sqlite")
     engine = make_engine(url)
