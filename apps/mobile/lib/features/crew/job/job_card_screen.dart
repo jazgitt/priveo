@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/ui/media_image.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import '../crew_providers.dart';
 import '../crew_text.dart';
 import '../crew_ui.dart';
@@ -45,7 +47,10 @@ class JobCardScreen extends ConsumerWidget {
                 label: d.job.status == JobStatus.scheduled
                     ? CrewText.startJob
                     : CrewText.continueJob,
-                onPressed: () => _open(context, ref, d),
+                onPressed: d.job.locked &&
+                        ref.watch(featureOnProvider(FeatureKeys.sequentialQueue))
+                    ? null
+                    : () => _open(context, ref, d),
               ),
               const SizedBox(height: 12),
               OutlinedButton(

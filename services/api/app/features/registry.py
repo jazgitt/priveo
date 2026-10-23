@@ -53,6 +53,9 @@ FLAGS: tuple[FlagDef, ...] = (
     # ---- crew ----
     FlagDef("crew.manager_screens", "Manager screens",
             "Schedule, attendance and hours for crew managers.", "Crew", CREW),
+    FlagDef("crew.sequential_queue", "Sequential queue",
+            "Crew must finish jobs in queue order; later jobs stay locked (S-13, C-01).",
+            "Crew", CREW),
     FlagDef("crew.notifications", "Crew notifications", "The notifications screen.",
             "Crew", CREW),
     # ---- both ----

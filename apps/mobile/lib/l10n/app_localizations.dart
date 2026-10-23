@@ -700,6 +700,24 @@ abstract class AppLocalizations {
   /// **'Left'**
   String get crewLeft;
 
+  /// No description provided for @crewFinishFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish {vehicle} first'**
+  String crewFinishFirst(String vehicle);
+
+  /// No description provided for @crewSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get crewSave;
+
+  /// No description provided for @crewSaveNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & Next'**
+  String get crewSaveNext;
+
   /// No description provided for @adminAlerts.
   ///
   /// In en, this message translates to:

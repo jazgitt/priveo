@@ -23,6 +23,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { isOpen, JobFlags, JobLabel, StatusSummary } from "./Board";
 import { CardBoard } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
+import { QueuePanel } from "./QueuePanel";
 import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
@@ -50,6 +51,7 @@ const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) =>
   { id: "needs", label: count("Needs scheduling", n.needs) },
   { id: "skipped", label: count("Skipped and paused", n.skipped) },
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
+  { id: "queue", label: "Crew queue" },
   { id: "improve", label: "Draft improvements" },
 ] as const;
 
@@ -406,6 +408,9 @@ export function SchedulePage() {
           ? <EmptyState title="Choose a site">Pick a site at the top left to see its skipped and paused jobs.</EmptyState>
           : <SkippedJobs key={`${societyId}-${date}`} societyId={societyId} date={date} />)}
         {tab === "cutoff" && <CutoffRequests date={date} onDate={chooseDate} refresh={refresh} />}
+        {tab === "queue" && (board
+          ? <QueuePanel key={date} crew={board.crew} jobs={dayJobs} date={date} refresh={refresh} />
+          : <EmptyState title="No schedule for this day">Run the scheduler for this day to make a draft first.</EmptyState>)}
         {tab === "improve" && <DraftImprovements key={date} board={board} date={date} refresh={refresh} />}
       </Tabs>
 

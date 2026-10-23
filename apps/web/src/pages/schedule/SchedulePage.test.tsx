@@ -522,7 +522,7 @@ describe("schedule tabs and unavailable crew time", () => {
     await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Run", "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Draft improvements"]));
+      "Run", "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements"]));
     expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Run" }));

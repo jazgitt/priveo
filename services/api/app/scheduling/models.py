@@ -12,6 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     event,
+    false,
     select,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -141,6 +142,11 @@ class Job(Base):
     late: Mapped[bool] = mapped_column(Boolean, default=False)
     # Why it is Unscheduled (ADM-SCH-08).
     note: Mapped[str] = mapped_column(Text, default="")
+    # Position in the crew member's day (1, 2, ...), the order they must work
+    # in (S-13, C-01). Null while the job has no crew member.
+    sequence: Mapped[int | None] = mapped_column(Integer)
+    # The admin released this job from the queue lock (C-04, B-06).
+    queue_unlocked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Immutable issued definition. Legacy backfill is explicitly identified.
     checklist_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 

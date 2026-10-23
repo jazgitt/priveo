@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_failure.dart';
 import '../../core/ui/theme.dart';
 import '../../core/ui/widgets.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
 import '../../core/util/format.dart';
+import '../../l10n/app_localizations.dart';
 import 'crew_text.dart';
 import 'data/crew_models.dart';
 
@@ -39,7 +42,12 @@ class JobCardTile extends StatelessWidget {
     required this.onTap,
     this.showDate = false,
     this.showAssignee = false,
+    this.lockedBy,
   });
+
+  /// When set, the card is locked behind the job of this vehicle (S-13): it
+  /// cannot be opened and says "Finish (vehicle) first".
+  final String? lockedBy;
 
   final CrewJobCard card;
   final VoidCallback onTap;
@@ -49,6 +57,7 @@ class JobCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final locked = lockedBy != null;
     final lines = <String>[
       [card.parking, card.service].where((p) => p.isNotEmpty).join(' · '),
       if (card.vehicle.name.isNotEmpty && card.vehicle.registration.isNotEmpty)
@@ -57,12 +66,14 @@ class JobCardTile extends StatelessWidget {
       if (card.finishBy != null) CrewText.finishBy(formatClock(card.finishBy!)),
       if (showDate) formatDate(card.date),
       if (showAssignee && card.assignedTo != null) card.assignedTo!.name,
+      if (locked) AppLocalizations.of(context).crewFinishFirst(lockedBy!),
     ];
     return Semantics(
       button: true,
+      enabled: !locked,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        onTap: locked ? null : onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),
           child: SectionCard(
@@ -78,7 +89,12 @@ class JobCardTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                StatusChip(card.status, tone: toneForJob(card.status)),
+                if (locked)
+                  Icon(Symbols.lock_rounded,
+                      key: const ValueKey('queue-lock'),
+                      color: Theme.of(context).disabledColor)
+                else
+                  StatusChip(card.status, tone: toneForJob(card.status)),
               ],
             ),
           ),

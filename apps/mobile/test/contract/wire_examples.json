@@ -337,7 +337,9 @@
     ],
     "delivered_services": [
       "wire-value"
-    ]
+    ],
+    "sequence": 1,
+    "queue_unlocked": true
   },
   "AdminPaymentIn": {
     "vehicle_id": "wire-value",
@@ -397,6 +399,10 @@
   },
   "AppConfig": {
     "min_app_version": "wire-value"
+  },
+  "AppFeaturesOut": {
+    "version": "wire-value",
+    "flags": {}
   },
   "AuthSupportContact": {
     "helpline": "wire-value",
@@ -497,7 +503,9 @@
         ],
         "delivered_services": [
           "wire-value"
-        ]
+        ],
+        "sequence": 1,
+        "queue_unlocked": true
       }
     ]
   },
@@ -853,7 +861,10 @@
         "status": "wire-value",
         "start_time": "wire-value",
         "end_time": "wire-value",
-        "finish_by": "wire-value"
+        "finish_by": "wire-value",
+        "sequence": 1,
+        "locked": true,
+        "current": true
       }
     ]
   },
@@ -883,7 +894,10 @@
     "status": "wire-value",
     "start_time": "wire-value",
     "end_time": "wire-value",
-    "finish_by": "wire-value"
+    "finish_by": "wire-value",
+    "sequence": 1,
+    "locked": true,
+    "current": true
   },
   "CrewDayWindow": {
     "start": 1,
@@ -1017,7 +1031,10 @@
     "assigned_to": {
       "id": "wire-value",
       "name": "wire-value"
-    }
+    },
+    "sequence": 1,
+    "locked": true,
+    "current": true
   },
   "CrewManagerAttendance": {
     "date": "2026-10-20",
@@ -1729,6 +1746,17 @@
   "EmailCorrection": {
     "email": "wire-value"
   },
+  "FeatureOut": {
+    "key": "wire-value",
+    "label": "wire-value",
+    "description": "wire-value",
+    "group": "wire-value",
+    "audience": "wire-value",
+    "enabled": true
+  },
+  "FeatureUpdate": {
+    "enabled": true
+  },
   "FeedbackAdmin": {
     "id": "11111111-1111-1111-1111-111111111111",
     "category": "wire-value",
@@ -1866,7 +1894,10 @@
       "assigned_to": {
         "id": "wire-value",
         "name": "wire-value"
-      }
+      },
+      "sequence": 1,
+      "locked": true,
+      "current": true
     },
     "checklist": [
       {
@@ -1993,7 +2024,10 @@
             "assigned_to": {
               "id": "wire-value",
               "name": "wire-value"
-            }
+            },
+            "sequence": 1,
+            "locked": true,
+            "current": true
           }
         ]
       }
@@ -2030,7 +2064,10 @@
         "assigned_to": {
           "id": "wire-value",
           "name": "wire-value"
-        }
+        },
+        "sequence": 1,
+        "locked": true,
+        "current": true
       }
     ]
   },
@@ -2080,7 +2117,9 @@
         ],
         "delivered_services": [
           "wire-value"
-        ]
+        ],
+        "sequence": 1,
+        "queue_unlocked": true
       }
     ],
     "pending_addons": [
@@ -2375,6 +2414,23 @@
     "url": "wire-value",
     "stage": "wire-value",
     "taken_at": "2026-10-20T07:30:00+00:00"
+  },
+  "QueueChange": {
+    "message": "wire-value",
+    "ordered_job_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
+  },
+  "QueueReorder": {
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "date": "2026-10-20",
+    "ordered_job_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ],
+    "reason": "wire-value"
+  },
+  "QueueUnlock": {
+    "reason": "wire-value"
   },
   "QuickAction": {
     "key": "wire-value",
@@ -2696,7 +2752,10 @@
         "assigned_to": {
           "id": "wire-value",
           "name": "wire-value"
-        }
+        },
+        "sequence": 1,
+        "locked": true,
+        "current": true
       }
     ]
   },
@@ -2984,7 +3043,10 @@
         "assigned_to": {
           "id": "wire-value",
           "name": "wire-value"
-        }
+        },
+        "sequence": 1,
+        "locked": true,
+        "current": true
       }
     ]
   },

@@ -1021,6 +1021,8 @@ class AdminJob {
     this.visitOutcome,
     this.plannedServices,
     this.deliveredServices,
+    required this.sequence,
+    this.queueUnlocked,
   });
 
   final String id;
@@ -1050,6 +1052,8 @@ class AdminJob {
   final String? visitOutcome;
   final List<String>? plannedServices;
   final List<String>? deliveredServices;
+  final int? sequence;
+  final bool? queueUnlocked;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1079,6 +1083,8 @@ class AdminJob {
         visitOutcome: j['visit_outcome'] == null ? null : j['visit_outcome'] as String,
         plannedServices: j['planned_services'] == null ? null : [for (final x in j['planned_services'] as List) x as String],
         deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
+        sequence: j['sequence'] == null ? null : j['sequence'] as int,
+        queueUnlocked: j['queue_unlocked'] == null ? null : j['queue_unlocked'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1109,6 +1115,8 @@ class AdminJob {
         'visit_outcome': visitOutcome,
         'planned_services': plannedServices == null ? null : [for (final x in plannedServices!) x],
         'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
+        'sequence': sequence,
+        'queue_unlocked': queueUnlocked,
       };
 }
 
@@ -2205,6 +2213,9 @@ class CrewDayJob {
     required this.startTime,
     required this.endTime,
     required this.finishBy,
+    required this.sequence,
+    this.locked,
+    this.current,
   });
 
   final String id;
@@ -2222,6 +2233,9 @@ class CrewDayJob {
   final String? startTime;
   final String? endTime;
   final String? finishBy;
+  final int? sequence;
+  final bool? locked;
+  final bool? current;
 
   factory CrewDayJob.fromJson(Map<String, dynamic> j) => CrewDayJob(
         id: j['id'] as String,
@@ -2239,6 +2253,9 @@ class CrewDayJob {
         startTime: j['start_time'] == null ? null : j['start_time'] as String,
         endTime: j['end_time'] == null ? null : j['end_time'] as String,
         finishBy: j['finish_by'] == null ? null : j['finish_by'] as String,
+        sequence: j['sequence'] == null ? null : j['sequence'] as int,
+        locked: j['locked'] == null ? null : j['locked'] as bool,
+        current: j['current'] == null ? null : j['current'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -2257,6 +2274,9 @@ class CrewDayJob {
         'start_time': startTime,
         'end_time': endTime,
         'finish_by': finishBy,
+        'sequence': sequence,
+        'locked': locked,
+        'current': current,
       };
 }
 
@@ -2475,6 +2495,9 @@ class CrewJobCard {
     required this.checklistTotal,
     required this.checklistDone,
     required this.assignedTo,
+    required this.sequence,
+    this.locked,
+    this.current,
   });
 
   final String id;
@@ -2494,6 +2517,9 @@ class CrewJobCard {
   final int checklistTotal;
   final int checklistDone;
   final CrewRef? assignedTo;
+  final int? sequence;
+  final bool? locked;
+  final bool? current;
 
   factory CrewJobCard.fromJson(Map<String, dynamic> j) => CrewJobCard(
         id: j['id'] as String,
@@ -2513,6 +2539,9 @@ class CrewJobCard {
         checklistTotal: j['checklist_total'] as int,
         checklistDone: j['checklist_done'] as int,
         assignedTo: j['assigned_to'] == null ? null : CrewRef.fromJson(j['assigned_to'] as Map<String, dynamic>),
+        sequence: j['sequence'] == null ? null : j['sequence'] as int,
+        locked: j['locked'] == null ? null : j['locked'] as bool,
+        current: j['current'] == null ? null : j['current'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -2533,6 +2562,9 @@ class CrewJobCard {
         'checklist_total': checklistTotal,
         'checklist_done': checklistDone,
         'assigned_to': assignedTo?.toJson(),
+        'sequence': sequence,
+        'locked': locked,
+        'current': current,
       };
 }
 
@@ -6052,6 +6084,70 @@ class ProofOut {
       };
 }
 
+class QueueChange {
+  const QueueChange({
+    required this.message,
+    required this.orderedJobIds,
+  });
+
+  final String message;
+  final List<String> orderedJobIds;
+
+  factory QueueChange.fromJson(Map<String, dynamic> j) => QueueChange(
+        message: j['message'] as String,
+        orderedJobIds: [for (final x in j['ordered_job_ids'] as List) x as String],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'message': message,
+        'ordered_job_ids': [for (final x in orderedJobIds) x],
+      };
+}
+
+class QueueReorder {
+  const QueueReorder({
+    required this.crewId,
+    required this.date,
+    required this.orderedJobIds,
+    required this.reason,
+  });
+
+  final String crewId;
+  final DateTime date;
+  final List<String> orderedJobIds;
+  final String reason;
+
+  factory QueueReorder.fromJson(Map<String, dynamic> j) => QueueReorder(
+        crewId: j['crew_id'] as String,
+        date: DateTime.parse(j['date'] as String),
+        orderedJobIds: [for (final x in j['ordered_job_ids'] as List) x as String],
+        reason: j['reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'date': _date(date),
+        'ordered_job_ids': [for (final x in orderedJobIds) x],
+        'reason': reason,
+      };
+}
+
+class QueueUnlock {
+  const QueueUnlock({
+    required this.reason,
+  });
+
+  final String reason;
+
+  factory QueueUnlock.fromJson(Map<String, dynamic> j) => QueueUnlock(
+        reason: j['reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'reason': reason,
+      };
+}
+
 class QuickAction {
   const QuickAction({
     required this.key,
@@ -8359,6 +8455,16 @@ class PriveoApi {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/run', data: body.toJson());
       return RunResponse.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Reorder Queue
+  Future<QueueChange> reorderQueue(QueueReorder body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/queue/reorder', data: body.toJson());
+      return QueueChange.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

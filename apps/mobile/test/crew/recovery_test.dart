@@ -66,7 +66,7 @@ void main(){
     backend.offline=true;await t.tap(find.text('Item a'));await t.pumpAndSettle();expect(find.byType(SnackBar),findsOneWidget);
     backend.offline=false;await t.tap(find.text('Item a'));await t.pumpAndSettle();await t.tap(find.text('Item b'));await t.pumpAndSettle();
     await t.tap(find.text(CrewText.takePhoto));await t.pumpAndSettle();backend.offline=true;
-    await t.tap(find.text(CrewText.markComplete));await t.pumpAndSettle();expect(find.byType(PerformServiceScreen),findsOneWidget);expect(find.byType(SnackBar),findsOneWidget);
+    await t.tap(find.text('Save'));await t.pumpAndSettle();expect(find.byType(PerformServiceScreen),findsOneWidget);expect(find.byType(SnackBar),findsOneWidget);
   });
   testWidgets('manager could-not-complete attaches proof and retains the form on failed submit',(t)async{
     final backend=RecoveryBackend();final capture=FakeCapture();

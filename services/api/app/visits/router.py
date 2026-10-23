@@ -9,6 +9,7 @@ from app.identity.service import User
 from app.platform.clock import today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
+from app.scheduling import queue
 from app.visits import manager as manager_ops
 from app.visits import manager_schemas as ms
 from app.visits import schemas as s
@@ -41,6 +42,7 @@ def job(job_id: str, user: User = Depends(require_role("crew")),
 def start(job_id: str, user: User = Depends(require_role("crew")),
           db: Session = Depends(get_db)):
     j = service.visible_job(db, user.id, job_id)
+    queue.require_unlocked(db, j)  # S-13: the crew's own routes only
     service.start_job(db, j)
     return service.job_detail(db, j)
 
@@ -49,6 +51,7 @@ def start(job_id: str, user: User = Depends(require_role("crew")),
 def tick(job_id: str, item_id: str, body: s.ChecklistTick,
          user: User = Depends(require_role("crew")), db: Session = Depends(get_db)):
     j = service.visible_job(db, user.id, job_id)
+    queue.require_unlocked(db, j)  # S-13: the crew's own routes only
     service.set_checked(db, j, item_id, body.checked, user.id)
     return service.job_detail(db, j)
 
@@ -57,6 +60,7 @@ def tick(job_id: str, item_id: str, body: s.ChecklistTick,
 def complete(job_id: str, user: User = Depends(require_role("crew")),
              db: Session = Depends(get_db)):
     j = service.visible_job(db, user.id, job_id)
+    queue.require_unlocked(db, j)  # S-13: the crew's own routes only
     service.complete_job(db, j)
     return service.job_detail(db, j)
 
@@ -66,6 +70,7 @@ def could_not_complete(job_id: str, body: s.CouldNotComplete,
                        user: User = Depends(require_role("crew")),
                        db: Session = Depends(get_db)):
     j = service.visible_job(db, user.id, job_id)
+    queue.require_unlocked(db, j)  # S-13: the crew's own routes only
     service.could_not_complete(db, j, body, user.id)
     return service.job_detail(db, j)
 

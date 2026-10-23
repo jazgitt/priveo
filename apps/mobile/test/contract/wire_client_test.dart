@@ -292,6 +292,14 @@ void main() {
     http.status=409;
     await expectLater(api.run(wire.RunRequest.fromJson((http.examples['RunRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('POST /v1/admin/scheduling/queue/reorder uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.reorderQueue(wire.QueueReorder.fromJson((http.examples['QueueReorder'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/scheduling/queue/reorder'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['QueueReorder']);
+    http.status=409;
+    await expectLater(api.reorderQueue(wire.QueueReorder.fromJson((http.examples['QueueReorder'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
   test('POST /v1/admin/scheduling/freeze-due uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
     await api.freezeDue();

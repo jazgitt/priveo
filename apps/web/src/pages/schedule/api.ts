@@ -75,6 +75,9 @@ export interface AdminJob {
   visit_outcome?: string;
   planned_services?: string[];
   delivered_services?: string[];
+  /** Place in the crew member's day, and whether the admin unlocked it (S-13, C-04). */
+  sequence?: number | null;
+  queue_unlocked?: boolean;
 }
 
 export interface Board {
