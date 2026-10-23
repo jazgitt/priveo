@@ -75,6 +75,16 @@ def seed_defaults(db: Session) -> dict[str, int]:
         db.add(AddonCatalogueItem(code="ADN-0001", **defaults.ADDON))
         added["addons"] += 1
 
+    # S-08: priced and activated by the admin later; never touched once present.
+    from app.directory.service import next_code
+    for extra in defaults.EXTRA_ADDONS:
+        if db.scalar(select(AddonCatalogueItem).where(
+                func.lower(AddonCatalogueItem.name) == extra["name"].lower())) is None:
+            db.add(AddonCatalogueItem(
+                code=next_code(db, AddonCatalogueItem, "ADN"), **extra))
+            db.flush()
+            added["addons"] += 1
+
     have = {(e.make.lower(), e.model.lower(), e.variant.lower())
             for e in db.scalars(select(VehicleCatalogueEntry))}
     for make, model, category in defaults.CATALOGUE_MODELS:

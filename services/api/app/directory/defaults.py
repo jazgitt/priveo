@@ -81,6 +81,34 @@ ADDON = {
     ),
 }
 
+# S-08: one-time paid services that do not change the subscription. The owner
+# has NOT decided their prices, so they are seeded INACTIVE at price 0 (a
+# placeholder): customers cannot buy them until the admin sets a price and
+# activates them in Site Setup. Each maps to an existing service, so its job
+# gets that service and duration.
+EXTRA_ADDONS = (
+    {
+        "name": "Extra interior cleaning", "service": "Cleaning-Internal",
+        "price_rupees": 0, "list_price_rupees": None, "duration_minutes": 20,
+        "active": False, "sort_order": 10,
+        "description": (
+            "An extra interior clean, on top of your plan.\n"
+            "Interior vacuum and wipe-down\n"
+            "Photo proof of the finished work"
+        ),
+    },
+    {
+        "name": "Special exterior cleaning", "service": "Cleaning-External",
+        "price_rupees": 0, "list_price_rupees": None, "duration_minutes": 20,
+        "active": False, "sort_order": 20,
+        "description": (
+            "A special exterior clean, on top of your plan.\n"
+            "Exterior wash and wipe-down\n"
+            "Photo proof of the finished work"
+        ),
+    },
+)
+
 # DERIVED starter list for ADM-REF-03 so the onboarding dropdowns are not
 # empty. (make, model, category). Variants are generic placeholders.
 CATALOGUE_MODELS = (
