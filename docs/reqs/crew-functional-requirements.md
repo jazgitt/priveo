@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Crew App Functional Requirements
 
-**Status:** Draft v0.7: wrong passwords block crew and admin logins for a growing time instead of locking them (owner decision of 18 Oct 2026); the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.8 (daily queue, mandatory remark, Partially Completed, Manager flags, owner decisions of 23 Oct 2026; see owner-decisions-2026-10-23.md), v0.7: wrong passwords block crew and admin logins for a growing time instead of locking them (owner decision of 18 Oct 2026); the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 3 (Crew), MVP. Customer requirements are in `customer-app-functional-requirements.md`. Admin requirements are in `admin-functional-requirements.md`.
 **Platforms:** The same Flutter mobile app as the customer, with screens chosen by the user's role. Admins use a web portal, with a limited set of quick actions in the app.
 **Language:** English only
@@ -83,13 +83,17 @@ Rules followed:
 | CRW-SCH-04 | The card shows the time the job must be finished by: the customer's service cutoff time, or for a Deep Spa add-on the finish-by time the customer proposed. The customer sees the assigned crew member and time once the visit is assigned (CAL-10 in the customer file), but never the crew's contact details. The only crew notes the customer sees are those recorded with a job not done (CRW-CNC-06). | Owner |
 | CRW-SCH-05 | The service shown is Cleaning-External for every visit. On the customer's interior care day there is also a separate job for Cleaning-Internal. A Deep Spa job appears when a customer has bought it, as an add-on or as a standalone service, and it has been scheduled (section 9a of the customer file). Each job has its own job card, checklist, proof and completion, and can be done by a different crew member. The scheduler plans these jobs with their own durations: 20 minutes for Cleaning-Internal and 2 hours for Deep Spa (ADM-SVS-09, ADM-SVS-10), so the card shows the assigned start and end time for each. | Owner |
 | CRW-SCH-06 | The crew member can view the cards day by day, or all of the jobs scheduled so far. | Owner |
-| CRW-SCH-07 | Job statuses: **Scheduled**, **In progress** (started and not finished), **Completed**, **Could not complete**. | Derived |
+| CRW-SCH-07 | Job statuses: **Scheduled**, **In progress** (started and not finished), **Completed**, **Partially Completed** (a visit whose Exterior is done and Interior is not, CRW-CNC-08), **Could not complete** (the Not Completed outcome). | Derived |
 | CRW-SCH-08 | When a customer skips, pauses or cancels an add-on after the schedule is frozen, the visit is removed from the crew member's cards automatically (ADM-SCH-21). | Derived |
 | CRW-SCH-09 | When the admin unfreezes, changes and freezes the schedule again, or the system assigns a late visit automatically (ADM-SCH-27), the crew member's cards update to match. | Derived |
 | CRW-SCH-10 | A Member sees only their own jobs. A Trainee is paired with a Member (ADM-CRW-19) and sees the same jobs as that Member. A Trainee can do everything a Member can: check the checklist, upload proof, mark a job complete or Could not complete. A Trainee counts as zero capacity and is never assigned a job by the scheduler (ADM-CRW-14). | Owner |
 | CRW-SCH-12 | A job is one job, whoever does it. When the Member or the Trainee marks it complete, it is complete for both, and each sees the other's checklist ticks and uploads. If the paired Member has an exception for the day (sick, leave, late start), the Trainee has no jobs until the Member does. | Owner |
 | CRW-SCH-13 | No crew member sees a customer's name or mobile number on a job card or anywhere else in the crew app. Cards show the vehicle, society and parking spot only. | Owner |
 | CRW-SCH-11 | Jobs from a schedule that is still a draft are not shown. | Derived |
+| CRW-SCH-14 | Each crew member has an ordered daily queue of jobs. The default order is the assigned slot time. Only the current job can be started. Jobs after it show as locked. | Owner and Derived |
+| CRW-SCH-15 | The next job unlocks when the current job is Completed, Partially Completed, or Not Completed with a reason and a remark. A crew member cannot skip a job to reach the next one. | Owner |
+| CRW-SCH-16 | The admin can reorder the queue or unlock a job with a mandatory reason (ADM-SCH-38). The change is audited and the crew member gets a push notification (CRW-NOT-06). | Owner |
+| CRW-SCH-17 | The job card shows the vehicle's current parking slot. When the admin has set a temporary or permanent parking change, the card shows the slot valid for that day (ADM-CUS-27). | Draft |
 
 ---
 
@@ -100,11 +104,12 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | ID | Requirement | Status |
 |---|---|---|
 | CRW-MGR-01 | A Manager can see the whole society's schedule, read-only: every crew member's job cards and job statuses, by day and by crew member. | Owner |
-| CRW-MGR-02 | A Manager can mark a job assigned to another crew member as **Could not complete** (with a reason, CRW-CNC-02) or as **skipped**. A job marked skipped by a Manager is a visit skipped by operations: the customer gets the "Service skipped" notification if it is switched on, and the plan is extended by one day for a Cleaning-External job only (ADM-OPS-03). | Owner and Derived |
+| CRW-MGR-02 | A Manager can mark a job assigned to another crew member as **Could not complete** (with a reason and a remark, CRW-CNC-02). A Manager can mark it **skipped** only when the feature flag `crew.manager_skip` is on. It defaults to off, and only the admin can skip (ADM-OPS-04). A job skipped by a Manager is a visit skipped by operations: the customer gets the "Service skipped" notification if it is switched on, and the plan is not extended (ADM-OPS-03). | Owner and Derived |
 | CRW-MGR-03 | A Manager can reassign a job to another Member or Manager of the same society who is working that day. The admin's secret code is not needed. The job moves to the other crew member's cards, a Trainee paired with either follows their Member, and both crew members get a push notification. The reassignment is recorded. | Owner and Derived |
 | CRW-MGR-04 | A Manager can see crew attendance for their society and can add, edit and remove exceptions (Sick, Leave, Late start) for its crew members (ADM-CRW-08). Capacity is recalculated at once (ADM-CRW-11), and the affected visits go to the Needs scheduling list (ADM-SCH-28) or are auto-assigned (ADM-SCH-27). | Owner and Derived |
 | CRW-MGR-05 | A Manager can edit the working hours of crew members in their society. The change applies to dates from then on and capacity is recalculated at once (ADM-CRW-05, ADM-CRW-11). A Manager cannot change roles, societies or passwords, cannot run the scheduler, and cannot freeze or unfreeze a schedule. Those stay with the admin. | Owner |
 | CRW-MGR-06 | A Manager does not see a customer's name or mobile number (CRW-SCH-13). | Owner |
+| CRW-MGR-07 | A Manager can decide to reschedule the missed Interior job of a Partially Completed visit in their society (CRW-CNC-08, ADM-CNC-10). This is allowed only when the feature flag `crew.manager_reschedule` is on. It defaults to on. | Owner |
 
 ---
 
@@ -122,7 +127,7 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | CRW-SVC-08 | "Mark complete" works only when every checklist item is checked and the minimum photos and videos have been uploaded. Until then it is disabled and the screen shows what is missing. | Owner |
 | CRW-SVC-09 | On "Mark complete" the finish time is saved and the job becomes Completed. When all the jobs of the visit are Completed, the visit becomes Completed: the customer then gets a "Service completed" push notification if they have it switched on (NOTIF-02 in the customer file), and the proof appears in their app. An add-on job is separate from the day's visit (ADD-11 in the customer file): the same notification is sent when that job is Completed. | Owner and Derived |
 | CRW-SVC-10 | If the connection is poor, photos and videos wait on the phone and upload when the connection returns, without being lost. The job is not complete for the customer until everything has uploaded. | Derived |
-| CRW-SVC-11 | A crew member can start a job any time after it appears and can leave and return to it before marking it complete. Their progress is kept. | Derived |
+| CRW-SVC-11 | A crew member can start only the current job of their queue (CRW-SCH-14) and can leave and return to it before marking it complete. Their progress is kept. | Derived |
 | CRW-SVC-12 | After a job is marked Completed the crew member cannot change it. Corrections go through the admin. | Derived |
 
 ---
@@ -132,11 +137,13 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | ID | Requirement | Status |
 |---|---|---|
 | CRW-CNC-01 | A crew member who cannot do a job can mark it **Could not complete**. | Owner |
-| CRW-CNC-02 | They choose a reason from a list and can add a note and a photo. The reason is required, the note and photo are optional. | Owner and Derived |
+| CRW-CNC-02 | They choose a reason from a list and can add a note and a photo. The reason and the remark (the note) are both required. The photo is optional (ADM-CNC-07). | Owner and Derived |
 | CRW-CNC-03 | The reason list is managed by the admin (ADM-CNC-01). A starting list is in the admin file. | Derived |
 | CRW-CNC-04 | The job status becomes **Could not complete** and the job is **Missed** in the system. The other jobs of the visit are not affected. The admin is told by push notification (ADM-SCH-24). | Derived |
-| CRW-CNC-05 | The admin decides what happens next (ADM-CNC-03). For a Cleaning-External job nothing is needed, because the next day's regular job covers it, unless the admin skips it by operations (the plan is extended by one day). For a Cleaning-Internal or Deep Spa job the admin schedules it again for the next day only, or skips it. A job scheduled again appears on the crew member's cards for the next day, assigned automatically (ADM-SCH-26). | Owner and Derived |
+| CRW-CNC-05 | The admin decides what happens next (ADM-CNC-03). For a Cleaning-External job nothing is needed, because the next day's regular job covers it, unless the admin skips it by operations (the plan is not extended, ADM-OPS-03). For a Cleaning-Internal or Deep Spa job the admin schedules it again for the next day only, or skips it. A job scheduled again appears on the crew member's cards for the next day, assigned automatically (ADM-SCH-26). | Owner and Derived |
 | CRW-CNC-06 | The customer sees "Missed", then "Rescheduled on dd-Mon-yy" or "Covered on dd-Mon-yy", and no push notification is sent (CAL-09 in the customer file). On the service details the customer also sees the reason, the free-text note and the photo the crew recorded (SVC-16 in the customer file; owner decision of 17 Oct 2026). | Owner and Derived |
+| CRW-CNC-07 | The remark is mandatory for every Not Completed outcome, whoever records it (ADM-CNC-07). The reasons include those added on 23 Oct 2026 (ADM-CNC-08). | Owner |
+| CRW-CNC-08 | When a visit is planned as Exterior + Interior, the Exterior is done and the Interior cannot be done (for example keys or customer unavailable), the crew member marks the Interior job Not Completed with a reason and a remark. The visit outcome is **Partially Completed**, with planned and delivered services kept (ADM-CNC-09). Rescheduling the missed Interior job is decided by the admin or a Manager (CRW-MGR-07). | Owner |
 
 ---
 
@@ -157,6 +164,7 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 | CRW-NOT-05 | A crew member (and a Trainee paired with them) gets a push notification when a Manager reassigns a job to or from them (CRW-MGR-03). | Owner |
 | CRW-NOT-04 | The crew member receives a push notification when a job is assigned to them automatically after a freeze (ADM-SCH-27). The job appears on their cards. | Owner |
 | CRW-NOT-03 | Crew cannot switch these notifications off. There are no other crew notifications in MVP. | Owner |
+| CRW-NOT-06 | The crew member receives a push notification when the admin reorders their queue or unlocks a job (CRW-SCH-16). | Owner |
 
 
 ---
@@ -170,10 +178,12 @@ A Manager is a crew member with the Manager role. Managers count in full capacit
 5. Each service has a checklist set by the admin, and only the admin can edit it.
 6. A job is complete only when every checklist item is checked and the admin's minimum photos and videos are uploaded.
 7. Photo and video limits follow rule 17 in the customer file.
-8. A job that cannot be done is marked Could not complete with a reason. The job is Missed and the admin decides the outcome.
+8. A job that cannot be done is marked Could not complete with a reason and a remark. The job is Missed and the admin decides the outcome.
 9. A completed job cannot be changed by the crew.
 10. A crew member belongs to one society and is deactivated by the admin when they leave.
 11. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26 (rule 28 in the customer file).
+12. Each crew member has an ordered daily queue. Only the current job can be started, and the next unlocks when the current job is Completed, Partially Completed, or Not Completed with a reason and a remark. Only the admin can reorder or unlock, with a mandatory reason.
+13. The remark is mandatory for every Not Completed outcome. Crew cannot skip a job. A Manager can skip only when `crew.manager_skip` is on (default off) and can reschedule a missed Interior job only when `crew.manager_reschedule` is on (default on).
 
 ---
 
@@ -186,7 +196,8 @@ For your reference when you write the data model. This is a reading of the requi
 - **Job card**: a view of a scheduled visit for one crew member (visit, vehicle, parking, assigned time, service, status).
 - **Checklist progress**: visit, checklist item, checked, time checked.
 - **Media**: visit, kind (photo, video), stage (Before, During, After), time, uploaded by.
-- **Could-not-complete record**: visit, reason, note, photo, crew member, time, admin outcome and handled by.
+- **Could-not-complete record**: visit, reason, remark (mandatory), photo (optional), crew member, time, admin outcome and handled by.
+- **Queue entry**: crew member, date, position, locked or unlocked, as in the admin file.
 - **Could-not-complete reason**: name, active flag. Managed by the admin.
 
 ---
@@ -202,6 +213,8 @@ For your reference when you write the data model. This is a reading of the requi
 | SVC-03, SVC-04, SVC-05, SVC-06: checklist, photos and video in Service Details | Crew capture and upload | CRW-SVC |
 | NOTIF-02 and NOTIF-04: "Service completed" and "Service skipped" notifications | Mark complete, Could not complete | CRW-SVC-09, CRW-CNC |
 | SVC-02: one crew card for each job in Service Details | The crew member assigned to each job | CRW-SCH |
+| ADM-SCH-38: queue reorder or unlock by the admin | Ordered daily queue and notification | CRW-SCH-14 to CRW-SCH-16, CRW-NOT-06 |
+| ADM-CNC-09, ADM-CNC-10: Partially Completed and rescheduling | Mark Interior Not Completed, Manager decision | CRW-CNC-08, CRW-MGR-07 |
 
 ---
 

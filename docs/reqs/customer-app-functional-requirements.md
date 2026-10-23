@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Customer App Functional Requirements
 
-**Status:** Draft v0.28 (usage-data notice at sign-in and a usage-data switch in Settings, 19 Oct 2026; several add-ons can be sold, 18 Oct 2026; a customer can skip or pause only dates the current plan covers, 18 Oct 2026; every history row opens its details, imported records in the same newest-first list, and the crew's reason, note and photo for a job not done, 17 Oct 2026; vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.29 (a skip by operations no longer extends the plan, Partially Completed, add-on payment rule, service-history states, owner decisions of 23 Oct 2026; see owner-decisions-2026-10-23.md), v0.28 (usage-data notice at sign-in and a usage-data switch in Settings, 19 Oct 2026; several add-ons can be sold, 18 Oct 2026; a customer can skip or pause only dates the current plan covers, 18 Oct 2026; every history row opens its details, imported records in the same newest-first list, and the crew's reason, note and photo for a job not done, 17 Oct 2026; vehicle header on quick-action screens; no price on Home; Deep Spa and My Subscription landing pages; calendar greys only days without a subscription; Expires on; Renew subscription and the payment method choice; next service stays until the crew closes it; calendar plan-duration line; calendar limited to the billing cycle; complaint confirmation has no 4-hour promise; skip screen changes; refresh on return only after 5 minutes away; one combined vehicle card; no timed refresh, 16 Oct 2026; feedback tab is an icon only; 30-minute code): wireframe-only rows re-statused to Derived; prototype plus owner decisions of 9 Oct 2026; customers sign in by email; Deep Spa is an add-on for subscribers and a standalone service for others (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 1 (Customer), MVP. Admin requirements are in `admin-functional-requirements.md`. Crew requirements are in `crew-functional-requirements.md`.
 **Platforms:** iOS and Android (Flutter)
 **Language:** English only
@@ -187,6 +187,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | CAL-09 | A job the crew could not complete is **Missed** (CRW-CNC-04 in the crew file). The calendar shows a Missed marker for that date. The day card shows "Missed", and then: for a Cleaning-External job, "Missed. Covered on dd-Mon-yy" (the next day's regular visit); for a Cleaning-Internal or Deep Spa job the admin has scheduled again, "Missed. Rescheduled on dd-Mon-yy". If the admin skips it instead, it shows as Skipped. No push notification is sent for Missed. | Owner and Derived |
 | CAL-10 | When the admin has assigned a visit to a crew member (the schedule is frozen, or a late visit has been auto-assigned), the Next service card and the day card for that date show the crew member's name and the assigned time. A visit still waiting for a crew member shows as Scheduled with only the cutoff time. If the assignment changes, the new crew member and time are shown. Crew contact details are never shown. | Owner |
 | CAL-08 | On a scheduled future date, the day card has a "Change cutoff time" action that sets the cutoff time for that date. It is available until 9 PM the previous day (SCHED-01). | Owner |
+| CAL-11 | A visit that was Partially Completed (Exterior done, Interior not) shows a Partially Completed marker and day card, with what was done and what was not, and the reason and remark as in SVC-16. | Draft |
 
 ---
 
@@ -217,6 +218,7 @@ Home shows the currently selected vehicle. Everything on this screen, and on the
 | HIST-01 | List of past services, newest first: date, service type, finish time and the rating given (or none). Each row opens Service Details, whatever the visit's status. The details page starts with the vehicle header, then the service, status, photos, videos, checklist and any crew note (SVC-16). | Defined and Owner |
 | HIST-02 | The list shows one month at a time, starting with the current month. The user can move to earlier months, and long months load in pages. A footer states the month and the member-since date. | Owner |
 | HIST-03 | Records imported from before the Priveo app appear in the same list, sorted with the visits by date, newest first, and tagged "Imported". Each opens a page with the vehicle header, date, service, payment and notes, and says that completion and photos were not recorded. Imported records without a date are listed under "Earlier records, date unknown" on the oldest month. | Owner and Derived |
+| HIST-04 | Each service in the history shows one of these states: Scheduled, Completed, Partially Completed, Not Completed, Rescheduled, Cancelled. A rescheduled service shows its original and revised dates. Not Completed appears to the customer as Missed (CAL-09). | Draft |
 
 ---
 
@@ -230,13 +232,14 @@ Screen with two tabs: "Skip a date" and "Pause service". Both act on the selecte
 |---|---|---|
 | SKIP-01 | Horizontal date chips for upcoming service days, each showing weekday, day number and service type (Exterior, + Interior). The text of a chip shows its status: Skipped in yellow, Paused in red, Completed in green. | Owner (status colours, 16 Oct 2026) |
 | SKIP-02 | There is no instruction text above the date chips. Skip requests after the 9 PM cutoff are not accepted. When the next day is already past the cutoff, it starts selected and the screen shows "The cutoff for <date> has passed (9 PM the evening before). Please call support for an emergency change." with a Call support button. Picking another day clears the message; picking the closed day shows it again, and it cannot be skipped. | Owner (16 Oct 2026) |
-| SKIP-03 | The user selects one date and taps "Confirm skip". No note about charges is shown. A skipped day does not change the plan: no day is added to it and the renewal date does not move (only a pause or a visit skipped by operations does, PAUSE-02, ADM-OPS-03). | Owner (16 Oct 2026) |
+| SKIP-03 | The user selects one date and taps "Confirm skip". No note about charges is shown. A skipped day does not change the plan: no day is added to it and the renewal date does not move (only a pause does, PAUSE-02; a visit skipped by operations does not either, ADM-OPS-03). | Owner (16 Oct 2026) |
 | SKIP-04 | Confirming without a date shows "Pick a date to skip first." | Defined |
 | SKIP-05 | On confirm: the date is marked skipped in the upcoming list, calendar and chip; a confirmation says the crew has been told; the crew is notified automatically. | Defined |
 | SKIP-06 | The screen has no upcoming-schedule list. A "View Service Calendar" button below opens the service calendar. This button has the same label and look everywhere it appears in the app. | Owner (16 Oct 2026) |
 | SKIP-07 | The customer can undo a skip (un-skip) until 9 PM the previous day (SCHED-01). The date returns to Scheduled, in the list and the calendar, and the crew is told. | Owner |
 | SKIP-08 | A date that falls inside a pause cannot be skipped separately. A skip is treated as a subset of a pause (PAUSE-06). | Owner |
 | SKIP-09 | A customer can skip only dates up to the last day the current plan covers (the "Expires on" date). Later days are not offered, and the API refuses them with the plan's end date. The admin is not held to this. | Owner |
+| SKIP-10 | The customer-facing Skip and Pause screens stay controlled by the existing feature flag `customer.skip_pause`. This decision changes nothing there (owner decision of 23 Oct 2026). | Owner |
 
 ### 6.2 Pause service
 
@@ -357,6 +360,8 @@ An add-on is an optional extra service the customer buys separately from the pla
 | ADD-15 | Admin creates the customer and vehicle without a subscription. The customer books, pays for and follows standalone Deep Spa using the same rules as subscriber add-on Spa (owner decision 13 Oct 2026). | Owner |
 | ADD-16 | When Deep Spa is the only add-on, the screen is one service landing page, titled "Deep Spa", for subscribers and for customers without a subscription. It shows the service name, a short pitch, the price (list price struck through), the duration, and "What's included". The first line of the add-on's description in the catalogue is the pitch; every further line is shown as an inclusion. The words "Deep Spa without a subscription" are not shown. | Owner (18 Oct 2026) |
 | ADD-17 | The admin can offer more than one add-on (ADM-ADD-14), and customers can buy any of them. With two or more active add-ons the add-on screen first lists them, each with its name, a line about it, its duration and its price; the customer opens one and books it as in ADD-04 and ADD-05. With one, it opens at once as in ADD-16. Each request records which add-on was bought, with its name and price then, and is listed and paid under that name. An add-on's job is planned as the service chosen for it in Site Setup. | Owner (18 Oct 2026) |
+| ADD-18 | An add-on is charged separately from the plan. Its payment becomes Due if it is not paid by the scheduled service date and Over due if the service is completed and the payment is not yet received (ADM-PAY-13). | Owner |
+| ADD-19 | Extra interior and Special exterior can become add-ons once the admin has set their prices (ADM-ADD-15). Their price and booking rules are not decided. | Draft and Open |
 
 ---
 
@@ -486,13 +491,15 @@ These are behaviors a developer must implement, taken from the screens and owner
 22. Payment reminders: one week before the renewal date, one day before, then every 2 days until the customer marks the payment Initiated, it becomes Received, or the subscription becomes Inactive.
 23. The monthly check-in is a set of admin-editable categories, each rated with 1 to 5 stars, plus one optional comment. At least one category must be rated to save it. It is pushed 4 days before the renewal date and also shown as a card on Home until completed.
 24. The feedback modal needs at least a star rating or a comment before it can be sent.
-25. A Cleaning-External visit skipped by operations is added to the end of the plan. For each day skipped, the plan is extended by one day, so the renewal date moves forward by one day. The customer is not charged extra. A skipped Cleaning-Internal job is lost for that week and does not extend the plan. A skipped Deep Spa add-on does not extend the plan: any refund or rebooking is handled by the admin outside the app.
-26. A billing cycle is 30 calendar days. The first cycle starts on the first service date. Each later cycle starts on the previous renewal date, so the renewal date is the first day after the 30 days. Pauses (rule 4) and visits skipped by operations (rule 25) move the renewal date forward by one day for each day. A skip by the customer does not move it. The cycle dates shown in the app come from the backend and follow this rule.
+25. A visit or job skipped by operations does not extend the plan or change that month's cost (owner decision of 23 Oct 2026, replacing the earlier rule that extended the plan for a skipped Cleaning-External visit). A skipped Deep Spa add-on is refunded or rebooked by the admin outside the app.
+26. A billing cycle is 30 calendar days. The first cycle starts on the first service date. Each later cycle starts on the previous renewal date, so the renewal date is the first day after the 30 days. Pauses (rule 4) move the renewal date forward by one day for each day. A skip by the customer or by operations does not move it (rule 25). The cycle dates shown in the app come from the backend and follow this rule.
 27. A job the crew could not complete is Missed. A Missed Cleaning-External job is covered by the next day's regular job unless the admin skips it by operations. A Missed Cleaning-Internal or Deep Spa job is scheduled again by the admin for the next day only, or skipped by operations (rule 25). It cannot be scheduled for any other day. A visit is Completed when all of its jobs are done or skipped.
 28. Every date shown in the app uses the format dd-Mon-yy, for example 07-Nov-26. This applies to all roles. Weekdays and times are shown as described in each requirement.
 29. A customer signs in with their email. The customer exists only because the admin created them. At the first sign-in they get a 6-digit code by email, set a password, and review the details the admin entered. After that they sign in with email and password, and stay signed in on the phone. Forgot password and an email change use an emailed code. There is no mobile OTP.
 30. In MVP prospective customers do not sign themselves up. An email the admin has not created gets no code and sees "This email is not registered. Contact Priveo."
 31. Deep Spa (2 hours) is sold in two ways. A customer with a subscription buys it as an add-on for a vehicle with an Active subscription. A customer without a subscription can take it as a standalone service; they use the same booking/payment/service rules after admin-created onboarding (ADD-15). For an add-on, the customer proposes one date and a finish-by time, pays by UPI, and the scheduler plans the job. Scheduling does not wait for payment in MVP. The customer can change or cancel until 9 PM the day before.
+32. The first billing period and plan changes are not prorated (ADM-SUB-09). An add-on is charged separately and its payment is Due or Over due as in ADD-18.
+33. A visit planned as Exterior + Interior with only the Exterior done is Partially Completed. The remark is mandatory for every Not Completed outcome (ADM-CNC-07).
 
 ---
 
@@ -510,7 +517,7 @@ For your reference when you write the data model. This is a reading of the scree
 - **Subscription**: one per vehicle. Customer, vehicle, plan, status (Activating, Active, Paused, Inactive), start date, renewal date, amount, default service cutoff time, interior day.
 - **Slot assignment**: subscription, assigned slot, assigned crew member, assigned by admin. Set outside the customer app and shown to the customer once assigned.
 - **Cutoff override**: subscription, date, cutoff time, for a change to a single date.
-- **Service visit**: date, type (Exterior, Exterior + Interior), status (Scheduled, Completed, Skipped, Missed), crew member, finish time, rating.
+- **Service visit**: date, type (Exterior, Exterior + Interior), status (Scheduled, Completed, Partially Completed, Skipped, Missed, Rescheduled, Cancelled), planned and delivered services, original and revised dates, crew member, finish time, rating.
 - **Checklist item**: visit, label, completed, completion time.
 - **Media**: visit, kind (photo, video), stage (before, during, after), timestamp.
 - **Skip / Pause**: subscription, date or date range, status.
@@ -551,6 +558,8 @@ Owner decision: where the wireframes and the interactive prototype differ, the p
 All earlier questions in this file are answered and removed. One is open:
 
 Resolved 13 Oct 2026: standalone Deep Spa follows ADD-15 and the [owner decisions](owner-decisions-2026-10-13.md).
+
+Open since 23 Oct 2026: whether the customer is notified of a Partially Completed visit, and the prices of Extra interior and Special exterior (ADD-19). See section 13 of `admin-functional-requirements.md`.
 
 Other open questions that touch the customer app are tracked in `admin-functional-requirements.md` and `crew-functional-requirements.md`.
 
