@@ -2,6 +2,7 @@ import 'package:priveo/features/customer/account/account_data.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/app.dart';
 import 'package:priveo/core/api/api.g.dart' hide AppConfig;
@@ -305,6 +306,7 @@ Future<ProviderContainer> pumpApp(
   FakeAuthRepository? auth,
   FakePriveoApi? api,
   Brightness brightness = Brightness.light,
+  List<Override> overrides = const [],
 }) async {
   final crewBackend = FakeCrewBackend();
   final uploadQueue = UploadQueue(api: crewBackend,
@@ -329,6 +331,7 @@ Future<ProviderContainer> pumpApp(
     uploadQueueProvider.overrideWithValue(uploadQueue),
     uploadQueueStoreProvider.overrideWithValue(MemoryUploadQueueStore()),
     onlineEventsProvider.overrideWithValue(null),
+    ...overrides,
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(
