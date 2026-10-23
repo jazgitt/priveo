@@ -8,6 +8,8 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/api/api.g.dart';
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/tokens.g.dart';
@@ -59,7 +61,10 @@ class _CustomerShellState extends ConsumerState<CustomerShell> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    ref.watch(pushRegistrationProvider); // registers the phone for push
+    // Registers the phone for push, unless the admin has switched push off.
+    if (ref.watch(featureOnProvider(FeatureKeys.push))) {
+      ref.watch(pushRegistrationProvider);
+    }
     // Home opens only after the customer has confirmed their details (ONB-25).
     final home = ref.watch(customerHomeProvider).value;
     if (home != null && !home.onboardingConfirmed) {
@@ -317,7 +322,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.4,
-                  children: [
+                  children: _switchedOn(ref, [
                     for (final a in h.quickActions)
                       if (a.key != 'skip_pause' || vehicle?.subscriptionStatus != null) _QuickAction(a),
                     if (vehicle?.subscriptionStatus != null)
@@ -337,7 +342,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                           label: MoneyStrings.addonTitle,
                         ),
                       ),
-                  ],
+                  ]),
                 ),
               ),
             ],
@@ -660,6 +665,17 @@ class _VehicleCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The quick actions whose feature the admin has not switched off.
+List<_QuickAction> _switchedOn(WidgetRef ref, List<_QuickAction> actions) {
+  final flags = ref.watch(featureFlagsProvider);
+  bool on(_QuickAction a) {
+    final key = FeatureKeys.forQuickAction(a.action.key);
+    return key == null || flags.isOn(key);
+  }
+
+  return actions.where(on).toList();
 }
 
 class _QuickAction extends ConsumerWidget {

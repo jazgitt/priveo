@@ -50,3 +50,18 @@ def require_role(role: str):
         return user
 
     return dependency
+
+
+def require_feature(key: str):
+    """Refuse a request while the admin has switched the feature off. Put it in
+    an endpoint's `dependencies=[...]`. It adds no query: flags are cached."""
+    from app.features import registry, service
+
+    if key not in registry.BY_KEY:
+        raise KeyError(key)
+
+    def dependency(db: Session = Depends(get_db)) -> None:
+        if not service.is_enabled(db, key):
+            raise ApiError("feature_disabled", "This is not available right now.", 403)
+
+    return dependency

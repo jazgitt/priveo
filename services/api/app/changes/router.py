@@ -17,7 +17,7 @@ from app.changes.schemas import (
 from app.changes.service import Actor, ChangesService
 from app.identity.service import User
 from app.platform.db import get_db
-from app.platform.deps import require_role
+from app.platform.deps import require_feature, require_role
 
 customer = APIRouter(prefix="/v1/customer", tags=["changes"])
 admin = APIRouter(prefix="/v1/admin", tags=["changes"])
@@ -47,7 +47,8 @@ def upcoming(vehicle_id: str, user: User = Depends(require_role("customer")),
     return svc.upcoming(vehicle, sub=sub)
 
 
-@customer.post("/vehicles/{vehicle_id}/skips", response_model=ChangeOut, status_code=201)
+@customer.post("/vehicles/{vehicle_id}/skips", response_model=ChangeOut, status_code=201,
+               dependencies=[Depends(require_feature("customer.skip_pause"))])
 def skip(vehicle_id: str, body: SkipIn, user: User = Depends(require_role("customer")),
          idempotency_key: str | None = Header(default=None),
          db: Session = Depends(get_db), svc: ChangesService = Depends(get_changes_service)):
@@ -62,7 +63,8 @@ def unskip(vehicle_id: str, skip_id: str, user: User = Depends(require_role("cus
     svc.unskip(Actor("customer", user.id), vehicle, skip_id)
 
 
-@customer.post("/vehicles/{vehicle_id}/pauses", response_model=ChangeOut, status_code=201)
+@customer.post("/vehicles/{vehicle_id}/pauses", response_model=ChangeOut, status_code=201,
+               dependencies=[Depends(require_feature("customer.skip_pause"))])
 def pause(vehicle_id: str, body: PauseIn, user: User = Depends(require_role("customer")),
           idempotency_key: str | None = Header(default=None),
           db: Session = Depends(get_db), svc: ChangesService = Depends(get_changes_service)):
