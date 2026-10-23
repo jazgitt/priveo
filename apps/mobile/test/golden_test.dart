@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/auth/session.dart';
+import 'package:priveo/features/crew/home/crew_home_data.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart';
 
 import 'support/fakes.dart';
 
@@ -39,6 +41,16 @@ Future<void> _loadImages(WidgetTester tester) async {
   });
 }
 
+/// The images show a greeting that depends on the hour and a date line. Pin
+/// both, so they do not change with the time the test runs.
+final _pinnedNow = DateTime(2026, 10, 23, 9, 30);
+
+class _PinnedCrewDay extends CrewDayNotifier {
+  @override
+  DateTime? build() =>
+      DateTime(_pinnedNow.year, _pinnedNow.month, _pinnedNow.day);
+}
+
 Future<void> _open(WidgetTester tester,
     {Session? session, FakePriveoApi? api}) async {
   tester.view.physicalSize = const Size(780, 1688);
@@ -47,7 +59,10 @@ Future<void> _open(WidgetTester tester,
   final store = MemorySessionStore();
   if (session != null) await store.write(session);
   // Each role has one look, whatever the phone setting is.
-  await pumpApp(tester, store: store, api: api);
+  await pumpApp(tester, store: store, api: api, overrides: [
+    homeNowProvider.overrideWithValue(() => _pinnedNow),
+    crewDayProvider.overrideWith(_PinnedCrewDay.new),
+  ]);
 }
 
 void main() {
