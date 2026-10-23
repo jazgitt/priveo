@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.addons.models import AddonBooking
-from app.changes.extension import extend_for_skipped_job
 from app.customers.models import Customer, Vehicle
 from app.directory import lookup
 from app.directory.models import Society
@@ -93,7 +92,6 @@ def skip_job(db, job, body, actor, commit=True):
         return job
     if not db.scalar(select(JobOutcome.id).where(JobOutcome.job_id == job.id)):
         db.add(JobOutcome(job_id=job.id, kind="skipped", note=body.note.strip(), by_login_id=actor))
-    extend_for_skipped_job(db, job, actor)
     job.status = "Skipped"
     db.flush()
     scheduling.refresh_visit_status(db, job.visit_id)
