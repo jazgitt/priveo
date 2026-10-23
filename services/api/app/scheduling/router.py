@@ -31,6 +31,8 @@ from app.scheduling.schemas import (
     ScheduleOut,
     UnfreezeRequest,
 )
+from app.visits import operations
+from app.visits.operations import BulkReassign, MoveDate
 
 customer = APIRouter(prefix="/v1/customer", tags=["scheduling"])
 crew = APIRouter(prefix="/v1/crew", tags=["scheduling"])
@@ -145,6 +147,46 @@ def move_job(
     job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
+
+
+class MoveDateResult(BaseModel):
+    original: AdminJob
+    moved: AdminJob
+
+
+class ReassignResult(BaseModel):
+    job_id: str
+    ok: bool
+    code: str = ""
+    message: str = ""
+
+
+class BulkReassignOut(BaseModel):
+    reassigned: int
+    results: list[ReassignResult]
+
+
+@admin.post("/jobs/{job_id}/move-date", response_model=MoveDateResult)
+def move_job_to_date(
+    job_id: uuid.UUID,
+    body: MoveDate,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """S-05: one scheduled service to any date from today on."""
+    job, moved = operations.move_to_date(db, job_id, body, user.id)
+    return {"original": service.job_rows(db, Job.id == job.id)[0],
+            "moved": service.job_rows(db, Job.id == moved.id)[0]}
+
+
+@admin.post("/reassign", response_model=BulkReassignOut)
+def bulk_reassign(
+    body: BulkReassign,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """S-09: give several jobs, or a crew member's whole day, to someone else."""
+    return operations.bulk_reassign(db, body, user.id)
 
 
 @admin.post("/queue/reorder", response_model=QueueChange)

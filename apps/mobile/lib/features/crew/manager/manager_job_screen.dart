@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/features/feature_flags.dart';
+import '../../../core/features/feature_keys.dart';
 import '../../../core/ui/widgets.dart';
 import '../crew_providers.dart';
 import '../crew_text.dart';
@@ -55,6 +57,10 @@ class _State extends ConsumerState<ManagerJobScreen> {
     await _run(() => ref.read(crewRepositoryProvider).managerSkip(widget.jobId),
         CrewText.jobSkipped);
   }
+
+  Future<void> _reschedule() => _run(
+      () => ref.read(crewRepositoryProvider).managerReschedule(widget.jobId),
+      CrewText.jobRescheduled);
 
   Future<void> _reassign(String? currentId) async {
     final choice = await showModalBottomSheet<String>(
@@ -153,10 +159,23 @@ class _State extends ConsumerState<ManagerJobScreen> {
                       },
                 child: Text(CrewText.couldNotComplete),
               ),
+              // D-02: both are switched by the admin (the skip starts off).
+              if (ref.watch(featureOnProvider(FeatureKeys.managerSkip))) ...[
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: _busy ? null : _skip,
+                  child: Text(CrewText.skipJob),
+                ),
+              ],
+            ],
+            if (d.job.status == 'Could not complete' &&
+                d.job.service != 'Cleaning-External' &&
+                ref.watch(
+                    featureOnProvider(FeatureKeys.managerReschedule))) ...[
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: _busy ? null : _skip,
-                child: Text(CrewText.skipJob),
+                onPressed: _busy ? null : _reschedule,
+                child: Text(CrewText.reschedule),
               ),
             ],
           ],

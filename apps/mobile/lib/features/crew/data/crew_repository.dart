@@ -32,6 +32,7 @@ abstract class CrewRepository {
   Future<CrewJobDetail> managerCouldNotComplete(String jobId,
       {required String reasonKey, String note = '', String? uploadId});
   Future<CrewJobDetail> managerSkip(String jobId);
+  Future<CrewJobDetail> managerReschedule(String jobId);
   Future<CrewJobDetail> managerReassign(String jobId, String crewId);
 
   // Manager attendance, working hours and reassign checks (CRW-MGR-03 to 05).
@@ -185,6 +186,10 @@ class ApiCrewRepository implements CrewRepository, UploadApi {
   @override
   Future<CrewJobDetail> managerSkip(String jobId) =>
       _detail(() => _dio.post('/v1/crew/manager/jobs/$jobId/skip'));
+
+  @override
+  Future<CrewJobDetail> managerReschedule(String jobId) =>
+      _detail(() => _dio.post('/v1/crew/manager/jobs/$jobId/reschedule'));
 
   @override
   Future<CrewJobDetail> managerReassign(String jobId, String crewId) =>

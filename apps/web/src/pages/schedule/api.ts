@@ -69,6 +69,9 @@ export interface AdminJob {
   manual: boolean;
   reason: string;
   /** A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36). */
+  /** S-05: the closed original has the new date; the job on the new date has the old one. */
+  moved_to_date?: string | null;
+  moved_from_date?: string | null;
   skip_kind?: string;
   skip_reason?: string;
   /** Derived outcome of the whole visit: Scheduled, Completed, Partially Completed, Not Completed, Rescheduled or Cancelled. */

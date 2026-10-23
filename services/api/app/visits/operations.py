@@ -27,9 +27,11 @@ from app.platform.errors import ApiError
 from app.scheduling import service as scheduling
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.outcomes import customer_summary, outcome_of_visit, visit_outcomes
-from app.visits.models import JobOutcome, OperationsDecision
+from app.visits.models import JobOutcome, JobReassignment, OperationsDecision
 
 router = APIRouter(prefix="/v1/admin/operations", tags=["operations"])
+
+Day = date  # the field name `date` hides the type inside a model
 
 
 class Resolution(BaseModel):
@@ -43,6 +45,39 @@ class SkipVisit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reason: str = Field(default="", max_length=200)
     note: str = Field(default="", max_length=2000)
+
+
+class BulkSkip(BaseModel):
+    """S-12: skip many visits at once for a disruption. Give `visit_ids`, or a
+    `society_id` and `date`. The reason is mandatory."""
+
+    model_config = ConfigDict(extra="forbid")
+    visit_ids: list[uuid.UUID] | None = Field(default=None, max_length=500)
+    society_id: uuid.UUID | None = None
+    date: Day | None = None
+    reason_key: str | None = Field(default=None, max_length=60)
+    reason: str = Field(default="", max_length=200)
+    note: str = Field(default="", max_length=2000)
+
+
+class MoveDate(BaseModel):
+    """S-05: move one scheduled service to any date from today on."""
+
+    model_config = ConfigDict(extra="forbid")
+    date: Day
+    reason: str = Field(min_length=1, max_length=200)
+
+
+class BulkReassign(BaseModel):
+    """S-09: give many jobs to one crew member. Give `job_ids`, or the crew
+    member whose day to hand over (`from_crew_id` and `date`)."""
+
+    model_config = ConfigDict(extra="forbid")
+    job_ids: list[uuid.UUID] | None = Field(default=None, max_length=500)
+    from_crew_id: uuid.UUID | None = None
+    date: Day | None = None
+    to_crew_id: uuid.UUID
+    reason: str = Field(min_length=1, max_length=200)
 
 
 def locked_job(db, job_id):
@@ -107,15 +142,10 @@ def skip_job(db, job, body, actor, commit=True):
     return job
 
 
-def reschedule(db, job, body, actor):
-    if not decide(db, job, body, actor):
-        return job
-    source = db.get(Visit, job.visit_id)
-    target_date = source.date + timedelta(days=1)
-    if target_date < today_ist():
-        raise ApiError(
-            "retry_date_passed", "The next-day retry date has passed. Skip the job instead.", 409
-        )
+def make_redo(db, job, source, target_date, actor, note):
+    """A follow-up job on `target_date`, linked by `source_job_id`, then a run
+    of that day's schedule so the normal planner places it. Used by the
+    next-day retry and by the admin's move-to-date (S-05). Commits."""
     origin = db.get(Schedule, source.schedule_id)
     target = db.scalar(
         select(Schedule)
@@ -152,9 +182,22 @@ def reschedule(db, job, body, actor):
         booking.status = "Requested"
         booking.requested_date, booking.requested_finish_by = None, None
     db.flush()
-    scheduling.record(db, target.id, actor, "redo", f"Next-day retry for {job.id}")
+    scheduling.record(db, target.id, actor, "redo", note)
     # The scheduler keeps frozen placements and includes explicit retry jobs.
     scheduling.run_schedule(db, target, actor)
+    return redo
+
+
+def reschedule(db, job, body, actor):
+    if not decide(db, job, body, actor):
+        return job
+    source = db.get(Visit, job.visit_id)
+    target_date = source.date + timedelta(days=1)
+    if target_date < today_ist():
+        raise ApiError(
+            "retry_date_passed", "The next-day retry date has passed. Skip the job instead.", 409
+        )
+    make_redo(db, job, source, target_date, actor, f"Next-day retry for {job.id}")
     return job
 
 
@@ -328,3 +371,191 @@ def skip_visit(
     for job in eligible:
         emit.job_status_changed(db, job)
     return [job_out(db, j, store) for j in rows]
+
+
+@router.post("/bulk-skip")
+def bulk_skip_visits(
+    body: BulkSkip,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """S-12: skip a list of visits, or a society's whole day, in one go."""
+    return bulk_skip(db, body, user.id)
+
+
+# ---- S-12 bulk skip ---------------------------------------------------------------
+
+def _open_jobs(db, visit_id):
+    rows = list(db.scalars(select(Job).where(Job.visit_id == visit_id).with_for_update()))
+    return rows, [j for j in rows if j.status in ("Scheduled", "Could not complete")]
+
+
+def bulk_skip(db, body: BulkSkip, actor):
+    """Skip the open jobs of many visits in one transaction (S-12). A visit
+    with nothing open is counted as ignored. Nothing extends the plan (B-01).
+    One audit row per visit and one for the batch."""
+    reason = body.reason.strip()
+    if body.reason_key:
+        reason = reason or lookup.reason_label(db, body.reason_key) or ""
+    if not reason:
+        raise ApiError("validation_failed", "Give a reason.", 422, {"reason": "Required."})
+    by_ids = body.visit_ids is not None
+    by_day = body.society_id is not None and body.date is not None
+    if by_ids == by_day or (body.visit_ids is not None and not body.visit_ids):
+        raise ApiError(
+            "validation_failed", "Give visit_ids, or a society_id and a date.", 422)
+    if by_ids:
+        ids = list(dict.fromkeys(body.visit_ids))
+        found = {v.id for v in db.scalars(select(Visit).where(Visit.id.in_(ids)))}
+        missing = [str(i) for i in ids if i not in found]
+        if missing:
+            raise ApiError("not_found", "A visit was not found.", 404, {"visit_ids": missing[0]})
+    else:
+        ids = list(db.scalars(
+            select(Visit.id)
+            .join(Schedule, Schedule.id == Visit.schedule_id)
+            .where(Schedule.society_id == body.society_id, Visit.date == body.date)
+            .order_by(Visit.id)
+        ))
+    resolution = Resolution(action="Skip", reason=reason, note=body.note)
+    skipped, ignored, jobs = [], 0, []
+    try:
+        for visit_id in ids:
+            _rows, eligible = _open_jobs(db, visit_id)
+            if not eligible:
+                ignored += 1
+                continue
+            for job in eligible:
+                skip_job(db, job, resolution, actor, commit=False)
+            jobs.extend(eligible)
+            skipped.append(visit_id)
+            audit(db, actor, "operations", visit_id, "bulk-skip-visit",
+                  {"reason": reason, "note": body.note.strip(), "jobs": len(eligible)})
+        if not skipped:
+            raise ApiError("job_not_open", "No scheduled or missed jobs remain on these visits.",
+                           409)
+        audit(db, actor, "operations", "batch", "bulk-skip",
+              {"reason": reason, "note": body.note.strip(), "visits": len(skipped),
+               "jobs": len(jobs), "ignored": ignored,
+               "society_id": str(body.society_id) if body.society_id else None,
+               "date": body.date.isoformat() if body.date else None})
+        db.commit()
+    except ApiError:
+        db.rollback()
+        raise
+    for job in jobs:
+        emit.job_status_changed(db, job)
+    return {"visits_skipped": len(skipped), "jobs_skipped": len(jobs),
+            "visits_ignored": ignored, "visit_ids": [str(v) for v in skipped]}
+
+
+# ---- S-05 move one service to any date --------------------------------------------
+
+def move_to_date(db, job_id, body: MoveDate, actor):
+    """The admin moves one scheduled service to another date (S-05). The
+    recurring pattern is untouched. The original job is closed (Skipped, with a
+    note) and kept; a linked job (`source_job_id`) on the new date goes through
+    the normal planner. The customer calendar shows the new date."""
+    reason = body.reason.strip()
+    if not reason:
+        raise ApiError("validation_failed", "Give a reason.", 422, {"reason": "Required."})
+    if body.date < today_ist():
+        raise ApiError("date_passed", "Choose today or a later date.", 422, {"date": "Too early."})
+    job = locked_job(db, job_id)
+    source = db.get(Visit, job.visit_id)
+    if job.status != "Scheduled":
+        raise ApiError("job_not_open", "Only a scheduled service can be moved.", 409)
+    if body.date == source.date:
+        raise ApiError("same_date", "The service is already on that date.", 409)
+    if db.scalar(select(Job.id).where(Job.source_job_id == job.id)):
+        raise ApiError("already_moved", "This service has already been moved.", 409)
+    duplicate = db.scalar(
+        select(Job.id)
+        .join(Visit, Visit.id == Job.visit_id)
+        .where(
+            Visit.vehicle_id == source.vehicle_id,
+            Visit.date == body.date,
+            Job.service == job.service,
+            Job.status != "Skipped",
+        )
+    )
+    if duplicate:
+        raise ApiError("duplicate_service", "That vehicle already has this service that day.", 409)
+    previous_crew = job.crew_id
+    job.status, job.crew_id, job.start_minute, job.late = "Skipped", None, None, False
+    job.note = f"Moved to {body.date.strftime('%d-%b-%y')}."
+    db.flush()
+    scheduling.refresh_visit_status(db, job.visit_id)
+    audit(db, actor, "operations", job.id, "move-date",
+          {"reason": reason, "service": job.service, "from": source.date.isoformat(),
+           "to": body.date.isoformat()})
+    try:
+        redo = make_redo(db, job, source, body.date, actor, f"Moved {job.id} to {body.date}")
+    except ApiError:
+        db.rollback()
+        raise
+    emit.job_taken_off(db, job, previous_crew)
+    return job, redo
+
+
+# ---- S-09 bulk reassign -----------------------------------------------------------
+
+def bulk_reassign(db, body: BulkReassign, actor):
+    """Give many jobs to one crew member in one transaction (S-09). Each keeps
+    its start time and goes through `move_job`'s checks. If any job fails,
+    nothing changes and the error lists every job with its result."""
+    reason = body.reason.strip()
+    if not reason:
+        raise ApiError("validation_failed", "Give a reason.", 422, {"reason": "Required."})
+    by_ids = body.job_ids is not None
+    by_day = body.from_crew_id is not None and body.date is not None
+    if by_ids == by_day or (body.job_ids is not None and not body.job_ids):
+        raise ApiError("validation_failed", "Give job_ids, or from_crew_id and a date.", 422)
+    if by_ids:
+        ids = list(dict.fromkeys(body.job_ids))
+    else:
+        ids = list(db.scalars(
+            select(Job.id)
+            .join(Visit, Visit.id == Job.visit_id)
+            .where(Job.crew_id == body.from_crew_id, Visit.date == body.date,
+                   Job.status == "Scheduled")
+            .order_by(Job.start_minute, Job.id)
+        ))
+        if not ids:
+            raise ApiError("job_not_open", "That crew member has no scheduled jobs that day.", 409)
+    target = db.get(SchedulingCrew, body.to_crew_id)
+    if target is None or not target.active:
+        raise ApiError("crew_not_found", "That crew member was not found.", 404)
+    results, failed, moves = [], False, []
+    for job_id in ids:
+        job = db.get(Job, job_id)
+        if job is None:
+            results.append({"job_id": str(job_id), "ok": False, "code": "not_found",
+                            "message": "Job not found."})
+            failed = True
+            continue
+        previous = job.crew_id
+        try:
+            if previous == target.id:
+                raise ApiError("same_crew", "The job is already with that crew member.", 409)
+            scheduling.move_job(db, job_id, target.id, job.start_minute, actor, commit=False)
+        except ApiError as e:
+            results.append({"job_id": str(job_id), "ok": False, "code": e.code,
+                            "message": e.message})
+            failed = True
+            continue
+        db.add(JobReassignment(job_id=job_id, from_crew_id=previous, to_crew_id=target.id,
+                               by_login_id=actor))
+        moves.append(job)
+        results.append({"job_id": str(job_id), "ok": True, "code": "", "message": ""})
+    if failed:
+        db.rollback()
+        raise ApiError("reassign_failed",
+                       "Nothing was changed. Fix the jobs that failed and try again.", 409,
+                       {r["job_id"]: r["code"] for r in results if not r["ok"]})
+    audit(db, actor, "scheduling", "batch", "bulk-reassign",
+          {"reason": reason, "to_crew_id": str(target.id), "jobs": [str(j.id) for j in moves]})
+    db.commit()
+    for job in moves:
+        emit.job_reassigned(db, job)
+    return {"reassigned": len(moves), "results": results}

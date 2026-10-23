@@ -83,6 +83,21 @@ it("filters the server queue by the chosen site, queue and failure reason", asyn
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("queue=history"))).toBe(true));
 });
 
+it("skips selected visits in bulk with a reason, after asking (S-12)", async () => {
+  page();
+  await screen.findByText("Car unavailable");
+  expect(screen.getByRole("button", { name: "Skip selected (0)" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("checkbox", { name: /Select HR01ZZ1234/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Skip selected (1)" }));
+  const submit = screen.getByRole("button", { name: "Skip visits" });
+  expect(submit).toBeDisabled();
+  await choose("Reason", "Other");
+  await userEvent.click(submit);
+  await confirmWith("Skip visits");
+  await waitFor(() => expect(fetchMock.mock.calls.some(([path, options]) => path === "/v1/admin/operations/bulk-skip" &&
+    JSON.parse(options.body).visit_ids[0] === "v1" && JSON.parse(options.body).reason === "Other")).toBe(true));
+});
+
 it("lists a partially completed visit for follow-up with planned and delivered services", async () => {
   partial = true;
   page();

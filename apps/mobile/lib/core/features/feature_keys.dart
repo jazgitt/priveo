@@ -16,6 +16,8 @@ abstract final class FeatureKeys {
   static const checkin = 'customer.checkin';
   static const feedback = 'customer.feedback';
   static const managerScreens = 'crew.manager_screens';
+  static const managerSkip = 'crew.manager_skip';
+  static const managerReschedule = 'crew.manager_reschedule';
   static const sequentialQueue = 'crew.sequential_queue';
   static const crewNotifications = 'crew.notifications';
   static const push = 'common.push';

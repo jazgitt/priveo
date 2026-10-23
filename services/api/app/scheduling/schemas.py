@@ -123,6 +123,10 @@ class AdminJob(BaseModel):
     late: bool
     manual: bool
     reason: str
+    # S-05: a moved service keeps both dates. `moved_to_date` is on the closed
+    # original, `moved_from_date` on the job on the new date.
+    moved_to_date: date | None = None
+    moved_from_date: date | None = None
     # A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36).
     skip_kind: str = ""
     skip_reason: str = ""

@@ -68,7 +68,7 @@ void main() {
     await r.job('j1');await r.start('j1');await r.setChecked('j1','i1',true);expect(http.requests.last.data,{'checked':true});await r.complete('j1');
     await r.couldNotComplete('j1',reasonKey:'locked',note:'Gate',uploadId:'u1');expect(http.requests.last.data,{'reason_key':'locked','note':'Gate','upload_id':'u1'});
     expect(await r.reasons(),isNotEmpty);await r.profile();await r.setProfilePhoto('u1');await r.managerSchedule(day);expect(await r.managerCrew(),isNotEmpty);
-    await r.managerJob('j1');await r.managerCouldNotComplete('j1',reasonKey:'locked');await r.managerSkip('j1');await r.managerReassign('j1','c2');expect(http.requests.last.data,{'crew_id':'c2'});
+    await r.managerJob('j1');await r.managerCouldNotComplete('j1',reasonKey:'locked');await r.managerSkip('j1');await r.managerReschedule('j1');expect(http.requests.last.path,'/v1/crew/manager/jobs/j1/reschedule');await r.managerReassign('j1','c2');expect(http.requests.last.data,{'crew_id':'c2'});
     await r.managerAttendance(day);await r.managerSetAttendance('c2',status:'Late start',from:day,to:day,start:'08:00');
     expect(http.requests.last.data,{'status':'Late start','from_date':'2026-10-20','to_date':'2026-10-20','start':'08:00'});
     expect(await r.managerHours(),isNotEmpty);await r.managerSetHours('c2',[HoursDay(day:'Monday',working:true,start:'06:00',end:'12:00')]);

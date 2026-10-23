@@ -239,6 +239,14 @@ void main() {
     http.status=409;
     await expectLater(api.reasons(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('POST /v1/admin/operations/bulk-skip uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.bulkSkipVisits(wire.BulkSkip.fromJson((http.examples['BulkSkip'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/operations/bulk-skip'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['BulkSkip']);
+    http.status=409;
+    await expectLater(api.bulkSkipVisits(wire.BulkSkip.fromJson((http.examples['BulkSkip'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
   test('GET /v1/admin/home uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
     await api.adminHome();
@@ -291,6 +299,14 @@ void main() {
     expect(http.requests.last.data, http.examples['RunRequest']);
     http.status=409;
     await expectLater(api.run(wire.RunRequest.fromJson((http.examples['RunRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('POST /v1/admin/scheduling/reassign uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.bulkReassign(wire.BulkReassign.fromJson((http.examples['BulkReassign'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/scheduling/reassign'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['BulkReassign']);
+    http.status=409;
+    await expectLater(api.bulkReassign(wire.BulkReassign.fromJson((http.examples['BulkReassign'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
   test('POST /v1/admin/scheduling/queue/reorder uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());

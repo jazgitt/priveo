@@ -15,6 +15,7 @@ import { showDate } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
+import { Checkbox } from "@/ui/checkbox";
 import { Switch } from "@/ui/switch";
 import { Textarea } from "@/ui/textarea";
 
@@ -55,6 +56,9 @@ export function OperationsPage() {
   const [reason, setReason] = useState("");
   const [unresolved, setUnresolved] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  // S-12: visits picked for a bulk skip (one visit can hold several jobs).
+  const [picked, setPicked] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const params = new URLSearchParams({ queue });
   if (site.id) params.set("society_id", site.id);
   if (from) params.set("date_from", from);
@@ -69,7 +73,7 @@ export function OperationsPage() {
     <>
       <PageHeader title="Operations" site={site.name || undefined}
                   description="Decide what happens to jobs the crew could not do, and skip work by operations." />
-      <Tabs tabs={QUEUES} active={queue} label="Queues" onChange={(q) => { setQueue(q); setOpenId(null); }}>
+      <Tabs tabs={QUEUES} active={queue} label="Queues" onChange={(q) => { setQueue(q); setOpenId(null); setPicked([]); }}>
         {(jobs.isError || reasons.isError) && <div className="mb-4"><ErrorState message={errorMessage(jobs.error ?? reasons.error)} /></div>}
         <DataTable
           rows={jobs.data}
@@ -85,6 +89,11 @@ export function OperationsPage() {
                 {(p) => <SelectBox {...p} value={reason || NONE} onChange={(v) => setReason(v === NONE ? "" : v)}
                                    choices={[{ value: NONE, label: "All reasons" }, ...(reasons.data ?? []).map((r) => ({ value: r.key, label: r.label }))]} />}
               </Field>
+              {queue !== "history" && (
+                <Button type="button" variant="destructive" disabled={picked.length === 0} onClick={() => setBulkOpen(true)}>
+                  Skip selected ({picked.length})
+                </Button>
+              )}
               {queue === "missed" && (
                 <label className="flex items-center gap-2 pb-2 text-sm">
                   <Switch aria-label="Only Interior/Spa jobs awaiting an outcome" checked={unresolved} onCheckedChange={setUnresolved} />
@@ -95,6 +104,10 @@ export function OperationsPage() {
           )}
           empty={<EmptyState title="No jobs match these filters" />}
           columns={[
+            ...(queue === "history" ? [] : [{ key: "sel", header: "", width: "3rem", cell: (j: OperationJob) => (
+              <Checkbox aria-label={`Select ${j.registration} ${j.service}`} checked={picked.includes(j.visit_id)}
+                        onCheckedChange={(on) => setPicked((p) => (on ? [...new Set([...p, j.visit_id])] : p.filter((v) => v !== j.visit_id)))} />
+            ) }]),
             { key: "date", header: "Date", width: "7rem", cell: (j) => showDate(j.date) },
             { key: "veh", header: "Vehicle", width: "17%", cell: (j) => (
               <div className="min-w-0"><span className="reg block truncate">{j.registration}</span>
@@ -108,6 +121,8 @@ export function OperationsPage() {
           ]}
         />
       </Tabs>
+      {bulkOpen && <BulkSkipDialog visitIds={picked} reasons={reasons.data ?? []} onClose={() => setBulkOpen(false)}
+                                   onDone={() => { setBulkOpen(false); setPicked([]); }} />}
       {open && <JobDialog key={`${open.id}:${open.resolved_at ?? "open"}`} job={open} reasons={reasons.data ?? []} onClose={() => setOpenId(null)} />}
     </>
   );
@@ -195,6 +210,43 @@ function JobDialog({ job, reasons, onClose }: { job: OperationJob; reasons: Reas
           </div>
         </section>
       )}
+    </FormDialog>
+  );
+}
+
+/** S-12: skip every open job of the chosen visits for a disruption. One reason, one confirm. */
+function BulkSkipDialog({ visitIds, reasons, onClose, onDone }: {
+  visitIds: string[]; reasons: Reason[]; onClose: () => void; onDone: () => void;
+}) {
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const skip = useAppMutation<void, { visits_skipped: number; jobs_skipped: number }>({
+    mutationFn: () => api("/v1/admin/operations/bulk-skip", { method: "POST", body: { visit_ids: visitIds, reason, note } }),
+    pending: "Skipping…",
+    success: (r) => `${r.visits_skipped} ${r.visits_skipped === 1 ? "visit" : "visits"} skipped (${r.jobs_skipped} jobs).`,
+    onSuccess: () => { for (const key of ["operations", "board", "needs-scheduling"]) void qc.invalidateQueries({ queryKey: [key] }); onDone(); },
+  });
+  const submit = async () => {
+    if (await confirm({
+      title: `Skip ${visitIds.length} ${visitIds.length === 1 ? "visit" : "visits"}?`,
+      description: "Every open job on these visits is skipped by operations and customers are told. Nothing is added to the plan. This cannot be undone here.",
+      confirmLabel: "Skip visits", tone: "danger",
+    })) skip.mutate();
+  };
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Skip selected visits" size="md" danger
+                submitLabel="Skip visits" busy={skip.isPending} disabled={!reason}
+                description="Use this when something stops work for many cars, such as a water cut or heavy rain."
+                onSubmit={() => void submit()}>
+      <Field label="Reason">
+        {(p) => <SelectBox {...p} value={reason || NONE} onChange={(v) => setReason(v === NONE ? "" : v)}
+                           choices={[{ value: NONE, label: "Choose a reason" }, ...reasons.map((r) => ({ value: r.label, label: r.label }))]} />}
+      </Field>
+      <Field label="Note" optional>
+        {(p) => <Textarea {...p} rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />}
+      </Field>
     </FormDialog>
   );
 }
