@@ -10,6 +10,7 @@ import { routes as addons } from "./pages/addons";
 import { routes as operations } from "./pages/operations";
 import { routes as dashboard } from "./pages/dashboard";
 import { routes as feedback } from "./pages/feedback";
+import { routes as features } from "./pages/features";
 import { routes as payments } from "./pages/payments";
 import { routes as reference } from "./pages/reference";
 import { routes as schedule } from "./pages/schedule";
@@ -30,6 +31,7 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...reference,
   ...slots,
   ...settings,
+  ...features,
   ...audit,
   ...crew,
   ...customers,

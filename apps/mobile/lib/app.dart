@@ -7,6 +7,8 @@ import 'core/analytics/analytics_binding.dart';
 import 'core/analytics/analytics_consent.dart';
 import 'core/analytics/posthog_analytics.dart';
 import 'core/config/app_config.dart';
+import 'core/features/feature_flags.dart';
+import 'core/features/feature_keys.dart';
 import 'core/providers.dart';
 import 'core/routing/router.dart';
 import 'core/ui/theme.dart';
@@ -61,11 +63,12 @@ class PriveoApp extends ConsumerWidget {
     final session = ref.watch(authControllerProvider).value;
     final confirmed = session?.role == Role.customer
         && (ref.watch(customerHomeProvider).value?.onboardingConfirmed ?? false);
+    final feedbackOn = ref.watch(featureOnProvider(FeatureKeys.feedback));
     return analytics.wrap(MaterialApp.router(
       builder: (context, child) => ListenableBuilder(
         listenable: router.routeInformationProvider,
         builder: (context, _) {
-          if (!confirmed || !router.routeInformationProvider.value.uri.path.startsWith('/customer')) {
+          if (!confirmed || !feedbackOn || !router.routeInformationProvider.value.uri.path.startsWith('/customer')) {
             return child ?? const SizedBox.shrink();
           }
           return FeedbackSideTab(child: child ?? const SizedBox.shrink(), onOpen: () {

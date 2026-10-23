@@ -8,7 +8,9 @@
 #   apps/mobile/tool/build_priveo.sh android --build-only   (writes the APK)
 #   apps/mobile/tool/build_priveo.sh ios --replay --api http://192.168.1.5:8000
 #
-# Flags: --build-only  --clean  --api <url>  --replay  --debug|--release  --device <id>
+# Flags: --build-only  --clean  --api <url>  --local  --replay  --debug|--release  --device <id>
+# --local uses the API from tools/dev/run-local.sh on this Mac (Android emulator: 10.0.2.2,
+# iOS Simulator: localhost). It needs a debug build, so it cannot be used with --release.
 # --clean runs `flutter clean` first, for a full rebuild (slow).
 #
 # Analytics (PostHog EU): the key comes from $POSTHOG_KEY, else from the GitHub
@@ -25,7 +27,7 @@ REPO="jazgitt/priveo"
 POSTHOG_HOST="https://eu.i.posthog.com"
 
 usage() {
-  sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit "${1:-2}"
 }
 
@@ -46,6 +48,7 @@ API_URL="https://priveo-api.vercel.app"
 REPLAY=false
 BUILD_ONLY=false
 CLEAN=false
+LOCAL=false
 MODE=""
 DEVICE=""
 while [ $# -gt 0 ]; do
@@ -56,12 +59,18 @@ while [ $# -gt 0 ]; do
     --debug) MODE=debug ;;
     --release) MODE=release ;;
     --api) API_URL="${2:?--api needs a URL}"; shift ;;
+    --local) LOCAL=true ;;
     --device) DEVICE="${2:?--device needs an id}"; shift ;;
     -h | --help) usage 0 ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
   shift
 done
+if $LOCAL; then
+  if [ "$TARGET" = android ]; then API_URL="http://10.0.2.2:8000"; else API_URL="http://localhost:8000"; fi
+  [ "$MODE" != release ] || { echo "--local needs a debug build (plain http is blocked in release)." >&2; exit 2; }
+  MODE=debug
+fi
 if [ -z "$MODE" ]; then
   if $BUILD_ONLY; then MODE=release; else MODE=debug; fi
 fi
