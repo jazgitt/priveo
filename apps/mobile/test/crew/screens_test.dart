@@ -149,7 +149,10 @@ void main() {
 
     await tester.tap(find.text('Car is locked'));
     await tester.pumpAndSettle();
+    // A reason alone is not enough: the remark is required.
+    expect(confirm().onPressed, isNull);
     await tester.enterText(find.byType(TextField), 'No one around');
+    await tester.pump();
     expect(confirm().onPressed, isNotNull);
     await tester.tap(find.text(CrewText.confirm));
     await tester.pumpAndSettle();

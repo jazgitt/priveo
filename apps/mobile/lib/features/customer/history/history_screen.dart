@@ -299,11 +299,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       [
         h.services.join(' + '),
         if (h.photoCount > 0) CustStrings.photoCount(h.photoCount),
+        if (h.outcome == 'Partially Completed') h.outcomeSummary,
       ].where((s) => s.isNotEmpty).join('  ·  '),
       completed
           ? (h.rating == null ? VisitStrings.noRating : VisitStrings.stars(h.rating!))
           : null,
-      StatusChip(h.status, tone: statusTone(h.status)),
+      StatusChip(h.shownStatus, tone: statusTone(h.shownStatus)),
     );
   }
 

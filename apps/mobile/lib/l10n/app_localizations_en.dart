@@ -909,7 +909,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crew_reason => 'Reason';
 
   @override
-  String get crew_note_optional => 'Note (optional)';
+  String get crew_remark => 'Remark (required)';
 
   @override
   String get crew_add_photo => 'Add a photo (optional)';

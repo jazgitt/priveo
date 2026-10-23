@@ -37,6 +37,9 @@ export function isUnplaced(job: AdminJob): boolean {
 export const JOB_STATUSES = ["Scheduled", "In progress", "Completed", "Skipped", "Could not complete"] as const;
 
 /** The CSS class for a job's status: green when completed, red when it could not be done (ADM-SCH-34). */
+/** A visit with some jobs done and some not: listed for follow-up, never hidden. */
+export const PARTIAL = "Partially Completed";
+
 export function statusClass(job: AdminJob): string {
   if (job.status === "Completed") return "done";
   if (job.status === "Could not complete") return "failed";
@@ -46,7 +49,12 @@ export function statusClass(job: AdminJob): string {
 
 /** Whether a job stays bright for the chosen status and vehicle search. */
 export function matches(job: AdminJob, focus: string, search: string): boolean {
+  if (focus === PARTIAL) return job.visit_outcome === PARTIAL && matchesSearch(job, search);
   if (focus && job.status !== focus) return false;
+  return matchesSearch(job, search);
+}
+
+function matchesSearch(job: AdminJob, search: string): boolean {
   const q = search.replace(/\s/g, "").toUpperCase();
   return !q || job.registration.replace(/\s/g, "").toUpperCase().includes(q)
     || (job.parking ?? "").toUpperCase().includes(q);
@@ -65,6 +73,7 @@ export function StatusSummary({ jobs, focus, onFocus }: {
   for (const j of jobs) counts.set(j.status, (counts.get(j.status) ?? 0) + 1);
   const shown = [...JOB_STATUSES.filter((s) => counts.has(s)),
     ...[...counts.keys()].filter((s) => !(JOB_STATUSES as readonly string[]).includes(s))];
+  const partial = jobs.filter((j) => j.visit_outcome === PARTIAL).length;
   const chip = (status: string, label: string, n: number) => (
     <button key={status || "all"} type="button" aria-pressed={focus === status}
             onClick={() => onFocus(focus === status ? "" : status)}
@@ -76,6 +85,7 @@ export function StatusSummary({ jobs, focus, onFocus }: {
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Job status">
       {chip("", "All jobs", jobs.length)}
       {shown.map((s) => chip(s, s, counts.get(s) ?? 0))}
+      {partial > 0 && chip(PARTIAL, PARTIAL, partial)}
     </div>
   );
 }
@@ -92,6 +102,7 @@ export function JobLabel({ job }: { job: AdminJob }) {
 export function JobFlags({ job }: { job: AdminJob }) {
   return (
     <>
+      {job.visit_outcome === PARTIAL && <StatusBadge status={PARTIAL} tone="warn" />}
       {job.late && <StatusBadge status="Late" tone="error" />}
       {job.manual && <StatusBadge status="Changed by hand" tone="info" />}
     </>

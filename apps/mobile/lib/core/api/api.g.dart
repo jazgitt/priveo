@@ -1018,6 +1018,9 @@ class AdminJob {
     required this.reason,
     this.skipKind,
     this.skipReason,
+    this.visitOutcome,
+    this.plannedServices,
+    this.deliveredServices,
   });
 
   final String id;
@@ -1044,6 +1047,9 @@ class AdminJob {
   final String reason;
   final String? skipKind;
   final String? skipReason;
+  final String? visitOutcome;
+  final List<String>? plannedServices;
+  final List<String>? deliveredServices;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1070,6 +1076,9 @@ class AdminJob {
         reason: j['reason'] as String,
         skipKind: j['skip_kind'] == null ? null : j['skip_kind'] as String,
         skipReason: j['skip_reason'] == null ? null : j['skip_reason'] as String,
+        visitOutcome: j['visit_outcome'] == null ? null : j['visit_outcome'] as String,
+        plannedServices: j['planned_services'] == null ? null : [for (final x in j['planned_services'] as List) x as String],
+        deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
       );
 
   Map<String, dynamic> toJson() => {
@@ -1097,6 +1106,9 @@ class AdminJob {
         'reason': reason,
         'skip_kind': skipKind,
         'skip_reason': skipReason,
+        'visit_outcome': visitOutcome,
+        'planned_services': plannedServices == null ? null : [for (final x in plannedServices!) x],
+        'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
       };
 }
 
@@ -2043,17 +2055,17 @@ class ComplaintSummary {
 class CouldNotComplete {
   const CouldNotComplete({
     required this.reasonKey,
-    this.note,
+    required this.note,
     required this.uploadId,
   });
 
   final String reasonKey;
-  final String? note;
+  final String note;
   final String? uploadId;
 
   factory CouldNotComplete.fromJson(Map<String, dynamic> j) => CouldNotComplete(
         reasonKey: j['reason_key'] as String,
-        note: j['note'] == null ? null : j['note'] as String,
+        note: j['note'] as String,
         uploadId: j['upload_id'] == null ? null : j['upload_id'] as String,
       );
 
@@ -2449,6 +2461,9 @@ class CrewJobCard {
     required this.id,
     required this.visitId,
     required this.visitStatus,
+    this.visitOutcome,
+    this.plannedServices,
+    this.deliveredServices,
     required this.date,
     required this.service,
     required this.status,
@@ -2465,6 +2480,9 @@ class CrewJobCard {
   final String id;
   final String visitId;
   final String visitStatus;
+  final String? visitOutcome;
+  final List<String>? plannedServices;
+  final List<String>? deliveredServices;
   final DateTime date;
   final String service;
   final String status;
@@ -2481,6 +2499,9 @@ class CrewJobCard {
         id: j['id'] as String,
         visitId: j['visit_id'] as String,
         visitStatus: j['visit_status'] as String,
+        visitOutcome: j['visit_outcome'] == null ? null : j['visit_outcome'] as String,
+        plannedServices: j['planned_services'] == null ? null : [for (final x in j['planned_services'] as List) x as String],
+        deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
         date: DateTime.parse(j['date'] as String),
         service: j['service'] as String,
         status: j['status'] as String,
@@ -2498,6 +2519,9 @@ class CrewJobCard {
         'id': id,
         'visit_id': visitId,
         'visit_status': visitStatus,
+        'visit_outcome': visitOutcome,
+        'planned_services': plannedServices == null ? null : [for (final x in plannedServices!) x],
+        'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
         'date': _date(date),
         'service': service,
         'status': status,
@@ -4642,6 +4666,11 @@ class HistoryItem {
     required this.photoCount,
     required this.finishedAt,
     required this.rating,
+    this.outcome,
+    this.plannedServices,
+    this.deliveredServices,
+    this.missedServices,
+    this.outcomeSummary,
   });
 
   final String visitId;
@@ -4652,6 +4681,11 @@ class HistoryItem {
   final int photoCount;
   final String? finishedAt;
   final int? rating;
+  final String? outcome;
+  final List<String>? plannedServices;
+  final List<String>? deliveredServices;
+  final List<MissedService>? missedServices;
+  final String? outcomeSummary;
 
   factory HistoryItem.fromJson(Map<String, dynamic> j) => HistoryItem(
         visitId: j['visit_id'] as String,
@@ -4662,6 +4696,11 @@ class HistoryItem {
         photoCount: j['photo_count'] as int,
         finishedAt: j['finished_at'] == null ? null : j['finished_at'] as String,
         rating: j['rating'] == null ? null : j['rating'] as int,
+        outcome: j['outcome'] == null ? null : j['outcome'] as String,
+        plannedServices: j['planned_services'] == null ? null : [for (final x in j['planned_services'] as List) x as String],
+        deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
+        missedServices: j['missed_services'] == null ? null : [for (final x in j['missed_services'] as List) MissedService.fromJson(x as Map<String, dynamic>)],
+        outcomeSummary: j['outcome_summary'] == null ? null : j['outcome_summary'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -4673,6 +4712,11 @@ class HistoryItem {
         'photo_count': photoCount,
         'finished_at': finishedAt,
         'rating': rating,
+        'outcome': outcome,
+        'planned_services': plannedServices == null ? null : [for (final x in plannedServices!) x],
+        'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
+        'missed_services': missedServices == null ? null : [for (final x in missedServices!) x.toJson()],
+        'outcome_summary': outcomeSummary,
       };
 }
 
@@ -5005,6 +5049,34 @@ class MessageCreate {
 
   Map<String, dynamic> toJson() => {
         'note': note,
+      };
+}
+
+class MissedService {
+  const MissedService({
+    required this.service,
+    this.reason,
+    this.note,
+    this.rescheduled,
+  });
+
+  final String service;
+  final String? reason;
+  final String? note;
+  final bool? rescheduled;
+
+  factory MissedService.fromJson(Map<String, dynamic> j) => MissedService(
+        service: j['service'] as String,
+        reason: j['reason'] == null ? null : j['reason'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+        rescheduled: j['rescheduled'] == null ? null : j['rescheduled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'service': service,
+        'reason': reason,
+        'note': note,
+        'rescheduled': rescheduled,
       };
 }
 
@@ -7763,6 +7835,11 @@ class VisitDetail {
     required this.jobs,
     required this.finishedAt,
     required this.rating,
+    this.outcome,
+    this.plannedServices,
+    this.deliveredServices,
+    this.missedServices,
+    this.outcomeSummary,
   });
 
   final String id;
@@ -7774,6 +7851,11 @@ class VisitDetail {
   final List<JobOut> jobs;
   final String? finishedAt;
   final VisitRatingGiven? rating;
+  final String? outcome;
+  final List<String>? plannedServices;
+  final List<String>? deliveredServices;
+  final List<MissedService>? missedServices;
+  final String? outcomeSummary;
 
   factory VisitDetail.fromJson(Map<String, dynamic> j) => VisitDetail(
         id: j['id'] as String,
@@ -7785,6 +7867,11 @@ class VisitDetail {
         jobs: [for (final x in j['jobs'] as List) JobOut.fromJson(x as Map<String, dynamic>)],
         finishedAt: j['finished_at'] == null ? null : j['finished_at'] as String,
         rating: j['rating'] == null ? null : VisitRatingGiven.fromJson(j['rating'] as Map<String, dynamic>),
+        outcome: j['outcome'] == null ? null : j['outcome'] as String,
+        plannedServices: j['planned_services'] == null ? null : [for (final x in j['planned_services'] as List) x as String],
+        deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
+        missedServices: j['missed_services'] == null ? null : [for (final x in j['missed_services'] as List) MissedService.fromJson(x as Map<String, dynamic>)],
+        outcomeSummary: j['outcome_summary'] == null ? null : j['outcome_summary'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7797,6 +7884,11 @@ class VisitDetail {
         'jobs': [for (final x in jobs) x.toJson()],
         'finished_at': finishedAt,
         'rating': rating?.toJson(),
+        'outcome': outcome,
+        'planned_services': plannedServices == null ? null : [for (final x in plannedServices!) x],
+        'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
+        'missed_services': missedServices == null ? null : [for (final x in missedServices!) x.toJson()],
+        'outcome_summary': outcomeSummary,
       };
 }
 

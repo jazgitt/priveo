@@ -71,6 +71,10 @@ export interface AdminJob {
   /** A skipped job only: "Skipped" or "Paused", and by whom (ADM-SCH-36). */
   skip_kind?: string;
   skip_reason?: string;
+  /** Derived outcome of the whole visit: Scheduled, Completed, Partially Completed, Not Completed, Rescheduled or Cancelled. */
+  visit_outcome?: string;
+  planned_services?: string[];
+  delivered_services?: string[];
 }
 
 export interface Board {

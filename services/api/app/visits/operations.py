@@ -26,6 +26,7 @@ from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling import service as scheduling
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
+from app.scheduling.outcomes import customer_summary, outcome_of_visit, visit_outcomes
 from app.visits.models import JobOutcome, OperationsDecision
 
 router = APIRouter(prefix="/v1/admin/operations", tags=["operations"])
@@ -157,7 +158,7 @@ def reschedule(db, job, body, actor):
     return job
 
 
-def job_out(db, job, store):
+def job_out(db, job, store, derived=None):
     visit = db.get(Visit, job.visit_id)
     schedule = db.get(Schedule, visit.schedule_id)
     vehicle = db.get(Vehicle, visit.vehicle_id)
@@ -171,6 +172,9 @@ def job_out(db, job, store):
     reason = lookup.reason_label(db, failure.reason_key) if failure and failure.reason_key else None
     photo = db.get(MediaUpload, failure.upload_id) if failure and failure.upload_id else None
     actor = db.get(Login, decision.by_login_id) if decision else None
+    visit_outcome = derived.get(visit.id) if derived else None
+    visit_outcome = visit_outcome or outcome_of_visit(db, visit)
+    reporter = db.get(Login, failure.by_login_id) if failure else None
     return {
         "id": str(job.id),
         "visit_id": str(visit.id),
@@ -187,6 +191,17 @@ def job_out(db, job, store):
         "reason_key": failure.reason_key if failure else None,
         "reason": reason or "",
         "note": failure.note if failure else "",
+        # Who recorded the outcome and when (planned vs actual).
+        "reported_by": reporter.display_name if reporter else None,
+        "reported_at": failure.at if failure else None,
+        # Derived for the whole visit: partial visits are flagged for follow-up.
+        "visit_outcome": visit_outcome.outcome,
+        "partial": visit_outcome.partial,
+        "planned_services": visit_outcome.planned,
+        "delivered_services": visit_outcome.delivered,
+        "missed_services": visit_outcome.missed,
+        "outcome_summary": customer_summary(
+            visit_outcome.planned, visit_outcome.delivered, visit_outcome.missed),
         "photo_url": download_url(store, photo) if photo and photo.status == "Confirmed" else None,
         "outcome": decision.action
         if decision
@@ -262,9 +277,9 @@ def jobs(
             ~select(OperationsDecision.id).where(OperationsDecision.job_id == Job.id).exists(),
             Job.service != "Cleaning-External",
         )
-    return [
-        job_out(db, j, store) for j in db.scalars(q.order_by(Visit.date.desc(), Job.id).limit(500))
-    ]
+    found = list(db.scalars(q.order_by(Visit.date.desc(), Job.id).limit(500)))
+    derived = visit_outcomes(db, {j.visit_id for j in found})
+    return [job_out(db, j, store, derived) for j in found]
 
 
 @router.post("/jobs/{job_id}/resolve")

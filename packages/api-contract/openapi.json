@@ -18226,6 +18226,27 @@
             "type": "string",
             "title": "Skip Reason",
             "default": ""
+          },
+          "visit_outcome": {
+            "type": "string",
+            "title": "Visit Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
           }
         },
         "type": "object",
@@ -19542,8 +19563,7 @@
           "note": {
             "type": "string",
             "maxLength": 500,
-            "title": "Note",
-            "default": ""
+            "title": "Note"
           },
           "upload_id": {
             "anyOf": [
@@ -19559,7 +19579,8 @@
         },
         "type": "object",
         "required": [
-          "reason_key"
+          "reason_key",
+          "note"
         ],
         "title": "CouldNotComplete"
       },
@@ -20028,6 +20049,27 @@
           "visit_status": {
             "type": "string",
             "title": "Visit Status"
+          },
+          "visit_outcome": {
+            "type": "string",
+            "title": "Visit Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
           },
           "date": {
             "type": "string",
@@ -22946,6 +22988,40 @@
               }
             ],
             "title": "Rating"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
+          },
+          "missed_services": {
+            "items": {
+              "$ref": "#/components/schemas/MissedService"
+            },
+            "type": "array",
+            "title": "Missed Services",
+            "default": []
+          },
+          "outcome_summary": {
+            "type": "string",
+            "title": "Outcome Summary",
+            "default": ""
           }
         },
         "type": "object",
@@ -23413,6 +23489,34 @@
           "note"
         ],
         "title": "MessageCreate"
+      },
+      "MissedService": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          },
+          "rescheduled": {
+            "type": "boolean",
+            "title": "Rescheduled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "service"
+        ],
+        "title": "MissedService"
       },
       "MoveRequest": {
         "properties": {
@@ -27173,6 +27277,40 @@
                 "type": "null"
               }
             ]
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome",
+            "default": "Scheduled"
+          },
+          "planned_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Planned Services",
+            "default": []
+          },
+          "delivered_services": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Delivered Services",
+            "default": []
+          },
+          "missed_services": {
+            "items": {
+              "$ref": "#/components/schemas/MissedService"
+            },
+            "type": "array",
+            "title": "Missed Services",
+            "default": []
+          },
+          "outcome_summary": {
+            "type": "string",
+            "title": "Outcome Summary",
+            "default": ""
           }
         },
         "type": "object",

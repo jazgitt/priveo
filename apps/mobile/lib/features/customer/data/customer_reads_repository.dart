@@ -338,7 +338,22 @@ class VisitDetailDto {
     required this.jobs,
     this.finishedAt,
     this.rating,
+    this.outcome = 'Scheduled',
+    this.outcomeSummary = '',
   });
+
+  /// Derived: Scheduled, Completed, Partially Completed, Not Completed,
+  /// Rescheduled or Cancelled.
+  final String outcome;
+
+  /// Plain words for a visit that was not fully done, for example
+  /// "Exterior done. Interior not done today: Car is locked." Empty when
+  /// nothing was missed.
+  final String outcomeSummary;
+
+  /// What the status chip says: a partial visit is named, not just Missed.
+  String get shownStatus =>
+      outcome == 'Partially Completed' ? outcome : status;
 
   final String id;
   final String vehicleId;
@@ -367,6 +382,8 @@ class VisitDetailDto {
     jobs: _list(j['jobs'], JobDto.fromJson),
     finishedAt: _time(j['finished_at']),
     rating: (j['rating'] as Map<String, dynamic>?)?['rating'] as int?,
+    outcome: (j['outcome'] as String?) ?? 'Scheduled',
+    outcomeSummary: (j['outcome_summary'] as String?) ?? '',
   );
 }
 
@@ -380,7 +397,16 @@ class HistoryItemDto {
     required this.photoCount,
     this.finishedAt,
     this.rating,
+    this.outcome = 'Scheduled',
+    this.outcomeSummary = '',
   });
+
+  final String outcome;
+  final String outcomeSummary;
+
+  /// What the status chip says: a partial visit is named, not just Missed.
+  String get shownStatus =>
+      outcome == 'Partially Completed' ? outcome : status;
 
   final String visitId;
   final String vehicleId;
@@ -400,6 +426,8 @@ class HistoryItemDto {
     photoCount: j['photo_count'] as int,
     finishedAt: _time(j['finished_at']),
     rating: j['rating'] as int?,
+    outcome: (j['outcome'] as String?) ?? 'Scheduled',
+    outcomeSummary: (j['outcome_summary'] as String?) ?? '',
   );
 }
 

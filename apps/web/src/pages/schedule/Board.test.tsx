@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { fitsAt, freeSlots, freeStart, gaps, hm, matches } from "./Board";
+import { render, screen } from "@testing-library/react";
+
+import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary } from "./Board";
 import type { AdminJob } from "./api";
 
 const at = (start: number, duration = 20) => ({ start_minute: start, duration_minutes: duration } as AdminJob);
@@ -70,5 +72,21 @@ describe("board helpers", () => {
     expect(matches(job, "", "b1-2")).toBe(true);
     expect(matches(job, "", "zz")).toBe(false);
     expect(matches(job, "Completed", "")).toBe(false);
+  });
+});
+
+describe("partially completed visits (never hidden)", () => {
+  const partial = { registration: "KA01", status: "Could not complete", visit_outcome: PARTIAL } as AdminJob;
+  const done = { registration: "KA02", status: "Completed", visit_outcome: "Completed" } as AdminJob;
+
+  it("focuses the jobs of a partial visit from the summary chip", () => {
+    expect(matches(partial, PARTIAL, "")).toBe(true);
+    expect(matches(done, PARTIAL, "")).toBe(false);
+    expect(matches(partial, PARTIAL, "zz")).toBe(false);
+  });
+
+  it("counts partial visits in the status summary", () => {
+    render(<StatusSummary jobs={[partial, done]} focus="" onFocus={() => {}} />);
+    expect(screen.getByRole("button", { name: /Partially Completed/ })).toHaveTextContent("1");
   });
 });
