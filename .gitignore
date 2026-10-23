@@ -69,3 +69,6 @@ test-results/
 # Local copy of the dev database (tools/dev/local-db.ps1) holds real dev data.
 /.local-db/
 /services/api/.local-api.log*
+
+# Disposable PostgreSQL cluster made by services/api/scripts/test_postgres.py
+postgres-check-*/
