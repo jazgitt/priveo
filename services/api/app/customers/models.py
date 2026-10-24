@@ -67,6 +67,25 @@ class Vehicle(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
+class VehicleParkingChange(Base):
+    """A change of a vehicle's parking slot (S-07, ADM-CUS-27). With an end date it
+    is temporary; without one it is permanent from the start date. A cancelled
+    change stays as history. For a day, the latest change that covers it wins."""
+
+    __tablename__ = "vehicle_parking_changes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
+    basement: Mapped[str] = mapped_column(String(20))
+    number: Mapped[str] = mapped_column(String(20))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str] = mapped_column(String(160), default="", server_default="")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    cancelled_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+
+
 class Subscription(Base):
     """One per vehicle (ADM-CUS-05)."""
 

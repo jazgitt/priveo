@@ -2548,6 +2548,13 @@
     "note": "wire-value",
     "at": "2026-10-20T07:30:00+00:00"
   },
+  "ParkingChangeIn": {
+    "basement": "wire-value",
+    "number": "wire-value",
+    "from_date": "2026-10-20",
+    "to_date": "2026-10-20",
+    "note": "wire-value"
+  },
   "PauseIn": {
     "from_date": "2026-10-20",
     "to_date": "2026-10-20"

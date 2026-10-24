@@ -5960,6 +5960,38 @@ class Outcome {
       };
 }
 
+class ParkingChangeIn {
+  const ParkingChangeIn({
+    required this.basement,
+    required this.number,
+    required this.fromDate,
+    required this.toDate,
+    this.note,
+  });
+
+  final String basement;
+  final String number;
+  final DateTime fromDate;
+  final DateTime? toDate;
+  final String? note;
+
+  factory ParkingChangeIn.fromJson(Map<String, dynamic> j) => ParkingChangeIn(
+        basement: j['basement'] as String,
+        number: j['number'] as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: j['to_date'] == null ? null : DateTime.parse(j['to_date'] as String),
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'basement': basement,
+        'number': number,
+        'from_date': _date(fromDate),
+        'to_date': toDate == null ? null : _date(toDate!),
+        'note': note,
+      };
+}
+
 class PauseIn {
   const PauseIn({
     required this.fromDate,

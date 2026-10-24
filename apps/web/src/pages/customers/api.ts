@@ -43,6 +43,12 @@ export type StatusTab = (typeof STATUS_TABS)[number];
 export interface Session { id: string; device_name: string; platform: string; app_version: string; last_active: string; channel: string }
 /** A crew member serving a vehicle, from its scheduled jobs (ADM-CUS-28). */
 export interface VehicleCrew { id: string; name: string; role: string; services: string[]; next_date: string; jobs: number }
+/** A vehicle's own parking slot, the slot valid today and every change (ADM-CUS-27). */
+export interface ParkingChange {
+  id: string; basement: string; number: string; from_date: string; to_date: string | null;
+  kind: "Temporary" | "Permanent"; note: string; state: "Upcoming" | "Current" | "Ended" | "Cancelled";
+}
+export interface ParkingChanges { base: string; today: string; changes: ParkingChange[] }
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.addons.models import AddonBooking
 from app.changes.models import ScheduleChange
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
+from app.customers.parking import label as parking_label
+from app.customers.parking import slots as parking_slots
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.identity.models import Login
@@ -1043,6 +1045,9 @@ def job_rows(db: Session, *where) -> list[dict]:
         .order_by(Visit.date, Job.start_minute.is_(None), Job.start_minute, Vehicle.id, Job.service)
     ).all()
     result = [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
+    on = parking_slots(db, [(veh, v.date) for _, v, veh, *_ in rows])
+    for r, (_, v, veh, *_) in zip(result, rows, strict=True):
+        r["parking"] = parking_label(on[(veh.id, v.date)])
     from app.scheduling.outcomes import visit_outcomes
 
     derived = visit_outcomes(db, {r["visit_id"] for r in result})
@@ -1209,6 +1214,7 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
     rows.sort(key=lambda r: queue._order_key((r[0], r[1])))
     states = queue.states_for(db, [r[0] for r in rows])
     jobs = []
+    on = parking_slots(db, [(vehicle, day) for _, _, vehicle in rows])
     for job, visit, vehicle in rows:
         state = states.get(job.id)
         end = None if job.start_minute is None else job.start_minute + job.duration_minutes
@@ -1221,8 +1227,8 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
                 "make": vehicle.make,
                 "model": vehicle.model,
                 "category": vehicle.category,
-                "parking_basement": vehicle.parking_basement,
-                "parking_number": vehicle.parking_number,
+                "parking_basement": on[(vehicle.id, day)][0],
+                "parking_number": on[(vehicle.id, day)][1],
                 "society": empty["society"],
                 "service": job.service,
                 "status": job.status,
