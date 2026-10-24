@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Vehicle
+from app.customers.parking import label as parking_label
+from app.customers.parking import slots as parking_slots
 from app.directory import lookup
 from app.directory.models import Society
 from app.identity.models import Login
@@ -152,12 +154,13 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
     photos = vehicle_photo_urls(db, get_object_store(), vehicles.keys())
     states = queue.states_for(db, jobs)
 
+    parking_on = parking_slots(db, [(vehicles[v.vehicle_id], v.date) for v in visits.values()])
     cards = []
     for job in jobs:
         visit = visits[job.visit_id]
         vehicle = vehicles[visit.vehicle_id]
         state = states.get(job.id)
-        parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
+        parking = parking_label(parking_on[(vehicle.id, visit.date)])
         cards.append(
             s.CrewJobCard(
                 id=str(job.id),

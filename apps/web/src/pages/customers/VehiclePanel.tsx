@@ -11,10 +11,10 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import type { Changes, Vehicle, VehicleCrew } from "./api";
-import { CarDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
+import type { Changes, ParkingChanges, Vehicle, VehicleCrew } from "./api";
+import { CarDialog, ParkingDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
 
-type Open = null | "car" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
+type Open = null | "car" | "parking" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
 
 function SubHeading({ children, actions }: { children: string; actions?: React.ReactNode }) {
   return (
@@ -38,6 +38,15 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const crew = useQuery({
     queryKey: ["customer", customerId, "crew", v.id],
     queryFn: () => api<VehicleCrew[]>(`/v1/admin/vehicles/${v.id}/crew`),
+  });
+  const parking = useQuery({
+    queryKey: ["customer", customerId, "parking", v.id],
+    queryFn: () => api<ParkingChanges>(`/v1/admin/vehicles/${v.id}/parking-changes`),
+  });
+  const cancelParking = useAppMutation<string>({
+    mutationFn: (id) => api(`/v1/admin/vehicles/${v.id}/parking-changes/${id}`, { method: "DELETE" }),
+    success: () => "Parking change cancelled.",
+    invalidate: [["customer", customerId, "parking", v.id]],
   });
   const undo = useAppMutation<{ path: string; done: string }>({
     mutationFn: (r) => api(r.path, { method: "DELETE" }),
@@ -194,6 +203,37 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
         </section>
       )}
 
+      {live && (
+        <section className="border-t pt-5">
+          <SubHeading actions={<Button size="sm" variant="outline" onClick={() => setOpen("parking")}><Car aria-hidden /> Change parking</Button>}>Parking</SubHeading>
+          {parking.error && <ErrorState message={errorMessage(parking.error)} />}
+          {parking.data && (
+            <p className="mb-2 text-sm text-muted-foreground">
+              Own slot {parking.data.base || "not set"}. Today the crew go to <strong className="text-foreground">{parking.data.today || "not set"}</strong>.
+            </p>
+          )}
+          <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0 empty:hidden">
+            {parking.data?.changes.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 px-3 py-2">
+                <span>
+                  <span className="font-medium">{c.basement}-{c.number}</span>{" "}
+                  <span className="text-sm text-muted-foreground">
+                    {c.kind === "Permanent" ? `from ${showDate(c.from_date)}` : `${showDate(c.from_date)} to ${showDate(c.to_date!)}`}
+                    {c.note ? `, ${c.note}` : ""}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <StatusBadge status={c.state} />
+                  {(c.state === "Upcoming" || c.state === "Current") && (
+                    <Button size="sm" variant="ghost" disabled={cancelParking.isPending} onClick={() => cancelParking.mutate(c.id)}>Cancel</Button>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="border-t pt-5">
         <SubHeading actions={<Button size="sm" variant="link" asChild><Link to="/payments">Manage payments</Link></Button>}>Payments</SubHeading>
         {v.payments.length === 0 ? <p className="text-sm text-muted-foreground">No payments yet.</p> : (
@@ -220,6 +260,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
 
       {open === "car" && <CarDialog v={v} customerId={customerId} onClose={close} />}
       {open === "settings" && sub && <SettingsDialog sub={sub} customerId={customerId} onClose={close} />}
+      {open === "parking" && <ParkingDialog v={v} customerId={customerId} onClose={close} />}
       {open === "skip" && <SkipDialog v={v} customerId={customerId} onClose={close} />}
       {open === "pause" && <PauseDialog v={v} customerId={customerId} onClose={close} />}
       {(open === "Active" || open === "Inactive" || open === "Activating") && sub && (

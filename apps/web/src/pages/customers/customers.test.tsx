@@ -44,6 +44,7 @@ beforeEach(() => {
     if (path.endsWith("/sessions")) return reply([]);
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
     if (path.endsWith("/crew")) return reply([]);
+    if (path.endsWith("/parking-changes") && method === "GET") return reply({ base: "B2-14", today: "B2-14", changes: [] });
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
     if (path === "/v1/admin/customers/c1" && method === "GET") return reply(customer);
     if (path.startsWith("/v1/admin/customers/summary")) return reply(summary);
@@ -440,4 +441,51 @@ it("shows the crew who serve a vehicle, read only (ADM-CUS-28)", async () => {
 it("says so when no crew is scheduled for a vehicle", async () => {
   detail([car()]);
   expect(await screen.findByText("No crew is scheduled for this vehicle yet.")).toBeInTheDocument();
+});
+
+it("shows a vehicle's parking changes and saves a temporary one (S-07)", async () => {
+  detail([car()], (path, o) => (path.endsWith("/v1/admin/vehicles/v1/parking-changes") && (o?.method ?? "GET") === "GET"
+    ? reply({ base: "B2-14", today: "B1-24", changes: [
+      { id: "p1", basement: "B1", number: "24", from_date: "2026-11-03", to_date: "2026-11-05", kind: "Temporary", note: "Water logging", state: "Current" },
+      { id: "p2", basement: "B3", number: "7", from_date: "2026-12-01", to_date: null, kind: "Permanent", note: "", state: "Upcoming" },
+      { id: "p3", basement: "B4", number: "1", from_date: "2026-10-01", to_date: "2026-10-02", kind: "Temporary", note: "", state: "Ended" },
+    ] }) : undefined));
+  expect(await screen.findByText(/Today the crew go to/)).toBeInTheDocument();
+  expect(screen.getByText("B1-24", { selector: "strong" })).toBeInTheDocument();
+  expect(screen.getByText(/Water logging/)).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(2); // not the ended one
+
+  await userEvent.click(screen.getByRole("button", { name: "Change parking" }));
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.getByRole("button", { name: "Save change" })).toBeDisabled();
+  await userEvent.type(dialog.getByLabelText("Parking number"), "9");
+  fireEvent.change(dialog.getByLabelText("First day"), { target: { value: "2026-11-10" } });
+  fireEvent.change(dialog.getByLabelText("Last day"), { target: { value: "2026-11-09" } });
+  expect(dialog.getByText("The change must end on or after its first day.")).toBeInTheDocument();
+  expect(dialog.getByRole("button", { name: "Save change" })).toBeDisabled();
+  fireEvent.change(dialog.getByLabelText("Last day"), { target: { value: "2026-11-12" } });
+  await userEvent.click(dialog.getByRole("button", { name: "Save change" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/parking-changes", "POST")).toEqual({
+    basement: "B1", number: "9", from_date: "2026-11-10", to_date: "2026-11-12", note: "" }));
+});
+
+it("cancels a parking change", async () => {
+  detail([car()], (path, o) => (path.endsWith("/v1/admin/vehicles/v1/parking-changes") && (o?.method ?? "GET") === "GET"
+    ? reply({ base: "B2-14", today: "B2-14", changes: [
+      { id: "p2", basement: "B3", number: "7", from_date: "2026-12-01", to_date: null, kind: "Permanent", note: "", state: "Upcoming" }] }) : undefined));
+  await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(sentTo("/v1/admin/vehicles/v1/parking-changes/p2", "DELETE")).toHaveLength(1));
+});
+
+it("sends a permanent parking change without an end date", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Change parking" }));
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.type(dialog.getByLabelText("Parking number"), "5");
+  await userEvent.click(dialog.getByRole("combobox", { name: "Applies" }));
+  await userEvent.click(await screen.findByRole("option", { name: "Permanently, from a date" }));
+  expect(dialog.queryByLabelText("Last day")).not.toBeInTheDocument();
+  fireEvent.change(dialog.getByLabelText("First day"), { target: { value: "2026-11-10" } });
+  await userEvent.click(dialog.getByRole("button", { name: "Save change" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/parking-changes", "POST")).toMatchObject({ to_date: null, number: "5" }));
 });

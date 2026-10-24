@@ -261,6 +261,49 @@ export function PauseDialog({ v, customerId, onClose }: { v: Vehicle; customerId
   );
 }
 
+/** A temporary (with an end date) or permanent (from a date) parking change, S-07. */
+export function ParkingDialog({ v, customerId, onClose }: { v: Vehicle; customerId: string; onClose: () => void }) {
+  const societies = useSocietyList();
+  const basements = societies.data?.find((s) => s.id === v.society_id || s.name === v.society)?.parking_basements ?? [];
+  const [basement, setBasement] = useState(v.parking_basement);
+  const [number, setNumber] = useState("");
+  const [temporary, setTemporary] = useState(true);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [note, setNote] = useState("");
+  const save = useCustomerSave(customerId, "Parking change saved.", onClose);
+  const order = temporary && from && to && to < from ? "The change must end on or after its first day." : undefined;
+  const valid = basement && number.trim() !== "" && from && (!temporary || to) && !order;
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Change parking, ${v.registration}`} size="sm"
+                description="The crew see this slot on the job card for these days. The vehicle's own slot is not changed."
+                submitLabel="Save change" busy={save.isPending} disabled={!valid}
+                onSubmit={() => save.mutate({
+                  path: `/v1/admin/vehicles/${v.id}/parking-changes`,
+                  body: { basement, number: number.trim(), from_date: from, to_date: temporary ? to : null, note },
+                })}>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Basement">
+          {(p) => basements.length > 0
+            ? <SelectBox {...p} value={basement} onChange={setBasement}
+                         choices={[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))} />
+            : <Input {...p} value={basement} onChange={(e) => setBasement(e.target.value)} />}
+        </Field>
+        <Field label="Parking number">{(p) => <Input {...p} value={number} onChange={(e) => setNumber(e.target.value)} />}</Field>
+      </div>
+      <Field label="Applies">
+        {(p) => <SelectBox {...p} value={temporary ? "temporary" : "permanent"} onChange={(x) => setTemporary(x === "temporary")}
+                           choices={[{ value: "temporary", label: "Temporarily, from a date to a date" }, { value: "permanent", label: "Permanently, from a date" }]} />}
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="First day">{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
+        {temporary && <Field label="Last day" error={order}>{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>}
+      </div>
+      <Field label="Note (optional)">{(p) => <Input {...p} value={note} maxLength={160} onChange={(e) => setNote(e.target.value)} />}</Field>
+    </FormDialog>
+  );
+}
+
 /**
  * The subscription status change that is valid now (ADM-SUB-01, -02, -04):
  * Activate needs the first service date, Make inactive needs a reason.
