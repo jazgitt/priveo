@@ -2555,6 +2555,23 @@
     "to_date": "2026-10-20",
     "note": "wire-value"
   },
+  "PatternIn": {
+    "kind": "wire-value",
+    "exterior_weekdays": [
+      "wire-value"
+    ],
+    "interior_weekdays": [
+      "wire-value"
+    ],
+    "exterior_days": [
+      1
+    ],
+    "combined_days": [
+      1
+    ],
+    "exterior_count": 1,
+    "combined_count": 1
+  },
   "PauseIn": {
     "from_date": "2026-10-20",
     "to_date": "2026-10-20"

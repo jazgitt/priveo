@@ -13,6 +13,7 @@ from app.changes.models import ScheduleChange
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
 from app.customers.parking import label as parking_label
 from app.customers.parking import slots as parking_slots
+from app.customers.schedule_pattern import day_flags, patterns_for
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.identity.models import Login
@@ -134,25 +135,29 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
         )
         .order_by(Vehicle.created_at, Vehicle.id)
     ).all()
+    pattern_of = patterns_for(db, [sub.id for sub, _ in rows])
     for sub, vehicle in rows:
         default_cutoff = minutes_of(sub.cutoff_time)
         off, own_cutoff = _customer_changes(db, vehicle.id, days)
+        pattern = pattern_of.get(sub.id)
         for day in days:
             if day < sub.first_service_date:
                 continue
             cutoff = own_cutoff.get(day, default_cutoff)
-            out.append(Demand(day, vehicle.id, "Cleaning-External", cutoff, skipped=day in off))
+            if pattern is None:  # the default: Exterior every day, Interior on its day
+                exterior = True
+                interior = bool(sub.interior_day) and WEEKDAYS[day.weekday()] == sub.interior_day
+            else:
+                exterior, interior = day_flags(db, sub, pattern, day)
+            if exterior:
+                out.append(Demand(day, vehicle.id, "Cleaning-External", cutoff, skipped=day in off))
             chosen_plan = (
                 sub.pending_plan_id
                 if sub.pending_plan_id and sub.pending_from and day >= sub.pending_from
                 else sub.plan_id
             )
             plan = db.get(Plan, chosen_plan) if chosen_plan else None
-            if (
-                sub.interior_day
-                and (plan is None or plan.includes_interior)
-                and WEEKDAYS[day.weekday()] == sub.interior_day
-            ):
+            if interior and (plan is None or plan.includes_interior):
                 out.append(Demand(day, vehicle.id, "Cleaning-Internal", cutoff, skipped=day in off))
     addons = (
         db.execute(

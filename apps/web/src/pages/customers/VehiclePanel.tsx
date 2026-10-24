@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarOff, Car, PauseCircle, Pencil, Power, Settings2 } from "lucide-react";
+import { CalendarDays, CalendarOff, Car, PauseCircle, Pencil, Power, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -11,10 +11,10 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import type { Changes, ParkingChanges, PlanHistory, Vehicle, VehicleCrew } from "./api";
-import { CarDialog, ParkingDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
+import type { Changes, ParkingChanges, PlanHistory, SchedulePattern, Vehicle, VehicleCrew } from "./api";
+import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
 
-type Open = null | "car" | "parking" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
+type Open = null | "car" | "parking" | "pattern" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
 
 function SubHeading({ children, actions }: { children: string; actions?: React.ReactNode }) {
   return (
@@ -23,6 +23,16 @@ function SubHeading({ children, actions }: { children: string; actions?: React.R
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
+}
+
+/** One line for the pattern, for the Subscription section. */
+function patternText(p: SchedulePattern | undefined): string {
+  if (!p || p.kind === "Default") return "Default (Exterior every day)";
+  if (p.kind === "Weekly") {
+    const short = (days: string[]) => days.map((d) => d.slice(0, 3)).join(", ");
+    return `Weekly: Exterior ${short(p.exterior_weekdays)}${p.interior_weekdays.length ? `; Interior ${short(p.interior_weekdays)}` : ""}`;
+  }
+  return `Cycle: ${p.exterior_count} Exterior-only and ${p.combined_count} Exterior + Interior days in ${p.cycle_days}`;
 }
 
 /** One vehicle: car, subscription, skips and pauses, and payments. Each change opens its own dialog. */
@@ -38,6 +48,11 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const crew = useQuery({
     queryKey: ["customer", customerId, "crew", v.id],
     queryFn: () => api<VehicleCrew[]>(`/v1/admin/vehicles/${v.id}/crew`),
+  });
+  const pattern = useQuery({
+    queryKey: ["customer", customerId, "pattern", sub?.id],
+    queryFn: () => api<SchedulePattern>(`/v1/admin/subscriptions/${sub!.id}/schedule-pattern`),
+    enabled: Boolean(sub),
   });
   const planHistory = useQuery({
     queryKey: ["customer", customerId, "plan-history", sub?.id],
@@ -148,7 +163,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
 
       {live && (
       <section className="border-t pt-5">
-        <SubHeading actions={sub ? <>{statusActions}<Button size="sm" variant="outline" onClick={() => setOpen("settings")}><Settings2 aria-hidden /> Schedule settings</Button></> : undefined}>
+        <SubHeading actions={sub ? <>{statusActions}<Button size="sm" variant="outline" onClick={() => setOpen("settings")}><Settings2 aria-hidden /> Schedule settings</Button><Button size="sm" variant="outline" onClick={() => setOpen("pattern")}><CalendarDays aria-hidden /> Schedule pattern</Button></> : undefined}>
           Subscription
         </SubHeading>
         {!sub ? (
@@ -160,6 +175,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
             { label: "First service date", value: sub.first_service_date ? showDate(sub.first_service_date) : "Not set" },
             { label: "Service cutoff", value: sub.cutoff_time },
             { label: "Interior care day", value: sub.interior_day ?? "None" },
+            { label: "Schedule pattern", value: patternText(pattern.data) },
             { label: "Plan change", value: sub.pending_from ? `Starts ${showDate(sub.pending_from)}` : "None pending" },
           ]} />
         )}
@@ -291,6 +307,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
 
       {open === "car" && <CarDialog v={v} customerId={customerId} onClose={close} />}
       {open === "settings" && sub && <SettingsDialog sub={sub} customerId={customerId} onClose={close} />}
+      {open === "pattern" && sub && <PatternDialog sub={sub} registration={v.registration} customerId={customerId} onClose={close} />}
       {open === "parking" && <ParkingDialog v={v} customerId={customerId} onClose={close} />}
       {open === "skip" && <SkipDialog v={v} customerId={customerId} onClose={close} />}
       {open === "pause" && <PauseDialog v={v} customerId={customerId} onClose={close} />}

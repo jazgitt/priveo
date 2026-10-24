@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, Time, Uuid, false
+from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text, Time, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -106,6 +106,29 @@ class Subscription(Base):
     cutoff_time: Mapped[time | None] = mapped_column(Time)
     interior_day: Mapped[str | None] = mapped_column(String(9))
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class SchedulePattern(Base):
+    """How often a subscription is serviced (S-02, ADM-SCH-41). A subscription with
+    no pattern keeps the default: Exterior every day and Interior on its interior
+    care day. Weekly lists the weekdays; Cycle lists day numbers in the billing
+    cycle (1 is the cycle's first day). An Interior day is also an Exterior day."""
+
+    __tablename__ = "subscription_schedule_patterns"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    subscription_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("subscriptions.id"), unique=True)
+    kind: Mapped[str] = mapped_column(String(8))  # Weekly | Cycle
+    # Weekly: weekday names.
+    exterior_weekdays: Mapped[list] = mapped_column(JSON, default=list)
+    interior_weekdays: Mapped[list] = mapped_column(JSON, default=list)
+    # Cycle: day numbers. Exterior only, and Exterior + Interior.
+    exterior_days: Mapped[list] = mapped_column(JSON, default=list)
+    combined_days: Mapped[list] = mapped_column(JSON, default=list)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, onupdate=utcnow)
 
 
 class PlanChange(Base):

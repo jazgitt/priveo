@@ -1467,6 +1467,14 @@ void main() {
     final input = jsonDecode('{"basement":"wire-value","number":"wire-value","from_date":"2026-10-20","to_date":null,"note":"wire-value"}') as Map<String, dynamic>;
     expect(wire.ParkingChangeIn.fromJson(input).toJson(), equals(input));
   });
+  test('PatternIn preserves populated wire fields', () {
+    final input = jsonDecode('{"kind":"wire-value","exterior_weekdays":["wire-value"],"interior_weekdays":["wire-value"],"exterior_days":[1],"combined_days":[1],"exterior_count":1,"combined_count":1}') as Map<String, dynamic>;
+    expect(wire.PatternIn.fromJson(input).toJson(), equals(input));
+  });
+  test('PatternIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"kind":"wire-value","exterior_weekdays":[],"interior_weekdays":[],"exterior_days":[],"combined_days":[],"exterior_count":null,"combined_count":null}') as Map<String, dynamic>;
+    expect(wire.PatternIn.fromJson(input).toJson(), equals(input));
+  });
   test('PauseIn preserves populated wire fields', () {
     final input = jsonDecode('{"from_date":"2026-10-20","to_date":"2026-10-20"}') as Map<String, dynamic>;
     expect(wire.PauseIn.fromJson(input).toJson(), equals(input));
