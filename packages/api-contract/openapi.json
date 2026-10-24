@@ -2804,6 +2804,179 @@
         }
       }
     },
+    "/v1/admin/subscriptions/{subscription_id}/schedule-pattern": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Read Pattern",
+        "operationId": "read_pattern_v1_admin_subscriptions__subscription_id__schedule_pattern_get",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Set Pattern",
+        "operationId": "set_pattern_v1_admin_subscriptions__subscription_id__schedule_pattern_put",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatternIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Clear Pattern",
+        "description": "Back to the default: Exterior every day, Interior on the interior care day.",
+        "operationId": "clear_pattern_v1_admin_subscriptions__subscription_id__schedule_pattern_delete",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/vehicles": {
       "post": {
         "tags": [
@@ -25652,6 +25825,74 @@
           "from_date"
         ],
         "title": "ParkingChangeIn"
+      },
+      "PatternIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "exterior_weekdays": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Exterior Weekdays",
+            "default": []
+          },
+          "interior_weekdays": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interior Weekdays",
+            "default": []
+          },
+          "exterior_days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Exterior Days",
+            "default": []
+          },
+          "combined_days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Combined Days",
+            "default": []
+          },
+          "exterior_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior Count"
+          },
+          "combined_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Combined Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "PatternIn"
       },
       "PauseIn": {
         "properties": {

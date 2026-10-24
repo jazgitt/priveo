@@ -7,12 +7,13 @@ import { FormDialog } from "@/blocks/FormDialog";
 import { useAppMutation } from "@/blocks/mutation";
 import { inr, showDate } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
+import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
 import {
   times, uploadCustomerAsset, weekdays,
-  type Catalogue, type Customer, type Plan, type Society, type Subscription, type Vehicle,
+  type Catalogue, type Customer, type Plan, type SchedulePattern, type Society, type Subscription, type Vehicle,
 } from "./api";
 
 type Call = { path: string; method?: string; body?: unknown };
@@ -264,6 +265,116 @@ export function PauseDialog({ v, customerId, onClose }: { v: Vehicle; customerId
         <Field label="First day">{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
         <Field label="Last day" error={order}>{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
       </div>
+    </FormDialog>
+  );
+}
+
+/** "1, 3-5, 9" as day numbers, or null when it is not a list of numbers. */
+export function parseDays(text: string): number[] | null {
+  const out: number[] = [];
+  for (const part of text.split(",").map((s) => s.trim()).filter(Boolean)) {
+    const range = /^(\d+)\s*-\s*(\d+)$/.exec(part);
+    if (range) {
+      const [a, b] = [Number(range[1]), Number(range[2])];
+      if (b < a || b - a > 60) return null;
+      for (let n = a; n <= b; n++) out.push(n);
+    } else if (/^\d+$/.test(part)) out.push(Number(part));
+    else return null;
+  }
+  return out;
+}
+
+/** The schedule pattern of a subscription: Default, Weekly or Cycle (S-02, ADM-SCH-41). */
+export function PatternDialog({ sub, registration, customerId, onClose }: {
+  sub: Subscription; registration: string; customerId: string; onClose: () => void;
+}) {
+  const current = useQuery({
+    queryKey: ["customer", customerId, "pattern", sub.id],
+    queryFn: () => api<SchedulePattern>(`/v1/admin/subscriptions/${sub.id}/schedule-pattern`),
+  });
+  return current.data
+    ? <PatternForm key={current.data.kind} sub={sub} registration={registration} customerId={customerId} current={current.data} onClose={onClose} />
+    : null;
+}
+
+function PatternForm({ sub, registration, customerId, current, onClose }: {
+  sub: Subscription; registration: string; customerId: string; current: SchedulePattern; onClose: () => void;
+}) {
+  const [kind, setKind] = useState<string>(current.kind);
+  const [exterior, setExterior] = useState<string[]>(current.exterior_weekdays);
+  const [interior, setInterior] = useState<string[]>(current.interior_weekdays);
+  const [onlyText, setOnlyText] = useState(current.exterior_days.join(", "));
+  const [combinedText, setCombinedText] = useState(current.combined_days.join(", "));
+  const save = useAppMutation<Call>({
+    mutationFn: call, success: "Schedule pattern saved.", onSuccess: onClose,
+    invalidate: [["customer", customerId], ["customers"]],
+  });
+  const only = parseDays(onlyText);
+  const combined = parseDays(combinedText);
+  const cycleError = kind !== "Cycle" ? undefined
+    : only === null || combined === null ? "Use day numbers like 1, 3, 5-7."
+    : [...only, ...combined].some((n) => n < 1 || n > current.cycle_days) ? `Day numbers run from 1 to ${current.cycle_days}.`
+    : new Set([...only, ...combined]).size !== only.length + combined.length ? "A day is listed twice."
+    : undefined;
+  const valid = kind === "Default" || (kind === "Weekly" && exterior.length > 0)
+    || (kind === "Cycle" && !cycleError && only !== null && combined !== null && only.length + combined.length > 0);
+  const toggle = (list: string[], set: (v: string[]) => void, day: string, on: boolean) =>
+    set(on ? [...list, day] : list.filter((d) => d !== day));
+  const submit = () => {
+    const path = `/v1/admin/subscriptions/${sub.id}/schedule-pattern`;
+    if (kind === "Default") save.mutate({ path, method: "DELETE" });
+    else if (kind === "Weekly") save.mutate({ path, method: "PUT", body: { kind, exterior_weekdays: exterior, interior_weekdays: interior } });
+    else save.mutate({ path, method: "PUT", body: { kind, exterior_days: only, combined_days: combined, exterior_count: only!.length, combined_count: combined!.length } });
+  };
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Schedule pattern, ${registration}`} size="sm"
+                description="Which days this vehicle is serviced. The pattern repeats every week, or every billing cycle."
+                submitLabel="Save pattern" busy={save.isPending} disabled={!valid} onSubmit={submit}>
+      <Field label="Pattern">
+        {(p) => <SelectBox {...p} value={kind} onChange={setKind} choices={[
+          { value: "Default", label: `Default: Exterior every day${current.default_interior_day ? `, Interior on ${current.default_interior_day}` : ""}` },
+          { value: "Weekly", label: "Weekly: choose weekdays" },
+          { value: "Cycle", label: `Cycle: choose day numbers in the ${current.cycle_days}-day billing cycle` },
+        ]} />}
+      </Field>
+      {kind === "Weekly" && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-muted-foreground uppercase">
+              <th className="py-1 pr-3 font-semibold">Day</th><th className="py-1 pr-3 font-semibold">Exterior</th><th className="py-1 font-semibold">Interior</th>
+            </tr></thead>
+            <tbody>
+              {weekdays.map((d) => (
+                <tr key={d} className="border-t">
+                  <td className="py-1.5 pr-3">{d}</td>
+                  <td className="py-1.5 pr-3">
+                    <Checkbox aria-label={`Exterior ${d}`} checked={exterior.includes(d) || interior.includes(d)} disabled={interior.includes(d)}
+                              onCheckedChange={(on) => toggle(exterior, setExterior, d, on === true)} />
+                  </td>
+                  <td className="py-1.5">
+                    <Checkbox aria-label={`Interior ${d}`} checked={interior.includes(d)}
+                              onCheckedChange={(on) => {
+                                toggle(interior, setInterior, d, on === true);
+                                if (on === true && !exterior.includes(d)) setExterior([...exterior, d]);
+                              }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-muted-foreground">An Interior day is also an Exterior day.</p>
+        </div>
+      )}
+      {kind === "Cycle" && (
+        <div className="grid grid-cols-1 gap-4">
+          <Field label="Exterior-only days" hint={`${only?.length ?? 0} days. Day 1 is the first day of each billing cycle.`}>
+            {(p) => <Input {...p} value={onlyText} placeholder="1, 3, 5-7" onChange={(e) => setOnlyText(e.target.value)} />}
+          </Field>
+          <Field label="Exterior + Interior days" hint={`${combined?.length ?? 0} days`} error={cycleError}>
+            {(p) => <Input {...p} value={combinedText} placeholder="2, 9" onChange={(e) => setCombinedText(e.target.value)} />}
+          </Field>
+        </div>
+      )}
     </FormDialog>
   );
 }

@@ -8,6 +8,7 @@ import { ToastProvider } from "../../components";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { CustomerDetailPage, CustomersPage } from "./CustomersPage";
 import type { Vehicle } from "./api";
+import { parseDays } from "./dialogs";
 
 const fetchMock = vi.fn();
 const society = { id: "s1", name: "DLF Meadows", active: true, parking_basements: ["B1", "B2"] };
@@ -44,6 +45,7 @@ beforeEach(() => {
     if (path.endsWith("/sessions")) return reply([]);
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
     if (path.endsWith("/crew")) return reply([]);
+    if (path.endsWith("/schedule-pattern") && method === "GET") return reply({ kind: "Default", exterior_weekdays: [], interior_weekdays: [], exterior_days: [], combined_days: [], cycle_days: 30, default_interior_day: "Monday", exterior_count: null, combined_count: null });
     if (path.endsWith("/plan-history")) return reply({ current_plan: "Plan", current_price_rupees: 999, changes: [] });
     if (path.endsWith("/parking-changes") && method === "GET") return reply({ base: "B2-14", today: "B2-14", changes: [] });
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
@@ -517,4 +519,64 @@ it("sends the chosen start date with a plan change, and only then", async () => 
   fireEvent.change(dialog.getByLabelText("Plan starts on (optional)"), { target: { value: "2026-12-01" } });
   await userEvent.click(dialog.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1", "PATCH")).toMatchObject({ effective_from: "2026-12-01" }));
+});
+
+it("parses day numbers and ranges", () => {
+  expect(parseDays("1, 3-5, 9")).toEqual([1, 3, 4, 5, 9]);
+  expect(parseDays("")).toEqual([]);
+  expect(parseDays("1,,2")).toEqual([1, 2]);
+  expect(parseDays("a")).toBeNull();
+  expect(parseDays("5-2")).toBeNull();
+  expect(parseDays("1-99")).toBeNull();
+});
+
+it("saves a Weekly pattern with an Interior day that is also an Exterior day (ADM-SCH-41)", async () => {
+  detail([car()]);
+  expect(await screen.findByText("Default (Exterior every day)")).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("button", { name: "Schedule pattern" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  expect(dialog.getByRole("button", { name: "Save pattern" })).toBeEnabled(); // Default is valid
+  await choose("Pattern", /Weekly/);
+  expect(dialog.getByRole("button", { name: "Save pattern" })).toBeDisabled(); // no Exterior day yet
+  await userEvent.click(dialog.getByRole("checkbox", { name: "Exterior Monday" }));
+  await userEvent.click(dialog.getByRole("checkbox", { name: "Interior Saturday" }));
+  expect(dialog.getByRole("checkbox", { name: "Exterior Saturday" })).toBeChecked();
+  expect(dialog.getByRole("checkbox", { name: "Exterior Saturday" })).toBeDisabled();
+  await userEvent.click(dialog.getByRole("button", { name: "Save pattern" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1/schedule-pattern", "PUT")).toEqual({
+    kind: "Weekly", exterior_weekdays: ["Monday", "Saturday"], interior_weekdays: ["Saturday"] }));
+});
+
+it("checks Cycle day numbers before saving, and sends the counts", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Schedule pattern" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  await choose("Pattern", /Cycle/);
+  const only = dialog.getByLabelText("Exterior-only days");
+  const both = dialog.getByLabelText("Exterior + Interior days");
+  expect(dialog.getByRole("button", { name: "Save pattern" })).toBeDisabled();
+  await userEvent.type(only, "1, 3-4");
+  await userEvent.type(both, "31");
+  expect(dialog.getByText("Day numbers run from 1 to 30.")).toBeInTheDocument();
+  expect(dialog.getByRole("button", { name: "Save pattern" })).toBeDisabled();
+  await userEvent.clear(both);
+  await userEvent.type(both, "3");
+  expect(dialog.getByText("A day is listed twice.")).toBeInTheDocument();
+  await userEvent.clear(both);
+  await userEvent.type(both, "2");
+  await userEvent.click(dialog.getByRole("button", { name: "Save pattern" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1/schedule-pattern", "PUT")).toEqual({
+    kind: "Cycle", exterior_days: [1, 3, 4], combined_days: [2], exterior_count: 3, combined_count: 1 }));
+});
+
+it("shows the current pattern and goes back to the default with a delete", async () => {
+  detail([car()], (path, o) => (path.endsWith("/schedule-pattern") && (o?.method ?? "GET") === "GET"
+    ? reply({ kind: "Weekly", exterior_weekdays: ["Monday", "Saturday"], interior_weekdays: ["Saturday"], exterior_days: [], combined_days: [], cycle_days: 30, default_interior_day: null, exterior_count: 1, combined_count: 1 }) : undefined));
+  expect(await screen.findByText("Weekly: Exterior Mon, Sat; Interior Sat")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Schedule pattern" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  expect(dialog.getByRole("checkbox", { name: "Interior Saturday" })).toBeChecked();
+  await choose("Pattern", /Default/);
+  await userEvent.click(dialog.getByRole("button", { name: "Save pattern" }));
+  await waitFor(() => expect(sentTo("/v1/admin/subscriptions/sub1/schedule-pattern", "DELETE")).toHaveLength(1));
 });

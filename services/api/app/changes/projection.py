@@ -8,7 +8,10 @@ Cleaning-Internal on the interior care day, from the first service date, for
 an Active subscription."""
 from datetime import date, timedelta
 
+from sqlalchemy.orm import object_session
+
 from app.changes.cycle import CYCLE_DAYS
+from app.customers import schedule_pattern
 from app.customers.models import WEEKDAYS, Subscription
 
 
@@ -16,6 +19,12 @@ def day_services(sub: Subscription | None, day: date) -> list[str]:
     """The services the subscription implies on `day`. Empty when none."""
     if sub is None or sub.status != "Active" or day < sub.first_service_date:
         return []
+    session = object_session(sub)
+    pattern = schedule_pattern.pattern_of(session, sub) if session is not None else None
+    if pattern is not None:  # S-02: the same rule the scheduler uses
+        exterior, interior = schedule_pattern.day_flags(session, sub, pattern, day)
+        return (["Cleaning-External"] if exterior else []) + (
+            ["Cleaning-Internal"] if interior else [])
     services = ["Cleaning-External"]
     if sub.interior_day and WEEKDAYS[day.weekday()] == sub.interior_day:
         services.append("Cleaning-Internal")

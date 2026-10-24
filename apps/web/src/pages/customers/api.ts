@@ -55,6 +55,12 @@ export interface PlanChange {
   effective_from: string; status: "Scheduled" | "Applied" | "Cancelled"; chosen: boolean;
 }
 export interface PlanHistory { current_plan: string; current_price_rupees: number; changes: PlanChange[] }
+/** A subscription's schedule pattern (ADM-SCH-41). Default means no pattern. */
+export interface SchedulePattern {
+  kind: "Default" | "Weekly" | "Cycle"; exterior_weekdays: string[]; interior_weekdays: string[];
+  exterior_days: number[]; combined_days: number[]; cycle_days: number; default_interior_day: string | null;
+  exterior_count: number | null; combined_count: number | null;
+}
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

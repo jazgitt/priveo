@@ -5992,6 +5992,46 @@ class ParkingChangeIn {
       };
 }
 
+class PatternIn {
+  const PatternIn({
+    required this.kind,
+    this.exteriorWeekdays,
+    this.interiorWeekdays,
+    this.exteriorDays,
+    this.combinedDays,
+    required this.exteriorCount,
+    required this.combinedCount,
+  });
+
+  final String kind;
+  final List<String>? exteriorWeekdays;
+  final List<String>? interiorWeekdays;
+  final List<int>? exteriorDays;
+  final List<int>? combinedDays;
+  final int? exteriorCount;
+  final int? combinedCount;
+
+  factory PatternIn.fromJson(Map<String, dynamic> j) => PatternIn(
+        kind: j['kind'] as String,
+        exteriorWeekdays: j['exterior_weekdays'] == null ? null : [for (final x in j['exterior_weekdays'] as List) x as String],
+        interiorWeekdays: j['interior_weekdays'] == null ? null : [for (final x in j['interior_weekdays'] as List) x as String],
+        exteriorDays: j['exterior_days'] == null ? null : [for (final x in j['exterior_days'] as List) x as int],
+        combinedDays: j['combined_days'] == null ? null : [for (final x in j['combined_days'] as List) x as int],
+        exteriorCount: j['exterior_count'] == null ? null : j['exterior_count'] as int,
+        combinedCount: j['combined_count'] == null ? null : j['combined_count'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind,
+        'exterior_weekdays': exteriorWeekdays == null ? null : [for (final x in exteriorWeekdays!) x],
+        'interior_weekdays': interiorWeekdays == null ? null : [for (final x in interiorWeekdays!) x],
+        'exterior_days': exteriorDays == null ? null : [for (final x in exteriorDays!) x],
+        'combined_days': combinedDays == null ? null : [for (final x in combinedDays!) x],
+        'exterior_count': exteriorCount,
+        'combined_count': combinedCount,
+      };
+}
+
 class PauseIn {
   const PauseIn({
     required this.fromDate,
