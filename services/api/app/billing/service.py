@@ -35,6 +35,7 @@ from app.billing.schemas import (
 from app.changes.access import parse_id
 from app.changes.cycle import cycle_window, paused_days, plan_expires_on, shift_days
 from app.changes.rules import Clock, show_date, today_of
+from app.customers import plan_changes
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.service import show_registration, show_time
 from app.directory import lookup
@@ -825,6 +826,7 @@ class BillingService:
             plan = self._db.get(Plan, pending.pending_plan_id)
             pending.plan_id, pending.monthly_price_rupees = plan.id, plan.monthly_price_rupees
             pending.pending_plan_id, pending.pending_from = None, None
+            plan_changes.mark_applied(self._db, pending, plan)
             if not plan.includes_interior:
                 pending.interior_day = None
         self._db.flush()

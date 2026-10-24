@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.billing.models import Payment, PaymentEvent
 from app.changes.cycle import renewal_date
+from app.customers import plan_changes
 from app.customers.models import (
     WEEKDAYS,
     AddonRequest,
@@ -96,6 +97,8 @@ class VehicleEdit(Input):
 
 class SubscriptionEdit(Input):
     plan_id: uuid.UUID | None = None
+    # With a plan: the day the new plan starts. Empty: the next renewal date.
+    effective_from: date | None = None
     cutoff_time: str | None = None
     interior_day: str | None = None
 
@@ -767,14 +770,19 @@ def edit_subscription(
     sub = db.get(Subscription, subscription_id)
     if sub is None:
         raise ApiError("not_found", "Subscription not found.", 404)
-    watched = ("pending_plan_id", "cutoff_time", "interior_day")
+    watched = ("pending_plan_id", "pending_from", "cutoff_time", "interior_day")
     before = {k: getattr(sub, k) for k in watched}
     if body.plan_id:
         plan = db.get(Plan, body.plan_id)
         if plan is None or not plan.active:
             raise ApiError("validation_failed", "Choose an active plan.", 422)
-        sub.pending_plan_id = plan.id
-        sub.pending_from = renewal_date(db, sub.vehicle_id, sub.first_service_date, today_ist())
+        if body.effective_from is not None:
+            plan_changes.validate_start(body.effective_from)
+        starts = body.effective_from or renewal_date(
+            db, sub.vehicle_id, sub.first_service_date, today_ist())
+        plan_changes.schedule(db, sub, plan, starts, body.effective_from is not None, user.id)
+    elif body.effective_from is not None:
+        raise ApiError("validation_failed", "Choose a plan for that date.", 422)
     if body.cutoff_time is not None:
         cutoff = read_cutoff(body.cutoff_time)
         if cutoff is None:

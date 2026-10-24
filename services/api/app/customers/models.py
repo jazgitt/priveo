@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, Time, Uuid
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, Time, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -106,6 +106,32 @@ class Subscription(Base):
     cutoff_time: Mapped[time | None] = mapped_column(Time)
     interior_day: Mapped[str | None] = mapped_column(String(9))
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class PlanChange(Base):
+    """One plan change of a subscription, with the plan it left and the plan it
+    goes to (S-11, ADM-SUB-08). Scheduled until its date comes and the daily
+    job applies it; a cancelled change stays as history. The names and prices
+    are kept as they were when the change was made."""
+
+    __tablename__ = "subscription_plan_changes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    subscription_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("subscriptions.id"), index=True)
+    from_plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id"))
+    from_plan_name: Mapped[str] = mapped_column(String(80), default="")
+    from_price_rupees: Mapped[int | None] = mapped_column(Integer)
+    to_plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plans.id"))
+    to_plan_name: Mapped[str] = mapped_column(String(80))
+    to_price_rupees: Mapped[int] = mapped_column(Integer)
+    effective_from: Mapped[date] = mapped_column(Date)
+    # True when the admin chose the date; false when it is the next renewal.
+    chosen: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    status: Mapped[str] = mapped_column(String(10), default="Scheduled")  # Scheduled | Applied | Cancelled
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
 
 
 class AddonRequest(Base):

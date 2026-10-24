@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.billing.models import Payment
 from app.changes.rules import show_date
+from app.customers import plan_changes
 from app.platform.errors import ApiError
 
 
@@ -39,5 +40,8 @@ def shift_unpaid_renewals(db, sub, effective_date, days):
             payment.description = (f"Plan {show_date(payment.cycle_start)} to "
                                    f"{show_date(payment.cycle_end - timedelta(days=1))}")
         db.flush()
-    if sub.pending_from and sub.pending_from >= effective_date:
+    # A date the admin chose for a plan change does not move with a pause (ADM-SUB-08).
+    if (sub.pending_from and sub.pending_from >= effective_date
+            and not plan_changes.is_fixed(db, sub)):
         sub.pending_from += timedelta(days=days)
+        plan_changes.follow_pending(db, sub)
