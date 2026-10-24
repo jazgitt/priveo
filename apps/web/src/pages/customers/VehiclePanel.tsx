@@ -11,7 +11,7 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import type { Changes, Vehicle } from "./api";
+import type { Changes, Vehicle, VehicleCrew } from "./api";
 import { CarDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
 
 type Open = null | "car" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
@@ -34,6 +34,10 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const changes = useQuery({
     queryKey: ["customer", customerId, "changes", v.id],
     queryFn: () => api<Changes>(`/v1/admin/vehicles/${v.id}/changes`),
+  });
+  const crew = useQuery({
+    queryKey: ["customer", customerId, "crew", v.id],
+    queryFn: () => api<VehicleCrew[]>(`/v1/admin/vehicles/${v.id}/crew`),
   });
   const undo = useAppMutation<{ path: string; done: string }>({
     mutationFn: (r) => api(r.path, { method: "DELETE" }),
@@ -166,6 +170,24 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
               <li key={p.id} className="flex items-center justify-between gap-3 px-3 py-2">
                 <span><span className="mr-2 text-xs font-medium text-muted-foreground uppercase">Pause</span>{showDate(p.start_date)} to {showDate(p.end_date)}</span>
                 <Button size="sm" variant="ghost" disabled={undo.isPending} onClick={() => void endPause(p)}>End pause</Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {live && (
+        <section className="border-t pt-5">
+          <SubHeading>Crew serving this vehicle</SubHeading>
+          {crew.error && <ErrorState message={errorMessage(crew.error)} />}
+          {crew.data && crew.data.length === 0 && (
+            <p className="text-sm text-muted-foreground">No crew is scheduled for this vehicle yet.</p>
+          )}
+          <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0 empty:hidden">
+            {crew.data?.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 px-3 py-2">
+                <span><span className="font-medium">{c.name}</span> <span className="text-xs text-muted-foreground">{c.role}</span></span>
+                <span className="text-sm text-muted-foreground">{c.services.join(", ")} · next {showDate(c.next_date)}</span>
               </li>
             ))}
           </ul>
