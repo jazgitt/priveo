@@ -1494,6 +1494,121 @@
       }
     ]
   },
+  "DaySummary": {
+    "date": "2026-10-20",
+    "total": 1,
+    "completed": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "pending": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "missed": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "partially_completed": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "skipped": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "rescheduled": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    },
+    "cancelled": {
+      "count": 1,
+      "items": [
+        {
+          "id": "wire-value",
+          "registration": "wire-value",
+          "crew": "wire-value",
+          "reason": "wire-value",
+          "time": "wire-value"
+        }
+      ],
+      "more": 1
+    }
+  },
+  "DaySummaryItem": {
+    "id": "wire-value",
+    "registration": "wire-value",
+    "crew": "wire-value",
+    "reason": "wire-value",
+    "time": "wire-value"
+  },
+  "DaySummaryState": {
+    "count": 1,
+    "items": [
+      {
+        "id": "wire-value",
+        "registration": "wire-value",
+        "crew": "wire-value",
+        "reason": "wire-value",
+        "time": "wire-value"
+      }
+    ],
+    "more": 1
+  },
   "DemandLine": {
     "service": "wire-value",
     "source": "wire-value",

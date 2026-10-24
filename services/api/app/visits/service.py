@@ -364,7 +364,15 @@ def set_checked(db: Session, job: Job, item_key: str, checked: bool, login_id: u
         db.commit()
 
 
-def complete_job(db: Session, job: Job) -> Job:
+def _audit_job(db: Session, by, job: Job, action: str, detail: dict) -> None:
+    """A-04: one directory-audit row per crew outcome. Reasons by key and
+    remarks by length only: a remark can hold personal data."""
+    from app.directory.service import audit
+
+    audit(db, by, "job", job.id, action, detail)
+
+
+def complete_job(db: Session, job: Job, by: uuid.UUID | None = None) -> Job:
     """CRW-SVC-08: every item checked, the minimum proof confirmed, and no
     upload left waiting."""
     _open_job(job)
@@ -377,6 +385,7 @@ def complete_job(db: Session, job: Job) -> Job:
             {f"missing_{i + 1}": m for i, m in enumerate(missing)},
         )
     _stamp(db, job, finished=True)
+    _audit_job(db, by, job, "complete", {"status": [job.status, "Completed"]})
     return set_job_status(db, job.id, "Completed")
 
 
@@ -429,6 +438,9 @@ def could_not_complete(db: Session, job: Job, body: s.CouldNotComplete, by: uuid
         )
     )
     _stamp(db, job, finished=True)
+    _audit_job(db, by, job, "not_done", {
+        "status": [job.status, "Could not complete"], "reason_key": body.reason_key,
+        "remark_length": len(body.note.strip()), "has_photo": upload_id is not None})
     return set_job_status(db, job.id, "Could not complete")
 
 
@@ -512,6 +524,8 @@ def manager_reassign(
         )
     )
     previous_crew_id = job.crew_id
+    _audit_job(db, by, job, "reassign", {
+        "crew_id": [None if job.crew_id is None else str(job.crew_id), str(target.id)]})
     job.crew_id = target.id
     job.manual = True
     job.queue_unlocked = False

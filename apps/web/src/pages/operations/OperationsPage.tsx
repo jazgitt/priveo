@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { api } from "@/api/client";
 import { useConfirm } from "@/blocks/confirm";
@@ -50,9 +50,11 @@ function skipEffect(service: string): string {
 /** Missed jobs, work to skip by operations, and how each was resolved. */
 export function OperationsPage() {
   const site = useSite();
-  const [queue, setQueue] = useState("missed");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  // The dashboard links here with the queue and a day in the address (A-02).
+  const [linked] = useSearchParams();
+  const [queue, setQueue] = useState(QUEUES.some((q) => q.id === linked.get("queue")) ? linked.get("queue")! : "missed");
+  const [from, setFrom] = useState(linked.get("date_from") ?? "");
+  const [to, setTo] = useState(linked.get("date_to") ?? "");
   const [reason, setReason] = useState("");
   const [unresolved, setUnresolved] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);

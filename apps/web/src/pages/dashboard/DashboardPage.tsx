@@ -12,6 +12,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { formatDate } from "../support/format";
 import { KEYS, useMergedAlerts, useNeedsScheduling, usePayments } from "../support/hooks";
 import type { ComplaintSummary } from "../support/types";
+import { TodaysServices } from "./TodaysServices";
 
 /** One figure with the first few items behind it and a link to the page that deals with them. */
 function Tile({ title, to, count, loading, error, icon: Icon, urgent, empty, children }: {
@@ -58,6 +59,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard" description="What needs the admin's attention now, across all sites." />
+      <TodaysServices />
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 2xl:grid-cols-4">
         <Tile title="Unread alerts" to="/alerts" count={alerts.unread} icon={Bell}
               loading={alerts.loading} error={alerts.error} empty="No unread alerts.">

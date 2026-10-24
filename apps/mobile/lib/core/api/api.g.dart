@@ -3528,6 +3528,110 @@ class DayHours {
       };
 }
 
+class DaySummary {
+  const DaySummary({
+    required this.date,
+    required this.total,
+    required this.completed,
+    required this.pending,
+    required this.missed,
+    required this.partiallyCompleted,
+    required this.skipped,
+    required this.rescheduled,
+    required this.cancelled,
+  });
+
+  final DateTime date;
+  final int total;
+  final DaySummaryState completed;
+  final DaySummaryState pending;
+  final DaySummaryState missed;
+  final DaySummaryState partiallyCompleted;
+  final DaySummaryState skipped;
+  final DaySummaryState rescheduled;
+  final DaySummaryState cancelled;
+
+  factory DaySummary.fromJson(Map<String, dynamic> j) => DaySummary(
+        date: DateTime.parse(j['date'] as String),
+        total: j['total'] as int,
+        completed: DaySummaryState.fromJson(j['completed'] as Map<String, dynamic>),
+        pending: DaySummaryState.fromJson(j['pending'] as Map<String, dynamic>),
+        missed: DaySummaryState.fromJson(j['missed'] as Map<String, dynamic>),
+        partiallyCompleted: DaySummaryState.fromJson(j['partially_completed'] as Map<String, dynamic>),
+        skipped: DaySummaryState.fromJson(j['skipped'] as Map<String, dynamic>),
+        rescheduled: DaySummaryState.fromJson(j['rescheduled'] as Map<String, dynamic>),
+        cancelled: DaySummaryState.fromJson(j['cancelled'] as Map<String, dynamic>),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'date': _date(date),
+        'total': total,
+        'completed': completed.toJson(),
+        'pending': pending.toJson(),
+        'missed': missed.toJson(),
+        'partially_completed': partiallyCompleted.toJson(),
+        'skipped': skipped.toJson(),
+        'rescheduled': rescheduled.toJson(),
+        'cancelled': cancelled.toJson(),
+      };
+}
+
+class DaySummaryItem {
+  const DaySummaryItem({
+    required this.id,
+    required this.registration,
+    required this.crew,
+    required this.reason,
+    required this.time,
+  });
+
+  final String id;
+  final String registration;
+  final String crew;
+  final String reason;
+  final String? time;
+
+  factory DaySummaryItem.fromJson(Map<String, dynamic> j) => DaySummaryItem(
+        id: j['id'] as String,
+        registration: j['registration'] as String,
+        crew: j['crew'] as String,
+        reason: j['reason'] as String,
+        time: j['time'] == null ? null : j['time'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'registration': registration,
+        'crew': crew,
+        'reason': reason,
+        'time': time,
+      };
+}
+
+class DaySummaryState {
+  const DaySummaryState({
+    required this.count,
+    required this.items,
+    required this.more,
+  });
+
+  final int count;
+  final List<DaySummaryItem> items;
+  final int more;
+
+  factory DaySummaryState.fromJson(Map<String, dynamic> j) => DaySummaryState(
+        count: j['count'] as int,
+        items: [for (final x in j['items'] as List) DaySummaryItem.fromJson(x as Map<String, dynamic>)],
+        more: j['more'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'count': count,
+        'items': [for (final x in items) x.toJson()],
+        'more': more,
+      };
+}
+
 class DemandLine {
   const DemandLine({
     required this.service,

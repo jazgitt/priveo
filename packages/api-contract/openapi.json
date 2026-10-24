@@ -3472,6 +3472,140 @@
         }
       }
     },
+    "/v1/admin/home/day-summary": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Day Summary",
+        "description": "A-02: today's (IST) visits by outcome. No customer name or mobile number.",
+        "operationId": "admin_day_summary_v1_admin_home_day_summary_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "crew_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "vehicle_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "registration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Registration"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DaySummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/crew": {
       "post": {
         "tags": [
@@ -21785,6 +21919,121 @@
           "working"
         ],
         "title": "DayHours"
+      },
+      "DaySummary": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "completed": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "pending": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "missed": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "partially_completed": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "skipped": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "rescheduled": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          },
+          "cancelled": {
+            "$ref": "#/components/schemas/DaySummaryState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "total",
+          "completed",
+          "pending",
+          "missed",
+          "partially_completed",
+          "skipped",
+          "rescheduled",
+          "cancelled"
+        ],
+        "title": "DaySummary",
+        "description": "A-02: the day's visits by derived outcome (WP2 helper). The states do not\noverlap, so they add up to `total`."
+      },
+      "DaySummaryItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "crew": {
+            "type": "string",
+            "title": "Crew"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "registration",
+          "crew",
+          "reason",
+          "time"
+        ],
+        "title": "DaySummaryItem",
+        "description": "One visit of the day. No customer name or mobile number."
+      },
+      "DaySummaryState": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DaySummaryItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "more": {
+            "type": "integer",
+            "title": "More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "items",
+          "more"
+        ],
+        "title": "DaySummaryState"
       },
       "DemandLine": {
         "properties": {

@@ -835,6 +835,30 @@ void main() {
     final input = jsonDecode('{"day":"wire-value","working":false,"start":"wire-value","end":"wire-value","extra_slots":[]}') as Map<String, dynamic>;
     expect(wire.DayHours.fromJson(input).toJson(), equals(input));
   });
+  test('DaySummary preserves populated wire fields', () {
+    final input = jsonDecode('{"date":"2026-10-20","total":1,"completed":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"pending":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"missed":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"partially_completed":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"skipped":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"rescheduled":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1},"cancelled":{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1}}') as Map<String, dynamic>;
+    expect(wire.DaySummary.fromJson(input).toJson(), equals(input));
+  });
+  test('DaySummary preserves nullable wire fields', () {
+    final input = jsonDecode('{"date":"2026-10-20","total":1,"completed":{"count":1,"items":[],"more":1},"pending":{"count":1,"items":[],"more":1},"missed":{"count":1,"items":[],"more":1},"partially_completed":{"count":1,"items":[],"more":1},"skipped":{"count":1,"items":[],"more":1},"rescheduled":{"count":1,"items":[],"more":1},"cancelled":{"count":1,"items":[],"more":1}}') as Map<String, dynamic>;
+    expect(wire.DaySummary.fromJson(input).toJson(), equals(input));
+  });
+  test('DaySummaryItem preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.DaySummaryItem.fromJson(input).toJson(), equals(input));
+  });
+  test('DaySummaryItem preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":null}') as Map<String, dynamic>;
+    expect(wire.DaySummaryItem.fromJson(input).toJson(), equals(input));
+  });
+  test('DaySummaryState preserves populated wire fields', () {
+    final input = jsonDecode('{"count":1,"items":[{"id":"wire-value","registration":"wire-value","crew":"wire-value","reason":"wire-value","time":"wire-value"}],"more":1}') as Map<String, dynamic>;
+    expect(wire.DaySummaryState.fromJson(input).toJson(), equals(input));
+  });
+  test('DaySummaryState preserves nullable wire fields', () {
+    final input = jsonDecode('{"count":1,"items":[],"more":1}') as Map<String, dynamic>;
+    expect(wire.DaySummaryState.fromJson(input).toJson(), equals(input));
+  });
   test('DemandLine preserves populated wire fields', () {
     final input = jsonDecode('{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}') as Map<String, dynamic>;
     expect(wire.DemandLine.fromJson(input).toJson(), equals(input));

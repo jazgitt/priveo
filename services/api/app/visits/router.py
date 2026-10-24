@@ -61,7 +61,7 @@ def complete(job_id: str, user: User = Depends(require_role("crew")),
              db: Session = Depends(get_db)):
     j = service.visible_job(db, user.id, job_id)
     queue.require_unlocked(db, j)  # S-13: the crew's own routes only
-    service.complete_job(db, j)
+    service.complete_job(db, j, user.id)
     return service.job_detail(db, j)
 
 
