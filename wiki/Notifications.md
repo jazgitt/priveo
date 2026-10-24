@@ -22,7 +22,7 @@ Complaint alert email includes a brief operational summary and a portal link rat
 
 The repository separates notification records/events, adapters, device-token registration, push sending and support email delivery. FCM is the selected push provider and Resend the email provider. A stored event or passing adapter test is not proof of delivery through those providers on a real device.[^5][^6]
 
-The implementation handoff records remaining push, navigation and live-integration work. The 20 October report excludes live-provider and device tests. Requirements saying “sends push” should therefore be understood as intended behavior unless linked deployment evidence establishes delivery.[^6]
+Push, navigation and live-integration work remain. The 20 October report excludes live-provider and device tests. Requirements saying “sends push” should therefore be understood as intended behavior unless linked deployment evidence establishes delivery.[^6]
 
 ## Scheduled jobs
 
@@ -43,7 +43,7 @@ The development schedule configuration and cron comments include host-specific t
 [^3]: [Admin requirements](../docs/reqs/admin-functional-requirements.md), ADM-ACC-09, ADM-SCH-24 and ADM-CMP-08.
 [^4]: [Support email delivery](../services/api/app/support/email_delivery.py).
 [^5]: [Notification events](../services/api/app/notifications/events.py); [push adapter](../services/api/app/notifications/push.py).
-[^6]: [Implementation handoff](../docs/codex-handoff-plan.md); [test report, 20 October](../docs/testing/test-report-2026-10-20.md).
+[^6]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md).
 [^7]: [Cron implementation](../services/api/app/notifications/cron.py); [development host configuration](../services/api/vercel.json).
 
 ---

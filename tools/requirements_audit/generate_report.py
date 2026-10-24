@@ -610,7 +610,7 @@ All repository-authored Markdown files found outside dependency/build/cache dire
 | Markdown input | Lines | Treatment |
 |---|---:|---|
 """
-inputs = ["README.md", "CLAUDE.md", "docs/architecture.md", "docs/build-plan.md", "docs/build-and-release.md", "docs/codex-handoff-plan.md", "docs/overnight-build-report.md", "docs/system-component-diagram.md", "docs/tech-stack.md", *SOURCES.values(), "docs/reqs/owner-decisions-2026-10-13.md", "docs/coverage/customer.md", "docs/coverage/admin.md", "docs/coverage/crew.md", "apps/mobile/README.md", "apps/web/README.md", "apps/mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md"]
+inputs = ["README.md", "CLAUDE.md", "docs/architecture.md", "docs/build-plan.md", "docs/build-and-release.md", "docs/overnight-build-report.md", "docs/system-component-diagram.md", "docs/tech-stack.md", *SOURCES.values(), "docs/reqs/owner-decisions-2026-10-13.md", "docs/coverage/customer.md", "docs/coverage/admin.md", "docs/coverage/crew.md", "apps/mobile/README.md", "apps/web/README.md", "apps/mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md"]
 for path in inputs:
     content = (ROOT/path).read_text(encoding="utf-8")
     treatment = "Complete per-ID/rule/entity audit" if path in SOURCES.values() else "Historical coverage fully replaced by current per-row matrix" if path.startswith("docs/coverage/") else "Technical/release target reconciliation" if path in ("docs/architecture.md", "docs/tech-stack.md", "docs/build-plan.md", "docs/build-and-release.md") else "Historical/status/instruction review; not independent feature counts"

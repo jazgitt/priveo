@@ -51,7 +51,7 @@ Public signup, automated payments, in-app refunds and selected security upgrades
 [^2]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md), stage reconciliation and limitations; [feature tracker](../docs/feature-status.json).
 [^3]: [Requirements audit](../docs/coverage/requirements-audit.md); [owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md); [owner decisions, 19 October](../docs/reqs/owner-decisions-2026-10-19.md).
 [^4]: [Measured coverage](../docs/coverage/unit-test-coverage.md).
-[^5]: [Implementation handoff](../docs/codex-handoff-plan.md).
+[^5]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md).
 [^6]: [Mani Bond solution plan](../docs/agent/mani-bond-solution-plan.md).
 
 ---

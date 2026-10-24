@@ -38,7 +38,7 @@ Relevant implementation references:
 - `services/api/app/scheduling/`: scheduling services and planning rules.
 - `services/api/app/notifications/cron.py`: existing background-job entry points.
 - `services/api/pyproject.toml`: backend dependency baseline.
-- [Current handoff](../codex-handoff-plan.md), [tech stack](../tech-stack.md) and [security backlog](../security-backlog.md): existing integration and release constraints.
+- [Tech stack](../tech-stack.md) and [security backlog](../security-backlog.md): existing integration and release constraints.
 
 Existing code and deployed configuration must be rechecked before implementation. In particular, daily cron patterns do not establish near-real-time monitoring. Follow the project's decided AWS Mumbai hosting architecture; inspect current deployment before choosing how assistant workers run.
 
