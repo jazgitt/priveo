@@ -19,7 +19,7 @@ from app import (
     visits,
     webauth,
 )
-from app.customers import administration, plan_changes, schedule_pattern
+from app.customers import administration, plan_changes, schedule_pattern, service_history
 from app.customers import parking as vehicle_parking
 from app.customers import router as customers
 from app.home import router as home
@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(vehicle_parking.admin)
     app.include_router(plan_changes.admin)
     app.include_router(schedule_pattern.admin)
+    app.include_router(service_history.admin)
     app.include_router(administration.customer)
     app.include_router(scheduling_admin.router)
     app.include_router(operations.router)

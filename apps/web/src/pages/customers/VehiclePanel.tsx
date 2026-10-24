@@ -11,7 +11,7 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import type { Changes, ParkingChanges, PlanHistory, SchedulePattern, Vehicle, VehicleCrew } from "./api";
+import { HISTORY_STATES, type Changes, type ParkingChanges, type PlanHistory, type SchedulePattern, type ServiceHistory, type Vehicle, type VehicleCrew } from "./api";
 import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
 
 type Open = null | "car" | "parking" | "pattern" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
@@ -24,6 +24,9 @@ function SubHeading({ children, actions }: { children: string; actions?: React.R
     </div>
   );
 }
+
+const SERVICE_NAMES: Record<string, string> = { "Cleaning-External": "Exterior", "Cleaning-Internal": "Interior" };
+const serviceName = (s: string) => SERVICE_NAMES[s] ?? s;
 
 /** One line for the pattern, for the Subscription section. */
 function patternText(p: SchedulePattern | undefined): string {
@@ -48,6 +51,12 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const crew = useQuery({
     queryKey: ["customer", customerId, "crew", v.id],
     queryFn: () => api<VehicleCrew[]>(`/v1/admin/vehicles/${v.id}/crew`),
+  });
+  const [historyState, setHistoryState] = useState<string | null>(null);
+  const [historyLimit, setHistoryLimit] = useState(10);
+  const history = useQuery({
+    queryKey: ["customer", customerId, "history", v.id, historyState, historyLimit],
+    queryFn: () => api<ServiceHistory>(`/v1/admin/vehicles/${v.id}/service-history?limit=${historyLimit}${historyState ? `&state=${encodeURIComponent(historyState)}` : ""}`),
   });
   const pattern = useQuery({
     queryKey: ["customer", customerId, "pattern", sub?.id],
@@ -280,6 +289,53 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           </ul>
         </section>
       )}
+
+      <section className="border-t pt-5">
+        <SubHeading>Service history</SubHeading>
+        {history.error && <ErrorState message={errorMessage(history.error)} />}
+        {history.data && (
+          <>
+            <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Filter by state">
+              <Button size="sm" variant={historyState === null ? "default" : "outline"} aria-pressed={historyState === null}
+                      onClick={() => { setHistoryState(null); setHistoryLimit(10); }}>
+                All {Object.values(history.data.counts).reduce((a, b) => a + b, 0)}
+              </Button>
+              {HISTORY_STATES.map((s) => (
+                <Button key={s} size="sm" variant={historyState === s ? "default" : "outline"} aria-pressed={historyState === s}
+                        onClick={() => { setHistoryState(historyState === s ? null : s); setHistoryLimit(10); }}>
+                  {s} {history.data.counts[s]}
+                </Button>
+              ))}
+            </div>
+            {history.data.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{historyState ? `No ${historyState} services.` : "No services yet."}</p>
+            ) : (
+              <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0">
+                {history.data.items.map((i) => (
+                  <li key={i.visit_id} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                    <span>
+                      <span className="font-medium">{showDate(i.date)}</span>{" "}
+                      <span className="text-muted-foreground">{i.planned.map(serviceName).join(" + ")}</span>
+                      {i.missed.map((m) => (
+                        <span key={m.service} className="block text-xs text-muted-foreground">
+                          {serviceName(m.service)} not done{m.reason ? `: ${m.reason}` : ""}{m.note ? `, ${m.note}` : ""}
+                        </span>
+                      ))}
+                      {i.revised_date && (
+                        <span className="block text-xs text-muted-foreground">Moved from {showDate(i.original_date!)} to {showDate(i.revised_date)}</span>
+                      )}
+                    </span>
+                    <StatusBadge status={i.state} />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {history.data.total > history.data.items.length && (
+              <Button className="mt-2" size="sm" variant="ghost" onClick={() => setHistoryLimit(historyLimit + 10)}>Show more</Button>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="border-t pt-5">
         <SubHeading actions={<Button size="sm" variant="link" asChild><Link to="/payments">Manage payments</Link></Button>}>Payments</SubHeading>

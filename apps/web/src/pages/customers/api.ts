@@ -61,6 +61,14 @@ export interface SchedulePattern {
   exterior_days: number[]; combined_days: number[]; cycle_days: number; default_interior_day: string | null;
   exterior_count: number | null; combined_count: number | null;
 }
+/** A vehicle's service history for the admin, with the state of each service (ADM-CUS-29). */
+export const HISTORY_STATES = ["Scheduled", "Completed", "Partially Completed", "Not Completed", "Rescheduled", "Cancelled"] as const;
+export interface HistoryItem {
+  visit_id: string; date: string; state: (typeof HISTORY_STATES)[number]; planned: string[]; delivered: string[];
+  missed: { service: string; reason: string; note: string; rescheduled: boolean }[];
+  original_date: string | null; revised_date: string | null;
+}
+export interface ServiceHistory { counts: Record<(typeof HISTORY_STATES)[number], number>; total: number; items: HistoryItem[] }
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

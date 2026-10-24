@@ -31,9 +31,42 @@ const init = spawnSync(python, [
 ], { cwd: path.join(repo, "services/api"), env, stdio: "inherit" });
 if (init.status !== 0) process.exit(init.status ?? 1);
 
-const api = spawn(process.platform === "win32" ? "powershell" : "pwsh", [
-  "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-  path.join(repo, "tools/test-data/start-api.ps1"), "-DatabaseFile", db, "-Port", port, "-SerializeRequests",
-], { cwd: repo, env, stdio: "inherit" });
+// start-api.ps1 does the same on Windows and in CI. Where PowerShell is missing
+// (a Mac), set the same variables here and run the same serialised API.
+const hasPowerShell = process.platform === "win32"
+  || spawnSync("pwsh", ["-NoProfile", "-Command", "exit 0"], { stdio: "ignore" }).status === 0;
+let api;
+if (hasPowerShell) {
+  api = spawn(process.platform === "win32" ? "powershell" : "pwsh", [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    path.join(repo, "tools/test-data/start-api.ps1"), "-DatabaseFile", db, "-Port", port, "-SerializeRequests",
+  ], { cwd: repo, env, stdio: "inherit" });
+} else {
+  const fixtureEnv = {
+    ...env,
+    DATABASE_URL: `sqlite:///${db}`,
+    ENVIRONMENT: "dev",
+    RESEND_API_KEY: " ", // a space: an empty value would let services/api/.env send real email
+    TOKEN_SECRET: "local-fixture-only-secret-not-for-deployment",
+    MOCK_EMAIL_CODE: "246810",
+    MEDIA_ROOT: path.join(dir, "media"),
+    MONEY_GST_CONFIGURATION_MOCK: "true",
+    MONEY_UPI_ID: "priveo-placeholder@upi",
+    MONEY_UPI_PAYEE_NAME: "Priveo (test placeholder)",
+    MONEY_UPI_QR_URL: "",
+    MONEY_SELLER_NAME: "Priveo (placeholder seller)",
+    MONEY_SELLER_ADDRESS: "Placeholder address",
+    MONEY_SELLER_GSTIN: "00PLACEHOLDER0Z0",
+    MONEY_GST_RATE_PERCENT: "18",
+    MONEY_GST_MODE: "CGST_SGST",
+  };
+  const verify = spawnSync(python, ["scripts/test_data.py", "--database-file", db],
+    { cwd: path.join(repo, "services/api"), env: fixtureEnv, stdio: "ignore" });
+  if (verify.status !== 0) process.exit(verify.status ?? 1);
+  api = spawn(python, [
+    "-m", "uvicorn", "serial_app:app", "--app-dir", path.join(repo, "tools/test-data"),
+    "--host", "0.0.0.0", "--port", port,
+  ], { cwd: path.join(repo, "services/api"), env: fixtureEnv, stdio: "inherit" });
+}
 api.on("exit", (code) => process.exit(code ?? 0));
 process.on("SIGTERM", () => api.kill());
