@@ -35,6 +35,7 @@ from app.platform.clock import today_ist
 from app.platform.db import get_db, utcnow
 from app.platform.deps import require_feature, require_role
 from app.platform.errors import ApiError
+from app.scheduling.models import Job, SchedulingCrew, Visit
 
 admin = APIRouter(prefix="/v1/admin", tags=["customer-administration"])
 customer = APIRouter(prefix="/v1/customer", tags=["customer-administration"])
@@ -797,6 +798,37 @@ def edit_subscription(
     # ADM-CUS-14/15: admin plan and default preferences edits are silent.
     # Explicit skip/operations actions keep their separate notification rules.
     return {"updated": True, "pending_from": sub.pending_from}
+
+
+@admin.get("/vehicles/{vehicle_id}/crew")
+def vehicle_crew(
+    vehicle_id: uuid.UUID,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """ADM-CUS-28: the crew who serve a vehicle, read from its scheduled jobs from
+    today (IST) on. Read only. Skipped jobs and unassigned jobs do not count."""
+    if db.get(Vehicle, vehicle_id) is None:
+        raise ApiError("not_found", "Vehicle not found.", 404)
+    rows = db.execute(
+        select(SchedulingCrew, Login.display_name, Job.service, Visit.date)
+        .join(Job, Job.crew_id == SchedulingCrew.id)
+        .join(Visit, Visit.id == Job.visit_id)
+        .join(Login, Login.id == SchedulingCrew.login_id)
+        .where(Visit.vehicle_id == vehicle_id, Visit.date >= today_ist(),
+               Job.status != "Skipped")
+        .order_by(Visit.date, Job.start_minute)
+    ).all()
+    crew: dict[uuid.UUID, dict] = {}
+    for member, name, service, day in rows:
+        entry = crew.setdefault(member.id, {
+            "id": str(member.id), "name": name, "role": member.role,
+            "services": [], "next_date": day.isoformat(), "jobs": 0,
+        })
+        entry["jobs"] += 1
+        if service not in entry["services"]:
+            entry["services"].append(service)
+    return sorted(crew.values(), key=lambda c: (c["next_date"], c["name"]))
 
 
 @admin.patch("/vehicles/{vehicle_id}")

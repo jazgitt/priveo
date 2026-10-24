@@ -43,6 +43,7 @@ beforeEach(() => {
     if (path.endsWith("/notification-preferences") && method === "GET") return reply({ items: [] });
     if (path.endsWith("/sessions")) return reply([]);
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
+    if (path.endsWith("/crew")) return reply([]);
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
     if (path === "/v1/admin/customers/c1" && method === "GET") return reply(customer);
     if (path.startsWith("/v1/admin/customers/summary")) return reply(summary);
@@ -424,4 +425,19 @@ it("filters from a summary tile with a chip to clear it, and switches to tiles",
   await userEvent.click(screen.getByRole("button", { name: "Open Asha Rao" }));
   expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeInTheDocument();
   localStorage.removeItem("priveo.view.customers");
+});
+
+it("shows the crew who serve a vehicle, read only (ADM-CUS-28)", async () => {
+  detail([car()], (path) => (path.endsWith("/v1/admin/vehicles/v1/crew")
+    ? reply([{ id: "w1", name: "Ravi", role: "Member", services: ["Cleaning-External", "Cleaning-Internal"], next_date: "2026-11-03", jobs: 8 }]) : undefined));
+  expect(await screen.findByText("Crew serving this vehicle")).toBeInTheDocument();
+  expect(await screen.findByText("Ravi")).toBeInTheDocument();
+  expect(screen.getByText(/Cleaning-External, Cleaning-Internal/)).toBeInTheDocument();
+  expect(sentTo("/v1/admin/vehicles/v1/crew", "GET")).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([p, o]) => /\/crew/.test(String(p)) && (o?.method ?? "GET") !== "GET")).toHaveLength(0);
+});
+
+it("says so when no crew is scheduled for a vehicle", async () => {
+  detail([car()]);
+  expect(await screen.findByText("No crew is scheduled for this vehicle yet.")).toBeInTheDocument();
 });

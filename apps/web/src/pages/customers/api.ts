@@ -41,6 +41,8 @@ export interface CustomerSummary {
 export const STATUS_TABS = ["Active", "Activating", "Inactive", "No subscription"] as const;
 export type StatusTab = (typeof STATUS_TABS)[number];
 export interface Session { id: string; device_name: string; platform: string; app_version: string; last_active: string; channel: string }
+/** A crew member serving a vehicle, from its scheduled jobs (ADM-CUS-28). */
+export interface VehicleCrew { id: string; name: string; role: string; services: string[]; next_date: string; jobs: number }
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

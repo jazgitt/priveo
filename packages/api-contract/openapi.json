@@ -2147,6 +2147,64 @@
         }
       }
     },
+    "/v1/admin/vehicles/{vehicle_id}/crew": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Vehicle Crew",
+        "description": "ADM-CUS-28: the crew who serve a vehicle, read from its scheduled jobs from\ntoday (IST) on. Read only. Skipped jobs and unassigned jobs do not count.",
+        "operationId": "vehicle_crew_v1_admin_vehicles__vehicle_id__crew_get",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/vehicles/{vehicle_id}": {
       "patch": {
         "tags": [

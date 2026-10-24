@@ -165,7 +165,6 @@ All repository-authored Markdown files found outside dependency/build/cache dire
 | [docs/architecture.md:1](../../docs/architecture.md#L1) | 368 | Technical/release target reconciliation |
 | [docs/build-plan.md:1](../../docs/build-plan.md#L1) | 208 | Technical/release target reconciliation |
 | [docs/build-and-release.md:1](../../docs/build-and-release.md#L1) | 126 | Technical/release target reconciliation |
-| [docs/codex-handoff-plan.md:1](../../docs/codex-handoff-plan.md#L1) | 189 | Historical/status/instruction review; not independent feature counts |
 | [docs/overnight-build-report.md:1](../../docs/overnight-build-report.md#L1) | 80 | Historical/status/instruction review; not independent feature counts |
 | [docs/system-component-diagram.md:1](../../docs/system-component-diagram.md#L1) | 75 | Historical/status/instruction review; not independent feature counts |
 | [docs/tech-stack.md:1](../../docs/tech-stack.md#L1) | 226 | Technical/release target reconciliation |

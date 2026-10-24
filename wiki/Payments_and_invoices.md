@@ -46,7 +46,7 @@ This article describes project billing behavior, not independent tax or legal ad
 [^3]: [Cron implementation](../services/api/app/notifications/cron.py), payment and reminder jobs.
 [^4]: [Test-data plan](../docs/testing/test-data-plan.md), independent payment dimensions; [add-on service](../services/api/app/addons/service.py).
 [^5]: [Owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md), decision 4; [billing service](../services/api/app/billing/service.py).
-[^6]: [Implementation handoff](../docs/codex-handoff-plan.md), PDF and release work.
+[^6]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md), PDF and release work.
 
 ---
 

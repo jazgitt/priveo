@@ -38,7 +38,7 @@ Current requirements avoid timed refresh and specify refresh on return after fiv
 
 [^1]: [Customer requirements](../docs/reqs/customer-app-functional-requirements.md), AUTH, ONB, HOME, NAV, VEH, SET and account sections.
 [^2]: [Owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md), decisions 1–2.
-[^3]: [Implementation handoff](../docs/codex-handoff-plan.md), refresh and integration gaps.
+[^3]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md), refresh and integration gaps.
 
 ---
 

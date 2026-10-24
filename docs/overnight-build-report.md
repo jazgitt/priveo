@@ -1,6 +1,6 @@
 # Overnight build report: Phases 2 to 7
 
-This is the original overnight snapshot. Later integration has closed several gaps below; see [the current handoff](codex-handoff-plan.md) before planning new work.
+This is the original overnight snapshot. Later integration has closed several gaps below.
 
 **Status:** 11 Oct 2026. Built by six parallel slices on `integration/mobile-phases-2-7`, integrated and checked together. Nothing here was deployed. The `dev` database and the `dev` API were not touched.
 
