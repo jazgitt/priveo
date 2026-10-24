@@ -21,7 +21,7 @@ export interface AuditEntry {
 }
 
 const ENTITIES = ["society", "plan", "vehicle", "slot", "service", "checklist", "reason",
-  "setting", "addon", "customer", "subscription", "cutoff_request", "schedule_change", "operations", "schedule", "payment", "crew"];
+  "setting", "addon", "customer", "subscription", "cutoff_request", "schedule_change", "operations", "schedule", "payment", "crew", "job"];
 /** The most events the page ever loads. Older ones are not shown. */
 export const MAX_EVENTS = 1000;
 export const PAGE_SIZE = 50;

@@ -18,11 +18,15 @@ from app.home.schemas import (
     AdminDaySchedule,
     AdminHome,
     AdminHomeSociety,
+    DaySummary,
+    DaySummaryItem,
+    DaySummaryState,
     PaymentToConfirm,
 )
 from app.identity.models import Login
 from app.scheduling import service as scheduling
-from app.scheduling.models import Schedule, Visit
+from app.scheduling.models import Job, Schedule, Visit
+from app.scheduling.outcomes import visit_outcomes
 from app.support import alerts as support_alerts
 from app.support.models import Complaint
 
@@ -101,3 +105,66 @@ def day_schedule(db: Session, day: date, society_id: uuid.UUID | None) -> AdminD
         schedule_status=(None if not statuses else
                          statuses.pop() if len(statuses) == 1 else "Mixed"),
         total=len(rows), done=done, left=left, crew=ordered)
+
+
+SUMMARY_LIST_LIMIT = 20
+# Visit outcome (WP2) to the state shown. DERIVED: a Cancelled visit whose jobs
+# were all skipped is shown as Skipped; any other Cancelled visit stays Cancelled.
+_STATE_OF = {
+    "Scheduled": "pending",
+    "Completed": "completed",
+    "Not Completed": "missed",
+    "Partially Completed": "partially_completed",
+    "Rescheduled": "rescheduled",
+    "Cancelled": "cancelled",
+}
+
+
+def day_summary(db: Session, day: date, crew_id: uuid.UUID | None = None,
+                vehicle_id: uuid.UUID | None = None,
+                society_id: uuid.UUID | None = None,
+                registration: str | None = None) -> DaySummary:
+    """A-02. Counts the visits of one date by their derived outcome. A missed
+    or partial visit is counted and listed, never dropped (C-06)."""
+    where = [Visit.date == day]
+    if crew_id is not None:
+        where.append(Job.crew_id == crew_id)
+    if vehicle_id is not None:
+        where.append(Visit.vehicle_id == vehicle_id)
+    if society_id is not None:
+        where.append(Schedule.society_id == society_id)
+    if registration:
+        # Derived: the portal has no vehicle list, so it filters by registration.
+        where.append(func.upper(Vehicle.registration) == registration.strip().upper())
+    rows = scheduling.job_rows(db, *where)
+    visit_ids = {r["visit_id"] for r in rows}
+    derived = visit_outcomes(db, visit_ids)
+    all_status: dict = {}
+    if visit_ids:
+        for vid, status in db.execute(
+                select(Job.visit_id, Job.status).where(Job.visit_id.in_(visit_ids))):
+            all_status.setdefault(vid, []).append(status)
+    by_visit: dict = {}
+    for r in rows:  # job_rows is ordered by date then start time
+        by_visit.setdefault(r["visit_id"], []).append(r)
+    states: dict[str, list[DaySummaryItem]] = {k: [] for k in (
+        "completed", "pending", "missed", "partially_completed", "skipped",
+        "rescheduled", "cancelled")}
+    for vid, jobs in by_visit.items():
+        outcome = derived[vid]
+        state = _STATE_OF[outcome.outcome]
+        if state == "cancelled" and all_status.get(vid) and all(
+                x == "Skipped" for x in all_status[vid]):
+            state = "skipped"
+        crews = sorted({j["crew_name"] for j in jobs if j["crew_name"]})
+        times = [j["start_time"] for j in jobs if j["start_time"]]
+        # The reason label only; the free-text remark can hold personal data.
+        reasons = sorted({m["reason"] for m in outcome.missed if m["reason"]})
+        states[state].append(DaySummaryItem(
+            id=str(vid), registration=jobs[0]["registration"],
+            crew=", ".join(crews) or UNASSIGNED, reason=", ".join(reasons),
+            time=min(times) if times else None))
+    out = {k: DaySummaryState(count=len(v), items=v[:SUMMARY_LIST_LIMIT],
+                              more=max(0, len(v) - SUMMARY_LIST_LIMIT))
+           for k, v in states.items()}
+    return DaySummary(date=day, total=len(by_visit), **out)

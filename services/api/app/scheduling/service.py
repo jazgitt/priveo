@@ -71,7 +71,12 @@ def minutes_of(t: time | None) -> int | None:
 
 
 def record(
-    db: Session, schedule_id: uuid.UUID, admin_id: uuid.UUID | None, kind: str, detail: str = ""
+    db: Session,
+    schedule_id: uuid.UUID,
+    admin_id: uuid.UUID | None,
+    kind: str,
+    detail: str = "",
+    changes: dict | None = None,
 ) -> None:
     db.add(
         SchedulingEvent(schedule_id=schedule_id, admin_login_id=admin_id, kind=kind, detail=detail)
@@ -79,7 +84,8 @@ def record(
     if admin_id:
         from app.directory.service import audit
 
-        audit(db, admin_id, "schedule", schedule_id, kind, {"detail": detail})
+        # A-04: {field: [old, new]} when the caller knows it, else the text.
+        audit(db, admin_id, "schedule", schedule_id, kind, changes or {"detail": detail})
 
 
 # ---- demand and capacity ---------------------------------------------------
@@ -773,6 +779,10 @@ def run(
 # ---- manual changes and the freeze ----------------------------------------
 
 
+def _s(value) -> str | None:
+    return None if value is None else str(value)
+
+
 def move_job(
     db: Session,
     job_id: uuid.UUID,
@@ -793,12 +803,15 @@ def move_job(
         raise ApiError("job_not_open", "That job has already started or finished.", 409)
     if crew_id is None:
         previous_crew_id = job.crew_id  # notify hook
+        before = (job.crew_id, job.start_minute)
         job.crew_id, job.start_minute, job.late = None, None, False
         job.sequence, job.queue_unlocked = None, False
         queue.resequence_all(db, {(previous_crew_id, visit.date)})
         job.manual = True
         job.note = "Taken off the schedule by the admin."
-        record(db, schedule.id, admin_id, "move", f"job {job.id} taken off")
+        record(db, schedule.id, admin_id, "move", f"job {job.id} taken off", {
+            "job": str(job.id), "crew_id": [_s(before[0]), None],
+            "start_minute": [before[1], None]})
         if commit:
             db.commit()
             emit.job_taken_off(db, job, previous_crew_id)
@@ -847,13 +860,16 @@ def move_job(
         o_start = other.start_minute or 0
         if start_minute < o_start + other.duration_minutes and o_start < end:
             raise ApiError("overlap", "That time overlaps another job.", 409)
+    before = (job.crew_id, job.start_minute)
     old_crew_id = job.crew_id
     job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
     job.late = job.finish_by_minute is not None and end > job.finish_by_minute
     job.queue_unlocked = False
     # The moved job takes its place by start time on its new day (Derived).
     queue.resequence_all(db, {(crew_id, visit.date), (old_crew_id, visit.date)})
-    record(db, schedule.id, admin_id, "move", f"job {job.id} to {rules.hhmm(start_minute)}")
+    record(db, schedule.id, admin_id, "move", f"job {job.id} to {rules.hhmm(start_minute)}", {
+        "job": str(job.id), "crew_id": [_s(before[0]), str(crew_id)],
+        "start_minute": [before[1], start_minute]})
     refresh_visit_status(db, visit.id)
     if commit:
         db.commit()

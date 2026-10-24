@@ -127,3 +127,35 @@ class AdminDaySchedule(BaseModel):
     done: int
     left: int
     crew: list[AdminDayCrew]
+
+
+class DaySummaryItem(BaseModel):
+    """One visit of the day. No customer name or mobile number."""
+
+    id: str
+    registration: str
+    crew: str
+    reason: str
+    time: str | None
+
+
+class DaySummaryState(BaseModel):
+    count: int
+    items: list[DaySummaryItem]
+    # Visits beyond the 20 listed.
+    more: int
+
+
+class DaySummary(BaseModel):
+    """A-02: the day's visits by derived outcome (WP2 helper). The states do not
+    overlap, so they add up to `total`."""
+
+    date: date
+    total: int
+    completed: DaySummaryState
+    pending: DaySummaryState
+    missed: DaySummaryState
+    partially_completed: DaySummaryState
+    skipped: DaySummaryState
+    rescheduled: DaySummaryState
+    cancelled: DaySummaryState

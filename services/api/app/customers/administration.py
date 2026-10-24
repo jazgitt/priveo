@@ -766,6 +766,8 @@ def edit_subscription(
     sub = db.get(Subscription, subscription_id)
     if sub is None:
         raise ApiError("not_found", "Subscription not found.", 404)
+    watched = ("pending_plan_id", "cutoff_time", "interior_day")
+    before = {k: getattr(sub, k) for k in watched}
     if body.plan_id:
         plan = db.get(Plan, body.plan_id)
         if plan is None or not plan.active:
@@ -783,7 +785,11 @@ def edit_subscription(
         if body.interior_day not in WEEKDAYS or (plan and not plan.includes_interior):
             raise ApiError("validation_failed", "Choose an interior care day for this plan.", 422)
         sub.interior_day = body.interior_day
-    audit(db, user.id, "subscription", sub.id, "update", body.model_dump(mode="json"))
+    # A-04: {field: [old, new]} of what changed.
+    diff = {k: [str(before[k]) if before[k] is not None else None,
+                str(getattr(sub, k)) if getattr(sub, k) is not None else None]
+            for k in watched if getattr(sub, k) != before[k]}
+    audit(db, user.id, "subscription", sub.id, "update", diff or body.model_dump(mode="json"))
     db.commit()
     from app.scheduling.service import reconcile_vehicle
 
