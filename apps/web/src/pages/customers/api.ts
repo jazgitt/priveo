@@ -49,6 +49,12 @@ export interface ParkingChange {
   kind: "Temporary" | "Permanent"; note: string; state: "Upcoming" | "Current" | "Ended" | "Cancelled";
 }
 export interface ParkingChanges { base: string; today: string; changes: ParkingChange[] }
+/** One plan change of a subscription (ADM-SUB-08). */
+export interface PlanChange {
+  id: string; from_plan: string; from_price_rupees: number | null; to_plan: string; to_price_rupees: number;
+  effective_from: string; status: "Scheduled" | "Applied" | "Cancelled"; chosen: boolean;
+}
+export interface PlanHistory { current_plan: string; current_price_rupees: number; changes: PlanChange[] }
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",

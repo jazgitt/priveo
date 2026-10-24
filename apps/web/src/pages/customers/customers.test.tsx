@@ -44,6 +44,7 @@ beforeEach(() => {
     if (path.endsWith("/sessions")) return reply([]);
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
     if (path.endsWith("/crew")) return reply([]);
+    if (path.endsWith("/plan-history")) return reply({ current_plan: "Plan", current_price_rupees: 999, changes: [] });
     if (path.endsWith("/parking-changes") && method === "GET") return reply({ base: "B2-14", today: "B2-14", changes: [] });
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
     if (path === "/v1/admin/customers/c1" && method === "GET") return reply(customer);
@@ -168,7 +169,7 @@ it("changes to an exterior-only plan without submitting the old interior day", a
     path.includes("/directory/plans") ? reply([plan, { ...plan, id: "p2", name: "Exterior", includes_interior: false }]) : original(path, options));
   detail([car()]);
   await userEvent.click(await screen.findByRole("button", { name: "Schedule settings" }));
-  await choose("Plan at next renewal", /Exterior/);
+  await choose("New plan", /Exterior/);
   expect(screen.queryByRole("combobox", { name: "Interior care day" })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1", "PATCH")).toEqual({ plan_id: "p2", cutoff_time: "09:00" }));
@@ -488,4 +489,32 @@ it("sends a permanent parking change without an end date", async () => {
   fireEvent.change(dialog.getByLabelText("First day"), { target: { value: "2026-11-10" } });
   await userEvent.click(dialog.getByRole("button", { name: "Save change" }));
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/parking-changes", "POST")).toMatchObject({ to_date: null, number: "5" }));
+});
+
+it("shows the plan history and cancels a scheduled change (ADM-SUB-08)", async () => {
+  detail([car()], (path) => (path.endsWith("/plan-history")
+    ? reply({ current_plan: "Premium", current_price_rupees: 999, changes: [
+      { id: "c1", from_plan: "Premium", from_price_rupees: 999, to_plan: "Exterior", to_price_rupees: 699, effective_from: "2026-12-01", status: "Scheduled", chosen: true },
+      { id: "c0", from_plan: "Basic", from_price_rupees: 500, to_plan: "Premium", to_price_rupees: 999, effective_from: "2026-10-01", status: "Applied", chosen: false },
+    ] }) : undefined));
+  expect(await screen.findByText("Plan history")).toBeInTheDocument();
+  expect(screen.getByText("Scheduled")).toBeInTheDocument();
+  expect(screen.getByText("Applied")).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Cancel change" })).toHaveLength(1);
+  await userEvent.click(screen.getByRole("button", { name: "Cancel change" }));
+  await waitFor(() => expect(sentTo("/v1/admin/subscriptions/sub1/plan-change", "DELETE")).toHaveLength(1));
+});
+
+it("sends the chosen start date with a plan change, and only then", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, options?: RequestInit) =>
+    path.includes("/directory/plans") ? reply([plan, { ...plan, id: "p2", name: "Exterior", includes_interior: false }]) : original(path, options));
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Schedule settings" }));
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.queryByLabelText("Plan starts on (optional)")).not.toBeInTheDocument();
+  await choose("New plan", /Exterior/);
+  fireEvent.change(dialog.getByLabelText("Plan starts on (optional)"), { target: { value: "2026-12-01" } });
+  await userEvent.click(dialog.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1", "PATCH")).toMatchObject({ effective_from: "2026-12-01" }));
 });

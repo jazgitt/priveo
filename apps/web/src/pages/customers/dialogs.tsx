@@ -187,6 +187,7 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
   const [planId, setPlanId] = useState(NONE);
   const [cutoff, setCutoff] = useState(sub.cutoff_time || "09:00");
   const [interior, setInterior] = useState(sub.interior_day ?? "");
+  const [starts, setStarts] = useState("");
   const save = useCustomerSave(customerId, "Schedule settings saved.", onClose);
   const current = plans.data?.find((p) => p.id === sub.plan_id);
   const next = planId !== NONE ? plans.data?.find((p) => p.id === planId) : undefined;
@@ -199,7 +200,7 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
                 onSubmit={() => save.mutate({ path: `/v1/admin/subscriptions/${sub.id}`, method: "PATCH", body: {
                   cutoff_time: cutoff,
                   ...(needsInterior && interior ? { interior_day: interior } : {}),
-                  ...(planId !== NONE ? { plan_id: planId } : {}),
+                  ...(planId !== NONE ? { plan_id: planId, ...(starts ? { effective_from: starts } : {}) } : {}),
                 } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Service cutoff" hint="Visits finish by this time.">
@@ -214,8 +215,8 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
             {(p) => <Input {...p} disabled value="Not in this plan" />}
           </Field>
         )}
-        <Field label="Plan at next renewal" className="sm:col-span-2"
-               hint={sub.pending_from ? `A change already starts on ${showDate(sub.pending_from)}.` : "The new plan and price start on the next renewal date (ADM-CUS-15)."}>
+        <Field label="New plan" className="sm:col-span-2"
+               hint={sub.pending_from ? `A change already starts on ${showDate(sub.pending_from)}. A new choice replaces it.` : "Without a date, the new plan and price start on the next renewal date (ADM-CUS-15)."}>
           {(p) => (
             <SelectBox {...p} value={planId} onChange={setPlanId} choices={[
               { value: NONE, label: `Keep current plan${current ? ` (${current.name})` : ""}` },
@@ -225,6 +226,12 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
             ]} />
           )}
         </Field>
+        {planId !== NONE && (
+          <Field label="Plan starts on (optional)" className="sm:col-span-2"
+                 hint="Visits follow the new plan from this day. The next payment that is created uses the new price. A payment that already exists keeps its price.">
+            {(p) => <Input {...p} type="date" min={new Date().toISOString().slice(0, 10)} value={starts} onChange={(e) => setStarts(e.target.value)} />}
+          </Field>
+        )}
       </div>
     </FormDialog>
   );

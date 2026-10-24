@@ -1796,11 +1796,11 @@ void main() {
     expect(wire.StatusIn.fromJson(input).toJson(), equals(input));
   });
   test('SubscriptionEdit preserves populated wire fields', () {
-    final input = jsonDecode('{"plan_id":"11111111-1111-1111-1111-111111111111","cutoff_time":"wire-value","interior_day":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"plan_id":"11111111-1111-1111-1111-111111111111","effective_from":"2026-10-20","cutoff_time":"wire-value","interior_day":"wire-value"}') as Map<String, dynamic>;
     expect(wire.SubscriptionEdit.fromJson(input).toJson(), equals(input));
   });
   test('SubscriptionEdit preserves nullable wire fields', () {
-    final input = jsonDecode('{"plan_id":null,"cutoff_time":null,"interior_day":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"plan_id":null,"effective_from":null,"cutoff_time":null,"interior_day":null}') as Map<String, dynamic>;
     expect(wire.SubscriptionEdit.fromJson(input).toJson(), equals(input));
   });
   test('SubscriptionEventOut preserves populated wire fields', () {

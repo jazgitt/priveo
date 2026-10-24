@@ -11,7 +11,7 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import type { Changes, ParkingChanges, Vehicle, VehicleCrew } from "./api";
+import type { Changes, ParkingChanges, PlanHistory, Vehicle, VehicleCrew } from "./api";
 import { CarDialog, ParkingDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
 
 type Open = null | "car" | "parking" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
@@ -38,6 +38,16 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const crew = useQuery({
     queryKey: ["customer", customerId, "crew", v.id],
     queryFn: () => api<VehicleCrew[]>(`/v1/admin/vehicles/${v.id}/crew`),
+  });
+  const planHistory = useQuery({
+    queryKey: ["customer", customerId, "plan-history", sub?.id],
+    queryFn: () => api<PlanHistory>(`/v1/admin/subscriptions/${sub!.id}/plan-history`),
+    enabled: Boolean(sub),
+  });
+  const cancelPlanChange = useAppMutation<string>({
+    mutationFn: (id) => api(`/v1/admin/subscriptions/${id}/plan-change`, { method: "DELETE" }),
+    success: () => "Plan change cancelled.",
+    invalidate: [["customer", customerId], ["customers"]],
   });
   const parking = useQuery({
     queryKey: ["customer", customerId, "parking", v.id],
@@ -152,6 +162,27 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
             { label: "Interior care day", value: sub.interior_day ?? "None" },
             { label: "Plan change", value: sub.pending_from ? `Starts ${showDate(sub.pending_from)}` : "None pending" },
           ]} />
+        )}
+        {sub && planHistory.data && planHistory.data.changes.length > 0 && (
+          <div className="mt-4">
+            <h4 className="mb-2 text-xs font-semibold text-muted-foreground uppercase">Plan history</h4>
+            <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0">
+              {planHistory.data.changes.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 px-3 py-2 text-sm">
+                  <span>
+                    {c.from_plan || "No plan"} to <span className="font-medium">{c.to_plan}</span>{" "}
+                    <span className="text-muted-foreground">· {inr(c.to_price_rupees)}/month · from {showDate(c.effective_from)}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <StatusBadge status={c.status} />
+                    {c.status === "Scheduled" && (
+                      <Button size="sm" variant="ghost" disabled={cancelPlanChange.isPending} onClick={() => cancelPlanChange.mutate(sub.id)}>Cancel change</Button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
       )}

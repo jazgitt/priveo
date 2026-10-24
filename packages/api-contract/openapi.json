@@ -2694,6 +2694,116 @@
         }
       }
     },
+    "/v1/admin/subscriptions/{subscription_id}/plan-history": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Plan History",
+        "operationId": "plan_history_v1_admin_subscriptions__subscription_id__plan_history_get",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/subscriptions/{subscription_id}/plan-change": {
+      "delete": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Cancel Plan Change",
+        "description": "Cancels the plan change that has not started yet. It stays in the history.",
+        "operationId": "cancel_plan_change_v1_admin_subscriptions__subscription_id__plan_change_delete",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/vehicles": {
       "post": {
         "tags": [
@@ -26823,6 +26933,18 @@
               }
             ],
             "title": "Plan Id"
+          },
+          "effective_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
           },
           "cutoff_time": {
             "anyOf": [

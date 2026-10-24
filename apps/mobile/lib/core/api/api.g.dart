@@ -7071,22 +7071,26 @@ class StatusIn {
 class SubscriptionEdit {
   const SubscriptionEdit({
     required this.planId,
+    required this.effectiveFrom,
     required this.cutoffTime,
     required this.interiorDay,
   });
 
   final String? planId;
+  final DateTime? effectiveFrom;
   final String? cutoffTime;
   final String? interiorDay;
 
   factory SubscriptionEdit.fromJson(Map<String, dynamic> j) => SubscriptionEdit(
         planId: j['plan_id'] == null ? null : j['plan_id'] as String,
+        effectiveFrom: j['effective_from'] == null ? null : DateTime.parse(j['effective_from'] as String),
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
       );
 
   Map<String, dynamic> toJson() => {
         'plan_id': planId,
+        'effective_from': effectiveFrom == null ? null : _date(effectiveFrom!),
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
       };
