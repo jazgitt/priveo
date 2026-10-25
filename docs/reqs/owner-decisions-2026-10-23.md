@@ -51,7 +51,7 @@ New feature flags: `crew.manager_skip` (default off), `crew.manager_reschedule` 
 1. ~~Prices of Extra interior and Special exterior.~~ Answered 25 Oct 2026: add-ons are created and priced by the admin in the catalogue.
 2. ~~Whether the customer can pick a Weekly or Cycle pattern in the app.~~ Answered 25 Oct 2026: no, admin only. The single interior care day (ONB-18) stays.
 3. ~~Plan change from a chosen date: the charge for the days before the renewal.~~ Answered 25 Oct 2026: the admin decides for that customer at that time (no charge, the prorated difference, or an amount). No charge stays the default, so S-10 holds unless the admin chooses otherwise.
-4. Whether a missed Interior job of a Partially Completed visit may be rescheduled for any date. (The customer is notified: answered 25 Oct 2026, CAL-11.)
+4. Whether a missed Interior job of a Partially Completed visit may be rescheduled for any date. (Answered 25 Oct 2026: the next day only. The customer is notified: answered 25 Oct 2026, CAL-11.)
 5. ~~Owner confirmation of the Draft rows above.~~ Confirmed 25 Oct 2026.
 
 ## Implementation status (24 Oct 2026)
