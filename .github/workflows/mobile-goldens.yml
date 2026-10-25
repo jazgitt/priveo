@@ -38,3 +38,4 @@ jobs:
             git commit -m "Update golden images"
             git push
           fi
+# full CI run on main, 25 Oct 2026

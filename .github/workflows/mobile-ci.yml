@@ -46,3 +46,4 @@ jobs:
           name: golden-failures
           path: apps/mobile/test/failures
           if-no-files-found: ignore
+# full CI run on main, 25 Oct 2026

@@ -49,3 +49,4 @@ jobs:
         run: |
           python scripts/export_openapi.py
           git diff --exit-code -- ../../packages/api-contract
+# full CI run on main, 25 Oct 2026
