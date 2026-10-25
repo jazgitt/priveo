@@ -27,7 +27,7 @@ EVENTS = CUSTOMER_EVENTS + CREW_EVENTS
 # What the Settings screen shows for each switch: (name, one line).
 LABELS: dict[str, tuple[str, str]] = {
     "service_completed": ("Service completed",
-                          "When your car's service is done, with the proof."),
+                          "When your car's service is done, or only partly done, with the proof."),
     "service_skipped": ("Service skipped",
                         "When a visit is skipped, by you or by Priveo."),
     "complaint_update": ("Complaint update",
