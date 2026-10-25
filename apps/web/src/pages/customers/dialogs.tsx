@@ -13,7 +13,7 @@ import { Textarea } from "@/ui/textarea";
 
 import {
   times, uploadCustomerAsset, weekdays,
-  type Catalogue, type Customer, type Plan, type SchedulePattern, type Society, type Subscription, type Vehicle,
+  type Catalogue, type Customer, type Plan, type PlanChangeQuote, type SchedulePattern, type Society, type Subscription, type Vehicle,
 } from "./api";
 
 type Call = { path: string; method?: string; body?: unknown };
@@ -189,19 +189,33 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
   const [cutoff, setCutoff] = useState(sub.cutoff_time || "09:00");
   const [interior, setInterior] = useState(sub.interior_day ?? "");
   const [starts, setStarts] = useState("");
+  const [charge, setCharge] = useState("none");
+  const [amount, setAmount] = useState("");
   const save = useCustomerSave(customerId, "Schedule settings saved.", onClose);
   const current = plans.data?.find((p) => p.id === sub.plan_id);
   const next = planId !== NONE ? plans.data?.find((p) => p.id === planId) : undefined;
   const interiorPlan = next ?? current;
   const needsInterior = Boolean(interiorPlan?.includes_interior);
+  // The days between a chosen date and the renewal: the admin decides what to charge for them.
+  const quote = useQuery({
+    queryKey: ["plan-change-quote", sub.id, planId, starts],
+    enabled: planId !== NONE && Boolean(starts),
+    queryFn: () => api<PlanChangeQuote>(`/v1/admin/subscriptions/${sub.id}/plan-change-quote?plan_id=${planId}&effective_from=${starts}`),
+  });
+  const days = planId !== NONE && starts ? quote.data?.days ?? 0 : 0;
+  const mode = days > 0 ? charge : "none";
+  const customAmount = Number(amount);
+  const badAmount = mode === "custom" && !(Number.isInteger(customAmount) && customAmount >= 1 && customAmount <= 100000);
+  const noDifference = mode === "prorated" && !quote.data?.suggested_rupees;
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title="Schedule settings"
                 description="The 9 PM deadline does not apply to the admin. The customer is not notified."
-                submitLabel="Save settings" busy={save.isPending} disabled={needsInterior && !interior}
+                submitLabel="Save settings" busy={save.isPending} disabled={(needsInterior && !interior) || badAmount || noDifference}
                 onSubmit={() => save.mutate({ path: `/v1/admin/subscriptions/${sub.id}`, method: "PATCH", body: {
                   cutoff_time: cutoff,
                   ...(needsInterior && interior ? { interior_day: interior } : {}),
                   ...(planId !== NONE ? { plan_id: planId, ...(starts ? { effective_from: starts } : {}) } : {}),
+                  ...(mode !== "none" ? { charge: mode, ...(mode === "custom" ? { charge_rupees: customAmount } : {}) } : {}),
                 } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Service cutoff" hint="Visits finish by this time.">
@@ -231,6 +245,26 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
           <Field label="Plan starts on (optional)" className="sm:col-span-2"
                  hint="Visits follow the new plan from this day. The next payment that is created uses the new price. A payment that already exists keeps its price.">
             {(p) => <Input {...p} type="date" min={new Date().toISOString().slice(0, 10)} value={starts} onChange={(e) => setStarts(e.target.value)} />}
+          </Field>
+        )}
+        {days > 0 && quote.data && (
+          <Field label="Charge for the days before the renewal" className="sm:col-span-2"
+                 hint={`The new plan starts ${days} days before the renewal on ${showDate(quote.data.renewal_date)}. You decide for this customer. A charge is a separate payment due on the start date.`}>
+            {(p) => (
+              <SelectBox {...p} value={charge} onChange={setCharge} choices={[
+                { value: "none", label: "No charge" },
+                { value: "prorated", label: quote.data.suggested_rupees
+                  ? `Prorated difference · ${inr(quote.data.suggested_rupees)} for ${days} days`
+                  : "Prorated difference · none, the new plan costs no more" },
+                { value: "custom", label: "Another amount" },
+              ]} />
+            )}
+          </Field>
+        )}
+        {mode === "custom" && (
+          <Field label="Amount to charge (₹)" className="sm:col-span-2"
+                 error={amount && badAmount ? "Enter a whole number of rupees, 1 to 100000." : undefined}>
+            {(p) => <Input {...p} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />}
           </Field>
         )}
       </div>

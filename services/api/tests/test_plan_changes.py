@@ -144,3 +144,70 @@ def test_only_the_admin_reads_the_history_and_unknown_ids_are_404(client, direct
     assert client.get(f"/v1/admin/subscriptions/{sub.id}/plan-history").status_code == 401
     customer = auth(login(client, "customer")["access_token"])
     assert client.get(f"/v1/admin/subscriptions/{sub.id}/plan-history", headers=customer).status_code == 403
+
+
+def quote(client, admin, sub, plan, start):
+    r = client.get(f"/v1/admin/subscriptions/{sub.id}/plan-change-quote", headers=admin,
+                   params={"plan_id": str(plan.id), "effective_from": start.isoformat()})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def adjustments(db, sub):
+    from app.billing.models import Payment
+    return list(db.scalars(select(Payment).where(Payment.subscription_id == sub.id,
+                                                 Payment.kind == "Adjust")))
+
+
+def test_the_admin_decides_the_charge_for_the_days_before_the_renewal(client, directory, db):
+    admin, sub, _ = world(client, directory, db)
+    premium = Plan(name="Upgrade charge test", monthly_price_rupees=1499, includes_interior=True)
+    db.add(premium)
+    db.commit()
+    start = today_ist() + timedelta(days=3)
+    q = quote(client, admin, sub, premium, start)
+    assert q["days"] > 0 and q["price_difference_rupees"] == 500
+    assert q["suggested_rupees"] == round(500 * q["days"] / 30)
+
+    # No charge is the default.
+    assert patch(client, admin, sub, plan_id=str(premium.id), effective_from=start.isoformat()).status_code == 200
+    assert adjustments(db, sub) == []
+
+    # The prorated difference becomes one payment, kept with the change.
+    r = patch(client, admin, sub, plan_id=str(premium.id), effective_from=start.isoformat(), charge="prorated")
+    assert r.status_code == 200, r.text
+    (pay,) = adjustments(db, sub)
+    assert (pay.amount_rupees, pay.status, pay.due_date) == (q["suggested_rupees"], "Due", start)
+    assert history(client, admin, sub)["changes"][0]["charge_rupees"] == q["suggested_rupees"]
+
+    # Choosing again replaces the change and its unpaid charge with a custom amount.
+    r = patch(client, admin, sub, plan_id=str(premium.id), effective_from=start.isoformat(),
+              charge="custom", charge_rupees=250)
+    assert r.status_code == 200, r.text
+    db.expire_all()
+    live = [p for p in adjustments(db, sub) if p.voided_at is None]
+    assert [p.amount_rupees for p in live] == [250] and len(adjustments(db, sub)) == 2
+
+    # Cancelling the change voids what was not paid.
+    assert client.delete(f"/v1/admin/subscriptions/{sub.id}/plan-change", headers=admin).status_code == 204
+    db.expire_all()
+    assert all(p.voided_at is not None for p in adjustments(db, sub))
+
+
+def test_a_charge_needs_a_date_before_the_renewal_and_a_real_amount(client, directory, db):
+    admin, sub, exterior = world(client, directory, db)
+    start = today_ist() + timedelta(days=3)
+    # A downgrade has no difference to prorate.
+    r = patch(client, admin, sub, plan_id=str(exterior.id), effective_from=start.isoformat(), charge="prorated")
+    assert r.status_code == 422
+    # A custom charge needs an amount.
+    r = patch(client, admin, sub, plan_id=str(exterior.id), effective_from=start.isoformat(), charge="custom")
+    assert r.status_code == 422
+    # A charge without a date has no days to charge for.
+    r = patch(client, admin, sub, plan_id=str(exterior.id), charge="custom", charge_rupees=100)
+    assert r.status_code == 422
+    # At the renewal itself there are no days in between.
+    renewal = quote(client, admin, sub, exterior, start)["renewal_date"]
+    r = patch(client, admin, sub, plan_id=str(exterior.id), effective_from=renewal, charge="custom", charge_rupees=100)
+    assert r.status_code == 422
+    assert adjustments(db, sub) == []

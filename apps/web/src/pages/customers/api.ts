@@ -52,8 +52,10 @@ export interface ParkingChanges { base: string; today: string; changes: ParkingC
 /** One plan change of a subscription (ADM-SUB-08). */
 export interface PlanChange {
   id: string; from_plan: string; from_price_rupees: number | null; to_plan: string; to_price_rupees: number;
-  effective_from: string; status: "Scheduled" | "Applied" | "Cancelled"; chosen: boolean;
+  effective_from: string; status: "Scheduled" | "Applied" | "Cancelled"; chosen: boolean; charge_rupees?: number | null;
 }
+/** What the admin can charge for the days between a chosen start date and the renewal. */
+export interface PlanChangeQuote { renewal_date: string; days: number; suggested_rupees: number; price_difference_rupees: number }
 export interface PlanHistory { current_plan: string; current_price_rupees: number; changes: PlanChange[] }
 /** A subscription's schedule pattern (ADM-SCH-41). Default means no pattern. */
 export interface SchedulePattern {

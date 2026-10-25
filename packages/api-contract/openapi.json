@@ -2751,6 +2751,84 @@
         }
       }
     },
+    "/v1/admin/subscriptions/{subscription_id}/plan-change-quote": {
+      "get": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Plan Change Quote",
+        "description": "What the admin can charge for the days before the renewal if the new plan starts on `effective_from`.",
+        "operationId": "plan_change_quote_v1_admin_subscriptions__subscription_id__plan_change_quote_get",
+        "parameters": [
+          {
+            "name": "subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subscription Id"
+            }
+          },
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "effective_from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Effective From"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/subscriptions/{subscription_id}/plan-change": {
       "delete": {
         "tags": [
@@ -27283,6 +27361,27 @@
               }
             ],
             "title": "Effective From"
+          },
+          "charge": {
+            "type": "string",
+            "enum": [
+              "none",
+              "prorated",
+              "custom"
+            ],
+            "title": "Charge",
+            "default": "none"
+          },
+          "charge_rupees": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Rupees"
           },
           "cutoff_time": {
             "anyOf": [

@@ -196,7 +196,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
                 <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 px-3 py-2 text-sm">
                   <span>
                     {c.from_plan || "No plan"} to <span className="font-medium">{c.to_plan}</span>{" "}
-                    <span className="text-muted-foreground">· {inr(c.to_price_rupees)}/month · from {showDate(c.effective_from)}</span>
+                    <span className="text-muted-foreground">· {inr(c.to_price_rupees)}/month · from {showDate(c.effective_from)}{c.charge_rupees ? ` · charged ${inr(c.charge_rupees)}` : ""}</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <StatusBadge status={c.status} />
