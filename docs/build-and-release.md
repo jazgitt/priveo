@@ -149,7 +149,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `main` until it is merged. Their gaps and stubs are in `docs/overnight-build-report.md`. The list below is from before that branch.
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. Only the sending step is missing.
+- Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. The Resend sender is built and the key has been provided (25 Oct 2026). What is left is verifying the sending domain at Resend and setting `RESEND_API_KEY` and the from-address in the environment.
 - The rest of Phase 1 sign-in: the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
 - The links to the Terms and the Privacy Policy on the sign-in screen.
 - In the onboarding review (`ONB-25`): the vehicle photo (`ONB-22`, needs uploads) and the plan name (needs the plans). The review has one step for each vehicle, holding its parking, service preferences and plan together. **Derived:** the requirement lists these as separate steps and does not say how several vehicles are handled.
