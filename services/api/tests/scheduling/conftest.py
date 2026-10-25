@@ -86,7 +86,7 @@ def world(settings, engine):
 
 
 @pytest.fixture
-def api(world, engine):
+def api(world, engine, monkeypatch):
     world.db.commit()
 
     def _get_db():
@@ -99,6 +99,7 @@ def api(world, engine):
     # The tests plan the week of SUNDAY. Pin the clock to the day before, so the
     # 9 PM change rule does not depend on the date the tests are run on.
     app.dependency_overrides[get_now] = lambda: lambda: PINNED_NOW
+    monkeypatch.setattr("app.platform.clock.today_ist", lambda: PINNED_NOW.date())
     return TestClient(app)
 
 
