@@ -152,6 +152,9 @@ class PlanChange(Base):
     # True when the admin chose the date; false when it is the next renewal.
     chosen: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     status: Mapped[str] = mapped_column(String(10), default="Scheduled")  # Scheduled | Applied | Cancelled
+    # What the admin charged for the days before the next renewal, if anything.
+    charge_rupees: Mapped[int | None] = mapped_column(Integer)
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("payments.id"))
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)

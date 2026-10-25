@@ -616,3 +616,21 @@ it("says so when a state has no services", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Cancelled 0" }));
   expect(await screen.findByText("No Cancelled services.")).toBeInTheDocument();
 });
+
+it("lets the admin decide the charge for the days before the renewal", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, options?: RequestInit) =>
+    path.includes("/directory/plans") ? reply([plan, { ...plan, id: "p2", name: "Exterior", includes_interior: false }])
+      : path.includes("/plan-change-quote") ? reply({ renewal_date: "2026-12-20", days: 19, suggested_rupees: 317, price_difference_rupees: 500 })
+        : original(path, options));
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Schedule settings" }));
+  const dialog = within(screen.getByRole("dialog"));
+  await choose("New plan", /Exterior/);
+  expect(dialog.queryByLabelText("Charge for the days before the renewal")).not.toBeInTheDocument();
+  fireEvent.change(dialog.getByLabelText("Plan starts on (optional)"), { target: { value: "2026-12-01" } });
+  await screen.findByRole("combobox", { name: "Charge for the days before the renewal" });
+  await choose("Charge for the days before the renewal", /Prorated difference/);
+  await userEvent.click(dialog.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1", "PATCH")).toMatchObject({ effective_from: "2026-12-01", charge: "prorated" }));
+});

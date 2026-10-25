@@ -947,6 +947,17 @@ class BillingService:
         return report
 
 
+def add_on_service_completed(db: Session, payment_id: uuid.UUID | None) -> None:
+    """The add-on's service is Completed: an unpaid payment is Over due now, not on the next daily run."""
+    p = db.get(Payment, payment_id) if payment_id else None
+    if p is None or p.kind != "Add-on" or p.status != "Due" or p.voided_at is not None:
+        return
+    p.status = "Over due"
+    p.overdue_since = today_of(utcnow())
+    db.add(PaymentEvent(payment_id=p.id, from_status="Due", to_status="Over due", by_login_id=None,
+                        note="Service completed, payment not received"))
+
+
 def mark_overdue_and_inactive(
     now: datetime, db: Session | None = None, settings: MoneySettings | None = None
 ) -> OverdueReport:

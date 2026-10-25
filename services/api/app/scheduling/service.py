@@ -552,6 +552,10 @@ def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
                 job.status,
                 "Scheduled" if job.crew_id is not None and job.status != "Skipped" else "Requested",
             )
+            if b.status == "Completed":
+                from app.billing.service import add_on_service_completed
+
+                add_on_service_completed(db, b.payment_id)
 
 
 def service_windows(db, society_id, service, day):

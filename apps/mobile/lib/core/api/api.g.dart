@@ -7112,18 +7112,24 @@ class SubscriptionEdit {
   const SubscriptionEdit({
     required this.planId,
     required this.effectiveFrom,
+    this.charge,
+    required this.chargeRupees,
     required this.cutoffTime,
     required this.interiorDay,
   });
 
   final String? planId;
   final DateTime? effectiveFrom;
+  final String? charge;
+  final int? chargeRupees;
   final String? cutoffTime;
   final String? interiorDay;
 
   factory SubscriptionEdit.fromJson(Map<String, dynamic> j) => SubscriptionEdit(
         planId: j['plan_id'] == null ? null : j['plan_id'] as String,
         effectiveFrom: j['effective_from'] == null ? null : DateTime.parse(j['effective_from'] as String),
+        charge: j['charge'] == null ? null : j['charge'] as String,
+        chargeRupees: j['charge_rupees'] == null ? null : j['charge_rupees'] as int,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
       );
@@ -7131,6 +7137,8 @@ class SubscriptionEdit {
   Map<String, dynamic> toJson() => {
         'plan_id': planId,
         'effective_from': effectiveFrom == null ? null : _date(effectiveFrom!),
+        'charge': charge,
+        'charge_rupees': chargeRupees,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
       };

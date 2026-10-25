@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Crew App Functional Requirements
 
-**Status:** Draft v0.9 (parking slot by date, CRW-SCH-17; daily queue, mandatory remark, Partially Completed, Manager flags, owner decisions of 23 Oct 2026; see owner-decisions-2026-10-23.md), v0.7: wrong passwords block crew and admin logins for a growing time instead of locking them (owner decision of 18 Oct 2026); the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
+**Status:** Draft v0.10 (CRW-SCH-17 confirmed by the owner on 25 Oct 2026; parking slot by date, CRW-SCH-17; daily queue, mandatory remark, Partially Completed, Manager flags, owner decisions of 23 Oct 2026; see owner-decisions-2026-10-23.md), v0.7: wrong passwords block crew and admin logins for a growing time instead of locking them (owner decision of 18 Oct 2026); the customer sees the reason, note and photo of a job not done (owner decision of 17 Oct 2026); owner decisions of 9 Oct 2026; Deep Spa can also be a standalone service (owner decision of 10 Oct 2026); consistency pass
 **Scope:** Phase 1, Part 3 (Crew), MVP. Customer requirements are in `customer-app-functional-requirements.md`. Admin requirements are in `admin-functional-requirements.md`.
 **Platforms:** The same Flutter mobile app as the customer, with screens chosen by the user's role. Admins use a web portal, with a limited set of quick actions in the app.
 **Language:** English only
@@ -93,7 +93,7 @@ Rules followed:
 | CRW-SCH-14 | Each crew member has an ordered daily queue of jobs. The default order is the assigned slot time. Only the current job can be started. Jobs after it show as locked. | Owner and Derived |
 | CRW-SCH-15 | The next job unlocks when the current job is Completed, Partially Completed, or Not Completed with a reason and a remark. A crew member cannot skip a job to reach the next one. | Owner |
 | CRW-SCH-16 | The admin can reorder the queue or unlock a job with a mandatory reason (ADM-SCH-38). The change is audited and the crew member gets a push notification (CRW-NOT-06). | Owner |
-| CRW-SCH-17 | The job card shows the vehicle's current parking slot. When the admin has set a temporary or permanent parking change, the card shows the slot valid for that day (ADM-CUS-27). The crew day list shows the same slot. | Draft |
+| CRW-SCH-17 | The job card shows the vehicle's current parking slot. When the admin has set a temporary or permanent parking change, the card shows the slot valid for that day (ADM-CUS-27). The crew day list shows the same slot. | Owner (confirmed 25 Oct 2026) |
 
 ---
 

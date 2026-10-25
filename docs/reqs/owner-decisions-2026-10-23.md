@@ -34,36 +34,36 @@ Implementation work cites these IDs. A "changed" ID keeps its number and has new
 | 9 New reasons | ADM-CNC-08 | none | Owner |
 | 10 Crew queue | CRW-SCH-14, CRW-SCH-15, CRW-SCH-16, CRW-NOT-06, ADM-SCH-38 | CRW-SVC-11 | Owner (CRW-SCH-14 also Derived) |
 | 11 Partial completion | ADM-CNC-09, ADM-CNC-10, CRW-CNC-08, CRW-MGR-07, CAL-11 | CRW-SCH-07 | Owner (ADM-CNC-10 also Derived; CAL-11 Draft) |
-| 12 S-05 move one service | ADM-SCH-37 | none | Draft |
-| 12 S-07 parking change | ADM-CUS-27, CRW-SCH-17 | none | Draft |
-| 12 S-09 bulk reassign | ADM-SCH-39 | none | Draft |
-| 12 S-11 plan change from a date | ADM-SUB-08 | none | Draft |
-| 12 S-12 bulk missed or cancelled | ADM-SCH-40 | none | Draft |
-| 12 A-02 daily dashboard | ADM-ACC-16 | none | Draft |
-| 12 A-04 audit | ADM-SET-07 | none | Draft |
-| 12 A-01 service-history states | HIST-04, ADM-CUS-29 | none | Draft |
-| 12 S-08 add-on catalogue | ADM-ADD-15, ADD-19 | none | Draft and Open |
+| 12 S-05 move one service | ADM-SCH-37 | none | Owner (confirmed 25 Oct 2026) |
+| 12 S-07 parking change | ADM-CUS-27, CRW-SCH-17 | none | Owner (confirmed 25 Oct 2026) |
+| 12 S-09 bulk reassign | ADM-SCH-39 | none | Owner (confirmed 25 Oct 2026) |
+| 12 S-11 plan change from a date | ADM-SUB-08 | none | Owner (confirmed 25 Oct 2026) |
+| 12 S-12 bulk missed or cancelled | ADM-SCH-40 | none | Owner (confirmed 25 Oct 2026) |
+| 12 A-02 daily dashboard | ADM-ACC-16 | none | Owner (confirmed 25 Oct 2026) |
+| 12 A-04 audit | ADM-SET-07 | none | Owner (confirmed 25 Oct 2026) |
+| 12 A-01 service-history states | HIST-04, ADM-CUS-29 | none | Owner (confirmed 25 Oct 2026) |
+| 12 S-08 add-on catalogue | ADM-ADD-15, ADD-19 | none | Owner (confirmed 25 Oct 2026) |
 
 New feature flags: `crew.manager_skip` (default off), `crew.manager_reschedule` (default on). The flag `customer.skip_pause` already exists.
 
 ## Still open
 
-1. Prices of Extra interior and Special exterior.
-2. Whether the customer can pick a Weekly or Cycle pattern in the app. The single interior care day (ONB-18) stays until decided.
-3. Whether a plan change from a chosen date replaces the next-renewal rule in ADM-CUS-15, and the charge for the days between.
+1. ~~Prices of Extra interior and Special exterior.~~ Answered 25 Oct 2026: add-ons are created and priced by the admin in the catalogue.
+2. ~~Whether the customer can pick a Weekly or Cycle pattern in the app.~~ Answered 25 Oct 2026: no, admin only. The single interior care day (ONB-18) stays.
+3. ~~Plan change from a chosen date: the charge for the days before the renewal.~~ Answered 25 Oct 2026: the admin decides for that customer at that time (no charge, the prorated difference, or an amount). No charge stays the default, so S-10 holds unless the admin chooses otherwise.
 4. Whether a missed Interior job of a Partially Completed visit may be rescheduled for any date, and whether the customer is notified.
-5. Owner confirmation of the Draft rows above.
+5. ~~Owner confirmation of the Draft rows above.~~ Confirmed 25 Oct 2026.
 
 ## Implementation status (24 Oct 2026)
 
-All twelve decisions are built and merged. "Draft" requirement rows stay Draft until the owner confirms them one by one; where the build needed a detail the owner did not give, the requirement text says **Derived**.
+All twelve decisions are built and merged. The owner confirmed the Draft requirement rows on 25 Oct 2026 and they are marked **Owner**. Where the build needed a detail the owner did not give, it was confirmed with the rows.
 
 | Decision | Built in |
 |---|---|
 | 1 Skip and Pause flag | existing flag `customer.skip_pause` (#61) |
 | 2 Only admin skips; Manager skip flag | #70 (`crew.manager_skip`, default off) |
 | 3 Skip does not extend the plan | #65 |
-| 4 Add-on payment Due and Over due | #65 (Over due by the daily job) |
+| 4 Add-on payment Due and Over due | #65; Over due the moment the service completes (owner, 25 Oct 2026) |
 | 5 Remark mandatory; 9 New reasons | #66 |
 | 6 No proration | nothing to build; #74 keeps billing as it was |
 | 7 Crew serving a vehicle | #72 |
@@ -72,7 +72,7 @@ All twelve decisions are built and merged. "Draft" requirement rows stay Draft u
 | 11 Partial completion | #66, #70 (`crew.manager_reschedule`, default on) |
 | 12 S-05, S-09, S-12 | #70 |
 | 12 S-07 parking change | #73 (migration 0037) |
-| 12 S-11 plan change from a date | #74 (migration 0038); billing rule still open (question 3) |
+| 12 S-11 plan change from a date | #74 (migration 0038); admin-chosen charge, migration 0040 |
 | 12 A-02, A-03, A-04 | #71 |
 | 12 A-01 service-history states | derived outcomes #66; the admin history with the filter by state (ADM-CUS-29) in the Vehicles tab, in the pull request that follows #75 |
 | 12 S-08 add-on catalogue | #67 (seeded inactive at price 0; question 1) |

@@ -55,6 +55,10 @@ def outcome_of(
     return "Rescheduled" if rescheduled else "Not Completed"
 
 
+# The database returns rows in no set order, so a visit lists its services in this one.
+SERVICE_ORDER = {"Cleaning-External": 0, "Cleaning-Internal": 1, "Deep Spa": 2}
+
+
 @dataclass
 class VisitOutcome:
     outcome: str = "Scheduled"
@@ -119,6 +123,7 @@ def visit_outcomes(db: Session, visit_ids: Iterable[uuid.UUID]) -> dict[uuid.UUI
         by_visit[j.visit_id].append(j)
     out = {}
     for vid, rows in by_visit.items():
+        rows.sort(key=lambda j: (SERVICE_ORDER.get(j.service, len(SERVICE_ORDER)), str(j.id)))
         missed_rows = [j for j in rows if j.status == "Could not complete"]
         rescheduled = bool(missed_rows) and all(j.id in followed for j in missed_rows)
         cancelled = bool(rows) and all(j.addon_booking_id in cancelled_bookings for j in rows)

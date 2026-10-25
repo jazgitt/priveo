@@ -3,6 +3,7 @@
 import re
 import uuid
 from datetime import date, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -99,6 +100,9 @@ class SubscriptionEdit(Input):
     plan_id: uuid.UUID | None = None
     # With a plan: the day the new plan starts. Empty: the next renewal date.
     effective_from: date | None = None
+    # With a date before the renewal: what to charge for the days in between.
+    charge: Literal["none", "prorated", "custom"] = "none"
+    charge_rupees: int | None = None
     cutoff_time: str | None = None
     interior_day: str | None = None
 
@@ -780,7 +784,12 @@ def edit_subscription(
             plan_changes.validate_start(body.effective_from)
         starts = body.effective_from or renewal_date(
             db, sub.vehicle_id, sub.first_service_date, today_ist())
-        plan_changes.schedule(db, sub, plan, starts, body.effective_from is not None, user.id)
+        change = plan_changes.schedule(
+            db, sub, plan, starts, body.effective_from is not None, user.id)
+        if body.charge != "none" and body.effective_from is None:
+            raise ApiError("validation_failed", "Choose a date to charge for the days before it.", 422)
+        db.flush()
+        plan_changes.charge(db, sub, plan, change, starts, body.charge, body.charge_rupees)
     elif body.effective_from is not None:
         raise ApiError("validation_failed", "Choose a plan for that date.", 422)
     if body.cutoff_time is not None:
