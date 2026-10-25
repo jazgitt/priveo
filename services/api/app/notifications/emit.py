@@ -143,6 +143,8 @@ def job_status_changed(db: Session, job) -> None:
         _skipped_by_operations(db, job)
     elif job.status == "Could not complete":
         _job_missed(db, job)
+    if job.status in ("Completed", "Could not complete"):
+        _visit_partly_done(db, job)
 
 
 def _visit_context(db: Session, job):
@@ -171,6 +173,25 @@ def _service_completed(db: Session, job) -> None:
         login_id, "service_completed", "Service completed",
         f"{what} was done on {_show(visit.date)}. Tap to see the proof.",
         visit_id=str(visit.id), dedupe_key=key)
+
+
+def _visit_partly_done(db: Session, job) -> None:
+    """CAL-11: when every job of a visit is finished and some were done and some
+    were not, the customer is told what was done and what was not, with the reason."""
+    from app.scheduling.outcomes import customer_summary, visit_outcomes
+
+    if job.addon_request_id is not None or job.addon_booking_id is not None:
+        return
+    visit, vehicle = _visit_context(db, job)
+    found = visit_outcomes(db, [visit.id]).get(visit.id)
+    login_id = _customer_login(db, visit.vehicle_id)
+    if found is None or not found.partial or login_id is None:
+        return
+    summary = customer_summary(found.planned, found.delivered, found.missed)
+    _service(db).notify(
+        login_id, "service_completed", "Service partly done",
+        f"{_vehicle_text(vehicle)} on {_show(visit.date)}. {summary}",
+        visit_id=str(visit.id), dedupe_key=f"partial:visit:{visit.id}")
 
 
 def _skipped_by_operations(db: Session, job) -> None:

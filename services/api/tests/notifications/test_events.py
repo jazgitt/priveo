@@ -407,3 +407,19 @@ def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew,
     r = cron.get("/v1/internal/cron/renewal-reminders", headers=headers)
     assert r.json()["result"]["sent"] == 0
     assert "renewal_reminder" in events(db, customer_login.id)
+
+
+def test_a_partly_done_visit_tells_the_customer_what_was_and_was_not_done(
+        db, world, make_crew, new_visit, customer_login, push):
+    """CAL-11: Exterior done, Interior not, and the customer is told once, with no crew name."""
+    ravi = make_crew("9000000010", "Ravi")
+    _, jobs = new_visit(services=("Cleaning-External", "Cleaning-Internal"), assigned=ravi)
+    by_service = {j.service: j for j in jobs}
+    scheduling.set_job_status(db, by_service["Cleaning-External"].id, "Completed")
+    assert events(db, customer_login.id) == []  # one job is still open
+    scheduling.set_job_status(db, by_service["Cleaning-Internal"].id, "Could not complete")
+    assert events(db, customer_login.id) == ["service_completed"]
+    note = inbox(db, customer_login.id)[0]
+    assert note.title == "Service partly done"
+    assert "Exterior done." in note.body and "Interior not done today" in note.body
+    assert "Ravi" not in note.body
