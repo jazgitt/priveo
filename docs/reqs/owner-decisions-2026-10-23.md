@@ -1,6 +1,6 @@
 # Owner decisions: 23 October 2026
 
-The owner reviewed a requirements document of 43 rows on 23 Oct 2026 and decided the points below. They are recorded as Owner decisions in the three requirements files. Where a row is marked Derived, the owner stated the intent and the detail was filled in to make it workable. Rows marked Draft come from the owner's scenario list and have not been confirmed one by one. Nothing here claims that code exists: implementation is separate work.
+The owner reviewed a requirements document of 43 rows on 23 Oct 2026 and decided the points below. They are recorded as Owner decisions in the three requirements files. Where a row is marked Derived, the owner stated the intent and the detail was filled in to make it workable. Rows marked Draft come from the owner's scenario list and have not been confirmed one by one. Implementation status is in the section at the end.
 
 Terms: "Not Completed" is the job outcome the crew app calls Could not complete, shown to the customer as Missed. "Partially Completed" is a new visit outcome.
 
@@ -53,3 +53,27 @@ New feature flags: `crew.manager_skip` (default off), `crew.manager_reschedule` 
 3. Whether a plan change from a chosen date replaces the next-renewal rule in ADM-CUS-15, and the charge for the days between.
 4. Whether a missed Interior job of a Partially Completed visit may be rescheduled for any date, and whether the customer is notified.
 5. Owner confirmation of the Draft rows above.
+
+## Implementation status (24 Oct 2026)
+
+All twelve decisions are built and merged. "Draft" requirement rows stay Draft until the owner confirms them one by one; where the build needed a detail the owner did not give, the requirement text says **Derived**.
+
+| Decision | Built in |
+|---|---|
+| 1 Skip and Pause flag | existing flag `customer.skip_pause` (#61) |
+| 2 Only admin skips; Manager skip flag | #70 (`crew.manager_skip`, default off) |
+| 3 Skip does not extend the plan | #65 |
+| 4 Add-on payment Due and Over due | #65 (Over due by the daily job) |
+| 5 Remark mandatory; 9 New reasons | #66 |
+| 6 No proration | nothing to build; #74 keeps billing as it was |
+| 7 Crew serving a vehicle | #72 |
+| 8 Weekly and Cycle patterns | #75 (admin only; migration 0039) |
+| 10 Crew queue | #69 |
+| 11 Partial completion | #66, #70 (`crew.manager_reschedule`, default on) |
+| 12 S-05, S-09, S-12 | #70 |
+| 12 S-07 parking change | #73 (migration 0037) |
+| 12 S-11 plan change from a date | #74 (migration 0038); billing rule still open (question 3) |
+| 12 A-02, A-03, A-04 | #71 |
+| 12 A-01 service-history states | derived outcomes #66; the admin history with the filter by state (ADM-CUS-29) in the Vehicles tab, in the pull request that follows #75 |
+| 12 S-08 add-on catalogue | #67 (seeded inactive at price 0; question 1) |
+

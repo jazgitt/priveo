@@ -46,6 +46,7 @@ beforeEach(() => {
     if (path.endsWith("/changes")) return reply({ skips: [], pauses: [] });
     if (path.endsWith("/crew")) return reply([]);
     if (path.endsWith("/schedule-pattern") && method === "GET") return reply({ kind: "Default", exterior_weekdays: [], interior_weekdays: [], exterior_days: [], combined_days: [], cycle_days: 30, default_interior_day: "Monday", exterior_count: null, combined_count: null });
+    if (path.includes("/service-history")) return reply({ counts: { Scheduled: 0, Completed: 0, "Partially Completed": 0, "Not Completed": 0, Rescheduled: 0, Cancelled: 0 }, total: 0, items: [] });
     if (path.endsWith("/plan-history")) return reply({ current_plan: "Plan", current_price_rupees: 999, changes: [] });
     if (path.endsWith("/parking-changes") && method === "GET") return reply({ base: "B2-14", today: "B2-14", changes: [] });
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
@@ -579,4 +580,39 @@ it("shows the current pattern and goes back to the default with a delete", async
   await choose("Pattern", /Default/);
   await userEvent.click(dialog.getByRole("button", { name: "Save pattern" }));
   await waitFor(() => expect(sentTo("/v1/admin/subscriptions/sub1/schedule-pattern", "DELETE")).toHaveLength(1));
+});
+
+it("shows a vehicle's service history by state, with reasons and moved dates (ADM-CUS-29)", async () => {
+  const counts = { Scheduled: 1, Completed: 2, "Partially Completed": 1, "Not Completed": 0, Rescheduled: 0, Cancelled: 0 };
+  const items = [
+    { visit_id: "a", date: "2026-11-03", state: "Partially Completed", planned: ["Cleaning-External", "Cleaning-Internal"], delivered: ["Cleaning-External"],
+      missed: [{ service: "Cleaning-Internal", reason: "Car is locked", note: "Keys with guard", rescheduled: true }], original_date: "2026-11-03", revised_date: "2026-11-06" },
+    { visit_id: "b", date: "2026-11-02", state: "Completed", planned: ["Cleaning-External"], delivered: ["Cleaning-External"], missed: [], original_date: null, revised_date: null },
+  ];
+  detail([car()], (path) => {
+    if (!path.includes("/v1/admin/vehicles/v1/service-history")) return undefined;
+    return path.includes("state=Completed")
+      ? reply({ counts, total: 1, items: [items[1]] })
+      : reply({ counts, total: 15, items });
+  });
+  expect(await screen.findByText("Service history")).toBeInTheDocument();
+  expect(await screen.findByText("Exterior + Interior")).toBeInTheDocument();
+  expect(screen.getByText(/Interior not done: Car is locked, Keys with guard/)).toBeInTheDocument();
+  expect(screen.getByText(/Moved from .* to /)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "All 4" })).toHaveAttribute("aria-pressed", "true");
+
+  await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([p]) => String(p).includes("service-history?limit=20"))).toBe(true));
+
+  await userEvent.click(screen.getByRole("button", { name: "Completed 2" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([p]) => String(p).includes("service-history?limit=10&state=Completed"))).toBe(true));
+  await waitFor(() => expect(screen.queryByText(/Interior not done/)).not.toBeInTheDocument());
+  expect(screen.getByRole("button", { name: "Completed 2" })).toHaveAttribute("aria-pressed", "true");
+});
+
+it("says so when a state has no services", async () => {
+  detail([car()]);
+  expect(await screen.findByText("No services yet.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Cancelled 0" }));
+  expect(await screen.findByText("No Cancelled services.")).toBeInTheDocument();
 });

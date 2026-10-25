@@ -6,7 +6,7 @@
 #   tools/dev/check-local.sh --changed       # only the stages the diff against origin/main touches
 #   tools/dev/check-local.sh --only api      # api | pg | mobile | web | e2e
 #   tools/dev/check-local.sh --no-pg         # skip the PostgreSQL run (the slowest)
-#   tools/dev/check-local.sh --e2e           # also the Playwright browser tests
+#   tools/dev/check-local.sh --e2e           # also the Playwright browser tests (needs: cd apps/web && npx playwright install chromium)
 #   tools/dev/check-local.sh --fail-fast     # stop at the first failing stage
 #
 # Works from any checkout or git worktree: it checks the code of the folder
@@ -58,7 +58,7 @@ elif $CHANGED; then
   if has '^(apps/web/|services/api/|tools/test-data/)'; then want_e2e=true; fi
   if [ -z "$files" ]; then log "No changes against origin/main: nothing to run."; fi
 else
-  want_api=true; want_pg=true; want_mobile=true; want_web=true
+  want_api=true; want_pg=true; want_mobile=true; want_web=true; want_e2e=true
 fi
 $PG || want_pg=false
 # The browser tests are slow and need a browser, so they only run when asked.
@@ -156,6 +156,8 @@ mobile_stage() {
   gen_stale lib/core/ui/tokens.g.dart dart run tool/gen_theme.dart || return 1
   gen_stale lib/l10n flutter gen-l10n || return 1
   gen_stale lib/core/api/api.g.dart dart run tool/gen_api.dart || return 1
+  # The wire-contract cases are generated from the OpenAPI contract.
+  gen_stale test/contract "$PY" "$ROOT/tools/coverage/generate_contract_cases.py" || return 1
   flutter analyze || return 1
   flutter test || return 1
   echo "  Note: the golden-image tests are skipped on macOS. CI runs them on Linux." >&2
