@@ -74,7 +74,7 @@ find_python() {
   return 1
 }
 PY=""
-if $want_api || $want_pg || $want_e2e; then
+if $want_api || $want_pg || $want_mobile || $want_e2e; then
   PY="$(find_python)" || { echo "No virtualenv found. Create one: cd services/api && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'" >&2; exit 2; }
   # An editable install points at the checkout that made it. Put THIS checkout's code first.
   export PYTHONPATH="$API${PYTHONPATH:+:$PYTHONPATH}"
