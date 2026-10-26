@@ -154,8 +154,11 @@ pick_ios_device() {
     [ -n "$id" ] || { echo "No iOS Simulator found. Add one in Xcode > Settings > Platforms." >&2; false; }
     log "No simulator running. Booting $id ..."
     xcrun simctl boot "$id" >> "$LOG_FILE" 2>&1 || true
-    open -a Simulator
   fi
+  # Xcode 27 replaced Simulator.app with DeviceHub. Show whichever exists.
+  open -a Simulator > /dev/null 2>&1 \
+    || open "$(xcode-select -p)/../Applications/DeviceHub.app" > /dev/null 2>&1 \
+    || true
   echo "$id"
 }
 
@@ -195,16 +198,16 @@ fi
 if $BUILD_ONLY; then
   if [ "$TARGET" = android ]; then
     step "flutter build apk --$MODE"
-    flutter build apk "--$MODE" "${FLAVOR[@]}" -t lib/main_dev.dart "${DEFINES[@]}" 2>&1 | tee -a "$LOG_FILE"
+    flutter build apk "--$MODE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
     log "APK: $MOBILE/build/app/outputs/flutter-apk/app-dev-$MODE.apk"
   else
     step "flutter build ios --simulator --$MODE"
-    flutter build ios --simulator "--$MODE" -t lib/main_dev.dart "${DEFINES[@]}" 2>&1 | tee -a "$LOG_FILE"
+    flutter build ios --simulator "--$MODE" -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
     log "App: $MOBILE/build/ios/iphonesimulator/Runner.app"
   fi
 else
   step "flutter run --$MODE on $DEVICE (press q to quit, r to hot reload)"
-  flutter run "--$MODE" -d "$DEVICE" "${FLAVOR[@]}" -t lib/main_dev.dart "${DEFINES[@]}" 2>&1 | tee -a "$LOG_FILE"
+  flutter run "--$MODE" -d "$DEVICE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
 fi
 
 log "Done in $((SECONDS - START))s. Build $STAMP. Log: $LOG_FILE"

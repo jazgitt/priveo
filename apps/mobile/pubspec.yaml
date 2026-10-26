@@ -76,8 +76,6 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
-  # Used when a build or run command has no --flavor.
-  default-flavor: dev
   generate: true
   assets:
     - assets/brand/
