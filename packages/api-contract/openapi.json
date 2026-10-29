@@ -11352,6 +11352,65 @@
         }
       }
     },
+    "/v1/media/blob/{upload_id}": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Get Blob",
+        "description": "The signed read URL of a private Vercel Blob store. As with the local\nstore, the signature is the only credential. The API reads the file from\nBlob with the store's token and streams it, passing a Range request on so a\nvideo can play and seek in place.",
+        "operationId": "get_blob_v1_media_blob__upload_id__get",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Expires"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sig"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/media/uploads/{upload_id}/confirm": {
       "post": {
         "tags": [

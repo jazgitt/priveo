@@ -42,6 +42,13 @@ class ObjectStore(Protocol):
         ...
 
 
+def _sign_link(secret: str | None, upload_id: str, expires: int, action: str = "") -> str:
+    """The HMAC on a signed link of this API. An upload link signs `id:expires`;
+    a download link adds a `get:` prefix, so neither link works for the other."""
+    key = (secret or get_settings().token_secret).encode()
+    return hmac.new(key, f"{action}{upload_id}:{expires}".encode(), hashlib.sha256).hexdigest()
+
+
 class LocalObjectStore:
     def __init__(self, root: Path | None = None, secret: str | None = None):
         self.root = root or Path(
@@ -55,11 +62,7 @@ class LocalObjectStore:
         return path
 
     def _sign(self, upload_id: str, expires: int, action: str = "") -> str:
-        """The upload URL signs `id:expires`. The download URL adds a `get:`
-        prefix, so neither link can be used for the other action."""
-        secret = (self._secret or get_settings().token_secret).encode()
-        message = f"{action}{upload_id}:{expires}".encode()
-        return hmac.new(secret, message, hashlib.sha256).hexdigest()
+        return _sign_link(self._secret, upload_id, expires, action)
 
     def presign_upload(self, upload_id: str, key: str, content_type: str,
                        expires_at: datetime) -> SignedUpload:
@@ -105,13 +108,23 @@ class BlobObjectStore:
     """Vercel Blob, the stand-in for S3 on the Vercel dev host. The phone
     uploads straight to Blob with a short-lived client token that allows only
     this file's path, type and size, so the file never passes through the API
-    (whose requests are capped at 4.5 MB). The store is public: a file's
-    address holds the upload's random ID and is the only way to find it."""
+    (whose requests are capped at 4.5 MB).
 
-    def __init__(self, token: str, max_bytes: int = 25 * 1024 * 1024):
+    A public store (the default) serves a file at an address that holds the
+    upload's random ID, which is the only protection. A private store
+    (`access="private"`, BLOB_ACCESS=private) needs the token on every read, so
+    the phone is given a signed, expiring link to this API instead
+    (`GET /v1/media/blob/{id}`), and the API streams the file from the store."""
+
+    def __init__(self, token: str, max_bytes: int = 25 * 1024 * 1024,
+                 access: str = "public", secret: str | None = None):
         parts = token.split("_")
         if len(parts) < 5 or not token.startswith("vercel_blob_rw_"):
             raise ValueError("BLOB_READ_WRITE_TOKEN is not a read-write token.")
+        if access not in ("public", "private"):
+            raise ValueError('BLOB_ACCESS must be "public" or "private".')
+        self.access = access
+        self._secret = secret
         self._token = token
         self.store_id = parts[3]
         self._max_bytes = max_bytes
@@ -140,7 +153,7 @@ class BlobObjectStore:
             headers={
                 "authorization": f"Bearer {self.client_token(key, content_type, expires_at)}",
                 "x-api-version": BLOB_API_VERSION,
-                "x-vercel-blob-access": "public",
+                "x-vercel-blob-access": self.access,
                 "x-content-type": content_type,
                 "x-add-random-suffix": "0",
                 "x-allow-overwrite": "1",
@@ -148,8 +161,25 @@ class BlobObjectStore:
 
     def presign_download(self, upload_id: str, key: str, content_type: str,
                          expires_at: datetime) -> str:
+        if self.access == "private":
+            expires = int(expires_at.timestamp())
+            sig = _sign_link(self._secret, upload_id, expires, "get:")
+            return f"/v1/media/blob/{upload_id}?expires={expires}&sig={sig}"
         # Blob reports the address with the store ID in lower case.
         return f"https://{self.store_id.lower()}.public.blob.vercel-storage.com/{key}"
+
+    def verify_download(self, upload_id: str, expires: int, sig: str, now: datetime) -> bool:
+        return (now.timestamp() <= expires
+                and hmac.compare_digest(_sign_link(self._secret, upload_id, expires, "get:"), sig))
+
+    def open_private(self, key: str, range_header: str | None = None):
+        """The open response of a private file: a stream the caller must close.
+        Raises HTTPError, so 404 means nothing is stored and 416 an unsatisfiable range."""
+        headers = {"authorization": f"Bearer {self._token}"}
+        if range_header:
+            headers["range"] = range_header
+        url = f"https://{self.store_id.lower()}.private.blob.vercel-storage.com/{key}"
+        return urlopen(Request(url, headers=headers), timeout=30)
 
     def size_of(self, key: str) -> int | None:
         request = Request(f"{BLOB_API}/?{urlencode({'url': key})}", headers={
@@ -168,13 +198,15 @@ _store: ObjectStore | None = None
 
 def get_object_store() -> ObjectStore:
     """The one store for this process: Vercel Blob when BLOB_READ_WRITE_TOKEN is
-    set (and MEDIA_STORE is not "local"), otherwise files on local disk. A
+    set (and MEDIA_STORE is not "local"), with BLOB_ACCESS naming the store's
+    access mode ("public" by default), otherwise files on local disk. A
     deployment with S3 will return an S3 store here."""
     global _store
     if _store is None:
         token = os.environ.get("BLOB_READ_WRITE_TOKEN", "").strip()
         if token and os.environ.get("MEDIA_STORE", "").strip().lower() != "local":
-            _store = BlobObjectStore(token)
+            access = os.environ.get("BLOB_ACCESS", "").strip().lower() or "public"
+            _store = BlobObjectStore(token, access=access)
         else:
             _store = LocalObjectStore()
     return _store

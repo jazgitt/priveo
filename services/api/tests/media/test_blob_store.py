@@ -99,3 +99,50 @@ def test_the_store_follows_the_configuration(monkeypatch, token, media_store, ex
         assert isinstance(get_object_store(), expected)
     finally:
         store_module._store = None
+
+
+def test_a_private_store_uploads_privately_and_hands_out_a_signed_link_of_this_api():
+    private = BlobObjectStore(TOKEN, access="private", secret="s")
+    signed = private.presign_upload("u1", "proof/u1", "image/jpeg", WHEN)
+    assert signed.headers["x-vercel-blob-access"] == "private"
+    url = private.presign_download("u1", "proof/u1", "image/jpeg", WHEN)
+    assert url.startswith("/v1/media/blob/u1?expires=")
+    expires = int(WHEN.timestamp())
+    sig = url.split("sig=")[1]
+    assert private.verify_download("u1", expires, sig, WHEN)
+    assert not private.verify_download("u1", expires, sig, WHEN.replace(year=2027))
+    assert not private.verify_download("u2", expires, sig, WHEN)
+    # An upload signature (no `get:` prefix) must not work as a download link.
+    upload_sig = store_module._sign_link("s", "u1", expires)
+    assert not private.verify_download("u1", expires, upload_sig, WHEN)
+
+
+def test_a_private_read_sends_the_token_and_the_range_to_the_private_address(monkeypatch):
+    seen = {}
+
+    def ok(request, timeout):
+        seen["url"], seen["auth"] = request.full_url, request.headers["Authorization"]
+        seen["range"] = request.headers.get("Range")
+        return io.BytesIO(b"x")
+
+    monkeypatch.setattr(store_module, "urlopen", ok)
+    BlobObjectStore(TOKEN, access="private").open_private("proof/u1", "bytes=0-9")
+    assert seen == {"url": "https://abcdstore123.private.blob.vercel-storage.com/proof/u1",
+                    "auth": f"Bearer {TOKEN}", "range": "bytes=0-9"}
+
+
+def test_an_unknown_access_mode_is_refused():
+    with pytest.raises(ValueError):
+        BlobObjectStore(TOKEN, access="open")
+
+
+@pytest.mark.parametrize("access, expected", [("", "public"), ("private", "private")])
+def test_blob_access_follows_the_configuration(monkeypatch, access, expected):
+    monkeypatch.setattr(store_module, "_store", None)
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", TOKEN)
+    monkeypatch.setenv("MEDIA_STORE", "")
+    monkeypatch.setenv("BLOB_ACCESS", access)
+    try:
+        assert get_object_store().access == expected
+    finally:
+        store_module._store = None
