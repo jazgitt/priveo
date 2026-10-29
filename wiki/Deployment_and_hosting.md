@@ -4,7 +4,7 @@
 
 ## Development versus launch
 
-The build guide describes a development API on Vercel with Neon in Singapore and a provider switch for AWS. That is development history and configuration, not evidence of a production launch on AWS. Dev and production require separate hosts, databases, secrets and release controls.[^2]
+The build guide describes a development API on Vercel with Neon in Singapore and a provider switch for AWS. That is development history and configuration, not evidence of a production launch on AWS. Dev and production require separate hosts, databases, secrets and release controls.[^2] Update, 29 Oct 2026: the API now runs as two Vercel projects (test and production, both Mumbai) with a Supabase database each; see `docs/build-and-release.md`. The Neon database is retired once the move is checked.
 
 The hosting assessment considers alternatives and documents the trade-offs behind private-database AWS hosting. Its cost figures are estimates with unverified unit-price assumptions; they are not current provider quotes or measured product capacity.[^3]
 

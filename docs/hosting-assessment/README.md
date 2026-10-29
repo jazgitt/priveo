@@ -6,6 +6,8 @@ Version 1.0, 18-Oct-26. Documentation only. No code, infrastructure or deploymen
 
 Priveo's API can run on Vercel Pro as written. The Python runtime is generally available, functions can run up to 800 seconds, and Mumbai is a compute region. The problem is the database: Neon has no Mumbai region, and a Vercel function has no private route to a database in your own AWS network. The owner's architecture document requires private subnets and a non-public database. On that requirement, **AWS Mumbai with ECS Fargate** is recommended for launch. **Vercel Pro with Neon Singapore** is the second choice and is about $70 to $100 per month cheaper at 100 DAU, if the owner accepts a public database endpoint stored outside India.
 
+**Update, 29-Oct-26:** the owner has since set up the API as two Vercel projects in Mumbai (test and production), each with its own Supabase PostgreSQL database in Mumbai. Supabase has a Mumbai region, which removes the Neon region problem described below, but its database endpoint is still public. The owner confirmed on 29-Oct-26 that this is the first step, and that the 19-Oct decision below (AWS Mumbai with a private RDS) is still the later target. See `docs/build-and-release.md`.
+
 **Owner decision, 19-Oct-26: a public-endpoint database is not acceptable. Option C (AWS Mumbai, ECS Fargate, private RDS) is the launch architecture.**
 
 The weighted matrix is close (Vercel 4.13, Fargate 4.01 on base weights). The result flips with the security weight or the stated requirement, so the owner's answer to one question settles it.
