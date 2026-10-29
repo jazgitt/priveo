@@ -1,15 +1,16 @@
 import uuid
 from datetime import datetime
+from urllib.error import HTTPError
 
 from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.identity.service import User
 from app.media import service
 from app.media.models import STATUS_CONFIRMED, STATUS_REQUESTED, MediaUpload
-from app.media.store import LocalObjectStore, ObjectStore, get_object_store
+from app.media.store import BlobObjectStore, LocalObjectStore, ObjectStore, get_object_store
 from app.platform.db import get_db, utcnow
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
@@ -115,6 +116,52 @@ def get_local(upload_id: str, expires: int, sig: str, db: Session = Depends(get_
         raise ApiError("not_found", "This file was not found.", 404)
     return FileResponse(path, media_type=upload.content_type,
                         headers={"Cache-Control": "private, max-age=300"})
+
+
+_BLOB_CHUNK = 256 * 1024
+
+
+@router.get("/blob/{upload_id}")
+def get_blob(upload_id: str, expires: int, sig: str, request: Request,
+             db: Session = Depends(get_db), store: ObjectStore = Depends(get_object_store)):
+    """The signed read URL of a private Vercel Blob store. As with the local
+    store, the signature is the only credential. The API reads the file from
+    Blob with the store's token and streams it, passing a Range request on so a
+    video can play and seek in place."""
+    if not isinstance(store, BlobObjectStore) or store.access != "private":
+        raise ApiError("not_found", "Not found.", 404)
+    if not store.verify_download(upload_id, expires, sig, utcnow()):
+        raise ApiError("forbidden", "This link is not valid or has expired.", 403)
+    try:
+        upload = db.get(MediaUpload, uuid.UUID(upload_id))
+    except ValueError:
+        upload = None
+    if upload is None or upload.status != STATUS_CONFIRMED:
+        raise ApiError("not_found", "This file was not found.", 404)
+    try:
+        source = store.open_private(upload.object_key, request.headers.get("range"))
+    except HTTPError as e:
+        if e.code == 404:
+            raise ApiError("not_found", "This file was not found.", 404) from None
+        if e.code == 416:
+            return Response(status_code=416, headers={
+                "Content-Range": e.headers.get("Content-Range", "")})
+        raise
+
+    def chunks():
+        try:
+            while block := source.read(_BLOB_CHUNK):
+                yield block
+        finally:
+            source.close()
+
+    headers = {"Cache-Control": "private, max-age=300", "Accept-Ranges": "bytes",
+               "X-Content-Type-Options": "nosniff"}
+    for name in ("Content-Length", "Content-Range"):
+        if source.headers.get(name):
+            headers[name] = source.headers[name]
+    return StreamingResponse(chunks(), status_code=source.status,
+                             media_type=upload.content_type, headers=headers)
 
 
 @router.post("/uploads/{upload_id}/confirm", response_model=UploadState)

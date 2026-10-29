@@ -143,3 +143,67 @@ def test_rc_document_keeps_its_inclusive_five_mb_limit():
 
     assert valid_size("document", 5 * MB)
     assert not valid_size("document", 5 * MB + 1)
+
+
+def test_a_private_blob_file_streams_through_a_signed_link(
+        crew_client, make_crew, signin, new_visit, monkeypatch):
+    from datetime import timedelta
+    from urllib.error import HTTPError
+
+    from app.media import store as store_module
+    from app.media.store import BlobObjectStore, get_object_store
+
+    ravi = make_crew("9000000011", "Ravi")
+    _, (job,) = new_visit(assigned=ravi)
+    headers = signin(ravi)
+    ticket = request(crew_client, headers, str(job.id)).json()
+    crew_client.put(ticket["upload_url"], content=b"p" * 1000)
+    crew_client.post(f"/v1/media/uploads/{ticket['id']}/confirm", headers=headers)
+
+    private = BlobObjectStore("vercel_blob_rw_AbCdStore123_secretpart",
+                              access="private", secret="test-signing-secret")
+    crew_client.app.dependency_overrides[get_object_store] = lambda: private
+    calls = []
+
+    class Source:
+        status = 206
+        headers = {"Content-Length": "4", "Content-Range": "bytes 0-3/1000"}
+
+        def __init__(self):
+            self._data = [b"abcd", b""]
+
+        def read(self, n):
+            return self._data.pop(0)
+
+        def close(self):
+            calls.append("closed")
+
+    def opened(key, range_header=None):
+        calls.append((key, range_header))
+        return Source()
+
+    monkeypatch.setattr(private, "open_private", opened)
+    link = private.presign_download(ticket["id"], "k", "image/jpeg", utcnow() + timedelta(minutes=5))
+
+    ok = crew_client.get(link, headers={"Range": "bytes=0-3"})
+    assert ok.status_code == 206 and ok.content == b"abcd"
+    assert ok.headers["content-range"] == "bytes 0-3/1000"
+    assert ok.headers["content-type"] == "image/jpeg"
+    assert calls[0][1] == "bytes=0-3" and calls[-1] == "closed"
+
+    # A forged signature, an expired link and a link for a plain store are refused.
+    forged = link.replace("sig=", "sig=0")
+    assert crew_client.get(forged).status_code == 403
+    expired = private.presign_download(ticket["id"], "k", "image/jpeg", utcnow() - timedelta(minutes=1))
+    assert crew_client.get(expired).status_code == 403
+
+    def gone(key, range_header=None):
+        raise HTTPError("u", 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(private, "open_private", gone)
+    assert crew_client.get(link).status_code == 404
+
+    crew_client.app.dependency_overrides[get_object_store] = lambda: BlobObjectStore(
+        "vercel_blob_rw_AbCdStore123_secretpart", secret="test-signing-secret")
+    assert crew_client.get(link).status_code == 404
+    store_module._store = None

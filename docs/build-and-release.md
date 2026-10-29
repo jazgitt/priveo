@@ -132,12 +132,13 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 1. **Supabase:** create the project `priveo-test` (`priveo-prod`) in Mumbai (`ap-south-1`). Turn off the Data API. Production: use a paid plan with backups. Note the transaction pooler address (port 6543) and the direct or session address (port 5432).
 2. **Vercel:** sign in once (`npx vercel login`) and make sure the new Vercel team is on the Pro plan. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api-test --scope <team>` (`priveo-api-prod`). Leave the Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
-3. **Blob store:** create a Vercel Blob store on each project. It sets `BLOB_READ_WRITE_TOKEN`, which media uploads need.
+3. **Blob store:** create a Vercel Blob store on each project (`vercel blob create-store <name> --access public|private --region bom1 -e production --yes`, run from the linked project folder). It sets `BLOB_READ_WRITE_TOKEN`, which media uploads need. **test** uses a public store (a file's address holds a random ID and is the only protection). **production** uses a **private** store plus `BLOB_ACCESS=private`: every read needs the store token, so the API gives the phone a signed, expiring link to `GET /v1/media/blob/{id}` and streams the file from the store. In the Vercel dashboard, tick Sensitive on `BLOB_READ_WRITE_TOKEN`. Without `BLOB_ACCESS` the store is treated as public, so a private store without it would break every photo.
 4. **Runtime variables** on each project (Production), with `npx vercel env add <NAME> production`:
    - `DATABASE_URL`: the pooler address (port 6543).
    - `TOKEN_SECRET`: a long random value, 32 or more characters, **different for test and prod**.
    - `ENVIRONMENT`: `dev` for test, `prod` for production. The server will not start unless it is exactly one of these on a hosted server.
    - `CRON_SECRET`: a random value, or the scheduled jobs answer 503.
+   - Production only: `BLOB_ACCESS` = `private`.
    - `PUBLIC_BASE_URL`: that API's address.
    - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters at first sign-in and after "Forgot password" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*`, `SEED_DEMO_LOGINS` or `EMAIL_REDIRECT_TO`.
 5. **GitHub:** create the Environments `test` and `production` and add their variables and secrets (section 3). Set `API_URL` to an address that needs no Vercel sign-in: the project's production domain is public under the default protection, but per-deployment URLs are not.
