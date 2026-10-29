@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -14,8 +15,12 @@ target_metadata = Base.metadata
 
 
 def _url() -> str:
-    # A test can pass its own address with `-x url=...`.
-    url = context.get_x_argument(as_dictionary=True).get("url") or get_settings().database_url
+    # A test can pass its own address with `-x url=...`. A hosted deploy sets
+    # MIGRATION_DATABASE_URL to the direct or session address, because the
+    # transaction pooler that DATABASE_URL points at is not for migrations.
+    url = (context.get_x_argument(as_dictionary=True).get("url")
+           or os.environ.get("MIGRATION_DATABASE_URL")
+           or get_settings().database_url)
     if not url:
         raise SystemExit("DATABASE_URL is not set.")
     return url

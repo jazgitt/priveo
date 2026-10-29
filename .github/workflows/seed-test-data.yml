@@ -12,12 +12,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: api-deploy-dev
+  group: api-deploy-test
   cancel-in-progress: false
 
 jobs:
   seed:
     runs-on: ubuntu-latest
+    # Synthetic scenarios are for the test API and its database only.
+    environment: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,10 +28,10 @@ jobs:
       - name: Install API dependencies
         working-directory: services/api
         run: pip install -q -e .
-      - name: Add missing synthetic scenarios to dev
+      - name: Add missing synthetic scenarios to test
         working-directory: services/api
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
           ENVIRONMENT: dev
           SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
@@ -45,15 +47,15 @@ jobs:
       - name: Verify hosted scenario API journeys
         env:
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
-          TEST_DATA_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
-          API_DEV_URL: ${{ vars.API_DEV_URL }}
+          TEST_DATA_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          API_TEST_URL: ${{ vars.API_URL }}
           SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
         run: |
           args=()
           if [ "$SYNC_PASSWORDS" = "true" ]; then
             args+=(--scenarios C01,C02,C07,C09,C13,R01)
           fi
-          python tools/test-data/api_smoke.py --base-url "$API_DEV_URL" --manifest .local/test-data/hosted-manifest.json "${args[@]}"
+          python tools/test-data/api_smoke.py --base-url "$API_TEST_URL" --manifest .local/test-data/hosted-manifest.json "${args[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

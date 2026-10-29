@@ -37,11 +37,13 @@ jobs:
     if: (github.event_name == 'workflow_dispatch' && inputs.job != 'scenarios') || vars.RUN_EMULATOR_ON_MERGE == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # The demo logins exist on the test API only.
+    environment: test
     env:
-      API_DEV_URL: ${{ vars.API_DEV_URL }}
+      API_TEST_URL: ${{ vars.API_URL }}
       CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
       CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
-      ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -100,7 +102,7 @@ jobs:
           disable-animations: true
           disk-size: 2048M
           working-directory: apps/mobile
-          script: flutter test integration_test/logins_test.dart --dart-define=API_BASE_URL="$API_DEV_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
+          script: flutter test integration_test/logins_test.dart --dart-define=API_BASE_URL="$API_TEST_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
 
   scenarios:
     if: (github.event_name == 'workflow_dispatch' && inputs.job != 'logins') || vars.RUN_EMULATOR_ON_MERGE == 'true'

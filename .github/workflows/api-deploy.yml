@@ -1,148 +1,67 @@
 name: api-deploy
 
-# Deploys the API to `dev`, then runs the smoke test. This workflow is for dev
-# only: it seeds the demo logins. Production is a separate deployment with its
-# own workflow, its own database and ENVIRONMENT=prod (see docs/build-and-release.md).
+# Two deployments of the API, each with its own database (see
+# docs/build-and-release.md):
+#   test        every push to main  ->  api-deploy-vercel.yml, environment `test`
+#   production  a v* tag, or a manual run with environment = production
+#               ->  api-deploy-vercel.yml, environment `production`
+# Test seeds the demo logins. Production never does. The production
+# GitHub Environment should require a reviewer, so a release waits for approval.
 # The host is chosen by the repository variable DEPLOY_PROVIDER:
-#   vercel (default)  ->  job `deploy-vercel`
-#   aws               ->  job `deploy-aws` (ECR + ECS)
-# Needs the variables and secrets listed in docs/build-and-release.md.
-# A job whose credentials are missing is skipped.
+#   vercel (default)  ->  jobs `test` and `production`
+#   aws               ->  job `deploy-aws` (ECR + ECS), a single environment
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "services/api/**"
       - "apps/web/**"
       - "docs/brand/tokens.json"
       - "tools/deploy/**"
       - ".github/workflows/api-deploy.yml"
+      - ".github/workflows/api-deploy-vercel.yml"
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy the selected ref
+        type: choice
+        options: [test, production]
+        default: test
 
 permissions:
   id-token: write
   contents: read
 
-concurrency:
-  group: api-deploy-dev
-  cancel-in-progress: false
-
 jobs:
-  deploy-vercel:
-    if: ${{ (vars.DEPLOY_PROVIDER || 'vercel') == 'vercel' && vars.VERCEL_PROJECT_ID != '' }}
-    runs-on: ubuntu-latest
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-    steps:
-      - uses: actions/checkout@v4
+  test:
+    if: >-
+      ${{ (vars.DEPLOY_PROVIDER || 'vercel') == 'vercel'
+      && ((github.event_name == 'push' && github.ref_type == 'branch')
+          || (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')) }}
+    concurrency:
+      group: api-deploy-test
+      cancel-in-progress: false
+    uses: ./.github/workflows/api-deploy-vercel.yml
+    with:
+      environment: test
+      demo: true
+    secrets: inherit
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # Keep the CLI and its patched tar dependency reproducible.
-      - name: Install deployment tools
-        run: npm ci --prefix tools/deploy
-
-      # The database is changed before the new code goes live. The seed makes
-      # the admin login, and in dev the demo customer and crew logins.
-      - name: Migrate and seed the database
-        working-directory: services/api
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
-          MOCK_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
-          MOCK_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
-          SEED_DEMO_LOGINS: "true"
-          ENVIRONMENT: dev
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::error::The DATABASE_URL secret is not set."
-            exit 1
-          fi
-          pip install -q -e .
-          alembic upgrade head
-          python scripts/seed.py
-
-      # The admin portal is served by the API at /portal/ (same origin). Its
-      # build goes into services/api/portal, which the deploy uploads with the
-      # API. That folder is not in .vercelignore or .gitignore on purpose.
-      # VITE_ values are baked into the build here, not read from Vercel. All
-      # three come from GitHub repository variables (Settings > Secrets and
-      # variables > Actions > Variables). The key is public by design. Unset:
-      # no key sends nothing, host is EU, replay is off.
-      - name: Build the admin portal
-        working-directory: apps/web
-        env:
-          VITE_POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
-          VITE_POSTHOG_HOST: ${{ vars.POSTHOG_HOST || 'https://eu.i.posthog.com' }}
-          VITE_POSTHOG_REPLAY: ${{ vars.POSTHOG_REPLAY || 'false' }}
-        run: |
-          npm ci
-          npm run build -- --outDir ../../services/api/portal --emptyOutDir
-          test -f ../../services/api/portal/index.html
-
-      # Runs from services/api, so leave the project's Root Directory empty
-      # in Vercel. Runtime settings (TOKEN_SECRET, DATABASE_URL) live in the
-      # Vercel project's environment variables.
-      - name: Deploy to production (the `dev` API)
-        working-directory: services/api
-        run: |
-          ../../tools/deploy/node_modules/.bin/vercel deploy --prod --yes --token "$VERCEL_TOKEN" \
-            --build-env BUILD_NUMBER=${{ github.run_number }} \
-            --env BUILD_NUMBER=${{ github.run_number }}
-
-      - name: Portal check
-        env:
-          API_DEV_URL: ${{ vars.API_DEV_URL }}
-        run: |
-          # The deployment alias can briefly serve the previous deployment.
-          # Retry HTTP errors and missing portal HTML, with a three-minute limit.
-          response=$(mktemp)
-          trap 'rm -f "$response"' EXIT
-          deadline=$((SECONDS + 180))
-          while (( SECONDS < deadline )); do
-            ready=true
-            for path in /portal/ /portal/customers; do
-              remaining=$((deadline - SECONDS))
-              if (( remaining <= 0 )); then
-                ready=false
-                break
-              fi
-              timeout=$((remaining < 10 ? remaining : 10))
-              if curl -fsS --connect-timeout 5 --max-time "$timeout" \
-                "${API_DEV_URL%/}${path}" -o "$response" && grep -q 'id="root"' "$response"; then
-                echo "Portal ready: $path"
-              else
-                echo "Portal not ready: $path"
-                head -c 1000 "$response"
-                ready=false
-              fi
-            done
-            if "$ready"; then
-              exit 0
-            fi
-            remaining=$((deadline - SECONDS))
-            if (( remaining > 0 )); then
-              sleep "$((remaining < 10 ? remaining : 10))"
-            fi
-          done
-          echo "::error::Portal did not become ready within three minutes."
-          exit 1
-
-      - name: Smoke test
-        env:
-          SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
-          SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
-          SMOKE_ADMIN_PASSWORD: ${{ secrets.MOCK_ADMIN_PASSWORD }}
-        run: python services/api/scripts/smoke_test.py "${{ vars.API_DEV_URL }}"
+  production:
+    if: >-
+      ${{ (vars.DEPLOY_PROVIDER || 'vercel') == 'vercel'
+      && ((github.event_name == 'push' && github.ref_type == 'tag')
+          || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')) }}
+    concurrency:
+      group: api-deploy-production
+      cancel-in-progress: false
+    uses: ./.github/workflows/api-deploy-vercel.yml
+    with:
+      environment: production
+      demo: false
+    secrets: inherit
 
   deploy-aws:
     if: ${{ vars.DEPLOY_PROVIDER == 'aws' && vars.AWS_DEPLOY_ROLE_ARN != '' }}

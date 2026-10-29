@@ -3,6 +3,8 @@
 Usage: python scripts/smoke_test.py https://api-dev.example.com
 Passwords come from SMOKE_CUSTOMER_PASSWORD, SMOKE_CREW_PASSWORD and
 SMOKE_ADMIN_PASSWORD. Nothing is printed except IDs and status codes.
+SMOKE_ROLES (default "customer,crew,admin") limits the logins tried: production
+has no demo logins, so it runs with SMOKE_ROLES=admin.
 """
 import json
 import os
@@ -48,7 +50,10 @@ def main() -> None:
     check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
     status, body = call(base, "/v1/auth/start", {"login_id": "priveopapa"})
     check(status == 200 and body.get("next") == "password", "sign-in start")
+    roles = os.environ.get("SMOKE_ROLES", "customer,crew,admin").split(",")
     for role, login_id, env in LOGINS:
+        if role not in roles:
+            continue
         password = os.environ.get(env, "")
         status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})
         check(status == 200 and body.get("role") == role, f"login {role}")

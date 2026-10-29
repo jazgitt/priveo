@@ -1,0 +1,147 @@
+name: api-deploy-vercel
+
+# One Vercel deployment of the API. Called by api-deploy.yml for `test`
+# (every push to main) and for `production` (a v* tag or a manual run).
+#
+# Everything that differs between the two lives in the GitHub Environment named
+# by `environment`, so the steps are the same for both:
+#   variables: VERCEL_ORG_ID, VERCEL_PROJECT_ID, API_URL
+#   secrets:   VERCEL_TOKEN, MIGRATION_DATABASE_URL, ADMIN_PASSWORD
+#   test only: MOCK_CUSTOMER_PASSWORD, MOCK_CREW_PASSWORD
+# Runtime settings (DATABASE_URL, TOKEN_SECRET, CRON_SECRET ...) live in the
+# Vercel project's own environment variables, not here.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy (test or production)
+        required: true
+        type: string
+      demo:
+        description: Seed the demo customer and crew logins (test only)
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Keep the CLI and its patched tar dependency reproducible.
+      - name: Install deployment tools
+        run: npm ci --prefix tools/deploy
+
+      # The database is changed before the new code goes live, so a migration
+      # must keep the previous release working. The seed makes the admin login
+      # and, on test only, the demo customer and crew logins.
+      - name: Migrate and seed the database
+        working-directory: services/api
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MOCK_CUSTOMER_PASSWORD: ${{ inputs.demo && secrets.MOCK_CUSTOMER_PASSWORD || '' }}
+          MOCK_CREW_PASSWORD: ${{ inputs.demo && secrets.MOCK_CREW_PASSWORD || '' }}
+          SEED_DEMO_LOGINS: ${{ inputs.demo && 'true' || 'false' }}
+          ENVIRONMENT: ${{ inputs.demo && 'dev' || 'prod' }}
+        run: |
+          if [ -z "$MIGRATION_DATABASE_URL" ]; then
+            echo "::error::The MIGRATION_DATABASE_URL secret is not set in the ${{ inputs.environment }} environment."
+            exit 1
+          fi
+          pip install -q -e .
+          alembic upgrade head
+          python scripts/seed.py
+
+      # The admin portal is served by the API at /portal/ (same origin). Its
+      # build goes into services/api/portal, which the deploy uploads with the
+      # API. That folder is not in .vercelignore or .gitignore on purpose.
+      # VITE_ values are baked into the build here, not read from Vercel. All
+      # three come from GitHub repository variables (Settings > Secrets and
+      # variables > Actions > Variables). The key is public by design. Unset:
+      # no key sends nothing, host is EU, replay is off.
+      - name: Build the admin portal
+        working-directory: apps/web
+        env:
+          VITE_POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.POSTHOG_HOST || 'https://eu.i.posthog.com' }}
+          VITE_POSTHOG_REPLAY: ${{ vars.POSTHOG_REPLAY || 'false' }}
+        run: |
+          npm ci
+          npm run build -- --outDir ../../services/api/portal --emptyOutDir
+          test -f ../../services/api/portal/index.html
+
+      # Runs from services/api, so leave the project's Root Directory empty
+      # in Vercel. `--prod` is Vercel's name for the project's live deployment;
+      # each of our two projects has exactly one.
+      - name: Deploy
+        working-directory: services/api
+        run: |
+          ../../tools/deploy/node_modules/.bin/vercel deploy --prod --yes --token "$VERCEL_TOKEN" \
+            --build-env BUILD_NUMBER=${{ github.run_number }} \
+            --env BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Portal check
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          # The deployment alias can briefly serve the previous deployment.
+          # Retry HTTP errors and missing portal HTML, with a three-minute limit.
+          response=$(mktemp)
+          trap 'rm -f "$response"' EXIT
+          deadline=$((SECONDS + 180))
+          while (( SECONDS < deadline )); do
+            ready=true
+            for path in /portal/ /portal/customers; do
+              remaining=$((deadline - SECONDS))
+              if (( remaining <= 0 )); then
+                ready=false
+                break
+              fi
+              timeout=$((remaining < 10 ? remaining : 10))
+              if curl -fsS --connect-timeout 5 --max-time "$timeout" \
+                "${API_URL%/}${path}" -o "$response" && grep -q 'id="root"' "$response"; then
+                echo "Portal ready: $path"
+              else
+                echo "Portal not ready: $path"
+                head -c 1000 "$response"
+                ready=false
+              fi
+            done
+            if "$ready"; then
+              exit 0
+            fi
+            remaining=$((deadline - SECONDS))
+            if (( remaining > 0 )); then
+              sleep "$((remaining < 10 ? remaining : 10))"
+            fi
+          done
+          echo "::error::Portal did not become ready within three minutes."
+          exit 1
+
+      # Production has no demo logins, so its smoke test signs in as admin only.
+      - name: Smoke test
+        env:
+          SMOKE_ROLES: ${{ inputs.demo && 'customer,crew,admin' || 'admin' }}
+          SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
+          SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: python services/api/scripts/smoke_test.py "${{ vars.API_URL }}"
