@@ -296,7 +296,7 @@ apps/admin-web/src/
 
 **Target (Derived from the reviewer's security requirement, not an Owner decision):** one public entry point to the backend. The database and every other backend part are private. Use this list for the move from `dev` to `prod` and in each security review. Mark each line with the date and who checked it.
 
-**What `dev` is.** `dev` runs on Vercel with a Neon database (`docs/build-and-release.md`). Neon is reached over the public internet with TLS and credentials only, and GitHub Actions connects to it directly to migrate and seed. So `dev` does not meet the target. Keep real customer data out of `dev`. `prod` is on AWS Mumbai (`DEPLOY_PROVIDER=aws`) and must meet every checkpoint below before launch.
+**What `test` and `prod` are (29 Oct 2026).** Since 29 Oct 2026 the API runs as two Vercel projects in the `priveo` team, `priveo-api-test` and `priveo-api-prod`, both in Mumbai (`bom1`), each with its own Supabase PostgreSQL database in Mumbai (`docs/build-and-release.md`). A Supabase database is reached over the public internet with TLS and credentials only, and GitHub Actions connects to it directly to migrate and seed. So neither meets the private-subnet target below. The owner chose this setup on 29 Oct 2026 as the first step: **Supabase first, then AWS Mumbai with a private RDS later**, as the owner decision of 19 Oct 2026 says (`docs/hosting-assessment/README.md`). So the Supabase `prod` is interim and the checkpoints below stay the bar for the AWS `prod`. The AWS path stays in the repo (`DEPLOY_PROVIDER=aws`).
 
 | # | Checkpoint | Pass when |
 |---|---|---|
