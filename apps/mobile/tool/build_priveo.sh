@@ -8,7 +8,9 @@
 #   apps/mobile/tool/build_priveo.sh android --build-only   (writes the APK)
 #   apps/mobile/tool/build_priveo.sh ios --replay --api http://192.168.1.5:8000
 #
-# Flags: --build-only  --clean  --api <url>  --local  --replay  --debug|--release  --device <id>
+# Flags: --build-only  --clean  --env test|prod  --api <url>  --local  --replay  --debug|--release  --device <id>
+# --env picks the API: test (default) or prod. Set API_TEST_URL / API_PROD_URL to override
+# the addresses below. --api <url> overrides --env.
 # --local uses the API from tools/dev/run-local.sh on this Mac (Android emulator: 10.0.2.2,
 # iOS Simulator: localhost). It needs a debug build, so it cannot be used with --release.
 # --clean runs `flutter clean` first, for a full rebuild (slow).
@@ -27,7 +29,7 @@ REPO="jazgitt/priveo"
 POSTHOG_HOST="https://eu.i.posthog.com"
 
 usage() {
-  sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit "${1:-2}"
 }
 
@@ -44,7 +46,11 @@ case "$TARGET" in
   *) echo "Target must be ios or android." >&2; usage ;;
 esac
 
-API_URL="https://priveo-api.vercel.app"
+# Update API_TEST_URL's default when the test API moves to its own domain.
+TEST_URL="${API_TEST_URL:-https://priveo-api.vercel.app}"
+PROD_URL="${API_PROD_URL:-https://api.priveo.in}"
+API_ENV="test"
+API_URL=""
 REPLAY=false
 BUILD_ONLY=false
 CLEAN=false
@@ -58,6 +64,7 @@ while [ $# -gt 0 ]; do
     --replay) REPLAY=true ;;
     --debug) MODE=debug ;;
     --release) MODE=release ;;
+    --env) API_ENV="${2:?--env needs test or prod}"; shift ;;
     --api) API_URL="${2:?--api needs a URL}"; shift ;;
     --local) LOCAL=true ;;
     --device) DEVICE="${2:?--device needs an id}"; shift ;;
@@ -66,6 +73,12 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+case "$API_ENV" in
+  test) ENV_URL="$TEST_URL" ;;
+  prod) ENV_URL="$PROD_URL" ;;
+  *) echo "--env must be test or prod." >&2; exit 2 ;;
+esac
+[ -n "$API_URL" ] || API_URL="$ENV_URL"
 if $LOCAL; then
   if [ "$TARGET" = android ]; then API_URL="http://10.0.2.2:8000"; else API_URL="http://localhost:8000"; fi
   [ "$MODE" != release ] || { echo "--local needs a debug build (plain http is blocked in release)." >&2; exit 2; }

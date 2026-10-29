@@ -24,6 +24,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Reads the API address of the test environment until the Play app moves
+    # to the production API (a deliberate change, with its own entry point).
+    environment: test
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
@@ -68,11 +71,11 @@ jobs:
         working-directory: apps/mobile
         run: |
           # The Play app is in.priveo.app, so this is the prod flavor. In
-          # Phase 0 it still starts from the dev entry point and the dev API.
+          # Phase 0 it still starts from the dev entry point and the test API.
           flutter build appbundle --release \
             --flavor prod \
             -t lib/main_dev.dart \
-            --dart-define=API_BASE_URL=${{ vars.API_DEV_URL }} \
+            --dart-define=API_BASE_URL=${{ vars.API_URL }} \
             --dart-define=POSTHOG_KEY=${{ vars.POSTHOG_KEY }} \
             --dart-define=POSTHOG_HOST=${{ vars.POSTHOG_HOST || 'https://eu.i.posthog.com' }} \
             --dart-define=POSTHOG_REPLAY=${{ vars.POSTHOG_REPLAY || 'false' }} \

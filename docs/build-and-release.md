@@ -1,6 +1,6 @@
 # Build and release (Phase 0)
 
-**Status:** 10 Oct 2026. Covers the Phase 0a Android path and the start of Phase 1 (real sign-in on PostgreSQL). The `dev` API host is Vercel with a Neon database, and switches to AWS with `DEPLOY_PROVIDER=aws`. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
+**Status:** 10 Oct 2026. Covers the Phase 0a Android path and the start of Phase 1 (real sign-in on PostgreSQL). The API runs as two Vercel projects (test and production), each with its own Supabase database, and switches to AWS with `DEPLOY_PROVIDER=aws`. Sections below that say Neon describe the old dev database, until the cut-over to Supabase is done and Neon is removed. iOS (0b) is not built yet. Plan: `docs/build-plan.md`.
 
 ## 1. Run it on your machine
 
@@ -53,9 +53,16 @@ Passwords are configuration, never committed. The database keeps only an Argon2 
 - **What it cannot run:** the golden-image tests (Linux only, skipped on macOS) and the `update-goldens` workflow. If a change moves pixels, add the label and let CI remake the images.
 - **CI stays the final gate.** A pass here means the pipelines should pass, not that they are skipped.
 
-## Dev and production are separate deployments
+## Test and production are separate deployments
 
-`dev` is the test server. It runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`), and is the only one the `api-deploy` workflow touches. Production is customer-facing: its own host, its own database, its own secrets and its own deploy workflow, with `ENVIRONMENT=prod`. In prod the server refuses to start if `SEED_DEMO_LOGINS`, `MOCK_*`, or `EMAIL_REDIRECT_TO` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins. The production workflow does not exist yet; it is created with the AWS move.
+There are two API deployments, each its own Vercel project (`priveo-api-test`, `priveo-api-prod`, in one Vercel team) with its own Supabase database (Mumbai). Both run the same code.
+
+- **test** runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`). Every merge to `main` deploys to it. Daily development and testing happen here.
+- **production** runs with `ENVIRONMENT=prod` and is customer-facing: its own database, secrets and `TOKEN_SECRET`. It deploys only from a `v*` tag, or a manual run with environment `production`, and the `production` GitHub Environment should require a reviewer. In prod the server refuses to start if `SEED_DEMO_LOGINS`, `MOCK_*`, or `EMAIL_REDIRECT_TO` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins.
+
+To release: check test, then `git tag v1.2.3 <commit> && git push origin v1.2.3` and approve the run. A migration runs before the new code goes live, so it must keep the previous release working.
+
+Supabase is used as plain PostgreSQL. Turn off its Data API on both projects. The app connects through the transaction pooler (port 6543) as `DATABASE_URL`. Migrations use the direct or session address (port 5432), kept in the GitHub secret `MIGRATION_DATABASE_URL`.
 
 ## 2. The pipelines
 
@@ -64,11 +71,11 @@ Passwords are configuration, never committed. The database keeps only an Argon2 
 | `api-ci` | Pull request touching the API | Lint, pytest on an in-memory database and again on PostgreSQL, and a check that `openapi.json` matches the code |
 | `mobile-ci` | Pull request touching the app, `tokens.json` or `openapi.json` | Theme, translations and API client up to date, `flutter analyze`, `flutter test` |
 | `mobile-goldens` | The label `update-goldens` added to a pull request | Remakes the golden images on Linux and commits them to the branch. Push one more commit afterwards, since that commit does not start `mobile-ci` |
-| `api-deploy` | Merge to `main` touching the API | Migrate and seed the `dev` database, deploy to `dev` on the host chosen by `DEPLOY_PROVIDER` (Vercel by default, or AWS), then smoke test |
-| `mobile-integration` | Started by hand (`gh workflow run mobile-integration`). Also on a merge to `main` touching the app, but only when `RUN_EMULATOR_ON_MERGE` is `true` | Runs the app on an Android emulator against the `dev` API and signs in as each role. About 15 minutes |
+| `api-deploy` | Merge to `main` touching the API (test); a `v*` tag or a manual run (production) | Calls `api-deploy-vercel` for the `test` or `production` environment: migrate and seed that database, deploy, check the portal, smoke test. `DEPLOY_PROVIDER=aws` uses the single-environment AWS job instead |
+| `mobile-integration` | Started by hand (`gh workflow run mobile-integration`). Also on a merge to `main` touching the app, but only when `RUN_EMULATOR_ON_MERGE` is `true` | Runs the app on an Android emulator against the `test` API and signs in as each role. About 15 minutes |
 | `mobile-android-release` | Merge to `main` touching the app | Test, build a signed bundle, upload to Play internal testing |
 
-`api-deploy` has two jobs. `deploy-vercel` runs when `DEPLOY_PROVIDER` is empty or `vercel` and `VERCEL_PROJECT_ID` is set. `deploy-aws` runs when `DEPLOY_PROVIDER` is `aws` and `AWS_DEPLOY_ROLE_ARN` is set. A job with missing settings is skipped. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
+`api-deploy` has the jobs `test` and `production` (when `DEPLOY_PROVIDER` is empty or `vercel`) and `deploy-aws` (when it is `aws` and `AWS_DEPLOY_ROLE_ARN` is set). The Vercel jobs read their settings from the GitHub Environment of the same name; a missing setting fails the run with a clear message. `mobile-android-release` does nothing until `ANDROID_KEYSTORE_BASE64` is set. Neither fails while the accounts are missing.
 
 To make a failing test block a merge, turn on branch protection for `main` and require `api-ci` and `mobile-ci`. **Open:** this is a GitHub setting that the owner must switch on.
 
@@ -80,12 +87,11 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 |---|---|
 | `RUN_EMULATOR_ON_MERGE` | `true` runs `mobile-integration` on each merge to `main` that touches the app. Unset or anything else: it runs only when started by hand |
 | `DEPLOY_PROVIDER` | `vercel` (default when empty) or `aws`. This is the switch |
-| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | From `.vercel/project.json` after `vercel link` (Vercel only) |
 | `AWS_DEPLOY_ROLE_ARN` | The IAM role that GitHub assumes through OIDC |
 | `AWS_REGION` | `ap-south-1` (Mumbai) |
 | `ECR_REPOSITORY` | The ECR repository name |
 | `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY` | The `dev` ECS names |
-| `API_DEV_URL` | The public address of the `dev` API: the project's production domain on Vercel (for example `https://priveo-api.vercel.app`), or `https://api-dev.<your-domain>` on AWS. The app and the smoke test both use it |
+| `API_DEV_URL` | AWS only: the public address of the AWS `dev` API, used by its smoke test |
 
 Analytics (PostHog EU) is set by three repository variables. Both the mobile release build and the portal build in `api-deploy.yml` read them. Vite bakes the values into the portal, because the portal is built in GitHub Actions, not on Vercel.
 
@@ -101,28 +107,41 @@ To try the portal on your PC: `VITE_POSTHOG_KEY=phc_... VITE_POSTHOG_REPLAY=true
 
 The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) are needed only when `DEPLOY_PROVIDER` is `aws`.
 
-**Secrets:**
+**GitHub Environments** (Settings, Environments): create `test` and `production`. On `production`, add a required reviewer. Each holds the same names with its own values:
+
+| Name | Kind | Value |
+|---|---|---|
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | variable | From `.vercel/project.json` after `vercel link` to that environment's project |
+| `API_URL` | variable | The public address of that API (the project's production domain, or its own domain). The app, the portal check and the smoke test use it |
+| `VERCEL_TOKEN` | secret | A token for the Vercel team |
+| `MIGRATION_DATABASE_URL` | secret | That environment's Supabase direct or session address (port 5432). The deploy migrates and seeds with it. The runtime `DATABASE_URL` (pooler, port 6543) lives only in the Vercel project |
+| `ADMIN_PASSWORD` | secret | The admin `priveopapa` password for that environment. The deploy seeds it and the smoke test signs in with it |
+| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD` | secret | `test` only: the demo customer and crew passwords. Production has none |
+
+**Repository secrets:**
 
 | Name | Value |
 |---|---|
-| `VERCEL_TOKEN` | A Vercel access token (Vercel only) |
-| `DATABASE_URL` | The `dev` PostgreSQL address. The deploy uses it to migrate and seed. The same value is in the Vercel project's environment |
-| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD`, `MOCK_ADMIN_PASSWORD` | The passwords of the demo customer, the demo crew member and the admin on `dev`. The deploy seeds them and the smoke test signs in with them |
 | `ANDROID_KEYSTORE_BASE64` | The upload keystore, base64 encoded |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | The upload key details |
 | `PLAY_SERVICE_ACCOUNT_JSON` | The Google Cloud service account key with Play Console access |
 
 ## 4. One-time setup, in order
 
-**Vercel (default host)**
+**Supabase and Vercel (default host).** Do the steps once for `test` and once for `production`; the names in brackets are the production ones.
 
-1. Sign in once: `npx vercel login`.
-2. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api`. Leave the project's Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Singapore region (`sin1`) for the `dev` API, the same region as the Neon database, so each query is a short hop. Production on AWS runs in Mumbai with the database beside it.
-3. Add the database: `npx vercel integration add neon --name priveo-dev`. The first time, accept Neon's terms in the browser when asked. It adds `DATABASE_URL` to the project. Copy that value into the GitHub secret `DATABASE_URL`.
-4. Add the runtime environment variables `TOKEN_SECRET` (a long random value, 32 or more characters) and `ENVIRONMENT` (`dev`) to the project (Production). Use `npx vercel env add TOKEN_SECRET production` and `npx vercel env add ENVIRONMENT production`. Add `CRON_SECRET` too, or the scheduled jobs answer 503. The server will not start without `TOKEN_SECRET`, and a hosted server will not start unless `ENVIRONMENT` is set to exactly `dev` or `prod`. Add `ENVIRONMENT` **before** the first deploy of this change.
-   - Until email is connected, also add `MOCK_EMAIL_CODE` (6 digits of your choice) the same way, then deploy again. It is the code every customer enters at first sign-in and after "Forgot password" on `dev`. No email is sent. Without it those two steps answer "Email is not set up yet". It does nothing when `ENVIRONMENT=prod`.
-5. First deploy: `npx vercel deploy --prod`. Set `API_DEV_URL` to the project's `*.vercel.app` production domain. The app needs an address that needs no Vercel sign-in. The production domain is public under the default protection, but the per-deployment URLs are not.
-6. Add the repository variables and secrets from section 3.
+1. **Supabase:** create the project `priveo-test` (`priveo-prod`) in Mumbai (`ap-south-1`). Turn off the Data API. Production: use a paid plan with backups. Note the transaction pooler address (port 6543) and the direct or session address (port 5432).
+2. **Vercel:** sign in once (`npx vercel login`) and make sure the new Vercel team is on the Pro plan. Create and link the project from `services/api`: `cd services/api && npx vercel link --yes --project priveo-api-test --scope <team>` (`priveo-api-prod`). Leave the Root Directory empty and do not connect Git. The workflow deploys from `services/api`, and `vercel.json` sets the Mumbai region (`bom1`).
+3. **Blob store:** create a Vercel Blob store on each project. It sets `BLOB_READ_WRITE_TOKEN`, which media uploads need.
+4. **Runtime variables** on each project (Production), with `npx vercel env add <NAME> production`:
+   - `DATABASE_URL`: the pooler address (port 6543).
+   - `TOKEN_SECRET`: a long random value, 32 or more characters, **different for test and prod**.
+   - `ENVIRONMENT`: `dev` for test, `prod` for production. The server will not start unless it is exactly one of these on a hosted server.
+   - `CRON_SECRET`: a random value, or the scheduled jobs answer 503.
+   - `PUBLIC_BASE_URL`: that API's address.
+   - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters at first sign-in and after "Forgot password" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*`, `SEED_DEMO_LOGINS` or `EMAIL_REDIRECT_TO`.
+5. **GitHub:** create the Environments `test` and `production` and add their variables and secrets (section 3). Set `API_URL` to an address that needs no Vercel sign-in: the project's production domain is public under the default protection, but per-deployment URLs are not.
+6. **First deploy:** run `api-deploy` from the Actions tab with environment `test`, then, after checking test, `production` (or push a `v*` tag).
 
 **AWS (switch with `DEPLOY_PROVIDER=aws`)**
 
@@ -161,7 +180,7 @@ Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `
 
 ## Try the admin portal on localhost
 
-Run `tools\dev\portal-local.ps1` from the repo root. It starts the API on `http://localhost:8000` and the portal dev server on `http://localhost:5173/portal/`, which reloads on every edit. The database is the dev Neon database; no local copy is made. The first run pulls the Vercel environment into `services/api/.env.neon` (git-ignored, never printed). Use `-Refresh` after a Vercel variable changes. The script does not run migrations or the seed; the deploy does that. What you save while testing is real dev data.
+Run `tools\dev\portal-local.ps1` from the repo root. It starts the API on `http://localhost:8000` and the portal dev server on `http://localhost:5173/portal/`, which reloads on every edit. The database is the shared test database of whichever Vercel project `services/api` is linked to (`priveo-api-test` after the move; link it with `npx vercel link --project priveo-api-test`); no local copy is made. The first run pulls the Vercel environment into `services/api/.env.neon` (git-ignored, never printed). Use `-Refresh` after a Vercel variable changes. The script does not run migrations or the seed; the deploy does that. What you save while testing is real dev data.
 
 ### Run the portal against a local copy of the dev database
 
