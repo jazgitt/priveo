@@ -7,6 +7,7 @@ import { routes as complaints } from "./pages/complaints";
 import { routes as crew } from "./pages/crew";
 import { routes as customers } from "./pages/customers";
 import { routes as addons } from "./pages/addons";
+import { routes as mani } from "./pages/mani";
 import { routes as operations } from "./pages/operations";
 import { routes as dashboard } from "./pages/dashboard";
 import { routes as feedback } from "./pages/feedback";
@@ -37,4 +38,5 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...customers,
   ...addons,
   ...operations,
+  ...mani,
 ];
