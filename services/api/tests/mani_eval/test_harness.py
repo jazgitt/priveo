@@ -276,9 +276,10 @@ def test_migration_head_is_read_from_the_repo():
     assert number >= "0042"
 
 
-def test_real_agent_hook_is_unimplemented(capsys):
-    assert runner.main(["--agent", "mani"]) == 2
-    assert "Wave 2" in capsys.readouterr().err
+def test_real_agent_hook_builds_the_real_agent_without_calling_a_model(eval_world):
+    agent = runner.AGENTS["mani"](eval_world["expected"], FIXED_NOW)  # building makes no network call
+    assert isinstance(agent, runner.EvalMani) and callable(agent.prepare)
+    assert type(agent.agent).__name__ == "ManiAgent"
 
 
 def test_list_prints_questions_and_expected(capsys):
