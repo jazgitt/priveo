@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/ui/media_image.dart';
 import '../../../core/ui/widgets.dart';
+import '../../common/version/version_screen.dart';
 import '../capture/media_capture.dart';
 import '../crew_providers.dart';
 import '../crew_text.dart';
@@ -140,6 +141,8 @@ class _State extends ConsumerState<CrewProfileScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            const VersionEntry(),
           ],
         ),
       ),

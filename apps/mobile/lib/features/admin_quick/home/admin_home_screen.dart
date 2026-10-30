@@ -9,6 +9,7 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../common/signout_button.dart';
+import '../../common/version/version_screen.dart';
 import '../alerts/routes.dart' show AlertsRoutes;
 import '../payments/routes.dart' show adminAlertsPath, adminPaymentsPath;
 import '../admin_quick_strings.dart';
@@ -125,6 +126,8 @@ class AdminHomeScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               OutlinedButton(onPressed: () => context.push(AdminQuickPaths.checklists),
                 child: const Text('Cleaning checklists')),
+              const SizedBox(height: 12),
+              const VersionEntry(),
               const _SignOutAllButton(),
             ],
           ),

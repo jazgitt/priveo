@@ -33,7 +33,7 @@ android {
         create("dev") {
             dimension = "env"
             applicationIdSuffix = ".dev"
-            manifestPlaceholders["appLabel"] = "Priveo Dev"
+            manifestPlaceholders["appLabel"] = "Priveo Test"
         }
         create("prod") {
             dimension = "env"

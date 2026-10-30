@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../features/auth/data/auth_repository.dart';
 import 'analytics/analytics.dart';
@@ -12,6 +13,11 @@ import 'network/api_client.dart';
 
 /// Overridden in `main_dev.dart` and `main_prod.dart`.
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.dev);
+
+/// The app's own version and build number (from pubspec.yaml). Tests override it.
+final packageInfoProvider = FutureProvider<PackageInfo>(
+  (ref) => PackageInfo.fromPlatform(),
+);
 
 /// Overridden in `runPriveo`. Tests keep this no-op.
 final analyticsProvider = Provider<Analytics>((ref) => const NoopAnalytics());

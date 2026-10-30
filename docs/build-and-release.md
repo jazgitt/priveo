@@ -164,6 +164,23 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 - The API build number is the same run number, passed to the image as `BUILD_NUMBER`. `GET /v1/public/health` shows it.
 - Phase 0 Play builds are the `prod` flavor (`in.priveo.app`, the Play app) started from the `dev` entry point with the `dev` API address. **Derived:** the owner has not chosen whether Play testers should get `in.priveo.app` or `in.priveo.app.dev` in Phase 0. A real `prod` build comes with Phase 8.
 
+### Build a test or production app
+
+`apps/mobile/tool/build_release.sh <android|ios> <test|prod>` builds an app that points at the Test or the Production API and writes it to `apps/mobile/dist/` (git-ignored). The file name carries the environment and the version in `pubspec.yaml` (`0.2.7+207` becomes `0.2.7-207`):
+
+| Command | File | API |
+|---|---|---|
+| `build_release.sh android test` | `priveo-test-<version>.apk` | `https://priveo-api-test.vercel.app` |
+| `build_release.sh android prod` | `priveo-release-<version>.apk` | `https://priveo-api-prod.vercel.app` |
+| `build_release.sh ios test` | `priveo-test-<version>-ios-sim.zip` (iOS Simulator app) | test |
+| `build_release.sh ios prod` | `priveo-release-<version>-ios-sim.zip` | prod |
+| `build_release.sh ios test --ipa` | `priveo-test-<version>.ipa` | test (needs Apple signing) |
+
+- **Android:** test is the `dev` flavor (`in.priveo.app.dev`, label "Priveo Test") and prod is the `prod` flavor (`in.priveo.app`, label "Priveo"), so both install side by side. Release builds use the upload key when `android/key.properties` exists, otherwise the debug key, which installs fine for testing.
+- **iOS:** both builds share the bundle id `in.priveo.app`, so install one at a time. The simulator build is a debug build (Flutter makes no release build for the simulator). An `.ipa` needs an Apple Developer account and a signing identity, which are not set up yet; `--ipa` stops with a message until then.
+- **Other API:** `--api <url>`, or set `API_TEST_URL` / `API_PROD_URL` (change the defaults in the script when `api.priveo.in` exists).
+- **Which build is this?** In the app: customer Settings > Version, crew Profile > Version, admin Home > Version. The page shows the environment (Test or Production), the version and build number, the API address, the package name and when it was built. "Copy details" puts that text on the clipboard.
+
 ## 6. Not built yet
 
 Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `main` until it is merged. Their gaps and stubs are in `docs/overnight-build-report.md`. The list below is from before that branch.

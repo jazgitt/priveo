@@ -30,6 +30,10 @@ class AppConfig {
   /// holds the code just compiled, not an old copy.
   final String buildStamp;
 
+  /// The name of this build's environment, shown on the Version page.
+  String get environmentName =>
+      flavor == Flavor.prod ? 'Production' : 'Test';
+
   /// The dev API address is set at build time:
   /// `--dart-define=API_BASE_URL=https://api-dev.example.com`.
   static const _devUrl = String.fromEnvironment(

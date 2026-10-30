@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../core/ui/theme.dart';
 import '../cust_strings.dart';
 import '../cust_ui.dart';
+import '../../common/version/version_screen.dart';
 import 'notification_prefs_repository.dart';
 
 /// Opens Settings over the current screen.
@@ -122,6 +123,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               if (ref.watch(analyticsProvider).isActive) ..._usageSection(text),
+              const SizedBox(height: 20),
+              const VersionEntry(),
             ],
           ),
         ),
