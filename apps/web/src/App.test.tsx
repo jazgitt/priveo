@@ -60,6 +60,18 @@ describe("portal shell", () => {
     expect(screen.getByText("Priveo Papa")).toBeInTheDocument();
   });
 
+  it("opens the areas from a menu button on a narrow screen and closes the menu after a choice", async () => {
+    fetchMock.mockResolvedValue(json(200, profile));
+    renderAt("/payments");
+    await screen.findByRole("navigation", { name: "Admin areas" });
+    expect(screen.queryByRole("navigation", { name: "Admin areas menu" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    const menu = await screen.findByRole("navigation", { name: "Admin areas menu" });
+    await userEvent.click(within(menu).getByRole("link", { name: "Crew" }));
+    expect(await screen.findByRole("heading", { name: "Crew" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("navigation", { name: "Admin areas menu" })).toBeNull());
+  });
+
   it("has a master Site selector; site pages are grouped apart from master data", async () => {
     fetchMock.mockImplementation(async (path: string) => {
       if (path === "/v1/web/me") return json(200, profile);

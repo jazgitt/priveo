@@ -9,7 +9,7 @@ import { ApiError } from "../api/client";
 import { ToastProvider } from "../components";
 import { PortalProviders } from "../test/portal";
 import { useConfirm } from "./confirm";
-import { DataTable, Pager } from "./DataTable";
+import { DataTable, Pager, tableMinRem } from "./DataTable";
 import { useViewMode, ViewToggle } from "./view";
 import { DetailList, EmptyState, ErrorState, PageHeader, StatTile } from "./layout";
 import { errorMessage, useAppMutation } from "./mutation";
@@ -223,4 +223,18 @@ it("shows the empty state and skeleton tiles in the tile view", () => {
   expect(screen.queryByText("none")).not.toBeInTheDocument();
   rerender(<DataTable view="tiles" rows={[]} rowKey={() => ""} empty={<p>none</p>} renderTile={() => null} columns={[]} />);
   expect(screen.getByText("none")).toBeInTheDocument();
+});
+
+it("keeps a table as wide as its columns need, so a narrow screen scrolls instead of squeezing", () => {
+  render(
+    <DataTable rows={[{ id: "a" }]} rowKey={(r) => r.id} empty={<p>none</p>} columns={[
+      { key: "a", header: "A", width: "10rem", cell: () => "x" },
+      { key: "b", header: "B", width: "25%", cell: () => "y" },
+      { key: "c", header: "C", cell: () => "z" },
+    ]} />,
+  );
+  // The 25% column needs 8 rem of its own, so the table is 32 rem; the others fit in the other 75%.
+  expect(screen.getByRole("table")).toHaveStyle({ minWidth: "32rem" });
+  expect(tableMinRem(["10rem", "25%", undefined])).toBe(32);
+  expect(tableMinRem(["10rem", "7rem", undefined])).toBe(25);
 });
