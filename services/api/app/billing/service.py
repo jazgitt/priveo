@@ -412,7 +412,7 @@ class BillingService:
         invoice = self._invoice_out(inv)
         preview = not self._seller_ready(invoice.model_dump()) or bool(
             inv.tax_details and inv.tax_details.get("mock_configuration"))
-        if preview and get_settings().environment != "dev":
+        if preview and get_settings().environment == "prod":
             raise ApiError("invoice_settings_incomplete",
                            "Ask Priveo to configure the invoice supplier details.", 409)
         from app.billing.pdf import render_invoice

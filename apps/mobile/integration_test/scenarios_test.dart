@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
 import 'package:priveo/features/customer/home/home_schedule.dart';
-import 'package:priveo/main_dev.dart' as app;
+import 'package:priveo/main_test.dart' as app;
 
 const _manifestJson = String.fromEnvironment('SCENARIO_MANIFEST');
 const _password = String.fromEnvironment('SCENARIO_PASSWORD');

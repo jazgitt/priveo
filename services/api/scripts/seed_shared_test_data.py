@@ -113,8 +113,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     settings = get_settings()
-    if settings.environment != "dev":
-        parser.error("Hosted synthetic seeding is allowed only for ENVIRONMENT=dev.")
+    if settings.environment not in ("dev", "test"):
+        parser.error("Hosted synthetic seeding is allowed only for ENVIRONMENT=dev or test.")
     engine = get_engine()
     if engine.dialect.name != "postgresql":
         parser.error("Use the local fixture tool for SQLite; hosted seeding needs PostgreSQL.")

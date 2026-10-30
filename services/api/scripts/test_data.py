@@ -899,8 +899,8 @@ def main() -> None:
             )
         )
         return
-    if os.environ.get("ENVIRONMENT", "dev").lower() != "dev":
-        parser.error("Fixture writes are allowed only with ENVIRONMENT=dev.")
+    if os.environ.get("ENVIRONMENT", "dev").lower() not in ("dev", "test"):
+        parser.error("Fixture writes are allowed only with ENVIRONMENT=dev or test.")
     if not args.database_file:
         parser.error("Specify --database-file explicitly. DATABASE_URL is never used.")
     if args.output and (

@@ -31,7 +31,7 @@ Future<ProviderContainer> _container(Session? session) async {
     retry: (_, _) => null,
     overrides: [
       sessionStoreProvider.overrideWithValue(store),
-      appConfigProvider.overrideWithValue(AppConfig.dev),
+      appConfigProvider.overrideWithValue(AppConfig.test),
     ],
   );
   addTearDown(container.dispose);
@@ -81,7 +81,7 @@ void main() {
         retry: (_, _) => null,
         overrides: [
           sessionStoreProvider.overrideWithValue(session),
-          appConfigProvider.overrideWithValue(AppConfig.dev),
+          appConfigProvider.overrideWithValue(AppConfig.test),
           uploadQueueStoreProvider.overrideWithValue(store),
           onlineEventsProvider.overrideWithValue(const Stream<bool>.empty()),
         ],

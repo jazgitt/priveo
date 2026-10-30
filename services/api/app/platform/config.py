@@ -26,9 +26,10 @@ class Settings(BaseSettings):
     seed_demo_logins: bool = False
     mock_customer_password: str = ""
     mock_crew_password: str = ""
-    # "dev" or "prod". The dev-only switches below do nothing in "prod". On a
-    # hosted server it must be set on purpose (check_startup); on a developer's
-    # machine it defaults to "dev".
+    # "dev" (your machine), "test" (the hosted test server) or "prod". Dev and
+    # test behave the same; the dev-only switches below do nothing in "prod". On
+    # a hosted server it must be set on purpose (check_startup); on a
+    # developer's machine it defaults to "dev".
     environment: str = "dev"
     # Dev only: optional fixed 6-digit code for customer verification.
     # Delivery uses Resend when configured, otherwise the logging sender.
@@ -62,7 +63,7 @@ log = logging.getLogger("priveo.api")
 
 # Set by the hosts the API runs on: Vercel, and AWS (ECS Fargate).
 _HOSTED_MARKERS = ("VERCEL", "AWS_EXECUTION_ENV", "ECS_CONTAINER_METADATA_URI_V4")
-_ENVIRONMENTS = ("dev", "prod")
+_ENVIRONMENTS = ("dev", "test", "prod")
 _MIN_PROD_SECRET = 32
 _PLACEHOLDER_SECRETS = ("", "change-me")
 
@@ -86,9 +87,9 @@ def startup_problems(settings: Settings, *, hosted: bool,
     if secret in _PLACEHOLDER_SECRETS:
         problems.append("TOKEN_SECRET is not set. Set it to a long random value.")
     if settings.environment not in _ENVIRONMENTS:
-        problems.append('ENVIRONMENT must be exactly "dev" or "prod".')
+        problems.append('ENVIRONMENT must be exactly "dev", "test" or "prod".')
     if hosted and "environment" not in settings.model_fields_set:
-        problems.append('ENVIRONMENT is not set. A hosted server must say "dev" or "prod".')
+        problems.append('ENVIRONMENT is not set. A hosted server must say "test" or "prod".')
 
     if settings.environment == "prod":
         if secret not in _PLACEHOLDER_SECRETS and len(secret) < _MIN_PROD_SECRET:

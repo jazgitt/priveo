@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:priveo/features/auth/presentation/login_screen.dart';
 import 'package:priveo/features/customer/home/home_schedule.dart';
-import 'package:priveo/main_dev.dart' as app;
+import 'package:priveo/main_test.dart' as app;
 
 /// Login ID, password, and a label that only that role's home shows. The
 /// customer home greets by the hour, so it is matched by its greeting line.

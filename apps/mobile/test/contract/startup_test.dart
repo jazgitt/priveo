@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/config/app_config.dart';
 import 'package:priveo/core/providers.dart';
-import 'package:priveo/main_dev.dart' as dev;
+import 'package:priveo/main_test.dart' as test_entry;
 import 'package:priveo/main.dart' as prod;
 import 'package:priveo/features/crew/routes.dart' as crew;
 import 'package:priveo/features/scheduling/dto.dart';
@@ -14,10 +14,10 @@ void main(){
       const channel=MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
       t.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel,(_)async=>null);
       addTearDown(()=>t.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel,null));
-      if(production){prod.main();}else{dev.main();}
+      if(production){prod.main();}else{test_entry.main();}
       await t.pump();await t.pump(const Duration(seconds:3));await t.pumpAndSettle();
       final container=ProviderScope.containerOf(t.element(find.byType(MaterialApp)));
-      expect(container.read(appConfigProvider),production?AppConfig.prod:AppConfig.dev);expect(find.text('Get started'),findsOneWidget);
+      expect(container.read(appConfigProvider),production?AppConfig.prod:AppConfig.test);expect(find.text('Get started'),findsOneWidget);
       await t.pumpWidget(const SizedBox());await t.pump();
       }
     });

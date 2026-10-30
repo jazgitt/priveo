@@ -23,7 +23,7 @@ class PostHogAnalytics implements Analytics {
       ..host = _config.posthogHost.isEmpty
           ? 'https://eu.i.posthog.com'
           : _config.posthogHost
-      ..debug = _config.flavor == Flavor.dev
+      ..debug = _config.flavor == Flavor.test
       ..captureApplicationLifecycleEvents = true
       ..personProfiles = PostHogPersonProfiles.identifiedOnly
       // The SDK builds its recorder only when this is true at setup. It then

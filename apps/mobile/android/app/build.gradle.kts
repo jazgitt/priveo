@@ -26,13 +26,13 @@ android {
         versionName = flutter.versionName
     }
 
-    // dev and prod install side by side. Pick one with --flavor; the default
+    // test and prod install side by side. Pick one with --flavor; the default
     // is set in pubspec.yaml. The manifest reads the label from appLabel.
     flavorDimensions += "env"
     productFlavors {
-        create("dev") {
+        create("test") {
             dimension = "env"
-            applicationIdSuffix = ".dev"
+            applicationIdSuffix = ".test"
             manifestPlaceholders["appLabel"] = "Priveo Test"
         }
         create("prod") {

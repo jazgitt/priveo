@@ -22,16 +22,16 @@
 | App: analyze and test | `flutter analyze && flutter test` |
 | App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD`, `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
 | App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
-| App: run (dev) | `flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=<url>` |
-| App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the `dev` API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-dev.apk` from the Files app |
+| App: run (dev) | `flutter run -t lib/main_test.dart --dart-define=API_BASE_URL=<url>` |
+| App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the test API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-test.apk` from the Files app |
 
-The app has two Android flavors that install side by side: `dev` (`in.priveo.app.dev`, labelled "Priveo Dev") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `dev`. Add `--flavor prod -t lib/main_prod.dart` for the other.
+The app has two Android flavors that install side by side: `test` (`in.priveo.app.test`, labelled "Priveo Test") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `test`. Add `--flavor prod -t lib/main_prod.dart` for the other.
 
 For actual email delivery, configure `RESEND_API_KEY` and `EMAIL_FROM` using a verified sending domain. Without a provider key, dev uses the logging sender and production verification returns `not_configured`. `MOCK_EMAIL_CODE` is an optional dev override and is ignored in production. No live provider credentials are needed for the test suite.
 
 Each role has one look, whatever the phone's light or dark setting (owner decision, 10-Oct-26): the splash, login and customer screens are dark and follow the prototype; crew screens are plain white; admin screens are cream. **Derived:** the white crew background is not in `tokens.json`. The customer look also uses the prototype's corner sizes (cards 22, inputs 15) where `tokens.json` says 18 and 12. The looks are in `apps/mobile/lib/core/ui/theme.dart`.
 
-The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for dev builds.
+The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for local builds.
 
 Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and ends any block on the login. Five wrong passwords block the admin for 15 minutes, then 1 hour, then 24 hours (CRW-ACC-07). To get in sooner on `dev`, run the `api-deploy` workflow by hand (Actions, Run workflow): it runs the seed. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
 
@@ -57,7 +57,7 @@ Passwords are configuration, never committed. The database keeps only an Argon2 
 
 There are two API deployments, each its own Vercel project (`priveo-api-test`, `priveo-api-prod`, in one Vercel team) with its own Supabase database (Mumbai). Both run the same code.
 
-- **test** runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`). Every merge to `main` deploys to it. Daily development and testing happen here.
+- **test** runs with `ENVIRONMENT=test`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`). Every merge to `main` deploys to it. Daily development and testing happen here.
 - **production** runs with `ENVIRONMENT=prod` and is customer-facing: its own database, secrets and `TOKEN_SECRET`. It deploys only from a `v*` tag, or a manual run with environment `production`, and the `production` GitHub Environment should require a reviewer. In prod the server refuses to start if `SEED_DEMO_LOGINS` or `MOCK_*` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins.
 
 To release: check test, then `git tag v1.2.3 <commit> && git push origin v1.2.3` and approve the run. A migration runs before the new code goes live, so it must keep the previous release working.
@@ -136,7 +136,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 4. **Runtime variables** on each project (Production), with `npx vercel env add <NAME> production`:
    - `DATABASE_URL`: the pooler address (port 6543).
    - `TOKEN_SECRET`: a long random value, 32 or more characters, **different for test and prod**.
-   - `ENVIRONMENT`: `dev` for test, `prod` for production. The server will not start unless it is exactly one of these on a hosted server.
+   - `ENVIRONMENT`: `test` for the test server, `prod` for production (`dev` is for your own machine). The server will not start unless it is exactly `dev`, `test` or `prod`, and a hosted server must set it.
    - `CRON_SECRET`: a random value, or the scheduled jobs answer 503.
    - Production only: `BLOB_ACCESS` = `private`.
    - `PUBLIC_BASE_URL`: that API's address.
@@ -162,7 +162,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 
 - The Android build number is the GitHub run number (`--build-number`). The version name comes from `apps/mobile/pubspec.yaml`.
 - The API build number is the same run number, passed to the image as `BUILD_NUMBER`. `GET /v1/public/health` shows it.
-- Phase 0 Play builds are the `prod` flavor (`in.priveo.app`, the Play app) started from the `dev` entry point with the `dev` API address. **Derived:** the owner has not chosen whether Play testers should get `in.priveo.app` or `in.priveo.app.dev` in Phase 0. A real `prod` build comes with Phase 8.
+- Phase 0 Play builds are the `prod` flavor (`in.priveo.app`, the Play app) started from the test entry point with the test API address. **Derived:** the owner has not chosen whether Play testers should get `in.priveo.app` or `in.priveo.app.test` in Phase 0. A real `prod` build comes with Phase 8.
 
 ### Build a test or production app
 
@@ -176,7 +176,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 | `build_release.sh ios prod` | `priveo-release-<version>-ios-sim.zip` | prod |
 | `build_release.sh ios test --ipa` | `priveo-test-<version>.ipa` | test (needs Apple signing) |
 
-- **Android:** test is the `dev` flavor (`in.priveo.app.dev`, label "Priveo Test") and prod is the `prod` flavor (`in.priveo.app`, label "Priveo"), so both install side by side. Release builds use the upload key when `android/key.properties` exists, otherwise the debug key, which installs fine for testing.
+- **Android:** test is the `test` flavor (`in.priveo.app.test`, label "Priveo Test") and prod is the `prod` flavor (`in.priveo.app`, label "Priveo"), so both install side by side. Release builds use the upload key when `android/key.properties` exists, otherwise the debug key, which installs fine for testing.
 - **iOS:** both builds share the bundle id `in.priveo.app`, so install one at a time. The simulator build is a debug build (Flutter makes no release build for the simulator). An `.ipa` needs an Apple Developer account and a signing identity, which are not set up yet; `--ipa` stops with a message until then.
 - **Other API:** `--api <url>`, or set `API_TEST_URL` / `API_PROD_URL` (change the defaults in the script when `api.priveo.in` exists).
 - **Which build is this?** In the app: customer Settings > Version, crew Profile > Version, admin Home > Version. The page shows the environment (Test or Production), the version and build number, the API address, the package name and when it was built. "Copy details" puts that text on the clipboard.
