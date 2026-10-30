@@ -88,6 +88,15 @@ def test_prod_needs_email_and_the_cron_secret():
     assert any("CRON_SECRET" in p for p in found)
 
 
+def test_test_is_an_allowed_environment_and_is_not_strict():
+    settings = make(environment="test", seed_demo_logins=True, mock_email_code="123456")
+    assert problems(settings, hosted=True) == []
+
+
+def test_an_unknown_environment_is_refused():
+    assert any("ENVIRONMENT must be" in p for p in problems(make(environment="staging")))
+
+
 def test_dev_may_keep_demo_logins_and_the_fixed_code():
     settings = make(seed_demo_logins=True, mock_email_code="123456")
     assert problems(settings, hosted=True) == []

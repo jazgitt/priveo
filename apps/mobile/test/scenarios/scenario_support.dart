@@ -63,7 +63,7 @@ Future<Session> signInApi(
       overrides: [
         appConfigProvider.overrideWithValue(
           const AppConfig(
-            flavor: Flavor.dev,
+            flavor: Flavor.test,
             apiBaseUrl: scenarioUrl,
           ),
         ),
@@ -99,7 +99,7 @@ Future<void> openApp(WidgetTester tester, [Session? session]) async {
       readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
       appConfigProvider.overrideWithValue(
         const AppConfig(
-          flavor: Flavor.dev,
+          flavor: Flavor.test,
           apiBaseUrl: scenarioUrl,
         ),
       ),

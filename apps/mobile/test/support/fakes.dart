@@ -319,7 +319,7 @@ Future<ProviderContainer> pumpApp(
   // a retry timer pending when the test ends.
   final container = ProviderContainer(retry: (_, _) => null, overrides: [
     readRefreshProvider.overrideWith((ref) => const Stream<int>.empty()),
-    appConfigProvider.overrideWithValue(AppConfig.dev),
+    appConfigProvider.overrideWithValue(AppConfig.test),
     sessionStoreProvider.overrideWithValue(store ?? MemorySessionStore()),
     authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
     apiProvider.overrideWithValue(api ?? FakePriveoApi()),

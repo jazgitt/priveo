@@ -11,8 +11,8 @@ import 'auth/session.dart';
 import 'config/app_config.dart';
 import 'network/api_client.dart';
 
-/// Overridden in `main_dev.dart` and `main_prod.dart`.
-final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.dev);
+/// Overridden in `main_test.dart` and `main_prod.dart`.
+final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.test);
 
 /// The app's own version and build number (from pubspec.yaml). Tests override it.
 final packageInfoProvider = FutureProvider<PackageInfo>(

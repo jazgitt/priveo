@@ -87,7 +87,7 @@ jobs:
       - name: Pre-build the app
         working-directory: apps/mobile
         run: |
-          flutter build apk --debug --flavor dev -t lib/main_dev.dart
+          flutter build apk --debug --flavor test -t lib/main_test.dart
           # Free the daemon's memory and the build output the emulator run does not reuse.
           (cd android && ./gradlew --stop) || true
           rm -rf build/app/outputs
@@ -135,7 +135,7 @@ jobs:
       - name: Build the fixture database and manifest
         working-directory: services/api
         env:
-          ENVIRONMENT: dev
+          ENVIRONMENT: test
           TEST_DATA_PASSWORD: ${{ env.SCENARIO_PASSWORD }}
           TEST_DATA_ADMIN_PASSWORD: ${{ env.SCENARIO_ADMIN_PASSWORD }}
         run: |
@@ -151,7 +151,7 @@ jobs:
       - name: Start the fixture API
         env:
           E2E_PYTHON: ${{ env.pythonLocation }}/bin/python
-          ENVIRONMENT: dev
+          ENVIRONMENT: test
           TEST_DATA_PASSWORD: ${{ env.SCENARIO_PASSWORD }}
         run: |
           nohup pwsh -NoProfile -File tools/test-data/start-api.ps1 -DatabaseFile "$RUNNER_TEMP/fixture/e2e.sqlite3" -Port "$FIXTURE_PORT" -SerializeRequests > "$RUNNER_TEMP/fixture/api.log" 2>&1 &
@@ -195,7 +195,7 @@ jobs:
       - name: Pre-build the app
         working-directory: apps/mobile
         run: |
-          flutter build apk --debug --flavor dev -t lib/main_dev.dart
+          flutter build apk --debug --flavor test -t lib/main_test.dart
           # Free the daemon's memory and the build output the emulator run does not reuse.
           (cd android && ./gradlew --stop) || true
           rm -rf build/app/outputs

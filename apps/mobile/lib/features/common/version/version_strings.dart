@@ -6,7 +6,7 @@ class VersionStrings {
   static const settingsEntry = 'Version';
   static const settingsEntryHelp = 'App version, build and the server it uses';
   static const app = 'App';
-  static const environment = 'Environment';
+  static const environment = 'Build Type';
   static const version = 'Version';
   static const build = 'Build';
   static const api = 'Server (API)';
@@ -15,5 +15,5 @@ class VersionStrings {
   static const copy = 'Copy details';
   static const copied = 'Details copied';
   static const environmentTest = 'Test';
-  static const environmentProduction = 'Production';
+  static const environmentProduction = 'Prod';
 }

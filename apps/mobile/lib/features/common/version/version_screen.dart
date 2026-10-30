@@ -17,20 +17,40 @@ void openVersion(BuildContext context) {
 /// Which build this is: the app version and build number, whether it is the
 /// Test or the Production build, and the API address it talks to. The same
 /// page for customers, crew and admins, so a tester can always say which build
-/// and which server they are on.
-class VersionScreen extends ConsumerWidget {
+/// and which server they are on. The server shows only its project name until
+/// the row is tapped three times, then the full address.
+class VersionScreen extends ConsumerStatefulWidget {
   const VersionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VersionScreen> createState() => _VersionScreenState();
+}
+
+class _VersionScreenState extends ConsumerState<VersionScreen> {
+  static const _tapsToReveal = 3;
+  int _apiTaps = 0;
+
+  /// `https://priveo-api-test.vercel.app` -> `priveo-api-test`. An address
+  /// that is not on vercel.app (a local server) is shown in full.
+  static String _serverName(String url) {
+    final host = Uri.tryParse(url)?.host ?? '';
+    return host.endsWith('.vercel.app') ? host.split('.').first : url;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
+    final revealed = _apiTaps >= _tapsToReveal;
     final info = ref.watch(packageInfoProvider).value;
     final rows = <(String, String)>[
       (VersionStrings.app, info?.appName ?? '-'),
       (VersionStrings.environment, config.environmentName),
       (VersionStrings.version, info?.version ?? '-'),
       (VersionStrings.build, info?.buildNumber ?? '-'),
-      (VersionStrings.api, config.apiBaseUrl),
+      (
+        VersionStrings.api,
+        revealed ? config.apiBaseUrl : _serverName(config.apiBaseUrl),
+      ),
       (VersionStrings.package, info?.packageName ?? '-'),
       if (config.buildStamp.isNotEmpty)
         (VersionStrings.builtAt, config.buildStamp),
@@ -61,10 +81,20 @@ class VersionScreen extends ConsumerWidget {
                               width: 110,
                               child: Text(
                                 r.$1,
-                                style: text.labelMedium?.copyWith(color: b.mute),
+                                style: text.labelMedium?.copyWith(
+                                  color: b.mute,
+                                ),
                               ),
                             ),
-                            Expanded(child: SelectableText(r.$2)),
+                            Expanded(
+                              child: r.$1 == VersionStrings.api
+                                  ? GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => setState(() => _apiTaps++),
+                                      child: Text(r.$2),
+                                    )
+                                  : SelectableText(r.$2),
+                            ),
                           ],
                         ),
                       ),

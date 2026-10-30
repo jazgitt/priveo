@@ -1,4 +1,4 @@
-enum Flavor { dev, prod }
+enum Flavor { test, prod }
 
 class AppConfig {
   const AppConfig({
@@ -26,17 +26,17 @@ class AppConfig {
   final bool posthogReplay;
 
   /// Set by `tool\push_apk.ps1` to the time of the build, and printed in the
-  /// dev startup log. The script looks for it inside the APK to prove the APK
+  /// test startup log. The script looks for it inside the APK to prove the APK
   /// holds the code just compiled, not an old copy.
   final String buildStamp;
 
   /// The name of this build's environment, shown on the Version page.
   String get environmentName =>
-      flavor == Flavor.prod ? 'Production' : 'Test';
+      flavor == Flavor.prod ? 'Prod' : 'Test';
 
-  /// The dev API address is set at build time:
-  /// `--dart-define=API_BASE_URL=https://api-dev.example.com`.
-  static const _devUrl = String.fromEnvironment(
+  /// The test API address is set at build time:
+  /// `--dart-define=API_BASE_URL=https://api-test.example.com`.
+  static const _testUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8000',
   );
@@ -52,9 +52,9 @@ class AppConfig {
   static const _posthogReplay = bool.fromEnvironment('POSTHOG_REPLAY');
   static const _buildStamp = String.fromEnvironment('BUILD_STAMP');
 
-  static const dev = AppConfig(
-    flavor: Flavor.dev,
-    apiBaseUrl: _devUrl,
+  static const test = AppConfig(
+    flavor: Flavor.test,
+    apiBaseUrl: _testUrl,
   );
 
   static const prod = AppConfig(

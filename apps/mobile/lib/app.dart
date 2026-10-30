@@ -23,9 +23,9 @@ import 'features/support/feedback_sheet.dart';
 Future<void> runPriveo(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
   Analytics analytics = const NoopAnalytics();
-  // One line in the log of a dev build says whether analytics started. The
+  // One line in the log of a test build says whether analytics started. The
   // key itself is never printed.
-  final say = config.flavor == Flavor.dev ? debugPrint : (String _) {};
+  final say = config.flavor == Flavor.test ? debugPrint : (String _) {};
   if (config.posthogKey.isEmpty) {
     say('[analytics] off: this build has no POSTHOG_KEY (build ${config.buildStamp})');
   } else {

@@ -22,7 +22,7 @@ class _NoPrefs implements NotificationPrefsRepository {
 }
 
 const _test = AppConfig(
-  flavor: Flavor.dev,
+  flavor: Flavor.test,
   apiBaseUrl: 'https://priveo-api-test.vercel.app',
 );
 const _prod = AppConfig(
@@ -73,20 +73,22 @@ void main() {
     expect(find.text('Test'), findsOneWidget);
     expect(find.text('0.2.7'), findsOneWidget);
     expect(find.text('207'), findsOneWidget);
-    expect(find.text('https://priveo-api-test.vercel.app'), findsOneWidget);
+    expect(find.text('priveo-api-test'), findsOneWidget);
+    expect(find.text('https://priveo-api-test.vercel.app'), findsNothing);
     expect(find.text('in.priveo.app'), findsOneWidget);
     expect(find.text(VersionStrings.builtAt), findsNothing);
   });
 
-  testWidgets('a production build shows Production, the prod API and its stamp', (
-    tester,
-  ) async {
-    await _pump(tester, _prod, const VersionScreen());
-    expect(find.text('Production'), findsOneWidget);
-    expect(find.text('https://priveo-api-prod.vercel.app'), findsOneWidget);
-    expect(find.text('261030-101500'), findsOneWidget);
-    expect(find.text('Test'), findsNothing);
-  });
+  testWidgets(
+    'a production build shows Production, the prod API and its stamp',
+    (tester) async {
+      await _pump(tester, _prod, const VersionScreen());
+      expect(find.text('Prod'), findsOneWidget);
+      expect(find.text('priveo-api-prod'), findsOneWidget);
+      expect(find.text('261030-101500'), findsOneWidget);
+      expect(find.text('Test'), findsNothing);
+    },
+  );
 
   testWidgets('Settings has a Version entry that opens the Version page', (
     tester,
@@ -95,6 +97,18 @@ void main() {
     await tester.tap(find.text(VersionStrings.settingsEntry));
     await tester.pumpAndSettle();
     expect(find.text(VersionStrings.environment), findsOneWidget);
+    expect(find.text('priveo-api-test'), findsOneWidget);
+  });
+
+  testWidgets('three taps on the server show its full address', (tester) async {
+    await _pump(tester, _test, const VersionScreen());
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.text('priveo-api-test'));
+      await tester.pump();
+    }
+    expect(find.text('https://priveo-api-test.vercel.app'), findsNothing);
+    await tester.tap(find.text('priveo-api-test'));
+    await tester.pump();
     expect(find.text('https://priveo-api-test.vercel.app'), findsOneWidget);
   });
 }

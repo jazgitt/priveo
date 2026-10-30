@@ -74,7 +74,7 @@ jobs:
           # Phase 0 it still starts from the dev entry point and the test API.
           flutter build appbundle --release \
             --flavor prod \
-            -t lib/main_dev.dart \
+            -t lib/main_test.dart \
             --dart-define=API_BASE_URL=${{ vars.API_URL }} \
             --dart-define=POSTHOG_KEY=${{ vars.POSTHOG_KEY }} \
             --dart-define=POSTHOG_HOST=${{ vars.POSTHOG_HOST || 'https://eu.i.posthog.com' }} \

@@ -33,7 +33,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
-          ENVIRONMENT: dev
+          ENVIRONMENT: test
           SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
         run: |
           python scripts/seed_shared_test_data.py --output ../../.local/test-data/hosted-manifest.json

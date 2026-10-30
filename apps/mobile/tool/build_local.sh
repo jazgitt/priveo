@@ -194,10 +194,10 @@ fi
 step "flutter pub get"
 flutter pub get 2>&1 | tee -a "$LOG_FILE"
 
-# Only Android has the dev/prod flavors. iOS has a single Runner scheme.
+# Only Android has the test/prod flavors. iOS has a single Runner scheme.
 FLAVOR=()
 if [ "$TARGET" = android ]; then
-  FLAVOR=(--flavor dev)
+  FLAVOR=(--flavor test)
   if $BUILD_ONLY; then
     # Gradle once packed an old copy of the app's code into every APK.
     step "clearing stale Android build folders"
@@ -210,16 +210,16 @@ fi
 if $BUILD_ONLY; then
   if [ "$TARGET" = android ]; then
     step "flutter build apk --$MODE"
-    flutter build apk "--$MODE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
-    log "APK: $MOBILE/build/app/outputs/flutter-apk/app-dev-$MODE.apk"
+    flutter build apk "--$MODE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_test.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
+    log "APK: $MOBILE/build/app/outputs/flutter-apk/app-test-$MODE.apk"
   else
     step "flutter build ios --simulator --$MODE"
-    flutter build ios --simulator "--$MODE" -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
+    flutter build ios --simulator "--$MODE" -t lib/main_test.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
     log "App: $MOBILE/build/ios/iphonesimulator/Runner.app"
   fi
 else
   step "flutter run --$MODE on $DEVICE (press q to quit, r to hot reload)"
-  flutter run "--$MODE" -d "$DEVICE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_dev.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
+  flutter run "--$MODE" -d "$DEVICE" ${FLAVOR[@]+"${FLAVOR[@]}"} -t lib/main_test.dart ${DEFINES[@]+"${DEFINES[@]}"} 2>&1 | tee -a "$LOG_FILE"
 fi
 
 log "Done in $((SECONDS - START))s. Build $STAMP. Log: $LOG_FILE"
