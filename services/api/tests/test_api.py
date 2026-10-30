@@ -31,7 +31,9 @@ def test_health_and_config(client):
     r = client.get("/v1/public/health")
     assert r.status_code == 200 and r.json()["status"] == "ok"
     assert "X-Request-ID" in r.headers
-    assert "min_app_version" in client.get("/v1/public/config").json()
+    config = client.get("/v1/public/config").json()
+    assert "min_app_version" in config
+    assert config["environment"] in ("dev", "test", "prod")
 
 
 def test_public_legal_links_and_support_use_configured_values(client, db, monkeypatch):

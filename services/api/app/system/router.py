@@ -14,6 +14,8 @@ class Health(BaseModel):
 
 class AppConfig(BaseModel):
     min_app_version: str
+    # dev, test or prod. The portal shows a banner on test.
+    environment: str
 
 
 @router.get("/health", response_model=Health)
@@ -23,4 +25,4 @@ def health(s: Settings = Depends(get_settings)):
 
 @router.get("/config", response_model=AppConfig)
 def config(s: Settings = Depends(get_settings)):
-    return AppConfig(min_app_version=s.min_app_version)
+    return AppConfig(min_app_version=s.min_app_version, environment=s.environment)

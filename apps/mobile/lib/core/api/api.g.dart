@@ -1331,16 +1331,20 @@ class AlertOut {
 class AppConfig {
   const AppConfig({
     required this.minAppVersion,
+    required this.environment,
   });
 
   final String minAppVersion;
+  final String environment;
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
         minAppVersion: j['min_app_version'] as String,
+        environment: j['environment'] as String,
       );
 
   Map<String, dynamic> toJson() => {
         'min_app_version': minAppVersion,
+        'environment': environment,
       };
 }
 
@@ -4141,6 +4145,7 @@ class DirectoryPlanCreate {
     this.inclusions,
     this.badge,
     this.sortOrder,
+    required this.vehicleCategory,
   });
 
   final String name;
@@ -4150,6 +4155,7 @@ class DirectoryPlanCreate {
   final List<String>? inclusions;
   final String? badge;
   final int? sortOrder;
+  final String? vehicleCategory;
 
   factory DirectoryPlanCreate.fromJson(Map<String, dynamic> j) => DirectoryPlanCreate(
         name: j['name'] as String,
@@ -4159,6 +4165,7 @@ class DirectoryPlanCreate {
         inclusions: j['inclusions'] == null ? null : [for (final x in j['inclusions'] as List) x as String],
         badge: j['badge'] == null ? null : j['badge'] as String,
         sortOrder: j['sort_order'] == null ? null : j['sort_order'] as int,
+        vehicleCategory: j['vehicle_category'] == null ? null : j['vehicle_category'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -4169,6 +4176,7 @@ class DirectoryPlanCreate {
         'inclusions': inclusions == null ? null : [for (final x in inclusions!) x],
         'badge': badge,
         'sort_order': sortOrder,
+        'vehicle_category': vehicleCategory,
       };
 }
 
@@ -4183,6 +4191,7 @@ class DirectoryPlanOut {
     required this.inclusions,
     required this.badge,
     required this.sortOrder,
+    required this.vehicleCategory,
     required this.active,
     required this.activeSubscriptions,
   });
@@ -4196,6 +4205,7 @@ class DirectoryPlanOut {
   final List<String> inclusions;
   final String badge;
   final int sortOrder;
+  final String? vehicleCategory;
   final bool active;
   final int activeSubscriptions;
 
@@ -4209,6 +4219,7 @@ class DirectoryPlanOut {
         inclusions: [for (final x in j['inclusions'] as List) x as String],
         badge: j['badge'] as String,
         sortOrder: j['sort_order'] as int,
+        vehicleCategory: j['vehicle_category'] == null ? null : j['vehicle_category'] as String,
         active: j['active'] as bool,
         activeSubscriptions: j['active_subscriptions'] as int,
       );
@@ -4223,6 +4234,7 @@ class DirectoryPlanOut {
         'inclusions': [for (final x in inclusions) x],
         'badge': badge,
         'sort_order': sortOrder,
+        'vehicle_category': vehicleCategory,
         'active': active,
         'active_subscriptions': activeSubscriptions,
       };
@@ -4238,6 +4250,8 @@ class DirectoryPlanUpdate {
     required this.inclusions,
     required this.badge,
     required this.sortOrder,
+    required this.vehicleCategory,
+    this.clearVehicleCategory,
   });
 
   final String? name;
@@ -4248,6 +4262,8 @@ class DirectoryPlanUpdate {
   final List<String>? inclusions;
   final String? badge;
   final int? sortOrder;
+  final String? vehicleCategory;
+  final bool? clearVehicleCategory;
 
   factory DirectoryPlanUpdate.fromJson(Map<String, dynamic> j) => DirectoryPlanUpdate(
         name: j['name'] == null ? null : j['name'] as String,
@@ -4258,6 +4274,8 @@ class DirectoryPlanUpdate {
         inclusions: j['inclusions'] == null ? null : [for (final x in j['inclusions'] as List) x as String],
         badge: j['badge'] == null ? null : j['badge'] as String,
         sortOrder: j['sort_order'] == null ? null : j['sort_order'] as int,
+        vehicleCategory: j['vehicle_category'] == null ? null : j['vehicle_category'] as String,
+        clearVehicleCategory: j['clear_vehicle_category'] == null ? null : j['clear_vehicle_category'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -4269,6 +4287,8 @@ class DirectoryPlanUpdate {
         'inclusions': inclusions == null ? null : [for (final x in inclusions!) x],
         'badge': badge,
         'sort_order': sortOrder,
+        'vehicle_category': vehicleCategory,
+        'clear_vehicle_category': clearVehicleCategory,
       };
 }
 

@@ -50,6 +50,24 @@ it('creates a plan with complete pricing and inclusions',async()=>{
   await userEvent.click(screen.getByLabelText('Includes interior care'));
   expect(await saved('/plans')).toEqual({name:'Premium',monthly_price_rupees:1600,list_price_rupees:1900,badge:'Launch',sort_order:2,includes_interior:true,inclusions:['Exterior','Interior']});
 });
+it('links a plan to a vehicle category',async()=>{
+  responses['/v1/admin/directory/vehicle-catalogue/categories']=['Hatchback','SUV'];
+  responses['/v1/admin/directory/plans']=[];
+  mount(<PlansTab/>);
+  await userEvent.click(screen.getByRole('button',{name:'Add a plan'}));
+  await field('Name','SUV plan'); await field('Monthly price (Rs, GST included)','900');
+  await choose(/Vehicle category/,'SUV');
+  expect(await saved('/plans')).toMatchObject({name:'SUV plan',vehicle_category:'SUV'});
+});
+it('removes the vehicle category from a plan',async()=>{
+  responses['/v1/admin/directory/vehicle-catalogue/categories']=['Hatchback','SUV'];
+  responses['/v1/admin/directory/plans']=[{id:'p2',code:'PLN-0002',name:'SUV plan',monthly_price_rupees:900,list_price_rupees:null,badge:'',sort_order:0,includes_interior:false,inclusions:[],vehicle_category:'SUV',active:true,active_subscriptions:0}];
+  mount(<PlansTab/>);
+  expect(await screen.findByText('SUV')).toBeTruthy(); // Listed in the table.
+  await userEvent.click(await screen.findByRole('button',{name:'Edit SUV plan'}));
+  await choose(/Vehicle category/,'No category');
+  expect(await saved('/plans/p2','PATCH')).toMatchObject({clear_vehicle_category:true});
+});
 it('edits a plan and clears the old list price',async()=>{
   responses['/v1/admin/directory/plans']=[{id:'p1',code:'PLN-0001',name:'Premium',monthly_price_rupees:1600,list_price_rupees:1900,badge:'Launch',sort_order:0,includes_interior:true,inclusions:['Exterior'],active:true,active_subscriptions:2}];
   mount(<PlansTab/>);

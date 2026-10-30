@@ -400,7 +400,8 @@
     "read": true
   },
   "AppConfig": {
-    "min_app_version": "wire-value"
+    "min_app_version": "wire-value",
+    "environment": "wire-value"
   },
   "AppFeaturesOut": {
     "version": "wire-value",
@@ -1749,7 +1750,8 @@
       "wire-value"
     ],
     "badge": "wire-value",
-    "sort_order": 1
+    "sort_order": 1,
+    "vehicle_category": "wire-value"
   },
   "DirectoryPlanOut": {
     "id": "11111111-1111-1111-1111-111111111111",
@@ -1763,6 +1765,7 @@
     ],
     "badge": "wire-value",
     "sort_order": 1,
+    "vehicle_category": "wire-value",
     "active": true,
     "active_subscriptions": 1
   },
@@ -1776,7 +1779,9 @@
       "wire-value"
     ],
     "badge": "wire-value",
-    "sort_order": 1
+    "sort_order": 1,
+    "vehicle_category": "wire-value",
+    "clear_vehicle_category": true
   },
   "DirectoryReasonCreate": {
     "label": "wire-value"

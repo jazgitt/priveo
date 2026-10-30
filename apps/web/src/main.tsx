@@ -14,6 +14,7 @@ import { DEFAULT_HOST, initAnalytics } from "./analytics/analytics";
 import { sharedReadOptions } from "./api/queryDefaults";
 import { AuthProvider } from "./auth/AuthContext";
 import { ToastProvider } from "./components";
+import { EnvBanner } from "./components/EnvBanner";
 
 initAnalytics({
   key: import.meta.env.VITE_POSTHOG_KEY ?? "",
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
         <ToastProvider>
           <AuthProvider>
             <AnalyticsBridge />
+            <EnvBanner />
             <AppRoutes />
           </AuthProvider>
         </ToastProvider>

@@ -32,6 +32,8 @@ export interface Plan {
   inclusions: string[];
   badge: string;
   sort_order: number;
+  /** The vehicle category this plan is linked to, or null for none. */
+  vehicle_category?: string | null;
   active: boolean;
   active_subscriptions: number;
 }

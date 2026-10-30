@@ -260,11 +260,11 @@ void main() {
     expect(wire.AlertOut.fromJson(input).toJson(), equals(input));
   });
   test('AppConfig preserves populated wire fields', () {
-    final input = jsonDecode('{"min_app_version":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"min_app_version":"wire-value","environment":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AppConfig.fromJson(input).toJson(), equals(input));
   });
   test('AppConfig preserves nullable wire fields', () {
-    final input = jsonDecode('{"min_app_version":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"min_app_version":"wire-value","environment":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AppConfig.fromJson(input).toJson(), equals(input));
   });
   test('AppFeaturesOut preserves populated wire fields', () {
@@ -988,27 +988,27 @@ void main() {
     expect(wire.DirectoryOrder.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanCreate preserves populated wire fields', () {
-    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"vehicle_category":"wire-value"}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanCreate preserves nullable wire fields', () {
-    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1,"vehicle_category":null}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"active":true,"active_subscriptions":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"vehicle_category":"wire-value","active":true,"active_subscriptions":1}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1,"active":false,"active_subscriptions":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","code":"wire-value","name":"wire-value","monthly_price_rupees":1,"list_price_rupees":null,"includes_interior":false,"inclusions":[],"badge":"wire-value","sort_order":1,"vehicle_category":null,"active":false,"active_subscriptions":1}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanUpdate preserves populated wire fields', () {
-    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"clear_list_price":true,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"name":"wire-value","monthly_price_rupees":1,"list_price_rupees":1,"clear_list_price":true,"includes_interior":true,"inclusions":["wire-value"],"badge":"wire-value","sort_order":1,"vehicle_category":"wire-value","clear_vehicle_category":true}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryPlanUpdate preserves nullable wire fields', () {
-    final input = jsonDecode('{"name":null,"monthly_price_rupees":null,"list_price_rupees":null,"clear_list_price":false,"includes_interior":null,"inclusions":null,"badge":null,"sort_order":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"name":null,"monthly_price_rupees":null,"list_price_rupees":null,"clear_list_price":false,"includes_interior":null,"inclusions":null,"badge":null,"sort_order":null,"vehicle_category":null,"clear_vehicle_category":false}') as Map<String, dynamic>;
     expect(wire.DirectoryPlanUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonCreate preserves populated wire fields', () {

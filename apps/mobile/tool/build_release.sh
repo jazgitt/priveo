@@ -13,7 +13,7 @@
 # Files go to apps/mobile/dist/ (git-ignored). The app shows the same details under
 # Settings > Version (customer), Profile > Version (crew) and Home > Version (admin).
 #
-# Test uses --flavor test (package in.priveo.app.test, label "Priveo Test") and
+# Test uses --flavor envtest (package in.priveo.app.test, label "Priveo Test") and
 # prod uses --flavor prod (in.priveo.app, label "Priveo"), so both install side by
 # side on Android. On iOS both share one bundle id: install one at a time.
 #
@@ -58,7 +58,7 @@ done
 if $IPA && [ "$PLATFORM" != ios ]; then die "--ipa is for ios only."; fi
 
 if [ "$ENV_NAME" = test ]; then
-  PREFIX="priveo-test"; ENTRY="lib/main_test.dart"; FLAVOR="test"; DEFAULT_URL="$TEST_URL"
+  PREFIX="priveo-test"; ENTRY="lib/main_test.dart"; FLAVOR="envtest"; DEFAULT_URL="$TEST_URL"
 else
   PREFIX="priveo-release"; ENTRY="lib/main_prod.dart"; FLAVOR="prod"; DEFAULT_URL="$PROD_URL"
 fi
