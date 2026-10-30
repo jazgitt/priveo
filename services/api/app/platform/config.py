@@ -96,8 +96,7 @@ def startup_problems(settings: Settings, *, hosted: bool,
         for name, value in (("SEED_DEMO_LOGINS", settings.seed_demo_logins),
                             ("MOCK_EMAIL_CODE", settings.mock_email_code.strip()),
                             ("MOCK_CUSTOMER_PASSWORD", settings.mock_customer_password),
-                            ("MOCK_CREW_PASSWORD", settings.mock_crew_password),
-                            ("EMAIL_REDIRECT_TO", settings.email_redirect_to.strip())):
+                            ("MOCK_CREW_PASSWORD", settings.mock_crew_password)):
             if value:
                 problems.append(f"{name} is for dev only and must not be set in prod.")
         if not settings.resend_api_key.strip():

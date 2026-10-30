@@ -58,7 +58,7 @@ Passwords are configuration, never committed. The database keeps only an Argon2 
 There are two API deployments, each its own Vercel project (`priveo-api-test`, `priveo-api-prod`, in one Vercel team) with its own Supabase database (Mumbai). Both run the same code.
 
 - **test** runs with `ENVIRONMENT=dev`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`). Every merge to `main` deploys to it. Daily development and testing happen here.
-- **production** runs with `ENVIRONMENT=prod` and is customer-facing: its own database, secrets and `TOKEN_SECRET`. It deploys only from a `v*` tag, or a manual run with environment `production`, and the `production` GitHub Environment should require a reviewer. In prod the server refuses to start if `SEED_DEMO_LOGINS`, `MOCK_*`, or `EMAIL_REDIRECT_TO` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins.
+- **production** runs with `ENVIRONMENT=prod` and is customer-facing: its own database, secrets and `TOKEN_SECRET`. It deploys only from a `v*` tag, or a manual run with environment `production`, and the `production` GitHub Environment should require a reviewer. In prod the server refuses to start if `SEED_DEMO_LOGINS` or `MOCK_*` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins.
 
 To release: check test, then `git tag v1.2.3 <commit> && git push origin v1.2.3` and approve the run. A migration runs before the new code goes live, so it must keep the previous release working.
 
@@ -140,7 +140,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
    - `CRON_SECRET`: a random value, or the scheduled jobs answer 503.
    - Production only: `BLOB_ACCESS` = `private`.
    - `PUBLIC_BASE_URL`: that API's address.
-   - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters at first sign-in and after "Forgot password" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*`, `SEED_DEMO_LOGINS` or `EMAIL_REDIRECT_TO`.
+   - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters at first sign-in and after "Forgot password" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*` or `SEED_DEMO_LOGINS`. `EMAIL_REDIRECT_TO` is allowed in prod: it sends every email to that one address, so use it only while no real customers exist.
 5. **GitHub:** create the Environments `test` and `production` and add their variables and secrets (section 3). Set `API_URL` to an address that needs no Vercel sign-in: the project's production domain is public under the default protection, but per-deployment URLs are not.
 6. **First deploy:** run `api-deploy` from the Actions tab with environment `test`, then, after checking test, `production` (or push a `v*` tag).
 
