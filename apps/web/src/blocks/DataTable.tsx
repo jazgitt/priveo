@@ -17,9 +17,31 @@ export interface DataColumn<T> {
   className?: string;
 }
 
+const COLUMN_MIN_REM = 8;
+
 /**
- * The portal's table: fixed column widths, long text cut and shown on hover,
- * row hover, an optional whole-row click, skeleton rows while loading and an
+ * How wide the table must be, in rem, for every column to keep a readable
+ * width. A column with a rem or px width needs that; one with no width needs
+ * 8 rem; a percentage column takes its share of the whole, so the others must
+ * fit in what is left (and the share itself must come to at least 8 rem).
+ */
+export function tableMinRem(widths: (string | undefined)[]): number {
+  let fixed = 0;
+  let share = 0;
+  let widest = 0;
+  for (const w of widths) {
+    const px = /^(\d*\.?\d+)(rem|px)$/.exec(w ?? "");
+    const pct = /^(\d*\.?\d+)%$/.exec(w ?? "");
+    if (px) fixed += px[2] === "px" ? Number(px[1]) / 16 : Number(px[1]);
+    else if (pct) { share += Number(pct[1]) / 100; widest = Math.max(widest, COLUMN_MIN_REM / (Number(pct[1]) / 100)); }
+    else fixed += COLUMN_MIN_REM;
+  }
+  return share >= 1 ? widest : Math.max(fixed / (1 - share), widest);
+}
+
+/**
+ * The portal's table: fixed column widths (on a narrow screen it scrolls
+ * sideways instead of squeezing a column), long text cut and shown on hover, row hover, an optional whole-row click, skeleton rows while loading and an
  * empty state. Paging and filters go in `footer` and `toolbar`.
  */
 export function DataTable<T>({
@@ -72,7 +94,7 @@ export function DataTable<T>({
     <div className={cn("flex flex-col gap-3", className)}>
       {toolbar}
       <div className="overflow-hidden rounded-lg border bg-card">
-        <Table className="table-fixed">
+        <Table className="table-fixed" style={{ minWidth: `${tableMinRem(columns.map((c) => c.width))}rem` }}>
           <colgroup>
             {columns.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}
           </colgroup>
