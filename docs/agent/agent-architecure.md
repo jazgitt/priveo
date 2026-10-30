@@ -423,7 +423,7 @@ Status: **Proposed**, with the owner's two answers below. Built from the reposit
 
 | Source | Why | Notes |
 |---|---|---|
-| `CLAUDE.md`, `README.md`, `ONBOARDING.md`, `wiki/` | Product and team summaries | |
+| `CLAUDE.md`, `README.md`, `wiki/` | Product and team summaries | |
 | `docs/reqs/` (customer, admin, crew requirements and owner decisions) | Business requirements | Requirement IDs kept for citations |
 | `docs/agent/` | Mani spec and this architecture | |
 | `docs/architecture.md`, `docs/system-component-diagram.md`, `docs/tech-stack.md`, `docs/build-plan.md`, `docs/build-and-release.md`, `docs/security-backlog.md`, `docs/hosting-assessment/`, `docs/design/`, `docs/testing/`, `docs/coverage/`, `docs/feature-status.json`, `docs/overnight-build-report.md` | Technology and status | |
