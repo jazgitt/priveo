@@ -60,15 +60,6 @@ function SettingRow({ setting }: { setting: Setting }) {
   const changed = value !== String(setting.value ?? "");
   const id = `setting-${setting.key}`;
 
-  if (setting.group === "invoice") {
-    return (
-      <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-4">
-        <span className="text-sm font-medium">{setting.label}</span>
-        <span className="text-sm">{String(setting.value ?? "") || "-"} <span className="block text-xs text-muted-foreground">Seeded from environment configuration.</span></span>
-      </div>
-    );
-  }
-
   return (
     <form className="grid grid-cols-1 items-start gap-2 py-3 sm:grid-cols-[14rem_minmax(0,1fr)_auto] sm:gap-4"
           onSubmit={(e) => { e.preventDefault(); if (changed) save.mutate(); }}>

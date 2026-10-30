@@ -59,6 +59,7 @@ There are two API deployments, each its own Vercel project (`priveo-api-test`, `
 
 - **test** runs with `ENVIRONMENT=test`, may have demo logins (`SEED_DEMO_LOGINS`) and a fixed sign-in code (`MOCK_EMAIL_CODE`). Every merge to `main` deploys to it. Daily development and testing happen here.
 - **production** runs with `ENVIRONMENT=prod` and is customer-facing: its own database, secrets and `TOKEN_SECRET`. It deploys only from a `v*` tag, or a manual run with environment `production`, and the `production` GitHub Environment should require a reviewer. In prod the server refuses to start if `SEED_DEMO_LOGINS` or `MOCK_*` is set, if `TOKEN_SECRET` is shorter than 32 characters, or if `RESEND_API_KEY` or `CRON_SECRET` is missing, and the seed never creates demo logins.
+- **What the deploy seeds** (`scripts/seed.py`): the admin login, and the directory defaults (services, checklist items, crew reasons, settings, default working slots) only into a table that has no rows, so nothing the admin added, edited or removed is touched. The sample plan, add-ons and vehicle catalogue are seeded on test only, never on prod. The invoice seller values are editable in Settings; the seed fills one only while it is empty and never replaces a value. The admin login is also unlocked and its password reset to `ADMIN_PASSWORD` on every deploy.
 
 To release: check test, then `git tag v1.2.3 <commit> && git push origin v1.2.3` and approve the run. A migration runs before the new code goes live, so it must keep the previous release working.
 

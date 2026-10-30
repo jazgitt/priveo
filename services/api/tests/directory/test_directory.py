@@ -7,11 +7,15 @@ from sqlalchemy.orm import Session
 from app.crew.models import CrewMember
 from app.directory import defaults, lookup
 from app.directory.models import (
+    AddonCatalogueItem,
     ChecklistItem,
     CncReason,
     DirectoryAudit,
+    DirectoryService,
+    Plan,
     Society,
     SystemSetting,
+    VehicleCatalogueEntry,
     WorkingSlot,
 )
 from app.directory.seed import seed_defaults
@@ -20,12 +24,32 @@ from app.identity.models import Login
 BASE = "/v1/admin/directory"
 
 
-def test_samples_have_five_steps_and_invoice_seller_settings_are_read_only(client, admin, seeded):
+def test_samples_have_five_steps(client, admin, seeded):
     lists = client.get(f'{BASE}/checklists', headers=admin).json()
     for entry in lists:
         assert len([item for item in entry['items'] if item['active']]) == 5
-    response = client.put(f'{BASE}/settings/invoice.seller_name', headers=admin, json={'value': 'New seller'})
-    assert response.status_code == 409 and response.json()['code'] == 'read_only'
+
+
+def test_invoice_seller_values_are_editable_and_the_seed_keeps_them(client, admin, engine):
+    with Session(engine) as db:
+        seed_defaults(db)
+    edited = client.put(f'{BASE}/settings/invoice.seller_name', headers=admin,
+                        json={'value': 'Priveo Services Pvt Ltd'})
+    assert edited.status_code == 200 and edited.json()['value'] == 'Priveo Services Pvt Ltd'
+    bad = client.put(f'{BASE}/settings/invoice.seller_gstin', headers=admin, json={'value': 'nope'})
+    assert bad.status_code == 422
+    good = client.put(f'{BASE}/settings/invoice.seller_gstin', headers=admin,
+                      json={'value': '29ABCDE1234F1Z5'})
+    assert good.status_code == 200
+    with Session(engine) as db:
+        seed_defaults(db)  # A deploy must not put the placeholder back.
+        assert db.get(SystemSetting, 'invoice.seller_name').value == 'Priveo Services Pvt Ltd'
+        assert db.get(SystemSetting, 'invoice.seller_gstin').value == '29ABCDE1234F1Z5'
+        # An empty value is filled in again from configuration.
+        db.get(SystemSetting, 'invoice.seller_address').value = ''
+        db.commit()
+        seed_defaults(db)
+        assert db.get(SystemSetting, 'invoice.seller_address').value
 
 
 @pytest.fixture
@@ -680,14 +704,54 @@ def test_seed_defaults_is_idempotent_and_keeps_admin_changes(client, admin, engi
     assert client.get(f"{BASE}/plans", headers=admin).json()[0]["monthly_price_rupees"] == 1111
 
 
-def test_seed_adds_slots_only_to_societies_with_none(client, admin, engine):
-    made = society(client, admin)
+def test_seed_without_starter_data_adds_no_plan_addon_or_catalogue(engine, client, db):
+    added = seed_defaults(db, starter_data=False)
+    assert added["plans"] == added["addons"] == added["catalogue"] == 0
+    assert not list(db.scalars(select(Plan)))
+    assert not list(db.scalars(select(AddonCatalogueItem)))
+    assert not list(db.scalars(select(VehicleCatalogueEntry)))
+    # The rest the apps need is still there.
+    assert added["services"] == 3 and added["reasons"] == len(defaults.REASONS)
+
+
+def test_a_renamed_default_plan_is_not_added_again(client, admin, engine):
     with Session(engine) as db:
         seed_defaults(db)
-    slots = client.get(f"{BASE}/societies/{made['id']}/slots", headers=admin).json()
+    plans = client.get(f"{BASE}/plans", headers=admin).json()
+    client.patch(f"{BASE}/plans/{plans[0]['id']}", headers=admin, json={"name": "Renamed"})
+    with Session(engine) as db:
+        # On a non-prod server the name check would add a second PLN-0001.
+        seed_defaults(db, starter_data=False)
+        assert [p.name for p in db.scalars(select(Plan))] == ["Renamed"]
+
+
+def test_seed_leaves_a_table_alone_once_it_has_rows(engine, client, db):
+    seed_defaults(db)
+    db.delete(db.scalar(select(DirectoryService).where(DirectoryService.name == "Deep Spa")))
+    db.delete(db.scalar(select(SystemSetting).where(SystemSetting.key == "support.hours")))
+    db.delete(db.scalar(select(ChecklistItem).where(ChecklistItem.service == "Deep Spa")))
+    db.commit()
+    again = seed_defaults(db)
+    assert again["services"] == again["settings"] == again["checklist_items"] == 0
+    assert db.scalar(select(DirectoryService).where(DirectoryService.name == "Deep Spa")) is None
+    assert db.get(SystemSetting, "support.hours") is None
+    assert lookup.setting(db, "support.hours")  # A missing key still reads as its default.
+
+
+def test_seed_adds_slots_only_while_no_slots_exist_at_all(client, admin, engine):
+    made = society(client, admin)
+    with Session(engine) as db:
+        assert seed_defaults(db)["slots"] == 0  # The new society already has its slots.
+    other = society(client, admin, name="Lake View")
+    slots = client.get(f"{BASE}/societies/{other['id']}/slots", headers=admin).json()
     assert len(slots) == 3
+    for s in client.get(f"{BASE}/societies/{made['id']}/slots", headers=admin).json():
+        client.delete(f"{BASE}/slots/{s['id']}", headers=admin)
+    with Session(engine) as db:
+        # Removing one society's slots is the admin's change: other slots exist, so nothing is added.
+        assert seed_defaults(db)["slots"] == 0
     for s in slots:
         client.delete(f"{BASE}/slots/{s['id']}", headers=admin)
     with Session(engine) as db:
-        # A society whose slots were all removed is treated as new again.
-        assert seed_defaults(db)["slots"] == 3
+        # With no slots anywhere the table counts as new.
+        assert seed_defaults(db)["slots"] >= 6

@@ -627,8 +627,6 @@ def save_settings(db: Session, admin_id, values: dict[str, Any]) -> list[dict]:
     parsed: dict[str, str] = {}
     errors: dict[str, str] = {}
     for key, raw in values.items():
-        if key.startswith("invoice."):
-            raise ApiError("read_only", "Invoice seller values are seeded from environment configuration.", 409)
         definition = settings_registry.BY_KEY.get(key)
         if definition is None:
             errors[key] = "This setting does not exist."
