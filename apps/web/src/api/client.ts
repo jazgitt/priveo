@@ -41,6 +41,11 @@ export function setUnauthorizedListener(fn: Listener | null): void {
   onUnauthorized = fn;
 }
 
+/** For a call that does not go through `api` (a streamed reply): the same sign-in prompt. */
+export function notifyUnauthorized(): void {
+  onUnauthorized?.();
+}
+
 export interface RequestOptions {
   method?: string;
   body?: unknown;
