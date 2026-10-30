@@ -2,6 +2,8 @@
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import func, select
+
 from app.mani.contracts import EmbedResult, ModelError, ScrubResult, Usage
 from app.mani.ingest import (
     IngestReport,
@@ -11,8 +13,6 @@ from app.mani.ingest import (
     requirement_ids,
 )
 from app.mani.models import ManiChunk, ManiSource
-from sqlalchemy import func, select
-
 from tests.mani.fakes import FakeEmbedder, PassthroughScrubber
 
 SECRET = "hunter2-planted-secret"

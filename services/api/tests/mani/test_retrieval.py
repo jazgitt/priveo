@@ -2,10 +2,10 @@
 from datetime import UTC, datetime
 
 import pytest
+
 from app.mani.contracts import ModelError, Retriever
 from app.mani.models import ManiChunk, ManiSource
 from app.mani.retrieval import HybridRetriever
-
 from tests.mani.fakes import FakeEmbedder, word_overlap_vector
 
 AS_OF = datetime(2026, 10, 30, 9, 0, tzinfo=UTC)
