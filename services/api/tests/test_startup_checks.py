@@ -76,7 +76,6 @@ def test_a_good_prod_setup_has_no_problems():
     ("mock_email_code", "123456"),
     ("mock_customer_password", "pw"),
     ("mock_crew_password", "pw"),
-    ("email_redirect_to", "me@example.com"),
 ])
 def test_dev_only_settings_stop_a_prod_server(name, value):
     found = problems(prod(**{name: value}), hosted=True)

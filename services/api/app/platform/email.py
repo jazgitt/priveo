@@ -130,7 +130,14 @@ class ResendEmailSender:
                 pass
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             # The message and address are not logged: they may hold a code.
-            log.warning("email send failed: %s", type(exc).__name__)
+            # Resend's error reply (status and reason) holds neither.
+            detail = ""
+            if isinstance(exc, urllib.error.HTTPError):
+                try:
+                    detail = f" {exc.code} {exc.read(300).decode(errors='replace')}"
+                except OSError:
+                    detail = f" {exc.code}"
+            log.warning("email send failed: %s%s", type(exc).__name__, detail)
             raise EmailSendError("The email could not be sent.") from exc
 
     def send_code(self, to: str, code: str, purpose: str) -> None:
