@@ -53,7 +53,7 @@ def make_engine(url: str) -> Engine:
         # One shared in-memory connection, for the tests.
         return create_engine(url, poolclass=StaticPool,
                              connect_args={"check_same_thread": False})
-    # No pool in the API process: the host (Neon, or RDS Proxy) pools, and a
+    # No pool in the API process: the host (the Supabase pooler, or RDS Proxy) pools, and a
     # serverless function must not hold connections between requests.
     # Prepared statements are off because the host's pooler hands each
     # transaction to a different server connection.
