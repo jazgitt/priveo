@@ -762,6 +762,14 @@
   "ChecklistTick": {
     "checked": true
   },
+  "CitationOut": {
+    "title": "wire-value",
+    "kind": "doc",
+    "path": "wire-value",
+    "requirement_id": "wire-value",
+    "commit_id": "wire-value",
+    "as_of": "2026-10-20T07:30:00+00:00"
+  },
   "CodeRequest": {
     "email": "wire-value"
   },
@@ -817,6 +825,46 @@
     "created_at": "2026-10-20T07:30:00+00:00",
     "updated_at": "2026-10-20T07:30:00+00:00",
     "latest_note": "wire-value"
+  },
+  "ConversationDetailOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "title": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00",
+    "messages": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "role": "user",
+        "content": "wire-value",
+        "citations": [
+          {
+            "title": "wire-value",
+            "kind": "doc",
+            "path": "wire-value",
+            "requirement_id": "wire-value",
+            "commit_id": "wire-value",
+            "as_of": "2026-10-20T07:30:00+00:00"
+          }
+        ],
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "ConversationListOut": {
+    "items": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "title": "wire-value",
+        "created_at": "2026-10-20T07:30:00+00:00",
+        "updated_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "ConversationOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "title": "wire-value",
+    "created_at": "2026-10-20T07:30:00+00:00",
+    "updated_at": "2026-10-20T07:30:00+00:00"
   },
   "CouldNotComplete": {
     "reason_key": "wire-value",
@@ -2225,8 +2273,44 @@
       }
     ]
   },
+  "MemoryFactOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "text": "wire-value",
+    "status": "confirmed",
+    "created_at": "2026-10-20T07:30:00+00:00"
+  },
+  "MemoryListOut": {
+    "items": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "text": "wire-value",
+        "status": "confirmed",
+        "created_at": "2026-10-20T07:30:00+00:00"
+      }
+    ]
+  },
+  "MemoryPatchIn": {
+    "text": "wire-value",
+    "status": "confirmed"
+  },
   "MessageCreate": {
     "note": "wire-value"
+  },
+  "MessageOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "role": "user",
+    "content": "wire-value",
+    "citations": [
+      {
+        "title": "wire-value",
+        "kind": "doc",
+        "path": "wire-value",
+        "requirement_id": "wire-value",
+        "commit_id": "wire-value",
+        "as_of": "2026-10-20T07:30:00+00:00"
+      }
+    ],
+    "created_at": "2026-10-20T07:30:00+00:00"
   },
   "MissedService": {
     "service": "wire-value",
@@ -2816,6 +2900,9 @@
     "start_minute": 1,
     "end_minute": 1
   },
+  "SendMessageIn": {
+    "text": "wire-value"
+  },
   "SessionDevice": {
     "device_name": "wire-value",
     "platform": "wire-value",
@@ -2831,6 +2918,30 @@
   "SkipVisit": {
     "reason": "wire-value",
     "note": "wire-value"
+  },
+  "SourceOut": {
+    "path": "wire-value",
+    "kind": "wire-value",
+    "title": "wire-value",
+    "status": "active",
+    "indexed_at": "2026-10-20T07:30:00+00:00",
+    "commit_id": "wire-value",
+    "chunks": 1
+  },
+  "SourcesOut": {
+    "items": [
+      {
+        "path": "wire-value",
+        "kind": "wire-value",
+        "title": "wire-value",
+        "status": "active",
+        "indexed_at": "2026-10-20T07:30:00+00:00",
+        "commit_id": "wire-value",
+        "chunks": 1
+      }
+    ],
+    "embedding_model": "wire-value",
+    "last_indexed_at": "2026-10-20T07:30:00+00:00"
   },
   "StandaloneIn": {
     "service": "Deep Spa",
@@ -3101,6 +3212,30 @@
     "method": "wire-value",
     "headers": {},
     "expires_at": "2026-10-20T07:30:00+00:00"
+  },
+  "UsageDayOut": {
+    "day": "wire-value",
+    "calls": 1,
+    "prompt_tokens": 1,
+    "completion_tokens": 1,
+    "cost_usd": 1.0
+  },
+  "UsageOut": {
+    "budget_usd": 1.0,
+    "spent_usd": 1.0,
+    "remaining_usd": 1.0,
+    "budget_exhausted": true,
+    "failed_calls": 1,
+    "average_latency_ms": 1,
+    "days": [
+      {
+        "day": "wire-value",
+        "calls": 1,
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "cost_usd": 1.0
+      }
+    ]
   },
   "ValidationError": {
     "loc": [
