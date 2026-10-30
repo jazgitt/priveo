@@ -136,8 +136,10 @@ def test_the_registry_runs_a_tool_and_scrubs_its_result():
         registry.register(Shout())
 
 
-def test_the_default_registry_starts_empty():
-    assert build_registry().specs() == []
+def test_the_default_registry_lists_every_read_tool_once():
+    names = [spec.name for spec in build_registry().specs()]
+    assert len(names) == len(set(names)) == 10
+    assert {"operations_summary", "payments_summary", "crew_summary"} <= set(names)
 
 
 def test_ids_are_uuids(db, seeded):
