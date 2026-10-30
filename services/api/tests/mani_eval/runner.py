@@ -8,16 +8,18 @@ Run it from `services/api`. The real agent arrives in Wave 2; `--agent mani` say
 import argparse
 import sys
 import tempfile
+import time
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.identity.models import Login
 from app.mani.contracts import Agent
+from app.mani.models import ManiChunk, ManiSource
 from tests.mani_eval.dataset import FIXED_NOW, DatasetReport, build_dataset, make_engine_at
 from tests.mani_eval.expected import Expected, compute_all
 from tests.mani_eval.questions import QUESTIONS, Question
@@ -101,9 +103,34 @@ def run_questions(agent: Agent, db: Session, *, now: datetime = FIXED_NOW,
     """Score `agent` on `questions`. The database must already hold the dataset."""
     expected = expected or compute_all(db, now)
     login_id = db.scalar(select(Login.id).where(Login.login_id == "priveopapa"))
-    scores = [run_question(agent, db, q, login_id=login_id, expected=expected, dataset=dataset)
-              for q in questions]
+    scores = []
+    for position, q in enumerate(questions, 1):
+        started = time.monotonic()
+        score = run_question(agent, db, q, login_id=login_id, expected=expected, dataset=dataset)
+        scores.append(score)
+        result = "skipped" if score.skipped else "pass" if score.passed else "FAIL"
+        print(f"[{position}/{len(questions)}] Q{q.id} {result} ({time.monotonic() - started:.0f}s)",
+              file=sys.stderr, flush=True)
     return Report(scores)
+
+
+def copy_sources(url: str, db: Session) -> tuple[int, int]:
+    """Copy the indexed sources and chunks of an ingested database into the eval database,
+    so the documentation questions have something to search. Reads only from `url`."""
+    source_engine = create_engine(url)
+    try:
+        with Session(source_engine) as source:
+            sources = list(source.scalars(select(ManiSource)))
+            chunks = list(source.scalars(select(ManiChunk)))
+            for row in sources:
+                db.add(ManiSource(**{c.name: getattr(row, c.name) for c in ManiSource.__table__.columns}))
+            db.flush()
+            for row in chunks:
+                db.add(ManiChunk(**{c.name: getattr(row, c.name) for c in ManiChunk.__table__.columns}))
+            db.commit()
+            return len(sources), len(chunks)
+    finally:
+        source_engine.dispose()
 
 
 def describe_expected(question: Question, expected: dict[str, Expected]) -> str:
@@ -128,6 +155,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--list", action="store_true", help="print questions and expected answers")
     parser.add_argument("--agent", choices=sorted(AGENTS), help="run the question set")
     parser.add_argument("--out", type=Path, help="save the JSON report here")
+    parser.add_argument("--sources-from", metavar="DATABASE_URL",
+                        help="copy the indexed sources from an ingested database (read only)")
     args = parser.parse_args(argv)
     if not args.list and not args.agent:
         parser.error("give --list or --agent")
@@ -142,6 +171,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     print()
                     print(list_questions(expected))
                     return 0
+                if args.sources_from:
+                    sources, chunks = copy_sources(args.sources_from, db)
+                    print(f"Copied {sources} sources and {chunks} chunks.", file=sys.stderr, flush=True)
                 try:
                     agent = AGENTS[args.agent](expected, FIXED_NOW)
                 except NotImplementedError as error:

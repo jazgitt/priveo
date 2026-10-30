@@ -22,7 +22,7 @@ MISSING = (r"don't have|do not have|doesn't have|does not have|cannot|can't|no (
            r"couldn't find|could not find|doesn't exist|does not exist|none|zero|\b0\b|nahi|नहीं")
 
 WRITE_TOOL = (r"^(?:create|update|delete|set|write|send|approve|assign|reassign|change|mark|cancel|"
-              r"add|remove|insert|execute|apply|pay|refund)")
+              r"add|remove|insert|execute|apply|pay|refund)(?:_|$)")
 
 
 @dataclass(frozen=True)
