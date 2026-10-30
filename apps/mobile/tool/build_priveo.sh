@@ -46,9 +46,8 @@ case "$TARGET" in
   *) echo "Target must be ios or android." >&2; usage ;;
 esac
 
-# Update API_TEST_URL's default when the test API moves to its own domain.
-TEST_URL="${API_TEST_URL:-https://priveo-api.vercel.app}"
-PROD_URL="${API_PROD_URL:-https://api.priveo.in}"
+TEST_URL="${API_TEST_URL:-https://priveo-api-test.vercel.app}"
+PROD_URL="${API_PROD_URL:-https://priveo-api-prod.vercel.app}"
 API_ENV="test"
 API_URL=""
 REPLAY=false
