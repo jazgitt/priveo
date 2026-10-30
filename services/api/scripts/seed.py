@@ -21,7 +21,9 @@ def main() -> None:
     with Session(get_engine()) as db:
         for login_id, outcome in seed_logins(db, get_settings()).items():
             print(f"{login_id}: {outcome}")
-        print(f"directory defaults added: {seed_defaults(db)}")
+        # The sample plan, add-ons and vehicle catalogue are never put on prod.
+        starter = get_settings().environment != "prod"
+        print(f"directory defaults added: {seed_defaults(db, starter_data=starter)}")
 
 
 if __name__ == "__main__":

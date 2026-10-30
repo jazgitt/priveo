@@ -10,10 +10,16 @@ test.describe("Settings", () => {
     await expect(page.getByRole("tablist", { name: "Settings sections" })).toBeVisible();
   });
 
-  test("seller identity is read-only [ADM-SET-04]", async ({ page }) => {
+  test("seller identity can be edited and is kept after a reload [ADM-SET-04]", async ({ page }) => {
     await page.getByRole("tab", { name: "Invoice" }).click();
-    await expect(page.getByText(/Seller GSTIN/)).toBeVisible();
-    await expect(page.getByLabel(/Seller GSTIN/)).toHaveCount(0);
+    const name = page.getByLabel("Seller legal name", { exact: true });
+    await name.fill("Priveo Services Pvt Ltd");
+    await page.getByRole("button", { name: "Save Seller legal name" }).click();
+    await expect(page.getByText("Seller legal name saved.")).toBeVisible();
+
+    await page.reload();
+    await page.getByRole("tab", { name: "Invoice" }).click();
+    await expect(page.getByLabel("Seller legal name", { exact: true })).toHaveValue("Priveo Services Pvt Ltd");
   });
 
   test("saves the helpline number and keeps it after a reload [ADM-SET-03]", async ({ page }) => {
