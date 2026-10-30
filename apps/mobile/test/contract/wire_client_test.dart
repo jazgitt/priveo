@@ -573,4 +573,11 @@ void main() {
     http.status=409;
     await expectLater(api.createAddon(wire.DirectoryAddonCreate.fromJson((http.examples['DirectoryAddonCreate'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('GET /v1/admin/mani/status uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.maniStatus();
+    expect(http.requests.last.path, '/v1/admin/mani/status'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.maniStatus(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
 }

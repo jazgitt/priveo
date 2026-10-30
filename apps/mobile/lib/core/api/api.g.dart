@@ -7128,6 +7128,38 @@ class StatusIn {
       };
 }
 
+class StatusOut {
+  const StatusOut({
+    this.founder,
+    required this.backend,
+    required this.chatModel,
+    required this.embeddingModel,
+    this.budgetExhausted,
+  });
+
+  final bool? founder;
+  final String backend;
+  final String chatModel;
+  final String embeddingModel;
+  final bool? budgetExhausted;
+
+  factory StatusOut.fromJson(Map<String, dynamic> j) => StatusOut(
+        founder: j['founder'] == null ? null : j['founder'] as bool,
+        backend: j['backend'] as String,
+        chatModel: j['chat_model'] as String,
+        embeddingModel: j['embedding_model'] as String,
+        budgetExhausted: j['budget_exhausted'] == null ? null : j['budget_exhausted'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'founder': founder,
+        'backend': backend,
+        'chat_model': chatModel,
+        'embedding_model': embeddingModel,
+        'budget_exhausted': budgetExhausted,
+      };
+}
+
 class SubscriptionEdit {
   const SubscriptionEdit({
     required this.planId,
@@ -9189,6 +9221,16 @@ class PriveoApi {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/admin/directory/addons', data: body.toJson());
       return DirectoryAddonOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Mani Status
+  Future<StatusOut> maniStatus() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/status');
+      return StatusOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }
