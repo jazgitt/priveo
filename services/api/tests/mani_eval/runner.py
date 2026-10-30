@@ -27,11 +27,48 @@ from tests.mani_eval.scoring import Outcome, Report, Score, read_events, score_q
 AgentFactory = Callable[[dict[str, Expected], datetime], Agent]
 
 
+class EvalMani:
+    """The real agent (`app.mani.agent.build_agent`) with the harness's `prepare` hook. It
+    needs the configured model backend, normally local Ollama. For a question with the
+    precondition "budget_exhausted" it records usage up to the budget before the turn and
+    removes it after, so the questions that follow still run."""
+
+    def __init__(self, agent: Agent, settings) -> None:
+        self.agent = agent
+        self.settings = settings
+        self.question: Question | None = None
+
+    def prepare(self, question: Question) -> None:
+        self.question = question
+
+    def run_turn(self, db: Session, *, conversation_id, login_id, user_text):
+        from decimal import Decimal
+
+        from app.mani.models import ManiModelUsage
+
+        row = None
+        if self.question is not None and self.question.precondition == "budget_exhausted" \
+                and user_text == self.question.prompt:
+            row = ManiModelUsage(kind="chat", backend="eval", model="eval-budget",
+                                 cost_usd=Decimal(str(self.settings.budget_usd)))
+            db.add(row)
+            db.commit()
+        try:
+            yield from self.agent.run_turn(db, conversation_id=conversation_id, login_id=login_id,
+                                           user_text=user_text)
+        finally:
+            if row is not None:
+                db.delete(row)
+                db.commit()
+
+
 def load_real_agent(expected: dict[str, Expected], now: datetime) -> Agent:
-    """The hook for the real agent. Wave 2 wires `app.mani` in here."""
-    raise NotImplementedError(
-        "The real Mani agent is not implemented yet: it arrives in Wave 2. Run with "
-        "--agent reference to check the harness, or call run_questions() with your own agent.")
+    """Builds the real Mani agent with the clock fixed to the dataset's day."""
+    from app.mani.agent import build_agent
+    from app.mani.config import get_mani_settings
+
+    settings = get_mani_settings()
+    return EvalMani(build_agent(settings, clock=lambda: now), settings)
 
 
 AGENTS: dict[str, AgentFactory] = {"reference": ReferenceAgent, "mani": load_real_agent}
