@@ -2,7 +2,7 @@
 .env*
 !.env.example
 
-# Files the Neon install adds for coding agents.
+# Files that coding-agent tooling adds.
 .agents/
 .claude/
 skills-lock.json
