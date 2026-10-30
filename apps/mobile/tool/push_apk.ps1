@@ -32,7 +32,7 @@ param(
 $ErrorActionPreference = "Stop"
 $mobile = Split-Path -Parent $PSScriptRoot
 $mode = if ($Debug) { "debug" } else { "release" }
-$apk = Join-Path $mobile "build\app\outputs\flutter-apk\app-test-$mode.apk"
+$apk = Join-Path $mobile "build\app\outputs\flutter-apk\app-envtest-$mode.apk"
 
 $adb = (Get-Command adb -ErrorAction SilentlyContinue).Source
 if (-not $adb) { $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe" }
@@ -70,7 +70,7 @@ try {
     foreach ($d in "merged_jni_libs", "merged_native_libs", "stripped_native_libs") {
         Remove-Item -Recurse -Force (Join-Path $mobile "build\app\intermediates\$d") -ErrorAction SilentlyContinue
     }
-    flutter build apk "--$mode" --flavor test -t lib/main_test.dart @defines
+    flutter build apk "--$mode" --flavor envtest -t lib/main_test.dart @defines
     if ($LASTEXITCODE -ne 0) { throw "The build failed." }
 }
 finally { Pop-Location }

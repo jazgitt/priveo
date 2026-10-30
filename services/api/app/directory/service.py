@@ -177,7 +177,8 @@ def plan_out(db: Session, p: Plan) -> dict:
             "monthly_price_rupees": p.monthly_price_rupees,
             "list_price_rupees": p.list_price_rupees, "includes_interior": p.includes_interior,
             "inclusions": list(p.inclusions or []), "badge": p.badge,
-            "sort_order": p.sort_order, "active": p.active, "active_subscriptions": subs}
+            "sort_order": p.sort_order, "vehicle_category": p.vehicle_category,
+            "active": p.active, "active_subscriptions": subs}
 
 
 def next_code(db: Session, model, prefix: str) -> str:
@@ -205,6 +206,18 @@ def _plan_name_free(db: Session, name: str, except_id: uuid.UUID | None = None) 
         raise _duplicate("plan")
 
 
+def _plan_category(db: Session, value: str | None) -> str | None:
+    """A plan's vehicle category must be one the catalogue has. Empty is none."""
+    category = (value or "").strip()
+    if not category:
+        return None
+    known = db.scalar(select(VehicleCatalogueEntry.id).where(
+        VehicleCatalogueEntry.category == category).limit(1))
+    if known is None:
+        raise invalid("vehicle_category", "Choose a vehicle category from the list.")
+    return category
+
+
 def create_plan(db: Session, admin_id, body) -> Plan:
     name = body.name.strip()
     if not name:
@@ -217,7 +230,8 @@ def create_plan(db: Session, admin_id, body) -> Plan:
                 list_price_rupees=body.list_price_rupees,
                 includes_interior=body.includes_interior,
                 inclusions=_clean_inclusions(body.inclusions), badge=body.badge.strip(),
-                sort_order=body.sort_order, active=True)
+                sort_order=body.sort_order, active=True,
+                vehicle_category=_plan_category(db, body.vehicle_category))
     db.add(plan)
     db.flush()
     audit(db, admin_id, "plan", plan.id, "create",
@@ -249,6 +263,10 @@ def update_plan(db: Session, admin_id, plan_id: uuid.UUID, body) -> Plan:
         changes["badge"] = body.badge.strip()
     if body.sort_order is not None:
         changes["sort_order"] = body.sort_order
+    if body.vehicle_category is not None:
+        changes["vehicle_category"] = _plan_category(db, body.vehicle_category)
+    if body.clear_vehicle_category:
+        changes["vehicle_category"] = None
     price = changes.get("monthly_price_rupees", plan.monthly_price_rupees)
     listed = changes.get("list_price_rupees", plan.list_price_rupees)
     if listed is not None and listed < price:

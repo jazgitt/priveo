@@ -19878,11 +19878,16 @@
           "min_app_version": {
             "type": "string",
             "title": "Min App Version"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
           }
         },
         "type": "object",
         "required": [
-          "min_app_version"
+          "min_app_version",
+          "environment"
         ],
         "title": "AppConfig"
       },
@@ -23499,6 +23504,18 @@
             "minimum": 0.0,
             "title": "Sort Order",
             "default": 0
+          },
+          "vehicle_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Category"
           }
         },
         "type": "object",
@@ -23557,6 +23574,17 @@
             "type": "integer",
             "title": "Sort Order"
           },
+          "vehicle_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Category"
+          },
           "active": {
             "type": "boolean",
             "title": "Active"
@@ -23577,6 +23605,7 @@
           "inclusions",
           "badge",
           "sort_order",
+          "vehicle_category",
           "active",
           "active_subscriptions"
         ],
@@ -23678,6 +23707,23 @@
               }
             ],
             "title": "Sort Order"
+          },
+          "vehicle_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Category"
+          },
+          "clear_vehicle_category": {
+            "type": "boolean",
+            "title": "Clear Vehicle Category",
+            "default": false
           }
         },
         "type": "object",

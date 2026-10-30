@@ -238,6 +238,32 @@ def test_plans(client, admin, customer):
     assert len(client.get(f"{BASE}/plans", headers=admin).json()) == 2
 
 
+def test_plan_vehicle_category_is_optional_and_must_exist(client, admin):
+    client.post(f"{BASE}/vehicle-catalogue", headers=admin, json={
+        "make": "Tata", "model": "Nexon", "variant": "", "category": "SUV"})
+    plain = client.post(f"{BASE}/plans", headers=admin, json={
+        "name": "Any car", "monthly_price_rupees": 500}).json()
+    assert plain["vehicle_category"] is None
+
+    linked = client.post(f"{BASE}/plans", headers=admin, json={
+        "name": "SUV plan", "monthly_price_rupees": 900, "vehicle_category": "SUV"})
+    assert linked.status_code == 201 and linked.json()["vehicle_category"] == "SUV"
+
+    bad = client.post(f"{BASE}/plans", headers=admin, json={
+        "name": "Boat plan", "monthly_price_rupees": 900, "vehicle_category": "Boat"})
+    assert bad.status_code == 422 and "vehicle_category" in bad.json()["fields"]
+
+    pid = plain["id"]
+    set_it = client.patch(f"{BASE}/plans/{pid}", headers=admin, json={"vehicle_category": "SUV"})
+    assert set_it.json()["vehicle_category"] == "SUV"
+    kept = client.patch(f"{BASE}/plans/{pid}", headers=admin, json={"badge": "New"})
+    assert kept.json()["vehicle_category"] == "SUV"
+    cleared = client.patch(f"{BASE}/plans/{pid}", headers=admin,
+                           json={"clear_vehicle_category": True})
+    assert cleared.json()["vehicle_category"] is None
+    assert client.get(f"{BASE}/plans", headers=admin).json()[0]["vehicle_category"] in (None, "SUV")
+
+
 def test_plan_counts_subscriptions_on_it(client, admin, engine):
     from app.customers.models import Subscription
     plan = client.post(f"{BASE}/plans", headers=admin, json={

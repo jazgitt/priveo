@@ -25,7 +25,7 @@
 | App: run (dev) | `flutter run -t lib/main_test.dart --dart-define=API_BASE_URL=<url>` |
 | App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the test API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-test.apk` from the Files app |
 
-The app has two Android flavors that install side by side: `test` (`in.priveo.app.test`, labelled "Priveo Test") and `prod` (`in.priveo.app`, labelled "Priveo"). A command with no `--flavor` uses `test`. Add `--flavor prod -t lib/main_prod.dart` for the other.
+The app has two Android flavors that install side by side: `test` (`in.priveo.app.test`, labelled "Priveo Test") and `prod` (`in.priveo.app`, labelled "Priveo"). The Gradle flavor for test is named `envtest`, because Gradle does not allow a flavor name that starts with `test`. Use `--flavor envtest -t lib/main_test.dart` or `--flavor prod -t lib/main_prod.dart`.
 
 For actual email delivery, configure `RESEND_API_KEY` and `EMAIL_FROM` using a verified sending domain. Without a provider key, dev uses the logging sender and production verification returns `not_configured`. `MOCK_EMAIL_CODE` is an optional dev override and is ignored in production. No live provider credentials are needed for the test suite.
 
@@ -176,7 +176,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 | `build_release.sh ios prod` | `priveo-release-<version>-ios-sim.zip` | prod |
 | `build_release.sh ios test --ipa` | `priveo-test-<version>.ipa` | test (needs Apple signing) |
 
-- **Android:** test is the `test` flavor (`in.priveo.app.test`, label "Priveo Test") and prod is the `prod` flavor (`in.priveo.app`, label "Priveo"), so both install side by side. Release builds use the upload key when `android/key.properties` exists, otherwise the debug key, which installs fine for testing.
+- **Android:** test is the `envtest` flavor (`in.priveo.app.test`, label "Priveo Test") and prod is the `prod` flavor (`in.priveo.app`, label "Priveo"), so both install side by side. Release builds use the upload key when `android/key.properties` exists, otherwise the debug key, which installs fine for testing.
 - **iOS:** both builds share the bundle id `in.priveo.app`, so install one at a time. The simulator build is a debug build (Flutter makes no release build for the simulator). An `.ipa` needs an Apple Developer account and a signing identity, which are not set up yet; `--ipa` stops with a message until then.
 - **Other API:** `--api <url>`, or set `API_TEST_URL` / `API_PROD_URL` (change the defaults in the script when `api.priveo.in` exists).
 - **Which build is this?** In the app: customer Settings > Version, crew Profile > Version, admin Home > Version. The page shows the environment (Test or Production), the version and build number, the API address, the package name and when it was built. "Copy details" puts that text on the clipboard.

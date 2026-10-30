@@ -54,6 +54,7 @@ class DirectoryPlanCreate(BaseModel):
     inclusions: list[str] = Field(default_factory=list, max_length=20)
     badge: str = Field(default="", max_length=40)
     sort_order: int = Field(default=0, ge=0, le=1000)
+    vehicle_category: str | None = Field(default=None, max_length=40)
 
 
 class DirectoryPlanUpdate(BaseModel):
@@ -66,6 +67,9 @@ class DirectoryPlanUpdate(BaseModel):
     inclusions: list[str] | None = Field(default=None, max_length=20)
     badge: str | None = Field(default=None, max_length=40)
     sort_order: int | None = Field(default=None, ge=0, le=1000)
+    vehicle_category: str | None = Field(default=None, max_length=40)
+    # Send true to remove the vehicle category.
+    clear_vehicle_category: bool = False
 
 
 class DirectoryPlanOut(BaseModel):
@@ -79,6 +83,7 @@ class DirectoryPlanOut(BaseModel):
     inclusions: list[str]
     badge: str
     sort_order: int
+    vehicle_category: str | None
     active: bool
     # Subscriptions on this plan that are not Inactive.
     active_subscriptions: int

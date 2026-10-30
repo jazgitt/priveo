@@ -87,7 +87,7 @@ jobs:
       - name: Pre-build the app
         working-directory: apps/mobile
         run: |
-          flutter build apk --debug --flavor test -t lib/main_test.dart
+          flutter build apk --debug --flavor envtest -t lib/main_test.dart
           # Free the daemon's memory and the build output the emulator run does not reuse.
           (cd android && ./gradlew --stop) || true
           rm -rf build/app/outputs
@@ -195,7 +195,7 @@ jobs:
       - name: Pre-build the app
         working-directory: apps/mobile
         run: |
-          flutter build apk --debug --flavor test -t lib/main_test.dart
+          flutter build apk --debug --flavor envtest -t lib/main_test.dart
           # Free the daemon's memory and the build output the emulator run does not reuse.
           (cd android && ./gradlew --stop) || true
           rm -rf build/app/outputs

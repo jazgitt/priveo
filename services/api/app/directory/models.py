@@ -49,6 +49,9 @@ class Plan(Base):
     # A short badge such as "Founding member" (PAY-01). Empty for none.
     badge: Mapped[str] = mapped_column(String(40), default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # Optional link to a vehicle category of the catalogue. Stored and shown
+    # only; it does not filter the plans a customer is offered.
+    vehicle_category: Mapped[str | None] = mapped_column(String(40))
 
 
 class VehicleCatalogueEntry(Base):
