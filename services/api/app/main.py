@@ -12,6 +12,7 @@ from app import (
     customer_reads,
     directory,
     features,
+    mani,
     media,
     notifications,
     scheduling,
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
     webauth.register(app)
     directory.register(app)
     features.register(app)
+    mani.register(app)
     return app
 
 
