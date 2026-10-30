@@ -7,6 +7,7 @@ from app.mani import models  # noqa: F401  (registers the tables)
 
 
 def register(app: FastAPI) -> None:
-    from app.mani import router
+    from app.mani import cron, router
 
     app.include_router(router.admin)
+    cron.register(app)

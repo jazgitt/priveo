@@ -580,4 +580,39 @@ void main() {
     http.status=409;
     await expectLater(api.maniStatus(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('GET /v1/admin/mani/conversations uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.listConversations();
+    expect(http.requests.last.path, '/v1/admin/mani/conversations'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.listConversations(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('POST /v1/admin/mani/conversations uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.createConversation();
+    expect(http.requests.last.path, '/v1/admin/mani/conversations'); expect(http.requests.last.method, 'POST');
+    http.status=409;
+    await expectLater(api.createConversation(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('GET /v1/admin/mani/sources uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.listSources();
+    expect(http.requests.last.path, '/v1/admin/mani/sources'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.listSources(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('GET /v1/admin/mani/memory uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.listMemory();
+    expect(http.requests.last.path, '/v1/admin/mani/memory'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.listMemory(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('GET /v1/admin/mani/usage uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.getUsage();
+    expect(http.requests.last.path, '/v1/admin/mani/usage'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.getUsage(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
 }

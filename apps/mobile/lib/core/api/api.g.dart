@@ -1968,6 +1968,42 @@ class ChecklistTick {
       };
 }
 
+class CitationOut {
+  const CitationOut({
+    required this.title,
+    required this.kind,
+    this.path,
+    required this.requirementId,
+    this.commitId,
+    required this.asOf,
+  });
+
+  final String title;
+  final String kind;
+  final String? path;
+  final String? requirementId;
+  final String? commitId;
+  final String? asOf;
+
+  factory CitationOut.fromJson(Map<String, dynamic> j) => CitationOut(
+        title: j['title'] as String,
+        kind: j['kind'] as String,
+        path: j['path'] == null ? null : j['path'] as String,
+        requirementId: j['requirement_id'] == null ? null : j['requirement_id'] as String,
+        commitId: j['commit_id'] == null ? null : j['commit_id'] as String,
+        asOf: j['as_of'] == null ? null : j['as_of'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'kind': kind,
+        'path': path,
+        'requirement_id': requirementId,
+        'commit_id': commitId,
+        'as_of': asOf,
+      };
+}
+
 class CodeRequest {
   const CodeRequest({
     required this.email,
@@ -2157,6 +2193,82 @@ class ComplaintSummary {
         'created_at': createdAt,
         'updated_at': updatedAt,
         'latest_note': latestNote,
+      };
+}
+
+class ConversationDetailOut {
+  const ConversationDetailOut({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.messages,
+  });
+
+  final String id;
+  final String title;
+  final String createdAt;
+  final String updatedAt;
+  final List<MessageOut> messages;
+
+  factory ConversationDetailOut.fromJson(Map<String, dynamic> j) => ConversationDetailOut(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        createdAt: j['created_at'] as String,
+        updatedAt: j['updated_at'] as String,
+        messages: [for (final x in j['messages'] as List) MessageOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
+        'messages': [for (final x in messages) x.toJson()],
+      };
+}
+
+class ConversationListOut {
+  const ConversationListOut({
+    required this.items,
+  });
+
+  final List<ConversationOut> items;
+
+  factory ConversationListOut.fromJson(Map<String, dynamic> j) => ConversationListOut(
+        items: [for (final x in j['items'] as List) ConversationOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'items': [for (final x in items) x.toJson()],
+      };
+}
+
+class ConversationOut {
+  const ConversationOut({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final String createdAt;
+  final String updatedAt;
+
+  factory ConversationOut.fromJson(Map<String, dynamic> j) => ConversationOut(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        createdAt: j['created_at'] as String,
+        updatedAt: j['updated_at'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
       };
 }
 
@@ -5288,6 +5400,70 @@ class ManagerSchedule {
       };
 }
 
+class MemoryFactOut {
+  const MemoryFactOut({
+    required this.id,
+    required this.text,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String text;
+  final String status;
+  final String createdAt;
+
+  factory MemoryFactOut.fromJson(Map<String, dynamic> j) => MemoryFactOut(
+        id: j['id'] as String,
+        text: j['text'] as String,
+        status: j['status'] as String,
+        createdAt: j['created_at'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'text': text,
+        'status': status,
+        'created_at': createdAt,
+      };
+}
+
+class MemoryListOut {
+  const MemoryListOut({
+    required this.items,
+  });
+
+  final List<MemoryFactOut> items;
+
+  factory MemoryListOut.fromJson(Map<String, dynamic> j) => MemoryListOut(
+        items: [for (final x in j['items'] as List) MemoryFactOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'items': [for (final x in items) x.toJson()],
+      };
+}
+
+class MemoryPatchIn {
+  const MemoryPatchIn({
+    required this.text,
+    required this.status,
+  });
+
+  final String? text;
+  final String? status;
+
+  factory MemoryPatchIn.fromJson(Map<String, dynamic> j) => MemoryPatchIn(
+        text: j['text'] == null ? null : j['text'] as String,
+        status: j['status'] == null ? null : j['status'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'text': text,
+        'status': status,
+      };
+}
+
 class MessageCreate {
   const MessageCreate({
     required this.note,
@@ -5301,6 +5477,38 @@ class MessageCreate {
 
   Map<String, dynamic> toJson() => {
         'note': note,
+      };
+}
+
+class MessageOut {
+  const MessageOut({
+    required this.id,
+    required this.role,
+    required this.content,
+    this.citations,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String role;
+  final String content;
+  final List<CitationOut>? citations;
+  final String createdAt;
+
+  factory MessageOut.fromJson(Map<String, dynamic> j) => MessageOut(
+        id: j['id'] as String,
+        role: j['role'] as String,
+        content: j['content'] as String,
+        citations: j['citations'] == null ? null : [for (final x in j['citations'] as List) CitationOut.fromJson(x as Map<String, dynamic>)],
+        createdAt: j['created_at'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'role': role,
+        'content': content,
+        'citations': citations == null ? null : [for (final x in citations!) x.toJson()],
+        'created_at': createdAt,
       };
 }
 
@@ -6936,6 +7144,22 @@ class SchedulingCrewOut {
       };
 }
 
+class SendMessageIn {
+  const SendMessageIn({
+    required this.text,
+  });
+
+  final String text;
+
+  factory SendMessageIn.fromJson(Map<String, dynamic> j) => SendMessageIn(
+        text: j['text'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'text': text,
+      };
+}
+
 class SessionDevice {
   const SessionDevice({
     required this.deviceName,
@@ -7013,6 +7237,70 @@ class SkipVisit {
   Map<String, dynamic> toJson() => {
         'reason': reason,
         'note': note,
+      };
+}
+
+class SourceOut {
+  const SourceOut({
+    required this.path,
+    required this.kind,
+    required this.title,
+    required this.status,
+    required this.indexedAt,
+    this.commitId,
+    this.chunks,
+  });
+
+  final String path;
+  final String kind;
+  final String title;
+  final String status;
+  final String? indexedAt;
+  final String? commitId;
+  final int? chunks;
+
+  factory SourceOut.fromJson(Map<String, dynamic> j) => SourceOut(
+        path: j['path'] as String,
+        kind: j['kind'] as String,
+        title: j['title'] as String,
+        status: j['status'] as String,
+        indexedAt: j['indexed_at'] == null ? null : j['indexed_at'] as String,
+        commitId: j['commit_id'] == null ? null : j['commit_id'] as String,
+        chunks: j['chunks'] == null ? null : j['chunks'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'path': path,
+        'kind': kind,
+        'title': title,
+        'status': status,
+        'indexed_at': indexedAt,
+        'commit_id': commitId,
+        'chunks': chunks,
+      };
+}
+
+class SourcesOut {
+  const SourcesOut({
+    required this.items,
+    this.embeddingModel,
+    required this.lastIndexedAt,
+  });
+
+  final List<SourceOut> items;
+  final String? embeddingModel;
+  final String? lastIndexedAt;
+
+  factory SourcesOut.fromJson(Map<String, dynamic> j) => SourcesOut(
+        items: [for (final x in j['items'] as List) SourceOut.fromJson(x as Map<String, dynamic>)],
+        embeddingModel: j['embedding_model'] == null ? null : j['embedding_model'] as String,
+        lastIndexedAt: j['last_indexed_at'] == null ? null : j['last_indexed_at'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'items': [for (final x in items) x.toJson()],
+        'embedding_model': embeddingModel,
+        'last_indexed_at': lastIndexedAt,
       };
 }
 
@@ -7889,6 +8177,78 @@ class UploadTicket {
         'method': method,
         'headers': headers,
         'expires_at': expiresAt,
+      };
+}
+
+class UsageDayOut {
+  const UsageDayOut({
+    required this.day,
+    required this.calls,
+    required this.promptTokens,
+    required this.completionTokens,
+    required this.costUsd,
+  });
+
+  final String day;
+  final int calls;
+  final int promptTokens;
+  final int completionTokens;
+  final double costUsd;
+
+  factory UsageDayOut.fromJson(Map<String, dynamic> j) => UsageDayOut(
+        day: j['day'] as String,
+        calls: j['calls'] as int,
+        promptTokens: j['prompt_tokens'] as int,
+        completionTokens: j['completion_tokens'] as int,
+        costUsd: (j['cost_usd'] as num).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'day': day,
+        'calls': calls,
+        'prompt_tokens': promptTokens,
+        'completion_tokens': completionTokens,
+        'cost_usd': costUsd,
+      };
+}
+
+class UsageOut {
+  const UsageOut({
+    required this.budgetUsd,
+    required this.spentUsd,
+    required this.remainingUsd,
+    required this.budgetExhausted,
+    required this.failedCalls,
+    required this.averageLatencyMs,
+    required this.days,
+  });
+
+  final double budgetUsd;
+  final double spentUsd;
+  final double remainingUsd;
+  final bool budgetExhausted;
+  final int failedCalls;
+  final int averageLatencyMs;
+  final List<UsageDayOut> days;
+
+  factory UsageOut.fromJson(Map<String, dynamic> j) => UsageOut(
+        budgetUsd: (j['budget_usd'] as num).toDouble(),
+        spentUsd: (j['spent_usd'] as num).toDouble(),
+        remainingUsd: (j['remaining_usd'] as num).toDouble(),
+        budgetExhausted: j['budget_exhausted'] as bool,
+        failedCalls: j['failed_calls'] as int,
+        averageLatencyMs: j['average_latency_ms'] as int,
+        days: [for (final x in j['days'] as List) UsageDayOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'budget_usd': budgetUsd,
+        'spent_usd': spentUsd,
+        'remaining_usd': remainingUsd,
+        'budget_exhausted': budgetExhausted,
+        'failed_calls': failedCalls,
+        'average_latency_ms': averageLatencyMs,
+        'days': [for (final x in days) x.toJson()],
       };
 }
 
@@ -9231,6 +9591,56 @@ class PriveoApi {
     try {
       final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/status');
       return StatusOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// List Conversations
+  Future<ConversationListOut> listConversations() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/conversations');
+      return ConversationListOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Create Conversation
+  Future<ConversationOut> createConversation() async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/mani/conversations');
+      return ConversationOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// List Sources
+  Future<SourcesOut> listSources() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/sources');
+      return SourcesOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// List Memory
+  Future<MemoryListOut> listMemory() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/memory');
+      return MemoryListOut.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Get Usage
+  Future<UsageOut> getUsage() async {
+    try {
+      final r = await _dio.get<Map<String, dynamic>>('/v1/admin/mani/usage');
+      return UsageOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

@@ -427,6 +427,14 @@ void main() {
     final input = jsonDecode('{"checked":false}') as Map<String, dynamic>;
     expect(wire.ChecklistTick.fromJson(input).toJson(), equals(input));
   });
+  test('CitationOut preserves populated wire fields', () {
+    final input = jsonDecode('{"title":"wire-value","kind":"doc","path":"wire-value","requirement_id":"wire-value","commit_id":"wire-value","as_of":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.CitationOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CitationOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"title":"wire-value","kind":"doc","path":"wire-value","requirement_id":null,"commit_id":"wire-value","as_of":null}') as Map<String, dynamic>;
+    expect(wire.CitationOut.fromJson(input).toJson(), equals(input));
+  });
   test('CodeRequest preserves populated wire fields', () {
     final input = jsonDecode('{"email":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CodeRequest.fromJson(input).toJson(), equals(input));
@@ -474,6 +482,30 @@ void main() {
   test('ComplaintSummary preserves nullable wire fields', () {
     final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","number":1,"display_id":"wire-value","category":"wire-value","description":"wire-value","status":"wire-value","visit_id":null,"created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00","latest_note":null}') as Map<String, dynamic>;
     expect(wire.ComplaintSummary.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationDetailOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","title":"wire-value","created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00","messages":[{"id":"11111111-1111-1111-1111-111111111111","role":"user","content":"wire-value","citations":[{"title":"wire-value","kind":"doc","path":"wire-value","requirement_id":"wire-value","commit_id":"wire-value","as_of":"2026-10-20T07:30:00+00:00"}],"created_at":"2026-10-20T07:30:00+00:00"}]}') as Map<String, dynamic>;
+    expect(wire.ConversationDetailOut.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationDetailOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","title":"wire-value","created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00","messages":[]}') as Map<String, dynamic>;
+    expect(wire.ConversationDetailOut.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationListOut preserves populated wire fields', () {
+    final input = jsonDecode('{"items":[{"id":"11111111-1111-1111-1111-111111111111","title":"wire-value","created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00"}]}') as Map<String, dynamic>;
+    expect(wire.ConversationListOut.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationListOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"items":[]}') as Map<String, dynamic>;
+    expect(wire.ConversationListOut.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","title":"wire-value","created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.ConversationOut.fromJson(input).toJson(), equals(input));
+  });
+  test('ConversationOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","title":"wire-value","created_at":"2026-10-20T07:30:00+00:00","updated_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.ConversationOut.fromJson(input).toJson(), equals(input));
   });
   test('CouldNotComplete preserves populated wire fields', () {
     final input = jsonDecode('{"reason_key":"wire-value","note":"wire-value","upload_id":"wire-value"}') as Map<String, dynamic>;
@@ -1275,6 +1307,30 @@ void main() {
     final input = jsonDecode('{"date":"2026-10-20","society":"wire-value","crew":[],"unassigned":[]}') as Map<String, dynamic>;
     expect(wire.ManagerSchedule.fromJson(input).toJson(), equals(input));
   });
+  test('MemoryFactOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","text":"wire-value","status":"confirmed","created_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.MemoryFactOut.fromJson(input).toJson(), equals(input));
+  });
+  test('MemoryFactOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","text":"wire-value","status":"confirmed","created_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.MemoryFactOut.fromJson(input).toJson(), equals(input));
+  });
+  test('MemoryListOut preserves populated wire fields', () {
+    final input = jsonDecode('{"items":[{"id":"11111111-1111-1111-1111-111111111111","text":"wire-value","status":"confirmed","created_at":"2026-10-20T07:30:00+00:00"}]}') as Map<String, dynamic>;
+    expect(wire.MemoryListOut.fromJson(input).toJson(), equals(input));
+  });
+  test('MemoryListOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"items":[]}') as Map<String, dynamic>;
+    expect(wire.MemoryListOut.fromJson(input).toJson(), equals(input));
+  });
+  test('MemoryPatchIn preserves populated wire fields', () {
+    final input = jsonDecode('{"text":"wire-value","status":"confirmed"}') as Map<String, dynamic>;
+    expect(wire.MemoryPatchIn.fromJson(input).toJson(), equals(input));
+  });
+  test('MemoryPatchIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"text":null,"status":null}') as Map<String, dynamic>;
+    expect(wire.MemoryPatchIn.fromJson(input).toJson(), equals(input));
+  });
   test('MessageCreate preserves populated wire fields', () {
     final input = jsonDecode('{"note":"wire-value"}') as Map<String, dynamic>;
     expect(wire.MessageCreate.fromJson(input).toJson(), equals(input));
@@ -1282,6 +1338,14 @@ void main() {
   test('MessageCreate preserves nullable wire fields', () {
     final input = jsonDecode('{"note":"wire-value"}') as Map<String, dynamic>;
     expect(wire.MessageCreate.fromJson(input).toJson(), equals(input));
+  });
+  test('MessageOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","role":"user","content":"wire-value","citations":[{"title":"wire-value","kind":"doc","path":"wire-value","requirement_id":"wire-value","commit_id":"wire-value","as_of":"2026-10-20T07:30:00+00:00"}],"created_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.MessageOut.fromJson(input).toJson(), equals(input));
+  });
+  test('MessageOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","role":"user","content":"wire-value","citations":[],"created_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.MessageOut.fromJson(input).toJson(), equals(input));
   });
   test('MissedService preserves populated wire fields', () {
     final input = jsonDecode('{"service":"wire-value","reason":"wire-value","note":"wire-value","rescheduled":true}') as Map<String, dynamic>;
@@ -1731,6 +1795,14 @@ void main() {
     final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","role":"wire-value","start_minute":1,"end_minute":1}') as Map<String, dynamic>;
     expect(wire.SchedulingCrewOut.fromJson(input).toJson(), equals(input));
   });
+  test('SendMessageIn preserves populated wire fields', () {
+    final input = jsonDecode('{"text":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.SendMessageIn.fromJson(input).toJson(), equals(input));
+  });
+  test('SendMessageIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"text":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.SendMessageIn.fromJson(input).toJson(), equals(input));
+  });
   test('SessionDevice preserves populated wire fields', () {
     final input = jsonDecode('{"device_name":"wire-value","platform":"wire-value","app_version":"wire-value"}') as Map<String, dynamic>;
     expect(wire.SessionDevice.fromJson(input).toJson(), equals(input));
@@ -1762,6 +1834,22 @@ void main() {
   test('SkipVisit preserves nullable wire fields', () {
     final input = jsonDecode('{"reason":"wire-value","note":"wire-value"}') as Map<String, dynamic>;
     expect(wire.SkipVisit.fromJson(input).toJson(), equals(input));
+  });
+  test('SourceOut preserves populated wire fields', () {
+    final input = jsonDecode('{"path":"wire-value","kind":"wire-value","title":"wire-value","status":"active","indexed_at":"2026-10-20T07:30:00+00:00","commit_id":"wire-value","chunks":1}') as Map<String, dynamic>;
+    expect(wire.SourceOut.fromJson(input).toJson(), equals(input));
+  });
+  test('SourceOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"path":"wire-value","kind":"wire-value","title":"wire-value","status":"active","indexed_at":null,"commit_id":"wire-value","chunks":1}') as Map<String, dynamic>;
+    expect(wire.SourceOut.fromJson(input).toJson(), equals(input));
+  });
+  test('SourcesOut preserves populated wire fields', () {
+    final input = jsonDecode('{"items":[{"path":"wire-value","kind":"wire-value","title":"wire-value","status":"active","indexed_at":"2026-10-20T07:30:00+00:00","commit_id":"wire-value","chunks":1}],"embedding_model":"wire-value","last_indexed_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
+    expect(wire.SourcesOut.fromJson(input).toJson(), equals(input));
+  });
+  test('SourcesOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"items":[],"embedding_model":"wire-value","last_indexed_at":null}') as Map<String, dynamic>;
+    expect(wire.SourcesOut.fromJson(input).toJson(), equals(input));
   });
   test('StandaloneIn preserves populated wire fields', () {
     final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
@@ -1994,6 +2082,22 @@ void main() {
   test('UploadTicket preserves nullable wire fields', () {
     final input = jsonDecode('{"id":"wire-value","upload_url":"wire-value","method":"wire-value","headers":{},"expires_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
     expect(wire.UploadTicket.fromJson(input).toJson(), equals(input));
+  });
+  test('UsageDayOut preserves populated wire fields', () {
+    final input = jsonDecode('{"day":"wire-value","calls":1,"prompt_tokens":1,"completion_tokens":1,"cost_usd":1.0}') as Map<String, dynamic>;
+    expect(wire.UsageDayOut.fromJson(input).toJson(), equals(input));
+  });
+  test('UsageDayOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"day":"wire-value","calls":1,"prompt_tokens":1,"completion_tokens":1,"cost_usd":1.0}') as Map<String, dynamic>;
+    expect(wire.UsageDayOut.fromJson(input).toJson(), equals(input));
+  });
+  test('UsageOut preserves populated wire fields', () {
+    final input = jsonDecode('{"budget_usd":1.0,"spent_usd":1.0,"remaining_usd":1.0,"budget_exhausted":true,"failed_calls":1,"average_latency_ms":1,"days":[{"day":"wire-value","calls":1,"prompt_tokens":1,"completion_tokens":1,"cost_usd":1.0}]}') as Map<String, dynamic>;
+    expect(wire.UsageOut.fromJson(input).toJson(), equals(input));
+  });
+  test('UsageOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"budget_usd":1.0,"spent_usd":1.0,"remaining_usd":1.0,"budget_exhausted":false,"failed_calls":1,"average_latency_ms":1,"days":[]}') as Map<String, dynamic>;
+    expect(wire.UsageOut.fromJson(input).toJson(), equals(input));
   });
   test('VehicleAnswer preserves populated wire fields', () {
     final input = jsonDecode('{"id":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","cutoff_time":"wire-value","interior_day":"wire-value"}') as Map<String, dynamic>;
