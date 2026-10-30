@@ -115,3 +115,27 @@
   p { margin: 0.25rem 0; }
   details > summary { cursor: pointer; font-weight: 600; padding: 0.4rem 0; }
 }
+
+/* Touch screens (an iPad): bigger tap targets. A mouse keeps the compact sizes.
+   Outside the layers on purpose, so it wins over the size classes. */
+@media (pointer: coarse) {
+  button:not([role="switch"]):not([role="checkbox"]):not([role="tab"]),
+  [data-slot="button"],
+  [role="combobox"],
+  input:not([type="checkbox"]):not([type="radio"]),
+  select {
+    min-height: 2.5rem;
+  }
+  [data-size^="icon"] { min-width: 2.5rem; }
+  /* A text link in a table is small; give it a larger tap area. */
+  td a:not([data-slot="button"]) { position: relative; }
+  td a:not([data-slot="button"])::after { content: ""; position: absolute; inset: -0.7rem -0.25rem; }
+  [role="tab"] { min-height: 2.5rem; }
+  /* A small switch or checkbox keeps its look but gets a larger tap area. */
+  [role="switch"], [role="checkbox"] { position: relative; }
+  [role="switch"]::after, [role="checkbox"]::after {
+    content: "";
+    position: absolute;
+    inset: -0.7rem -0.5rem;
+  }
+}

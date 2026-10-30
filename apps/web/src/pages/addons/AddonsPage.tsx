@@ -73,7 +73,7 @@ export function AddonsPage() {
         onRowClick={(b) => setOpenId(b.id)}
         rowLabel={(b) => `Open ${b.addon_name || b.service} for ${b.vehicle || b.customer_name}`}
         toolbar={(
-          <div className="grid grid-cols-2 items-end gap-3 rounded-xl border bg-card p-4 shadow-xs md:grid-cols-[11rem_10rem_10rem_11rem_auto]">
+          <div className="grid grid-cols-2 items-end gap-3 rounded-xl border bg-card p-4 shadow-xs lg:grid-cols-[11rem_10rem_10rem_11rem_auto]">
             <Field label="Status filter">
               {(p) => <SelectBox {...p} value={status || NONE} onChange={(v) => setStatus(v === NONE ? "" : v)}
                                  choices={[{ value: NONE, label: "All" }, ...STATUSES.map((s) => ({ value: s, label: s }))]} />}
