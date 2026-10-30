@@ -48,8 +48,8 @@ Acceptance covers Founder-only access, cited factual answers, stale/conflicting 
 ## References
 
 [^1]: [Mani Bond specification v3](../docs/agent/mani-bond-spec_final.md), identity, principles, functional areas and autonomy.
-[^2]: [Mani Bond solution architecture and stack plan](../docs/agent/mani-bond-solution-plan.md), architecture, phases, privacy and acceptance.
-[^3]: [Initial architecture assessment](../docs/agent/agent-architecure.md), earlier analysis; read alongside the subsequent solution plan.
+[^2]: [Mani Bond architecture](../docs/agent/agent-architecure.md), the single architecture document: architecture, stack, phases, privacy and acceptance.
+[^3]: [Mani Bond final spec](../docs/agent/mani-bond-spec_final.md), requirements.
 
 ---
 

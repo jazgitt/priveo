@@ -42,7 +42,7 @@ AWS Mumbai is the selected application-hosting direction, but that does not make
 [^4]: [Customer requirements](../docs/reqs/customer-app-functional-requirements.md), AUTH-18 and SET-05.
 [^5]: [Crew requirements](../docs/reqs/crew-functional-requirements.md), CRW-SCH-13; [import command](../services/api/scripts/import_customers.py).
 [^6]: [Security backlog](../docs/security-backlog.md), media finding.
-[^7]: [Mani Bond solution plan](../docs/agent/mani-bond-solution-plan.md), India boundary and acceptance defaults.
+[^7]: [Mani Bond architecture](../docs/agent/agent-architecure.md), India boundary and acceptance defaults.
 
 ---
 
