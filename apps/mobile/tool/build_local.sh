@@ -3,10 +3,10 @@
 # The macOS counterpart of push_apk.ps1.
 #
 # From any folder:
-#   apps/mobile/tool/build_priveo.sh android
-#   apps/mobile/tool/build_priveo.sh ios
-#   apps/mobile/tool/build_priveo.sh android --build-only   (writes the APK)
-#   apps/mobile/tool/build_priveo.sh ios --replay --api http://192.168.1.5:8000
+#   apps/mobile/tool/build_local.sh android
+#   apps/mobile/tool/build_local.sh ios
+#   apps/mobile/tool/build_local.sh android --build-only   (writes the APK)
+#   apps/mobile/tool/build_local.sh ios --replay --api http://192.168.1.5:8000
 #
 # Flags: --build-only  --clean  --env test|prod  --api <url>  --local  --replay  --debug|--release  --device <id>
 # --env picks the API: test (default) or prod. Set API_TEST_URL / API_PROD_URL to override
@@ -89,7 +89,7 @@ fi
 
 STAMP="$(date +%y%m%d-%H%M%S)"
 LOG_DIR="$MOBILE/build/logs"
-LOG_FILE="$LOG_DIR/build_priveo-$TARGET-$STAMP.log"
+LOG_FILE="$LOG_DIR/build_local-$TARGET-$STAMP.log"
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
 

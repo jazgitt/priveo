@@ -32,6 +32,22 @@ Startup validates hosted environment naming and production requirements. Product
 
 The repository conventions name `scripts/export_openapi.py`, `dart run tool/gen_api.dart`, `dart run tool/gen_theme.dart` and `flutter gen-l10n`. The portal theme generator is exposed through its package scripts. CI checks generated output for staleness.[^1][^2]
 
+## Building the mobile app
+
+Two scripts in `apps/mobile/tool/` build the app for different purposes.[^5]
+
+| | `build_local.sh` | `build_release.sh` |
+|---|---|---|
+| Purpose | Daily development: build and run on an emulator, phone or simulator | Make an installable file for testers or release |
+| Output | Installs and launches the app; `--build-only` writes the APK | A named file in `apps/mobile/dist/` (git-ignored) |
+| File name | None | `priveo-test-<version>.apk`, `priveo-release-<version>.apk`; `<version>` is `0.2.7-207` for `0.2.7+207` |
+| API choice | `--env test\|prod`, `--api URL`, or `--local` (API on this Mac) | `test` or `prod`, or `--api URL`; no `--local` |
+| Build type | Debug by default, `--release` optional | Release on Android; the iOS simulator app is a debug build |
+| Package | Dev flavor | Test: `dev` flavor, `in.priveo.app.dev`, "Priveo Test". Prod: `prod` flavor, `in.priveo.app`, "Priveo". Both install side by side on Android |
+| Extras | `--replay`, `--clean`, `--device` | `--ipa` for an iPhone build, which stops until Apple signing exists |
+
+Examples: `build_release.sh android test`, `build_release.sh android prod`, `build_release.sh ios test`. The test API is `https://priveo-api-test.vercel.app` and the production API is `https://priveo-api-prod.vercel.app`; `API_TEST_URL` and `API_PROD_URL` override them. The app shows its environment, build number and API address under Settings > Version (customer), Profile > Version (crew) and Home > Version (admin).[^5]
+
 ## Verification workflow
 
 Typical commands are pytest/ruff for the API, `flutter analyze` and `flutter test` for mobile, and portal lint/test/build scripts. Coverage has a dedicated PowerShell runner and report tool. PostgreSQL-specific checks use a disposable cluster script rather than an application database.[^1][^4]
@@ -60,3 +76,4 @@ Requirements use stable IDs and owner decisions take precedence over prototype b
 [Main page](README.md) | [Glossary](Glossary.md) | [Editorial guidelines](Editorial_guidelines.md)
 
 *Evidence reviewed: 20 October 2026. Requirements, implementation and verification may have different status.*
+[^5]: [Local build script](../apps/mobile/tool/build_local.sh); [release build script](../apps/mobile/tool/build_release.sh); [build guide](../docs/build-and-release.md).

@@ -2,9 +2,19 @@
 
 **Deployment and hosting** cover Priveo's development environments, selected launch architecture and mobile release pipelines. The 19 October owner decision selects AWS Mumbai with ECS Fargate and private RDS and rejects a public database endpoint for launch.[^1]
 
-## Development versus launch
+## Current hosting
 
-The build guide describes a development API on Vercel with Neon in Singapore and a provider switch for AWS. That is development history and configuration, not evidence of a production launch on AWS. Dev and production require separate hosts, databases, secrets and release controls.[^2] Update, 29 Oct 2026: the API now runs as two Vercel projects (test and production, both Mumbai) with a Supabase database each; see `docs/build-and-release.md`. The Neon database is retired once the move is checked.
+Since 29 Oct 2026 the API runs as two Vercel projects in one Pro team, `priveo-api-test` and `priveo-api-prod`, both in Mumbai (`bom1`). Each has its own Supabase PostgreSQL database in Mumbai. The old single `priveo-api` project and its Neon database were retired on 30 Oct 2026. AWS Mumbai with a private RDS remains the later target.[^1][^2]
+
+| | Test | Production |
+|---|---|---|
+| Deploys | Every merge to `main` | A `v*` tag or a manual run, after a reviewer approves |
+| Database | Supabase test project | Supabase prod project |
+| Demo logins | Seeded | Absent; startup refuses them |
+| Photos | Public Vercel Blob store | Private Vercel Blob store, streamed by the API through signed links |
+| Address | `priveo-api-test.vercel.app` | `priveo-api-prod.vercel.app` |
+
+Settings live in the GitHub Environments `test` and `production` and in each Vercel project's own variables. Runtime database access uses Supabase's transaction pooler; migrations use the session pooler through `MIGRATION_DATABASE_URL`, because GitHub runners cannot reach the IPv6-only direct address. Secrets such as the Blob token are stored as Sensitive. Local development uses a local PostgreSQL and never a hosted database. Production `v0.1.0` has been released and smoke-tested with the admin login only; it holds no real data, and email sign-in and photo upload there are not yet exercised. Custom domains are not set up.[^2]
 
 The hosting assessment considers alternatives and documents the trade-offs behind private-database AWS hosting. Its cost figures are estimates with unverified unit-price assumptions; they are not current provider quotes or measured product capacity.[^3]
 
@@ -21,7 +31,7 @@ The assessment identifies launch blockers including a private S3 object store, e
 | API CI | Lint, tests, PostgreSQL checks and contract freshness |
 | Mobile CI | Generated files, analysis and tests |
 | Web CI/E2E | Portal lint/build/unit and browser validation |
-| API deploy | Provider-selected development deployment and smoke checks |
+| API deploy | Test on every merge to `main`; production on a `v*` tag after approval; migrate, seed, deploy and smoke check |
 | Mobile integration | Android emulator/live API role checks |
 | Android release | Signed bundle and Play internal testing when configured |
 
@@ -33,7 +43,7 @@ The backend exposes eight authenticated internal jobs. Deployment must supply `C
 
 ## Mobile release
 
-Android has dev and prod flavors. Production signing and Play delivery require keystore and service-account configuration and initial store setup. The build guide records iOS work as pending at its checkpoint; newer store/device evidence is needed before claiming iOS release readiness.[^2]
+Android has dev and prod flavors. `apps/mobile/tool/build_release.sh` builds an app against the test or production API and names the file `priveo-test-<version>` or `priveo-release-<version>` (see [Development](Development.md)); Settings > Version in the app shows the environment, build and API address. An iOS phone build waits on an Apple Developer account; only simulator builds exist. Production signing and Play delivery require keystore and service-account configuration and initial store setup. The build guide records iOS work as pending at its checkpoint; newer store/device evidence is needed before claiming iOS release readiness.[^2]
 
 The security backlog records fallback to debug signing without a release keystore as an open issue. The latest local test report did not deploy or test real devices, emulators, live providers or hosted PostgreSQL.[^6][^7]
 
@@ -57,4 +67,4 @@ The security backlog records fallback to debug signing without a release keystor
 
 [Main page](README.md) | [Glossary](Glossary.md) | [Editorial guidelines](Editorial_guidelines.md)
 
-*Evidence reviewed: 20 October 2026. Requirements, implementation and verification may have different status.*
+*Evidence reviewed: 30 October 2026. Requirements, implementation and verification may have different status.*

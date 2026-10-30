@@ -10,8 +10,8 @@
 #   tools/dev/run-local.sh --port 8001
 #
 # Then run the app against it (in another terminal):
-#   apps/mobile/tool/build_priveo.sh android --local     # emulator reaches this Mac as 10.0.2.2
-#   apps/mobile/tool/build_priveo.sh ios --local         # simulator uses localhost
+#   apps/mobile/tool/build_local.sh android --local     # emulator reaches this Mac as 10.0.2.2
+#   apps/mobile/tool/build_local.sh ios --local         # simulator uses localhost
 #
 # Settings come from services/api/.env (git-ignored). DATABASE_URL must point at
 # a local PostgreSQL (localhost or 127.0.0.1) and TOKEN_SECRET must be set (any
