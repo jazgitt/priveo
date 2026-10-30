@@ -52,7 +52,7 @@ Repository implementation is broader than the old Phase 0 diagrams suggest. Neve
 [^3]: [Crew requirements](../docs/reqs/crew-functional-requirements.md), CRW-ACC and CRW-MGR.
 [^4]: [Owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md), standalone service and configurable policies.
 [^5]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md).
-[^6]: [Mani Bond solution plan](../docs/agent/mani-bond-solution-plan.md), recommended solution and rollout.
+[^6]: [Mani Bond architecture](../docs/agent/agent-architecure.md), recommended solution and rollout.
 
 ---
 
