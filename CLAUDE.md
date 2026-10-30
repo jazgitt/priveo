@@ -25,7 +25,7 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 
 ## Layout
 
-- `docs/agent/mani-bond-spec_final.md`: Mani Bond Chief of Staff requirements. `docs/agent/agent-architecure.md`: initial assessment and phased implementation plan. `docs/agent/mani-bond-solution-plan.md`: subsequent solution architecture and technology-stack plan, including the Founder-selected India-only processing, AWS Mumbai hosting, Crawl-plus-voice first release and push-to-talk interaction; read all three before working on Mani Bond. Stack and implementation recommendations remain proposals unless separately approved.
+- `docs/agent/mani-bond-spec_final.md`: Mani Bond Chief of Staff requirements. `docs/agent/agent-architecure.md`: the single architecture document (assessment, solution architecture, stack, phased plan, open decisions; hosting now Vercel and Supabase, India-only model route still open); read both before working on Mani Bond. Stack and implementation recommendations remain proposals unless separately approved.
 - `docs/reqs/customer-app-functional-requirements.md`: customer app
 - `docs/reqs/admin-functional-requirements.md`: admin (functional requirements for the web portal and the mobile quick actions)
 - `docs/reqs/crew-functional-requirements.md`: crew
