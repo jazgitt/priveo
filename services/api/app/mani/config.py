@@ -11,6 +11,8 @@ BACKENDS = ("local", "openrouter")
 # Every index is vector(1024) on every backend (decision D15). Both backends are asked
 # for this size, because their native size (4096) is more than pgvector can index.
 EMBEDDING_DIMENSIONS = 1024
+LOCAL_BASE_URL = "http://localhost:11434/v1"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 class ManiSettings(BaseSettings):
@@ -23,11 +25,19 @@ class ManiSettings(BaseSettings):
     portal_enabled: bool | None = None
     backend: str = "local"
     # Ollama's OpenAI-compatible endpoint, or OpenRouter's.
-    base_url: str = "http://localhost:11434/v1"
+    base_url: str = LOCAL_BASE_URL
     # qwen3:14b with a 16,384-token window (scripts/setup_mani_models.sh). Ollama's own default of 4,096
     # tokens is smaller than the persona, the tool list and eight passages, so the prompt would be cut.
     chat_model: str = "qwen3-14b-16k"
     embedding_model: str = "qwen3-embedding:8b"
+    # Where the embeddings come from. Empty means the same backend and URL as the chat. Set
+    # MANI_EMBEDDING_BACKEND=local to keep embeddings on Ollama while the chat uses OpenRouter: the
+    # stored vectors were made by the local model, so a question must be embedded by it too.
+    embedding_backend: str = ""
+    embedding_base_url: str = ""
+    # Evaluation only (MANI_EVAL_ALLOW_DATA_RETENTION=true): lets OpenRouter use a provider that may keep
+    # prompts, which the free models need. Off by default; never set it in test or prod (D8).
+    eval_allow_data_retention: bool = False
     # Only read for the `openrouter` backend. Never committed.
     api_key: str = Field(default="", validation_alias=AliasChoices(
         "PRIVEO_OPEN_ROUTER_TEST_KEY", "MANI_API_KEY"))
@@ -39,6 +49,18 @@ class ManiSettings(BaseSettings):
     request_timeout_seconds: float = 120.0
     conversation_retention_days: int = 90
 
+
+    @property
+    def embeddings_backend(self) -> str:
+        return self.embedding_backend or self.backend
+
+    @property
+    def embeddings_base_url(self) -> str:
+        if self.embedding_base_url:
+            return self.embedding_base_url
+        if self.embeddings_backend != self.backend:
+            return LOCAL_BASE_URL if self.embeddings_backend == "local" else OPENROUTER_BASE_URL
+        return self.base_url
 
     def portal_on(self, environment: str) -> bool:
         """Whether the portal may show Mani and the Agent report in this environment."""

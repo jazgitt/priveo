@@ -179,3 +179,21 @@ def test_one_source_supplies_at_most_two_passages(db):
     found = HybridRetriever(FakeEmbedder()).search(db, "over due payment inactive subscription", limit=6)
     paths = [p.citation.path for p in found]
     assert paths.count("docs/long.md") <= 2 and "docs/other.md" in paths
+
+
+def test_a_question_that_asks_two_things_is_split_and_a_short_half_is_not():
+    from app.mani.retrieval import _parts
+    assert _parts("Which scheduled jobs does the API expose, and where do they run?") == [
+        "Which scheduled jobs does the API expose", "where do they run"]
+    assert _parts("Which security findings are open, and which is High?") == []  # "High" alone is too thin
+    assert _parts("What is the latest migration?") == []
+
+
+def test_a_document_named_in_the_question_supplies_more_passages(db):
+    add(db, "docs/system-component-diagram.md", "Diagram", "doc",
+        [(f"Part {i}", f"component diagram part {i} shows the system", []) for i in range(6)])
+    add(db, "docs/other-notes.md", "Notes", "doc",
+        [(f"Part {i}", f"component diagram notes {i} shows the system", []) for i in range(6)])
+    found = HybridRetriever(FakeEmbedder()).search(db, "what does the system component diagram show", limit=8)
+    paths = [p.citation.path for p in found]
+    assert paths.count("docs/system-component-diagram.md") == 4 and paths.count("docs/other-notes.md") == 2

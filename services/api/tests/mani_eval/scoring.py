@@ -161,6 +161,17 @@ class Score:
     def failed_checks(self) -> list[CheckResult]:
         return [c for c in self.checks if not c.passed]
 
+    @property
+    def fact_checks(self) -> list[CheckResult]:
+        """The key facts of the answer: each required phrase (a phrase may list accepted variants)."""
+        return [c for c in self.checks if c.name.startswith("mentions")]
+
+    @property
+    def retrieved(self) -> bool | None:
+        """Did the facts reach the model? None when the question was not placed in the pipeline."""
+        stage = (self.stage_detail or {}).get("stage") or self.stage
+        return None if not stage else stage not in RETRIEVAL_LOST
+
 
 def _check(name: str, passed: bool, detail: str = "") -> CheckResult:
     return CheckResult(name, bool(passed), "" if passed else detail)
@@ -305,6 +316,9 @@ def score_question(question: Question, outcome: Outcome, expected: dict[str, Exp
 # ---- Report ----------------------------------------------------------------------------------
 
 
+RETRIEVAL_LOST = ("not-indexed", "not-retrieved", "dropped")
+
+
 def _percent(passed: int, total: int) -> float:
     return round(100 * passed / total, 1) if total else 0.0
 
@@ -340,6 +354,18 @@ class Report:
     def factual_met(self) -> bool:
         return self.factual_percent >= self.target_percent
 
+    @property
+    def retrieval_percent(self) -> float:
+        """Retrieval recall: share of documentation questions whose needed facts reached the model."""
+        rows = [s.retrieved for s in self.scored if s.retrieved is not None]
+        return _percent(sum(rows), len(rows))
+
+    @property
+    def fact_percent(self) -> float:
+        """Answer fact coverage: key facts stated, over all key facts asked for."""
+        checks = [c for s in self.scored for c in s.fact_checks]
+        return _percent(sum(c.passed for c in checks), len(checks))
+
     def by_area(self) -> dict[str, dict[str, Any]]:
         areas: dict[str, list[Score]] = {}
         for s in self.scored:
@@ -361,6 +387,8 @@ class Report:
             "by_stage": self.by_stage(),
             "overall_percent": self.overall_percent,
             "factual_percent": self.factual_percent,
+            "retrieval_percent": self.retrieval_percent,
+            "fact_percent": self.fact_percent,
             "target_percent": self.target_percent,
             "factual_target_met": self.factual_met,
             "scored": len(self.scored),
@@ -378,6 +406,8 @@ class Report:
             f"({len(self.skipped)} skipped)",
             f"Factual correctness on data-backed questions: {self.factual_percent}% "
             f"(target {self.target_percent}%): {'MET' if self.factual_met else 'NOT MET'}",
+            f"Retrieval recall (facts reached the model): {self.retrieval_percent}%",
+            f"Answer fact coverage (key facts stated): {self.fact_percent}%",
             "", "By area:"]
         for area, row in self.by_area().items():
             lines.append(f"  {area}: {row['passed']}/{row['total']} ({row['percent']}%)")

@@ -92,7 +92,7 @@ def test_reference_agent_scores_full_marks(eval_world):
                                   dataset=eval_world["dataset"])
     assert report.failures == [], report.to_text()
     assert report.overall_percent == report.factual_percent == 100.0
-    assert report.factual_met and report.skipped == [] and len(report.scored) == 48
+    assert report.factual_met and report.skipped == [] and len(report.scored) == 47
 
 
 def test_report_text_and_json(eval_world, tmp_path):
@@ -101,11 +101,11 @@ def test_report_text_and_json(eval_world, tmp_path):
                                   dataset=eval_world["dataset"])
     text = report.to_text()
     assert "Factual correctness" in text and "By area:" in text
-    assert "Code implementation: 18/18" in text and "How to run Priveo: 10/10" in text
+    assert "Code implementation: 17/17" in text and "How to run Priveo: 10/10" in text
     out = tmp_path / "nested" / "report.json"
     report.save(out)
     data = json.loads(out.read_text(encoding="utf-8"))
-    assert data["factual_target_met"] is True and data["scored"] == 48
+    assert data["factual_target_met"] is True and data["scored"] == 47
     assert set(data["by_area"]) == {"Code implementation", "Tech stack and architecture",
                                     "Business requirements", "How to run Priveo"}
 
@@ -223,7 +223,7 @@ def test_question_is_immutable_record(field):
 
 def test_the_five_sets_split_the_fifty_questions_without_overlap():
     from tests.mani_eval.questions import SETS
-    DROPPED = {7, 20}  # marked Drop in the review files
+    DROPPED = {7, 12, 20}  # marked Drop in the review files
     ranges = {"A1": (1, 10), "A2": (11, 20), "B": (21, 30), "C": (31, 40), "D": (41, 50)}
     assert list(SETS) == list(ranges)
     for name, (first, last) in ranges.items():
