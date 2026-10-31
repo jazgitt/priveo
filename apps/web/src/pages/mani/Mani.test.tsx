@@ -248,14 +248,27 @@ describe("memory and sources", () => {
     await waitFor(() => expect(calls("/memory/f1", "DELETE")).toHaveLength(1));
   });
 
-  it("lists sources with status, indexed date and the embedding model", async () => {
+  it("shows the sources by category, not as a file list", async () => {
+    routes["/v1/admin/mani/sources"] = () => json(200, {
+      items: [
+        { path: "docs/a.md", kind: "doc", title: "Plan doc", status: "active", indexed_at: "2026-10-05T01:00:00Z", commit_id: "abc1234", chunks: 4 },
+        { path: "docs/b.md", kind: "doc", title: "Other doc", status: "active", indexed_at: "2026-10-06T01:00:00Z", commit_id: "abc1234", chunks: 3 },
+        { path: "app/x.py", kind: "code", title: "x.py", status: "failed", indexed_at: null, commit_id: "", chunks: 0 },
+        { path: "app/old.py", kind: "code", title: "old.py", status: "deleted", indexed_at: "2026-09-01T01:00:00Z", commit_id: "abc1234", chunks: 9 },
+      ],
+      embedding_model: "bge-m3", last_indexed_at: "2026-10-06T01:00:00Z",
+    });
     wrap(<ManiPage />);
     await userEvent.click(await screen.findByRole("tab", { name: "Sources" }));
-    expect(await screen.findByText("Plan doc")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("05-Oct-26")).toBeInTheDocument();
-    expect(screen.getByText("06-Oct-26")).toBeInTheDocument();
+    const documents = (await screen.findByText("Documents")).closest("tr") as HTMLElement;
+    expect(within(documents).getByText("2")).toBeInTheDocument();
+    expect(within(documents).getByText("7")).toBeInTheDocument();
+    expect(within(documents).getByText("06-Oct-26")).toBeInTheDocument();
+    const code = screen.getByText("Code").closest("tr") as HTMLElement;
+    expect(within(code).getByText("1")).toBeInTheDocument(); // the one failed source; the deleted one is not counted
     expect(screen.getByText("bge-m3")).toBeInTheDocument();
+    expect(screen.queryByText("Plan doc")).not.toBeInTheDocument();
+    expect(screen.queryByText("docs/a.md")).not.toBeInTheDocument();
   });
 });
 

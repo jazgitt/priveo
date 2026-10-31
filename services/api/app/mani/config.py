@@ -18,6 +18,9 @@ class ManiSettings(BaseSettings):
 
     # The only login that may use Mani (D6). Anyone holding its password is the Founder.
     founder_login_id: str = "priveopapa"
+    # Whether Mani Bond and the Agent report are on in the admin portal (MANI_PORTAL_ENABLED). Unset means
+    # on in dev (local) and test, and off in prod. Set it to true or false to override either way.
+    portal_enabled: bool | None = None
     backend: str = "local"
     # Ollama's OpenAI-compatible endpoint, or OpenRouter's.
     base_url: str = "http://localhost:11434/v1"
@@ -35,6 +38,11 @@ class ManiSettings(BaseSettings):
     max_tool_rounds: int = 6
     request_timeout_seconds: float = 120.0
     conversation_retention_days: int = 90
+
+
+    def portal_on(self, environment: str) -> bool:
+        """Whether the portal may show Mani and the Agent report in this environment."""
+        return self.portal_enabled if self.portal_enabled is not None else environment != "prod"
 
 
 @lru_cache

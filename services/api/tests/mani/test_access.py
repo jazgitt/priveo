@@ -75,3 +75,53 @@ def test_a_deactivated_founder_is_refused(client, db):
     founder.active = False
     db.commit()
     assert client.get(STATUS, headers=headers).status_code in (401, 403)
+
+
+def switched(client, environment):
+    """Runs the next request as if the API were in `environment` (the platform setting)."""
+    from app.platform.config import get_settings
+    current = get_settings()
+    client.app.dependency_overrides[get_settings] = lambda: current.model_copy(update={"environment": environment})
+
+
+@pytest.mark.parametrize("environment, expected", [("dev", 200), ("test", 200), ("prod", 403)])
+def test_mani_is_on_in_dev_and_test_and_off_in_prod_by_default(client, environment, expected):
+    headers = auth(login(client, "admin")["access_token"])
+    switched(client, environment)
+    try:
+        r = client.get(STATUS, headers=headers)
+    finally:
+        from app.platform.config import get_settings
+        client.app.dependency_overrides.pop(get_settings, None)
+    assert r.status_code == expected
+    if expected == 403:
+        assert r.json()["code"] == "mani_disabled"
+
+
+def test_the_switch_overrides_the_environment_either_way(client, monkeypatch):
+    from app.platform.config import get_settings
+    headers = auth(login(client, "admin")["access_token"])
+    try:
+        monkeypatch.setenv("MANI_PORTAL_ENABLED", "true")
+        get_mani_settings.cache_clear()
+        switched(client, "prod")
+        assert client.get(STATUS, headers=headers).status_code == 200
+        monkeypatch.setenv("MANI_PORTAL_ENABLED", "false")
+        get_mani_settings.cache_clear()
+        switched(client, "dev")
+        r = client.get(STATUS, headers=headers)
+        assert r.status_code == 403 and r.json()["code"] == "mani_disabled"
+    finally:
+        client.app.dependency_overrides.pop(get_settings, None)
+
+
+def test_the_usage_report_is_off_too_when_mani_is_off(client, monkeypatch):
+    from app.platform.config import get_settings
+    headers = auth(login(client, "admin")["access_token"])
+    monkeypatch.setenv("MANI_PORTAL_ENABLED", "false")
+    get_mani_settings.cache_clear()
+    try:
+        assert client.get("/v1/admin/mani/usage", headers=headers).status_code == 403
+        assert client.get("/v1/admin/mani/conversations", headers=headers).status_code == 403
+    finally:
+        client.app.dependency_overrides.pop(get_settings, None)
