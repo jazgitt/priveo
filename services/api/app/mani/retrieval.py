@@ -40,14 +40,17 @@ class HybridRetriever:
             return []
         wanted = requirement_ids(query)
         if db.get_bind().dialect.name == "postgresql":
-            scores = self._postgres_scores(db, query, wanted, limit)
+            scores, named = self._postgres_scores(db, query, wanted, limit)
         else:
-            scores = self._keyword_scores(db, query, wanted)
+            scores, named = self._keyword_scores(db, query, wanted)
         scores = self._weighted(db, scores)
         ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:limit]
         if not ranked:
             return []
-        ranked = [(i, s) for i, s in ranked if s >= ranked[0][1] * MIN_RELATIVE]
+        # The floor is set by the best passage that does not rely on the ID boost, so a named ID
+        # does not push out the passages around it.
+        best = max((score for i, score in ranked if i not in named), default=ranked[0][1])
+        ranked = [(i, score) for i, score in ranked if i in named or score >= best * MIN_RELATIVE]
         rows = db.execute(
             select(ManiChunk, ManiSource).join(ManiSource, ManiSource.id == ManiChunk.source_id)
             .where(ManiChunk.id.in_([chunk_id for chunk_id, _ in ranked]))).all()
@@ -73,7 +76,7 @@ class HybridRetriever:
 
     # ---- PostgreSQL: vectors, full text, fusion --------------------------------------------
 
-    def _postgres_scores(self, db: Session, query: str, wanted: list[str], limit: int) -> dict:
+    def _postgres_scores(self, db: Session, query: str, wanted: list[str], limit: int) -> tuple[dict, set]:
         k = max(limit * 4, 20)
         active = (ManiSource.status == "active")
         base = select(ManiChunk.id).join(ManiSource, ManiSource.id == ManiChunk.source_id).where(active)
@@ -101,9 +104,10 @@ class HybridRetriever:
         for ranking in lists:
             for rank, chunk_id in enumerate(ranking, start=1):
                 scores[chunk_id] += 1.0 / (RRF_K + rank)
-        for chunk_id in self._chunks_naming(db, wanted, base, k):
+        named = set(self._chunks_naming(db, wanted, base, k))
+        for chunk_id in named:
             scores[chunk_id] += ID_BOOST
-        return scores
+        return scores, named
 
     @staticmethod
     def _chunks_naming(db: Session, wanted: list[str], base, k: int) -> list:
@@ -115,13 +119,14 @@ class HybridRetriever:
 
     # ---- SQLite and anything without vectors ------------------------------------------------
 
-    def _keyword_scores(self, db: Session, query: str, wanted: list[str]) -> dict:
+    def _keyword_scores(self, db: Session, query: str, wanted: list[str]) -> tuple[dict, set]:
         terms = _terms(query)
         rows = db.execute(
             select(ManiChunk.id, ManiChunk.text, ManiChunk.heading, ManiChunk.requirement_ids)
             .join(ManiSource, ManiSource.id == ManiChunk.source_id)
             .where(ManiSource.status == "active")).all()
         scores: dict = {}
+        named: set = set()
         for chunk_id, text, heading, ids in rows:
             lowered, head = text.lower(), (heading or "").lower()
             words = _WORD.findall(lowered)
@@ -129,6 +134,7 @@ class HybridRetriever:
             score = hits / (len(words) ** 0.5 + 1) if hits else 0.0
             if wanted and any(r in (ids or []) for r in wanted):
                 score += ID_BOOST
+                named.add(chunk_id)
             if score > 0:
                 scores[chunk_id] = score
-        return scores
+        return scores, named

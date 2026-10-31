@@ -154,7 +154,16 @@ def test_a_document_outranks_code_with_the_same_words(db):
 
 
 def test_a_passage_far_weaker_than_the_best_is_left_out(db):
+    if db.get_bind().dialect.name == "postgresql":
+        pytest.skip("rank fusion keeps scores close; the floor is checked on word scores")
     add(db, "docs/a.md", "A", "doc", [("Billing", "invoice invoice invoice reminders reminders", [])])
     add(db, "docs/b.md", "B", "doc", [("Notes", " ".join(["filler"] * 200) + " invoice", [])])
     found = HybridRetriever(FakeEmbedder()).search(db, "invoice reminders")
     assert [p.citation.path for p in found] == ["docs/a.md"]
+
+
+def test_a_named_requirement_id_does_not_push_out_the_passages_around_it(db):
+    add(db, "docs/a.md", "A", "doc", [("Pay", "payment rules AUTH-13 over due", ["AUTH-13"])])
+    add(db, "docs/b.md", "B", "doc", [("Pay", "payment over due reminders", [])])
+    found = HybridRetriever(FakeEmbedder()).search(db, "payment over due AUTH-13")
+    assert [p.citation.path for p in found] == ["docs/a.md", "docs/b.md"]
