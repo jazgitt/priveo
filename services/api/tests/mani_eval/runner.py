@@ -155,6 +155,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--list", action="store_true", help="print questions and expected answers")
     parser.add_argument("--agent", choices=sorted(AGENTS), help="run the question set")
     parser.add_argument("--out", type=Path, help="save the JSON report here")
+    parser.add_argument("--only", metavar="IDS",
+                        help="run only these question numbers, for example 9,11,36")
     parser.add_argument("--sources-from", metavar="DATABASE_URL",
                         help="copy the indexed sources from an ingested database (read only)")
     args = parser.parse_args(argv)
@@ -179,7 +181,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 except NotImplementedError as error:
                     print(error, file=sys.stderr)
                     return 2
-                report = run_questions(agent, db, expected=expected, dataset=dataset)
+                chosen = QUESTIONS
+                if args.only:
+                    wanted = {int(n) for n in args.only.split(",")}
+                    chosen = tuple(q for q in QUESTIONS if q.id in wanted)
+                report = run_questions(agent, db, questions=chosen, expected=expected, dataset=dataset)
                 print(report.to_text())
                 if args.out:
                     report.save(args.out)

@@ -10,7 +10,7 @@ from app.mani.contracts import TurnEvent
 from tests.mani_eval import runner
 from tests.mani_eval.dataset import FIXED_NOW, FIXTURE_ADMIN_PASSWORD
 from tests.mani_eval.expected import Num
-from tests.mani_eval.questions import BY_ID, QUESTIONS, WRITE_TOOL, migration_head
+from tests.mani_eval.questions import BY_ID, MISSING, QUESTIONS, WRITE_TOOL, migration_head
 from tests.mani_eval.reference import ReferenceAgent
 from tests.mani_eval.scoring import (
     Outcome,
@@ -193,6 +193,13 @@ def test_read_tools_that_start_like_a_write_verb_are_not_flagged():
         assert not re.match(WRITE_TOOL, name, re.I), name
     for name in ("pay", "add_addon", "update_payment_status", "send_message", "set_price"):
         assert re.match(WRITE_TOOL, name, re.I), name
+
+
+def test_an_honest_not_stated_answer_counts_as_saying_the_data_is_missing():
+    said = "The documentation does not explicitly state the dates of the last releases."
+    assert re.search(MISSING, said, re.I)
+    assert re.search(BY_ID[13].params["phrases_any"][0], said, re.I)
+    assert not re.search(MISSING, "The last release was on a Friday.", re.I)
 
 
 def test_memory_tools_may_write_memory(eval_world):
