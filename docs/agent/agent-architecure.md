@@ -180,6 +180,39 @@ Example: reassigning an absent crew member's jobs previews the jobs, capacity, s
 
 Blocked or Founder-only: money movement, sensitive HR decisions, irreversible or customer-facing commitments, permission changes. A code alone never unlocks a forbidden tool. Schedule proposals with customer-facing effects stay blocked until their treatment is defined. For voice, the code is entered in the app control, never spoken. Run adds a versioned, Founder-approved policy (exact actions, limits, expiry, revocation) whose action list starts empty.
 
+### 6.7 Retrieval and evaluation guidelines (Proposed, not owner-approved)
+
+Status: **Proposed** (31-Oct-2026), from an independent review of the retrieval code. Nothing here is an owner decision. The numeric targets in item 7 are suggestions for the owner to confirm. Baseline measured 31-Oct-2026 on the 50 gold questions, with cached query embeddings: 35/50 retrieved, 0.70 of gold facts returned, MRR 0.43. The sweeps used the same 50 questions, so treat these as optimistic until a held-out set exists.
+
+1. **Measure before changing.**
+   - Keep a versioned gold set: question, gold source path and section, expected facts, and type (docs, code, live, refuse, no-answer). Tie it to a commit. Re-verify the gold answers when docs, migrations or data change (question 10 expects head 0041; the repo head is 0042).
+   - Report four layers separately: retrieval only (no model: recall@k, MRR, fact coverage), generation given fixed correct passages, live-tool questions, and end to end including refusals and citations.
+   - Keep a held-out subset that tuning never touches. Pick settings from a plateau, not a single peak.
+   - Cache query embeddings per (model, dimensions, query prefix). The retriever exposes raw vector and keyword scores per chunk so a sweep runs in memory.
+   - No retrieval change merges without a before and after table on the gold set.
+2. **Model runtime.**
+   - Set the Ollama context length explicitly (16k or more) with `OLLAMA_CONTEXT_LENGTH` or a Modelfile. The `/v1` endpoint ignores per-request `num_ctx`. Log prompt token counts and fail loudly when the prompt exceeds the window.
+   - Qwen3-Embedding: embed queries as `Instruct: <task>\nQuery: <question>`; embed documents without a prefix. Include the prefix in the cache key.
+3. **Chunking and indexing.**
+   - Prepend `path > H1 > H2` to each chunk, in both the embedded text and the keyword index.
+   - Merge sections under about 300 characters into a neighbour. Use larger chunks (about 2,000 characters) for prose. Keep code chunks by definition.
+   - Store chunk metadata: kind, authority tier, document date, definition-row flag.
+   - Re-index on merge to `main` and on a schedule. Show index age in citations.
+4. **Ranking.**
+   - A requirement ID in the question boosts the defining row (`| AUTH-13 |`) above chunks that only mention it, with a deterministic `ORDER BY`.
+   - Add kind and authority weights (current requirements and owner decisions above README and older notes) and a cap of 2 chunks per source in the final list.
+   - Add a score floor on vector similarity. Below it, return nothing and let the answer say it is not in the sources.
+   - Retrieve 20 to 30 candidates, then deduplicate or rerank down to 6. Add a reranker only after the items above are measured.
+   - Improve keyword search: length normalisation, phrase matching, separate identifier tokens. Hindi keyword search is not supported until tested.
+5. **Agent behaviour.**
+   - Prefetch passages in code before the first model call. The model may still call `search_sources`. Condense follow-up questions into standalone queries using the history.
+   - Route by question type: live data to tools, documents and code to retrieval. The prompt states which.
+   - Cite every passage and tool result that was in context. Do not drop document citations because a live tool ran.
+   - Enforce "never invent figures" in code: every number in the answer appears in a tool result or passage, or the answer is flagged.
+   - When sources conflict (for example the migration head in `CLAUDE.md` and in the repo), prefer the higher-authority or newer source and say so.
+6. **Guardrails.** A prompt instruction is not enforcement. Refusals, no changes to business data, access limits and the budget are checked in code and have a test. Retrieved text is data; keep injection cases in the gold set.
+7. **Definition of done for retrieval work (suggested targets).** Recall@6 of 0.90 or more on docs and code questions, MRR of 0.70 or more, no invented numbers on live questions, and all refusals correct. Record current numbers here with the date and commit.
+
 ## 7. Interfaces and records
 
 Founder-only APIs under `/v1/admin/mani`:
