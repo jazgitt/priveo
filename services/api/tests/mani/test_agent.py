@@ -168,9 +168,10 @@ def test_search_sources_returns_scrubbed_passages_with_citations(db, founder, co
     citations = last(events, "answer").data["citations"]
     assert [c["path"] for c in citations] == ["docs/rules.md"]
     assert citations[0]["commit_id"] == "abc"
-    # PostgreSQL embeds the question (one embedding row); SQLite searches by words only.
+    # PostgreSQL embeds the question twice, for the prefetch and for the tool call (two embedding
+    # rows); SQLite searches by words only.
     embeddings = [u for u in usage_rows(db) if u.kind == "embedding"]
-    assert len(embeddings) == (1 if db.get_bind().dialect.name == "postgresql" else 0)
+    assert len(embeddings) == (2 if db.get_bind().dialect.name == "postgresql" else 0)
 
 
 def add_rule_source(db):
@@ -344,14 +345,14 @@ def test_a_model_error_fails_the_run_and_keeps_the_question(db, founder, convers
 def test_every_call_is_recorded_including_failures(db, founder, conversation):
     agent, _ = make_agent([ask(("jobs_today", {})), say("Done.")], tools=[StubTool()])
     turn(agent, db, conversation, founder)
-    rows = usage_rows(db)
-    assert len(rows) == 2 and all(r.ok and r.kind == "chat" for r in rows)
+    rows = [u for u in usage_rows(db) if u.kind == "chat"]  # PostgreSQL adds a prefetch embedding row
+    assert len(rows) == 2 and all(r.ok for r in rows)
     assert all((r.backend, r.model, r.prompt_tokens, r.completion_tokens) == ("local", "fake-chat", 10, 5)
                for r in rows)
     assert {r.run_id for r in rows} == {db.scalars(select(ManiRun.id)).one()}
     failing, _ = make_agent(llm=FailingLLM([]))
     turn(failing, db, conversation, founder)
-    bad = usage_rows(db)[-1]
+    bad = [u for u in usage_rows(db) if u.kind == "chat"][-1]
     assert bad.ok is False and bad.kind == "chat" and bad.backend == "local"
 
 

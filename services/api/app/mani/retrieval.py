@@ -2,7 +2,8 @@
 
 On PostgreSQL two searches run, by meaning (pgvector cosine distance) and by words
 (full-text rank), and their results are merged with reciprocal rank fusion. A requirement ID in
-the question (AUTH-13) puts the chunks that name it first. SQLite has no vectors, so the API
+the question (AUTH-13) puts the chunks that name it first. Documents count more than code, and a
+passage far weaker than the best one is left out. SQLite has no vectors, so the API
 tests there get a plain keyword score. Only chunks of active sources are searched."""
 import re
 from collections import defaultdict
@@ -16,6 +17,8 @@ from app.mani.models import ManiChunk, ManiSource
 
 RRF_K = 60  # the usual constant: a rank-1 hit is worth 1/61, rank-10 1/70
 ID_BOOST = 1.0  # far above any fused score (at most about 0.033), so a named ID sorts first
+KIND_WEIGHT = {"doc": 1.5}  # prose answers most questions; code and data keep weight 1.0
+MIN_RELATIVE = 0.5  # a passage scoring under half of the best one is not returned
 _STOP = {"a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for", "from", "how", "i", "if",
          "in", "is", "it", "me", "my", "of", "on", "or", "so", "the", "to", "we", "what", "when", "where",
          "which", "who", "why", "will", "with", "you", "our", "us", "that", "this", "there", "than", "then"}
@@ -40,9 +43,11 @@ class HybridRetriever:
             scores = self._postgres_scores(db, query, wanted, limit)
         else:
             scores = self._keyword_scores(db, query, wanted)
+        scores = self._weighted(db, scores)
         ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:limit]
         if not ranked:
             return []
+        ranked = [(i, s) for i, s in ranked if s >= ranked[0][1] * MIN_RELATIVE]
         rows = db.execute(
             select(ManiChunk, ManiSource).join(ManiSource, ManiSource.id == ManiChunk.source_id)
             .where(ManiChunk.id.in_([chunk_id for chunk_id, _ in ranked]))).all()
@@ -55,6 +60,16 @@ class HybridRetriever:
                 title=source.title, kind=source.kind, path=source.path, requirement_id=match,
                 commit_id=source.commit_id, as_of=source.indexed_at), score))
         return passages
+
+    @staticmethod
+    def _weighted(db: Session, scores: dict) -> dict:
+        """Scores times the weight of the kind of source each chunk comes from."""
+        if not scores:
+            return scores
+        kinds = dict(db.execute(
+            select(ManiChunk.id, ManiSource.kind).join(ManiSource, ManiSource.id == ManiChunk.source_id)
+            .where(ManiChunk.id.in_(list(scores)))).all())
+        return {i: score * KIND_WEIGHT.get(kinds.get(i), 1.0) for i, score in scores.items()}
 
     # ---- PostgreSQL: vectors, full text, fusion --------------------------------------------
 

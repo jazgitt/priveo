@@ -143,3 +143,18 @@ def test_requirement_id_boost_on_postgresql(db, engine):
     found = HybridRetriever(FakeEmbedder()).search(db, "crew wash cars every morning ADM-PAY-04")
     assert found[0].citation.requirement_id == "ADM-PAY-04"
     assert any("wash cars" in p.text for p in found)
+
+
+def test_a_document_outranks_code_with_the_same_words(db):
+    text = "subscription inactive after seven days over due"
+    add(db, "services/api/app/billing/service.py", "service.py", "code", [("def mark", text, [])])
+    add(db, "docs/rules.md", "Rules", "doc", [("Billing", text, [])])
+    found = HybridRetriever(FakeEmbedder()).search(db, "subscription inactive seven days over due")
+    assert [p.citation.kind for p in found][0] == "doc"
+
+
+def test_a_passage_far_weaker_than_the_best_is_left_out(db):
+    add(db, "docs/a.md", "A", "doc", [("Billing", "invoice invoice invoice reminders reminders", [])])
+    add(db, "docs/b.md", "B", "doc", [("Notes", " ".join(["filler"] * 200) + " invoice", [])])
+    found = HybridRetriever(FakeEmbedder()).search(db, "invoice reminders")
+    assert [p.citation.path for p in found] == ["docs/a.md"]
