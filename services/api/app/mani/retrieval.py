@@ -2,11 +2,16 @@
 
 On PostgreSQL two searches run, by meaning (pgvector cosine distance) and by words
 (full-text rank), and their results are merged with reciprocal rank fusion. A requirement ID in
-the question (AUTH-13) puts the chunks that name it first. Documents count more than code, and a
-passage far weaker than the best one is left out. SQLite has no vectors, so the API
-tests there get a plain keyword score. Only chunks of active sources are searched."""
+the question (AUTH-13) puts the chunks that name it first. A question that asks two things
+("which jobs run, and where") is also searched as each half, so a fact for either half is found.
+A passage far weaker than the best one is left out, and one source supplies at most a few passages,
+so near copies do not crowd out the rest; a document the question names by its file name
+supplies more. SQLite has no vectors, so the API tests there get a plain keyword score. Only chunks of
+active sources are searched."""
 import re
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import Session
@@ -17,8 +22,11 @@ from app.mani.models import ManiChunk, ManiSource
 
 RRF_K = 60  # the usual constant: a rank-1 hit is worth 1/61, rank-10 1/70
 ID_BOOST = 1.0  # far above any fused score (at most about 0.033), so a named ID sorts first
-KIND_WEIGHT = {"doc": 1.5}  # prose answers most questions; code and data keep weight 1.0
 MIN_RELATIVE = 0.5  # a passage scoring under half of the best one is not returned
+PER_SOURCE = 2  # at most this many passages from one file or document
+PER_NAMED_SOURCE = 4  # the same, for a file the question names ("the system component diagram")
+MIN_PART_TERMS = 2  # a half of a two-part question needs this many meaningful words to be searched alone
+DEPTH = 100  # how far down each of the two searches is read before they are fused
 _STOP = {"a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for", "from", "how", "i", "if",
          "in", "is", "it", "me", "my", "of", "on", "or", "so", "the", "to", "we", "what", "when", "where",
          "which", "who", "why", "will", "with", "you", "our", "us", "that", "this", "there", "than", "then"}
@@ -31,26 +39,68 @@ def _terms(query: str) -> list[str]:
     return list(dict.fromkeys(w for w in words if len(w) > 1 and w not in _STOP))
 
 
+def _parts(query: str) -> list[str]:
+    """The halves of a question that asks two things, joined by "and" (empty when it asks one)."""
+    halves = [h.strip(" ,?.") for h in re.split(r",?\s+and\s+", query, maxsplit=1, flags=re.I)]
+    if len(halves) == 2 and all(len(_terms(h)) >= MIN_PART_TERMS for h in halves):
+        return halves
+    return []
+
+
+def _names_source(path: str, terms: list[str]) -> bool:
+    """True when every word of the file's name is in the question: "system-component-diagram.md"."""
+    stem = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    words = [w.lower() for w in re.split(r"[^A-Za-z0-9]+", stem) if w]
+    return len(words) >= 2 and all(w in terms or w.rstrip("s") in terms or w + "s" in terms for w in words)
+
+
+def content_terms(query: str, ignore: frozenset[str] = frozenset()) -> list[str]:
+    """The meaningful words of a message, without the words in `ignore`."""
+    return [t for t in _terms(query) if t not in ignore]
+
+
+@dataclass
+class RetrievalTrace:
+    """What one search did, for the evaluation. Pass one to `search` and it is filled in; the
+    search itself behaves the same with or without it. Ranks start at 1; `vector` and `lexical`
+    hold the two lists that were fused (empty on SQLite)."""
+
+    query: str = ""
+    vector: dict[Any, int] = field(default_factory=dict)
+    lexical: dict[Any, int] = field(default_factory=dict)
+    named: set = field(default_factory=set)  # chunks that name a requirement ID in the query
+    fused: dict[Any, float] = field(default_factory=dict)  # rank fusion plus the ID boost
+    top: list = field(default_factory=list)  # the best `limit` chunks after the per-source cap, best first
+    returned: list = field(default_factory=list)  # what is left after the score floor
+    embedder_failed: bool = False
+
+
 class HybridRetriever:
     def __init__(self, embedder: Embedder) -> None:
         self._embedder = embedder
 
-    def search(self, db: Session, query: str, *, limit: int = 6) -> list[Passage]:
+    def search(self, db: Session, query: str, *, limit: int = 6,
+               trace: RetrievalTrace | None = None) -> list[Passage]:
         if not query.strip() or limit <= 0:
             return []
         wanted = requirement_ids(query)
+        trace = trace if trace is not None else RetrievalTrace()
+        trace.query = query
         if db.get_bind().dialect.name == "postgresql":
-            scores, named = self._postgres_scores(db, query, wanted, limit)
+            scores, named = self._postgres_scores(db, query, wanted, limit, trace)
         else:
             scores, named = self._keyword_scores(db, query, wanted)
-        scores = self._weighted(db, scores)
-        ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:limit]
+        trace.named, trace.fused = set(named), dict(scores)
+        ranked = self._capped(db, sorted(scores.items(), key=lambda item: item[1], reverse=True), limit,
+                              _terms(query))
+        trace.top = [i for i, _ in ranked]
         if not ranked:
             return []
         # The floor is set by the best passage that does not rely on the ID boost, so a named ID
         # does not push out the passages around it.
         best = max((score for i, score in ranked if i not in named), default=ranked[0][1])
         ranked = [(i, score) for i, score in ranked if i in named or score >= best * MIN_RELATIVE]
+        trace.returned = [i for i, _ in ranked]
         rows = db.execute(
             select(ManiChunk, ManiSource).join(ManiSource, ManiSource.id == ManiChunk.source_id)
             .where(ManiChunk.id.in_([chunk_id for chunk_id, _ in ranked]))).all()
@@ -65,49 +115,71 @@ class HybridRetriever:
         return passages
 
     @staticmethod
-    def _weighted(db: Session, scores: dict) -> dict:
-        """Scores times the weight of the kind of source each chunk comes from."""
-        if not scores:
-            return scores
-        kinds = dict(db.execute(
-            select(ManiChunk.id, ManiSource.kind).join(ManiSource, ManiSource.id == ManiChunk.source_id)
-            .where(ManiChunk.id.in_(list(scores)))).all())
-        return {i: score * KIND_WEIGHT.get(kinds.get(i), 1.0) for i, score in scores.items()}
+    def _capped(db: Session, ranked: list, limit: int, terms: list[str] = ()) -> list:
+        """The best `limit` of the ranked chunks, taking at most PER_SOURCE from any one source
+        (PER_NAMED_SOURCE from a file the question names)."""
+        pool = ranked[:limit * PER_NAMED_SOURCE * 2]  # enough to fill `limit` even when sources hit the cap
+        rows = db.execute(select(ManiChunk.id, ManiChunk.source_id, ManiSource.path)
+                          .join(ManiSource, ManiSource.id == ManiChunk.source_id)
+                          .where(ManiChunk.id.in_([i for i, _ in pool]))).all()
+        sources = {chunk_id: source_id for chunk_id, source_id, _ in rows}
+        cap = {source_id: PER_NAMED_SOURCE if _names_source(path, list(terms)) else PER_SOURCE
+               for _, source_id, path in rows}
+        taken: dict = defaultdict(int)
+        kept = []
+        for chunk_id, score in pool:
+            if taken[sources[chunk_id]] >= cap[sources[chunk_id]]:
+                continue
+            taken[sources[chunk_id]] += 1
+            kept.append((chunk_id, score))
+            if len(kept) == limit:
+                break
+        return kept
 
     # ---- PostgreSQL: vectors, full text, fusion --------------------------------------------
 
-    def _postgres_scores(self, db: Session, query: str, wanted: list[str], limit: int) -> tuple[dict, set]:
-        k = max(limit * 4, 20)
+    def _postgres_scores(self, db: Session, query: str, wanted: list[str], limit: int,
+                         trace: RetrievalTrace) -> tuple[dict, set]:
+        k = max(limit * 4, DEPTH)
         active = (ManiSource.status == "active")
         base = select(ManiChunk.id).join(ManiSource, ManiSource.id == ManiChunk.source_id).where(active)
-        lists: list[list] = []
 
+        scores: dict = defaultdict(float)
+        for i, text in enumerate([query, *_parts(query)]):
+            for ranking in self._rankings(db, text, base, k, trace if i == 0 else RetrievalTrace()):
+                for rank, chunk_id in enumerate(ranking, start=1):
+                    scores[chunk_id] += 1.0 / (RRF_K + rank)
+        named = set(self._chunks_naming(db, wanted, base, k))
+        for chunk_id in named:
+            scores[chunk_id] += ID_BOOST
+        return scores, named
+
+    def _rankings(self, db: Session, query: str, base, k: int, trace: RetrievalTrace) -> list[list]:
+        """The vector list and the word list for one piece of text, best first."""
+        lists: list[list] = []
         try:
             vector = self._embedder.embed([query]).vectors[0]
         except ModelError:
             vector = None  # the words still work without the model
+            trace.embedder_failed = True
         if vector is not None:
             lists.append(list(db.scalars(
                 base.where(ManiChunk.embedding.is_not(None))
                 .order_by(ManiChunk.embedding.cosine_distance(vector)).limit(k))))
-
+            trace.vector = {chunk_id: rank for rank, chunk_id in enumerate(lists[-1], start=1)}
         terms = _terms(query)
         if terms:
-            document = func.to_tsvector("english", ManiChunk.text)
+            # The words of the path and the heading count too: a code chunk rarely says what it is for.
+            place = func.translate(ManiSource.path, "/_.-", "    ")
+            document = func.to_tsvector(
+                "english", place + " " + func.coalesce(ManiChunk.heading, "") + " " + ManiChunk.text)
             # Any word may match (OR), so a long question still finds a chunk with a few of them.
             tsquery = func.to_tsquery("english", " | ".join(terms))
             lists.append(list(db.scalars(
                 base.where(document.op("@@")(tsquery))
                 .order_by(func.ts_rank(document, tsquery).desc()).limit(k))))
-
-        scores: dict = defaultdict(float)
-        for ranking in lists:
-            for rank, chunk_id in enumerate(ranking, start=1):
-                scores[chunk_id] += 1.0 / (RRF_K + rank)
-        named = set(self._chunks_naming(db, wanted, base, k))
-        for chunk_id in named:
-            scores[chunk_id] += ID_BOOST
-        return scores, named
+            trace.lexical = {chunk_id: rank for rank, chunk_id in enumerate(lists[-1], start=1)}
+        return lists
 
     @staticmethod
     def _chunks_naming(db: Session, wanted: list[str], base, k: int) -> list:

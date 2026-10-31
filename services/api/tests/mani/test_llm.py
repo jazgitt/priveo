@@ -178,6 +178,32 @@ class TestChat:
 
 
 class TestEmbeddings:
+    def test_the_no_retention_rule_is_on_unless_the_evaluation_switches_it_off(self, server):
+        server.body = chat_reply({"content": "hi"})
+        build_llm(settings(server, backend="openrouter", key="k")).chat([ChatMessage("user", "x")])
+        assert server.requests[-1]["body"]["provider"]["zdr"] is True
+        relaxed = settings(server, backend="openrouter", key="k")
+        relaxed.eval_allow_data_retention = True
+        build_llm(relaxed).chat([ChatMessage("user", "x")])
+        provider = server.requests[-1]["body"]["provider"]
+        assert "zdr" not in provider and "data_collection" not in provider
+
+    def test_embeddings_can_stay_local_while_the_chat_is_hosted(self, server):
+        server.body = vectors_reply(1)
+        own = ManiSettings(_env_file=None, backend="openrouter", base_url="https://openrouter.invalid/api/v1",
+                           embedding_backend="local", embedding_base_url=server.url, MANI_API_KEY="sk-secret",
+                           embedding_model="embed-x")
+        assert own.embeddings_backend == "local" and own.backend == "openrouter"
+        build_embedder(own).embed(["a"])
+        request = server.requests[0]
+        assert "provider" not in request["body"] and "Authorization" not in request["headers"]
+
+    def test_embeddings_follow_the_chat_backend_unless_told_otherwise(self):
+        both = ManiSettings(_env_file=None, backend="openrouter", base_url="https://x.invalid/v1", MANI_API_KEY="k")
+        assert both.embeddings_backend == "openrouter" and both.embeddings_base_url == "https://x.invalid/v1"
+        split = ManiSettings(_env_file=None, backend="openrouter", embedding_backend="local", MANI_API_KEY="k")
+        assert split.embeddings_base_url == "http://localhost:11434/v1"
+
     def test_local_asks_for_1024_and_keeps_order(self, server):
         # The server answers out of order; the adapter must restore input order.
         reply = vectors_reply(3)

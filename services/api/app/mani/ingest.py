@@ -26,6 +26,11 @@ MAX_FILE_BYTES = 1_000_000
 CHUNK_CHARS = 1200  # a chunk is cut at this size, on a paragraph or line where it can be
 OVERLAP_CHARS = 150  # the tail of a chunk repeated at the start of the next one in a section
 EMBED_BATCH = 32
+# Bump this when the way a file is turned into stored text changes (the scrubber, the chunking, what
+# is embedded), so unchanged files are read again. It is part of each file's change check.
+INDEX_VERSION = 2
+REPO_FACTS_PATH = "repo-facts.md"  # not a file: facts worked out from the checkout, indexed like a document
+_MIGRATION_FILE = re.compile(r"^\d{8}_(\d{4})_(\w+)\.py$")
 
 # A requirement ID such as AUTH-13, ADM-CNC-10, CRW-ACC-07 or BU-2. The skip list holds
 # common look-alikes (UTF-8, SHA-256).
@@ -186,7 +191,26 @@ class IngestReport:
     tokens: int = 0
 
 
+def repo_facts(root: Path) -> str | None:
+    """Facts that no single file states, such as which migration is the latest."""
+    versions = Path(root) / "services" / "api" / "migrations" / "versions"
+    found = sorted((m.group(1), m.group(2), f.name) for f in versions.glob("*.py")
+                   if (m := _MIGRATION_FILE.match(f.name))) if versions.is_dir() else []
+    if not found:
+        return None
+    number, name, filename = found[-1]
+    return (f"# Repository facts: database migrations\n\n"
+            f"The latest database migration (the Alembic head) is {number}, named {name}, "
+            f"in the file services/api/migrations/versions/{filename}. "
+            f"There are {len(found)} migrations in all, numbered {found[0][0]} to {number}.\n")
+
+
 def _read(root: Path, source: SourceFile) -> tuple[bytes, str]:
+    if source.path == REPO_FACTS_PATH:
+        text = repo_facts(root)
+        if text is None:
+            raise ValueError("No migrations found.")
+        return text.encode("utf-8"), text
     path = root / source.path
     size = path.stat().st_size
     if size > MAX_FILE_BYTES:
@@ -220,6 +244,12 @@ def drop_sections(path: str, text: str) -> str:
     return "\n".join(kept)
 
 
+def embedded_text(path: str, chunk: Chunk) -> str:
+    """What the embedder sees: the file path and heading ahead of the text, so a question that
+    names a place (the vercel config, the migrations) lands near the chunks of that place."""
+    return "\n".join(part for part in (path, chunk.heading, chunk.text) if part)
+
+
 def _embed(embedder: Embedder, texts: list[str]) -> tuple[list[list[float]], int]:
     vectors: list[list[float]] = []
     tokens = 0
@@ -250,6 +280,8 @@ def ingest(db: Session, root: Path, embedder: Embedder, scrubber: Scrubber, *,
     stamp = now or utcnow()
     commit = commit_id or ""
     files = discover(root)
+    if repo_facts(root) is not None:
+        files.append(SourceFile(REPO_FACTS_PATH, "doc", "Repository facts"))
     existing = {row.path: row for row in db.scalars(select(ManiSource))}
 
     for source in files:
@@ -259,7 +291,7 @@ def ingest(db: Session, root: Path, embedder: Embedder, scrubber: Scrubber, *,
             if source.path in EXCLUDE_SECTIONS:
                 text = drop_sections(source.path, text)
                 raw = text.encode("utf-8")
-            digest = hashlib.sha256(raw).hexdigest()
+            digest = hashlib.sha256(raw + f"|index-v{INDEX_VERSION}".encode()).hexdigest()
             if (row is not None and row.status == "active" and row.content_hash == digest
                     and row.embedding_model == embedder.model
                     and row.embedding_dimensions == embedder.dimensions):
@@ -272,8 +304,7 @@ def ingest(db: Session, root: Path, embedder: Embedder, scrubber: Scrubber, *,
             # Scrub first. Everything after this point sees only the scrubbed text.
             clean = scrubber.scrub(text, source_path=source.path).text
             chunks = chunk_text(source, clean)
-            vectors, tokens = _embed(
-                embedder, [f"{c.heading}\n{c.text}" if c.heading else c.text for c in chunks])
+            vectors, tokens = _embed(embedder, [embedded_text(source.path, c) for c in chunks])
 
             if row is None:
                 row = ManiSource(path=source.path)

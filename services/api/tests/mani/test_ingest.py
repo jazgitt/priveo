@@ -278,4 +278,31 @@ def test_an_excluded_section_is_dropped_to_the_next_heading_of_its_level():
 def test_the_evaluation_answer_key_is_not_indexed():
     from app.mani.sources import is_included
     assert not is_included("docs/agent/mani-question-set-review.md")
+    for part in ("A1", "A2", "B", "C", "D"):
+        assert not is_included(f"docs/agent/mani-question-set-review-{part}.md")
     assert is_included("docs/agent/agent-architecure.md")
+
+
+def test_the_embedder_sees_the_file_path_before_the_heading_and_text(db, repo):
+    embedder = FakeEmbedder()
+    run(db, repo, embedder)
+    sent = [t for call in embedder.calls for t in (call if isinstance(call, list) else [call])]
+    assert any(t.startswith("services/api/app/billing/service.py\ndef mark_overdue()") for t in sent)
+
+
+def test_the_latest_migration_is_indexed_as_a_repository_fact(db, repo):
+    versions = repo / "services/api/migrations/versions"
+    versions.mkdir(parents=True)
+    for name in ("20261025_0040_plan_change_charge.py", "20261030_0042_mani_foundation.py",
+                 "20261030_0041_plan_vehicle_category.py"):
+        (versions / name).write_text('"""x"""\n')
+    run(db, repo)
+    fact = " ".join(db.scalars(select(ManiChunk.text).join(ManiSource, ManiSource.id == ManiChunk.source_id)
+                               .where(ManiSource.path == "repo-facts.md")))
+    assert "head) is 0042, named mani_foundation" in fact and "3 migrations" in fact
+
+
+def test_a_new_index_version_reads_unchanged_files_again(db, repo, monkeypatch):
+    run(db, repo)
+    monkeypatch.setattr("app.mani.ingest.INDEX_VERSION", 3)
+    assert run(db, repo).updated == 3

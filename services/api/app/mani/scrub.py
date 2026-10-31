@@ -43,7 +43,9 @@ _QUOTED = r"\"(?:[^\"\\\n]|\\.){0,2000}\"|'(?:[^'\\\n]|\\.){0,2000}'"
 _SECRET_KV = re.compile(
     _SECRET_KW + r"[\w-]{0,40}(?P<q>[\"']?)(?P<sep>[ \t]{0,20}[:=][ \t]{0,20})"
     r"(?P<val>" + _QUOTED + r"|[^\s,;&\"'<>)}\]]+)", re.I)
-_NOT_SECRET = frozenset({"", "none", "null", "true", "false", "str", "string", "required", "optional"})
+# Type names too: `access_token_minutes: int = 15` is a declaration, not a secret.
+_NOT_SECRET = frozenset({"", "none", "null", "true", "false", "str", "string", "required", "optional",
+                         "int", "float", "bool", "bytes", "number", "boolean"})
 # A crew password is the name plus four digits and a dollar sign (`Raj1111$`).
 _CREW_PASSWORD = re.compile(r"(?<![A-Za-z0-9])[A-Z][a-z]{1,15}\d{4}\$")
 

@@ -3,16 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { getSources, type Source } from "@/api/mani";
 import { DataTable } from "@/blocks/DataTable";
 import { DetailList, EmptyState, ErrorState } from "@/blocks/layout";
-import { StatusBadge } from "@/blocks/status";
 import { showDate } from "@/components/format";
 
-const STATUS: Record<Source["status"], { label: string; tone: "ok" | "neutral" | "error" }> = {
-  active: { label: "Active", tone: "ok" },
-  deleted: { label: "Deleted", tone: "neutral" },
-  failed: { label: "Failed", tone: "error" },
-};
+const CATEGORY: Record<string, string> = { doc: "Documents", code: "Code", config: "Configuration", data: "Data" };
 
-/** The files Mani reads, with when each was last indexed. */
+interface Category { kind: string; name: string; sources: number; chunks: number; failed: number; indexed: string | null }
+
+/** One row per kind of source: how many are indexed, their chunks, and the latest index date. */
+function categories(items: Source[]): Category[] {
+  const by = new Map<string, Category>();
+  for (const s of items) {
+    if (s.status === "deleted") continue;
+    const row = by.get(s.kind) ?? { kind: s.kind, name: CATEGORY[s.kind] ?? s.kind, sources: 0, chunks: 0, failed: 0, indexed: null };
+    if (s.status === "failed") row.failed += 1;
+    else { row.sources += 1; row.chunks += s.chunks; }
+    if (s.indexed_at && (!row.indexed || s.indexed_at > row.indexed)) row.indexed = s.indexed_at;
+    by.set(s.kind, row);
+  }
+  return [...by.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** What Mani reads, by kind of source. The full file list is not shown. */
 export function SourcesPanel() {
   const list = useQuery({ queryKey: ["mani", "sources"], queryFn: getSources });
   return (
@@ -25,16 +36,16 @@ export function SourcesPanel() {
         ]} />
       )}
       <DataTable
-        rows={list.data?.items}
+        rows={list.data ? categories(list.data.items) : undefined}
         loading={list.isLoading}
-        rowKey={(s) => s.path}
+        rowKey={(c) => c.kind}
         empty={<EmptyState title="No sources indexed yet" />}
         columns={[
-          { key: "title", header: "Source", wrap: true, cell: (s) => (<><span className="font-medium">{s.title}</span><br /><span className="text-xs text-muted-foreground">{s.path}</span></>) },
-          { key: "kind", header: "Kind", width: "6rem", cell: (s) => s.kind },
-          { key: "status", header: "Status", width: "7rem", cell: (s) => <StatusBadge status={STATUS[s.status].label} tone={STATUS[s.status].tone} /> },
-          { key: "indexed", header: "Indexed", width: "8rem", cell: (s) => showDate(s.indexed_at) },
-          { key: "chunks", header: "Chunks", width: "6rem", align: "right", cell: (s) => s.chunks },
+          { key: "category", header: "Category", wrap: true, cell: (c) => <span className="font-medium">{c.name}</span> },
+          { key: "sources", header: "Sources", width: "7rem", align: "right", cell: (c) => c.sources },
+          { key: "chunks", header: "Chunks", width: "7rem", align: "right", cell: (c) => c.chunks },
+          { key: "failed", header: "Failed", width: "7rem", align: "right", cell: (c) => c.failed },
+          { key: "indexed", header: "Last indexed", width: "9rem", cell: (c) => (c.indexed ? showDate(c.indexed) : "") },
         ]}
       />
     </div>

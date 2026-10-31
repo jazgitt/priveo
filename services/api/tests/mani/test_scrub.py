@@ -233,3 +233,9 @@ def test_final_sweep_no_planted_value_survives():
     for kept in ("Asha Rao", "Palm Meadows", "Raj", "9000000002", "ADMIN_PASSWORD", "DATABASE_URL",
                  "db.example.com", "password_hash"):
         assert kept in out, kept
+
+
+def test_a_type_annotation_after_a_token_name_is_not_a_secret():
+    text = "access_token_minutes: int = 15\n    refresh_token_days: float = 30"
+    assert PatternScrubber().scrub(text).text == text
+    assert "[redacted:secret]" in PatternScrubber().scrub("token: abcdef123456").text

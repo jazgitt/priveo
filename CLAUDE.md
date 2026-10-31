@@ -10,9 +10,11 @@ As of 24 Oct 2026, `main` (migration head 0039) holds the whole build, including
 
 Last known from 13 Oct 2026 and not rechecked: provider keys will be supplied offline, so do not claim live integration; the Resend key has been provided (25 Oct 2026) and only the sending-domain verification is left, by the owner, before real email can be called live; push is a logging sender and media a local development store; PDF save/share, immediate real-time transport, S3 and device/release validation were pending. The automatic planner is coded and default-disabled. Before assuming a migration is applied to an application database, check it. The requirement-level audit in `docs/coverage/requirements-audit.md` is a static snapshot from 13 Oct 2026 and does not cover V2. Test coverage evidence is in `docs/coverage/unit-test-coverage.md`.
 
-Owner answers of 25 Oct 2026: an add-on payment becomes Over due the moment its service completes (built, `billing.add_on_service_completed`); customers cannot choose a Weekly or Cycle pattern, it stays admin-only; add-ons are created and priced by the admin in the catalogue, so there is no price question. There are no open owner questions (a missed Interior job is rescheduled for the next day only, ADM-CNC-10). The Draft requirement rows of the 23 Oct review, the plan-change charge (the admin decides per customer) and the add-on rules were all answered or confirmed on 25 Oct 2026.
+There are no open owner questions as of 25 Oct 2026. Functional rules and owner answers live in `docs/reqs/`, not in this file.
 
-Build and test commands (from the repo root):
+## Build and test commands
+
+Run these from the repo root:
 - API: `cd services/api && .venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. Export the contract with `scripts/export_openapi.py`.
 - PostgreSQL checks: from `services/api`, `.venv/Scripts/python scripts/test_postgres.py` creates, tests and stops a disposable local cluster. Set `POSTGRES_BIN` for another PostgreSQL installation. Never use an application database as `TEST_DATABASE_URL`; the test fixtures drop its tables.
 - Portal: from `apps/web`, `npm run lint`, `npm test`, `npm run build`.
@@ -48,15 +50,6 @@ Flutter (Riverpod, go_router, feature folders) for the app. Python FastAPI with 
 - **Format:** tables with columns ID, Requirement, Status. Plain, short sentences. English only. Only functional requirements.
 - **Dates** in the app are `dd-Mon-yy`, for example `07-Nov-26`. Currency is rupees and prices include GST.
 - **Version and sources:** bump the version line at the top of a file when its content changes.
-
-## Domain facts to keep straight
-
-- Services: Cleaning-External (20 min, every day), Cleaning-Internal (20 min, on the interior care day), Deep Spa (2 hours). Each service is a separate job. Deep Spa is not in the plan. A subscriber buys it separately as an add-on, proposing one date and a finish-by time. A customer without a subscription can take it as a standalone service; how they do that is not decided yet (`ADD-15`). Scheduling does not wait for its payment in MVP.
-- A visit is Completed only when all its jobs are done or skipped.
-- Billing cycle is 30 calendar days from the first service date. Payments are manual by UPI (statuses Due, Over due, Initiated, Received). A payment Over due for 7 days makes a subscription Inactive.
-- A schedule is frozen once, by 8 PM the day before its first day (a weekly schedule before the week starts). Customers change their schedule until 9 PM the day before. The admin is not bound by the 9 PM rule.
-- Ratings are general to the visit and not given to any crew member. No crew member sees a customer's name or mobile number.
-- Customers sign in by email: an emailed 6-digit code on first sign-in, then a password. Only customers the admin has created can sign in. Crew sign in with mobile number and password. Admins sign in with a user ID (the first is `priveopapa`) and password. Passwords are never sent by SMS or WhatsApp: the admin sees a new crew password once and hands it over. The admin password comes from `.env`, never from the repo.
 
 ## Working conventions
 

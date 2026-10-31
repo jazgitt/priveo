@@ -28,6 +28,7 @@ from app.mani.contracts import (
 # Sent on every OpenRouter request, chat and embeddings: no data kept or trained on, only
 # zero-data-retention providers, no other provider tried (D8).
 _PRIVACY = {"data_collection": "deny", "zdr": True, "allow_fallbacks": False, "require_parameters": True}
+_RELAXED = {"allow_fallbacks": False, "require_parameters": True}  # evaluation only: no retention rule
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
 _BODY_LIMIT = 300  # characters of an error body kept in a message
 
@@ -42,13 +43,16 @@ def _check_backend(backend: str, api_key: str) -> None:
 class _Endpoint:
     """The shared HTTP part: headers, the privacy block and error mapping."""
 
-    def __init__(self, settings: ManiSettings, model: str) -> None:
-        _check_backend(settings.backend, settings.api_key)
-        self.backend = settings.backend
+    def __init__(self, settings: ManiSettings, model: str, *, backend: str | None = None,
+                 base_url: str | None = None) -> None:
+        backend = backend or settings.backend
+        _check_backend(backend, settings.api_key)
+        self.backend = backend
         self.model = model
-        self._base = settings.base_url.rstrip("/")
-        self._key = settings.api_key if settings.backend == "openrouter" else ""
+        self._base = (base_url or settings.base_url).rstrip("/")
+        self._key = settings.api_key if backend == "openrouter" else ""
         self._timeout = settings.request_timeout_seconds
+        self._provider = _RELAXED if settings.eval_allow_data_retention else _PRIVACY
 
     def _clean(self, text: str) -> str:
         """Truncate and make sure the key cannot leak through an echoed body."""
@@ -60,7 +64,7 @@ class _Endpoint:
         payload = {**body, "model": self.model}
         headers = {"Content-Type": "application/json"}
         if self.backend == "openrouter":
-            payload["provider"] = dict(_PRIVACY)
+            payload["provider"] = dict(self._provider)
             headers["Authorization"] = f"Bearer {self._key}"
         request = urllib.request.Request(
             self._base + path, data=json.dumps(payload).encode(), headers=headers, method="POST")
@@ -180,7 +184,8 @@ class OpenAICompatibleEmbedder(_Endpoint):
     dimensions = EMBEDDING_DIMENSIONS
 
     def __init__(self, settings: ManiSettings) -> None:
-        super().__init__(settings, settings.embedding_model)
+        super().__init__(settings, settings.embedding_model, backend=settings.embeddings_backend,
+                         base_url=settings.embeddings_base_url)
 
     def embed(self, texts: Sequence[str]) -> EmbedResult:
         if not texts:

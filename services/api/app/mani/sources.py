@@ -21,8 +21,8 @@ INCLUDE = (
     "docs/hosting-assessment/", "docs/design/", "docs/testing/",
     "docs/feature-status.json", "docs/overnight-build-report.md",
     "services/api/app/", "services/api/migrations/", "services/api/scripts/",
-    "services/api/pyproject.toml",
-    "apps/web/src/", "apps/mobile/lib/",
+    "services/api/pyproject.toml", "services/api/vercel.json",
+    "apps/web/src/", "apps/mobile/lib/", "apps/mobile/tool/",
     "packages/api-contract/openapi.json",
     "docs/brand/tokens.json", "tools/",
 )
@@ -51,7 +51,10 @@ EXCLUDE_PATHS = (
     "services/api/scripts/test_data.py", "services/api/scripts/seed_shared_test_data.py",
     "services/api/scripts/smoke_test.py",
     "tools/test-data/",
-    "docs/agent/mani-question-set-review.md",  # the evaluation answer key, owner decision 31-Oct
+    # the evaluation answer key and its five parts, owner decision 31-Oct
+    "docs/agent/mani-question-set-review.md", "docs/agent/mani-question-set-review-A1.md",
+    "docs/agent/mani-question-set-review-A2.md", "docs/agent/mani-question-set-review-B.md",
+    "docs/agent/mani-question-set-review-C.md", "docs/agent/mani-question-set-review-D.md",
 )
 
 # Sections left out of an indexed file: path -> heading prefixes. A section runs from its heading

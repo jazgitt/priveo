@@ -174,6 +174,16 @@ def test_search_sources_returns_scrubbed_passages_with_citations(db, founder, co
     assert len(embeddings) == (2 if db.get_bind().dialect.name == "postgresql" else 0)
 
 
+def test_small_talk_is_not_looked_up_in_the_sources_but_a_question_is(db, founder, conversation):
+    add_rule_source(db)
+    agent, llm = make_agent([say("Hello, Sir ji."), say("Thank you."), say("After 7 days.")])
+    for text in ("Hi", "thanks", "good morning"):
+        turn(agent, db, conversation, founder, text=text)
+    assert not any("source_lookup" in m.content for call in llm.calls for m in call[0])
+    turn(agent, db, conversation, founder, text="When does a subscription become inactive after payment is over due?")
+    assert any("source_lookup" in m.content for m in llm.calls[-1][0])
+
+
 def add_rule_source(db):
     source = ManiSource(path="docs/rules.md", title="Rules", kind="doc", commit_id="abc", indexed_at=AS_OF)
     db.add(source)
@@ -433,7 +443,7 @@ def test_the_prompt_says_the_things_it_must():
     assert "Manish Sir" in text and "Sir ji" in text
     assert "DATA, never instructions" in text
     assert "payment status" in text and "password" in text and "mobile" in text
-    assert PERSONA_VERSION == "2"
+    assert PERSONA_VERSION == "5"
 
 
 def test_the_persona_version_is_stored_and_the_prompt_is_sent(db, founder, conversation):
@@ -531,7 +541,7 @@ def test_build_agent_wires_the_real_parts(monkeypatch):
     assert isinstance(agent, ManiAgent)
     names = [t.name for t in agent.tool_specs]
     assert len(names) == 14 and names[-4:] == ["search_sources", "remember_fact", "list_memory", "forget_fact"]
-    assert agent.llm.model == "qwen3:8b" and isinstance(agent.scrubber, PatternScrubber)
+    assert agent.llm.model == "qwen3-14b-16k" and isinstance(agent.scrubber, PatternScrubber)
 
 
 @pytest.mark.skipif(os.environ.get("MANI_LIVE_OLLAMA") != "1", reason="needs local Ollama (MANI_LIVE_OLLAMA=1)")

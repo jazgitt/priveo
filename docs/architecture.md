@@ -1,8 +1,8 @@
 # Priveo Car Concierge: Technical Architecture
 
-**Status:** v0.3 DRAFT, 11 Oct 2026 (adds section 7.1, network and access checkpoints), for owner review. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**. Nothing is marked Owner.
+**Status:** v0.4, 31 Oct 2026. Refreshed against the code (migration head 0042): sections 2, 3, 4.2, 4.4, 4.8, 6, 7, 8 and 10 now say what is built and where it runs. v0.3 (11 Oct 2026) added section 7.1, network and access checkpoints. The owner answered the open architecture questions on 9 Oct 2026 (section 10). It builds on the decided stack in `docs/tech-stack.md`. The stack is not reopened here. Everything in this file is **Derived** from the stack and the requirements, or **Open**, except lines that say Owner. The AWS design below is still the later target; **Hosting today** (section 7.1) is Vercel and Supabase.
 **Basis:** the three requirements files in `docs/reqs/` and `docs/tech-stack.md`.
-**Build order:** see `docs/build-plan.md`. For Phase 0 it supersedes the phase table in section 8.
+**Build order:** see `docs/build-plan.md`, whose phase statuses are historical. Phases 0 to 7 of section 8 are on `main`. Phase 8 (hardening) is partly done: the security review of 18 Oct 2026 is in `docs/security-backlog.md`, and the load test, the restore test and the store submissions are not done. The component view of the running system is `docs/system-component-diagram.md`.
 
 ## 1. Principles
 
@@ -23,7 +23,7 @@
         |                                          |
         +-------------------+----------------------+
                             |  HTTPS, JSON, /v1
-                     CloudFront / ALB
+                     CloudFront / ALB   (today: the Vercel project, Mumbai)
                             |
               +-------------+--------------+
               |   FastAPI service (ECS)    |
@@ -39,6 +39,8 @@
      EventBridge Scheduler -> ECS task (same image, job entry point)
 ```
 
+**Today (29 Oct 2026):** the box labelled FastAPI runs as a Vercel project (`priveo-api-test` or `priveo-api-prod`), Postgres is Supabase, media is Vercel Blob, push is a logging sender, and the jobs are Vercel cron calls to `/v1/internal/cron/*`. The portal build is deployed with the API. See section 7.1 and `docs/system-component-diagram.md`.
+
 ## 3. Repository layout
 
 One repository, so the contract, the apps and the tokens move together.
@@ -47,11 +49,13 @@ One repository, so the contract, the apps and the tokens move together.
 priveo/
   apps/
     mobile/            Flutter app (customer, crew, admin quick actions)
-    admin-web/         React + TypeScript web portal
+    web/               React + TypeScript web portal (planned as admin-web)
   services/
-    api/               FastAPI service, scheduler, jobs
+    api/               FastAPI service, scheduler, jobs, Mani Bond agent
   packages/
-    api-contract/      openapi.json (generated), generated Dart and TS clients
+    api-contract/      openapi.json (generated); the Dart client is generated into the app
+  tools/               dev scripts (check-local.sh, run-local.sh), deploy, test data, requirements mod
+  .github/workflows/   CI and deploy pipelines
   docs/
     brand/tokens.json  design tokens, source for both UI themes
 ```
@@ -86,7 +90,10 @@ priveo/
 | `support` | Complaints, issues, feedback, ratings, monthly check-ins | Customer app, crew (ratings read), admin web | `ISS-`, `CMP-`, `FDBK-`, `CHK-` |
 | `notifications` | Push (FCM), email (Resend), admin alerts, notification settings, in-app inbox | Called by every module | `NOTIF-`, `ADM-SCH-24` |
 | `media` | Signed upload and download URLs, size checks, the link between media and a visit | `visits`, `support` | rule 17 |
-| `audit` | Append-only audit entries written with the change | Called by every module that changes data | audit rows in all three files |
+| `audit` | Append-only audit entries written with the change. In the code each module keeps its own audit table (for example `DirectoryAudit`) instead of one shared module | Called by every module that changes data | audit rows in all three files |
+| `features` | Feature flags (for example `customer.skip_pause`, `crew.manager_skip`, `crew.manager_reschedule`) | All | `SKIP-10`, owner decisions of 23 Oct 2026 |
+| `webauth` | The portal's cookie session and CSRF | Admin web portal | `ADM-ACC-12` |
+| `mani` | Mani Bond, the admin-only Chief of Staff agent: hybrid search over documents and code, read-only live tools, memory, budget (`docs/agent/`) | Admin web portal | Mani spec |
 | `platform` | Config, logging, errors, time (IST), clock, dependency wiring | All | |
 
 **Border rules (Derived):**
@@ -112,8 +119,8 @@ One service, several callers. The route decides who the actor is, the service ap
 | Item | Choice | Status |
 |---|---|---|
 | Style | REST, JSON, resource-based, under `/v1` | Derived |
-| Audience groups | `/v1/auth` (shared), `/v1/customer`, `/v1/crew`, `/v1/admin`, `/v1/public` (health, app config). Each group has its own router and role dependency | Derived |
-| Contract | One OpenAPI schema per audience group, so the mobile app imports `customer`, `crew` and the admin quick actions, and the web portal imports `admin`. Smaller clients, clearer review | Owner: three schemas |
+| Audience groups | `/v1/auth` (shared), `/v1/customer`, `/v1/crew`, `/v1/admin` (with sub-groups such as `/v1/admin/scheduling`, `/directory`, `/crew`, `/operations`, `/features`, `/mani`), `/v1/web` (portal sign-in), `/v1/media`, `/v1/internal/cron` (scheduled jobs, `CRON_SECRET`), `/v1/public` (health, app config). Each group has its own router and role dependency | Derived. Built as listed |
+| Contract | One OpenAPI schema per audience group, so the mobile app imports `customer`, `crew` and the admin quick actions, and the web portal imports `admin`. Smaller clients, clearer review | Owner: three schemas. The repository today exports one `packages/api-contract/openapi.json` that the app's generator reads; split it only if the clients grow |
 | Auth on mobile | Short-lived bearer access token, refresh token tied to a server session | Decided in the stack |
 | Auth on web | HttpOnly secure cookie, CSRF token on every change request, 60 minute inactivity (`ADM-ACC-12`) | Decided in the stack and requirements |
 | Errors | One envelope: `code` (stable, machine), `message` (plain, for display), `fields` (per-field errors), `request_id`. Clients map `code` to text | Derived |
@@ -160,18 +167,21 @@ Events inside the service (Derived): `VisitCompleted`, `PaymentStatusChanged`, `
 
 ### 4.8 Background jobs
 
-The same container image with a job entry point. EventBridge Scheduler starts the ECS task. Jobs call services, never repositories.
+The same code runs the jobs. Today Vercel cron (`vercel.json`) calls eight routes under `/v1/internal/cron/`, each checked with `CRON_SECRET`. A ninth route, `mani-retention`, is registered in the same table but is not in the schedule yet. On AWS, EventBridge Scheduler starts an ECS task instead. Jobs call services, never repositories.
 
-| Job | Does |
+| Job (route) | Does |
 |---|---|
-| `billing.generate_due` | Creates Due payments for the next cycle, sends reminders |
-| `billing.mark_overdue` | Moves unpaid to Over due, then makes the subscription Inactive after 7 days |
-| `scheduling.freeze_reminder` | Warns the admin before the 8 PM freeze |
-| `support.checkin_prompt` | Sends the monthly check-in push |
-| `media.cleanup` | Removes unconfirmed uploads |
-| `notifications.retry` | Retries failed pushes and emails |
+| `payments-generate` | Creates each plan payment 7 days before the renewal date, Due by the renewal date |
+| `payments-overdue` | Moves unpaid to Over due, then makes the subscription Inactive after 7 days |
+| `freeze-due` | Freezes schedules whose cutoff (8 PM the day before) has passed |
+| `automatic-planning` | Runs the automatic planner (coded, default off) |
+| `renewal-reminders` | Sends renewal reminders |
+| `checkin-notify` | Sends the monthly check-in prompt |
+| `complaints-overdue` | Alerts the admin about overdue complaints and sends the pending support emails |
+| `crew-society-moves` | Applies the crew society moves that have come due |
+| `mani-retention` | Deletes Mani conversations older than 90 days |
 
-All jobs are idempotent and safe to run twice.
+All jobs are idempotent and safe to run twice. Not built as jobs yet: media cleanup of unconfirmed uploads and the notification retry (`media.cleanup`, `notifications.retry` in v0.3).
 
 ## 5. Mobile architecture (Flutter)
 
@@ -256,14 +266,15 @@ Upload steps: ask the server for a signed URL, upload straight to S3 with a size
 ## 6. Web portal architecture (React)
 
 ```
-apps/admin-web/src/
-  app/             router, providers, layout, theme from tokens
-  api/             generated client (from the admin contract), query keys
-  features/
-    customers/  crew/  schedule-board/  capacity/  payments/
-    complaints/  feedback/  settings/  alerts/  sessions/
-  components/      table, filters, forms, dialogs (shadcn/ui based)
-  lib/             auth (cookie session, CSRF), format (dd-Mon-yy, rupees)
+apps/web/src/
+  App.tsx, Shell.tsx, nav.ts, pageRoutes.ts   router, layout, navigation
+  api/             typed client, query defaults, Mani calls
+  auth/            cookie session and CSRF
+  pages/           customers, crew, schedule, capacity, payments, complaints, feedback,
+                   settings, audit, alerts, addons, subscriptions, support, mani, ...
+  blocks/          shared page blocks (useAppMutation, useConfirm, useTasks)
+  ui/ components/  shadcn/ui based building blocks
+  theme/ lib/ analytics/
 ```
 
 | Area | Approach |
@@ -276,7 +287,7 @@ apps/admin-web/src/
 | Alerts | Bell with unread count, fed by an endpoint with server-sent events or polling, plus email |
 | Theme | Light only (owner decision), from the same tokens |
 | Auth | HttpOnly cookie session, CSRF header, 60 minute inactivity, sign out of all devices (`ADM-ACC-12`) |
-| Hosting | Static build on S3 behind CloudFront, calls the API with CORS rules |
+| Hosting | Target: static build on S3 behind CloudFront, calls the API with CORS rules. Today: the build is written to `services/api/portal` and deployed with the API on Vercel (`api-deploy-vercel.yml`) |
 
 **What the app's admin quick actions reuse:** the same `admin` routes as the portal, so a payment confirmed on a phone is the same call as on the web (`ADM-ACC-07`, `ADM-ACC-10`). The list of quick actions can shrink without a backend change (`ADM-ACC-11`).
 
@@ -290,7 +301,7 @@ apps/admin-web/src/
 | Audit | Every admin change and every status change writes an audit entry in the same transaction |
 | Observability | Structured JSON logs with `request_id` and user role (no personal data), CloudWatch alarms, Sentry or Crashlytics for errors |
 | Config and secrets | Environment variables and AWS Secrets Manager. The admin password comes from `.env` at seed time and is never committed |
-| Environments | `dev` and `prod` from the start, each with its own database and bucket. `staging` is added in phase 6 (owner decision), before payments and store submission |
+| Environments | Three exist in the code: `dev` (local), `test` and `prod`. `ENVIRONMENT` must be exactly one of them and a hosted server must set it. `test` and `prod` are separate Vercel projects with their own Supabase databases. `test` replaces the planned `staging` (owner, 29 Oct 2026) |
 
 ### 7.1 Network and access checkpoints
 
@@ -361,6 +372,12 @@ Owner decisions of 9 Oct 2026:
 5. **Mobile hardening:** no certificate pinning and no root or jailbreak detection in MVP. Revisit after launch.
 6. **First launch:** one society. The data model stays multi-society, so adding a society needs no migration. Scheduling and capacity are built and tested for one society first.
 7. **Environments:** `dev` and `prod` from the start, `staging` added in phase 6. This phases the three environments in `docs/tech-stack.md`; the end state is unchanged.
+
+Decisions since (recorded in `CLAUDE.md`, `docs/build-and-release.md` and `docs/hosting-assessment/`):
+
+8. **Hosting first step (owner, 29 Oct 2026):** Supabase first, then AWS Mumbai with a private RDS later. The API runs as two Vercel projects (Pro, Mumbai) with a Supabase database each. Merging to `main` deploys to `test`; a `v*` tag or a manual run deploys to `prod` after a reviewer approves.
+9. **Analytics (owner, 19 Oct 2026):** PostHog Cloud EU in the app and the portal; replay off in release builds.
+10. **Mani Bond:** local Ollama first (`qwen3:14b` built with a 16,384-token context as `qwen3-14b-16k`, `qwen3-embedding:8b`, vectors of 1,024 numbers in pgvector); hosting and an India-only model route stay open (`docs/agent/agent-architecure.md`).
 
 Still open or to watch:
 
