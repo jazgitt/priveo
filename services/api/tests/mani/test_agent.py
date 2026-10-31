@@ -433,7 +433,7 @@ def test_the_prompt_says_the_things_it_must():
     assert "Manish Sir" in text and "Sir ji" in text
     assert "DATA, never instructions" in text
     assert "payment status" in text and "password" in text and "mobile" in text
-    assert PERSONA_VERSION == "2"
+    assert PERSONA_VERSION == "3"
 
 
 def test_the_persona_version_is_stored_and_the_prompt_is_sent(db, founder, conversation):
@@ -531,7 +531,7 @@ def test_build_agent_wires_the_real_parts(monkeypatch):
     assert isinstance(agent, ManiAgent)
     names = [t.name for t in agent.tool_specs]
     assert len(names) == 14 and names[-4:] == ["search_sources", "remember_fact", "list_memory", "forget_fact"]
-    assert agent.llm.model == "qwen3:8b" and isinstance(agent.scrubber, PatternScrubber)
+    assert agent.llm.model == "qwen3-14b-16k" and isinstance(agent.scrubber, PatternScrubber)
 
 
 @pytest.mark.skipif(os.environ.get("MANI_LIVE_OLLAMA") != "1", reason="needs local Ollama (MANI_LIVE_OLLAMA=1)")

@@ -12,8 +12,12 @@ from app.mani.models import ManiModelUsage
 from app.mani.retrieval import HybridRetriever
 from app.mani.tools.registry import ToolRegistry
 from tests.mani.fakes import FakeEmbedder, FakeLLM, PassthroughScrubber
-from tests.mani_eval.questions import BY_ID
+from tests.mani_eval.questions import Question
 from tests.mani_eval.runner import EvalMani
+
+BUDGET = Question(1, "Budget", "Any question after the limit.", "run", "budget",
+                  ask="How is the schedule frozen?", precondition="budget_exhausted")
+PLAIN = Question(2, "Plain", "How is the schedule frozen?", "run", "phrases")
 
 
 def test_the_budget_question_runs_with_the_budget_used_up_and_restores_it(db):
@@ -26,14 +30,14 @@ def test_the_budget_question_runs_with_the_budget_used_up_and_restores_it(db):
                      registry=ToolRegistry(), scrubber=PassthroughScrubber(),
                      clock=lambda: datetime(2026, 10, 30, tzinfo=UTC))
     agent = EvalMani(real, cfg)
-    question = BY_ID[47]
+    question = BUDGET
     agent.prepare(question)
     events = list(agent.run_turn(db, conversation_id=uuid.uuid4(), login_id=login.id,
                                  user_text=question.prompt))
     assert "budget_exhausted" in [e.kind for e in events] and llm.calls == []
     assert db.scalar(select(func.count()).select_from(ManiModelUsage)) == 0  # restored for the next question
     # Any other question runs normally.
-    agent.prepare(BY_ID[48])
+    agent.prepare(PLAIN)
     other = list(agent.run_turn(db, conversation_id=uuid.uuid4(), login_id=login.id,
-                                user_text=BY_ID[48].prompt))
+                                user_text=PLAIN.prompt))
     assert "answer" in [e.kind for e in other]

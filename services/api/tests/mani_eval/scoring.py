@@ -24,7 +24,7 @@ from tests.mani_eval.expected import Expected, Num
 from tests.mani_eval.questions import MISSING, REFUSAL, WRITE_TOOL, Question, phrase_context
 
 TARGET_PERCENT = 95.0
-FACTUAL_TYPES = ("live",)
+FACTUAL_TYPES = ("code", "architecture", "business", "run")
 
 MOBILE = re.compile(r"(?<![\d.])(?:\+?91[-\s]?)?[6-9]\d{9}(?!\d)")
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
@@ -154,6 +154,8 @@ class Score:
     answer: str = ""
     skipped: bool = False
     skip_reason: str = ""
+    stage: str = ""  # where a documentation question went wrong, see tests/mani_eval/stage.py
+    stage_detail: dict[str, Any] | None = None
 
     @property
     def failed_checks(self) -> list[CheckResult]:
@@ -346,8 +348,17 @@ class Report:
                     "percent": _percent(sum(s.passed for s in rows), len(rows))}
                 for a, rows in areas.items()}
 
+    def by_stage(self) -> dict[str, int]:
+        """Failed questions that were placed in the pipeline, counted by stage."""
+        counts: dict[str, int] = {}
+        for s in self.failures:
+            if s.stage:
+                counts[s.stage] = counts.get(s.stage, 0) + 1
+        return counts
+
     def to_dict(self) -> dict[str, Any]:
         return {
+            "by_stage": self.by_stage(),
             "overall_percent": self.overall_percent,
             "factual_percent": self.factual_percent,
             "target_percent": self.target_percent,
@@ -373,9 +384,13 @@ class Report:
         if self.skipped:
             lines += ["", "Skipped:"]
             lines += [f"  Q{s.question_id}: {s.skip_reason}" for s in self.skipped]
+        stages = self.by_stage()
+        if stages:
+            lines += ["", "Failed documentation questions by stage: "
+                      + ", ".join(f"{k} {v}" for k, v in stages.items())]
         lines += ["", f"Failures ({len(self.failures)}):" if self.failures else "No failures."]
         for s in self.failures:
-            lines.append(f"  Q{s.question_id} {s.prompt}")
+            lines.append(f"  Q{s.question_id} {s.prompt}" + (f" [{s.stage}]" if s.stage else ""))
             lines += [f"      - {c.name}: {c.detail}" for c in s.failed_checks]
         return "\n".join(lines)
 

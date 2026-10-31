@@ -21,7 +21,9 @@ class ManiSettings(BaseSettings):
     backend: str = "local"
     # Ollama's OpenAI-compatible endpoint, or OpenRouter's.
     base_url: str = "http://localhost:11434/v1"
-    chat_model: str = "qwen3:8b"
+    # qwen3:14b with a 16,384-token window (scripts/setup_mani_models.sh). Ollama's own default of 4,096
+    # tokens is smaller than the persona, the tool list and eight passages, so the prompt would be cut.
+    chat_model: str = "qwen3-14b-16k"
     embedding_model: str = "qwen3-embedding:8b"
     # Only read for the `openrouter` backend. Never committed.
     api_key: str = Field(default="", validation_alias=AliasChoices(

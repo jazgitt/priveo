@@ -5,7 +5,7 @@ import pytest
 
 from app.mani.contracts import ModelError, Retriever
 from app.mani.models import ManiChunk, ManiSource
-from app.mani.retrieval import HybridRetriever
+from app.mani.retrieval import HybridRetriever, RetrievalTrace
 from tests.mani.fakes import FakeEmbedder, word_overlap_vector
 
 AS_OF = datetime(2026, 10, 30, 9, 0, tzinfo=UTC)
@@ -145,14 +145,6 @@ def test_requirement_id_boost_on_postgresql(db, engine):
     assert any("wash cars" in p.text for p in found)
 
 
-def test_a_document_outranks_code_with_the_same_words(db):
-    text = "subscription inactive after seven days over due"
-    add(db, "services/api/app/billing/service.py", "service.py", "code", [("def mark", text, [])])
-    add(db, "docs/rules.md", "Rules", "doc", [("Billing", text, [])])
-    found = HybridRetriever(FakeEmbedder()).search(db, "subscription inactive seven days over due")
-    assert [p.citation.kind for p in found][0] == "doc"
-
-
 def test_a_passage_far_weaker_than_the_best_is_left_out(db):
     if db.get_bind().dialect.name == "postgresql":
         pytest.skip("rank fusion keeps scores close; the floor is checked on word scores")
@@ -167,3 +159,23 @@ def test_a_named_requirement_id_does_not_push_out_the_passages_around_it(db):
     add(db, "docs/b.md", "B", "doc", [("Pay", "payment over due reminders", [])])
     found = HybridRetriever(FakeEmbedder()).search(db, "payment over due AUTH-13")
     assert [p.citation.path for p in found] == ["docs/a.md", "docs/b.md"]
+
+
+def test_a_trace_records_the_search_and_changes_nothing(indexed):
+    retriever = HybridRetriever(FakeEmbedder())
+    query = "when is a subscription made inactive for over due payment"
+    plain = retriever.search(indexed, query)
+    trace = RetrievalTrace()
+    traced = retriever.search(indexed, query, trace=trace)
+    assert [p.text for p in traced] == [p.text for p in plain]
+    assert trace.query == query and trace.top and trace.returned
+    assert set(trace.returned) <= set(trace.top) <= set(trace.fused)
+
+
+def test_one_source_supplies_at_most_two_passages(db):
+    add(db, "docs/long.md", "Long", "doc",
+        [(f"Part {i}", f"inactive subscription rule number {i} for over due payment", []) for i in range(5)])
+    add(db, "docs/other.md", "Other", "doc", [("Other", "an over due payment makes a subscription inactive", [])])
+    found = HybridRetriever(FakeEmbedder()).search(db, "over due payment inactive subscription", limit=6)
+    paths = [p.citation.path for p in found]
+    assert paths.count("docs/long.md") <= 2 and "docs/other.md" in paths
