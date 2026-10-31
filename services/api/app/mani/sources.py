@@ -51,7 +51,14 @@ EXCLUDE_PATHS = (
     "services/api/scripts/test_data.py", "services/api/scripts/seed_shared_test_data.py",
     "services/api/scripts/smoke_test.py",
     "tools/test-data/",
+    "docs/agent/mani-question-set-review.md",  # the evaluation answer key, owner decision 31-Oct
 )
+
+# Sections left out of an indexed file: path -> heading prefixes. A section runs from its heading
+# to the next heading of the same or a higher level.
+EXCLUDE_SECTIONS = {
+    "docs/agent/agent-architecure.md": ("## Appendix A: question set",),  # the 50 questions
+}
 
 # Excluded when any folder in the path has one of these names.
 EXCLUDE_DIRS = {

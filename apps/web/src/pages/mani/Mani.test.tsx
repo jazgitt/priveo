@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/App";
+import { setUnauthorizedListener } from "@/api/client";
 import { sendMessage, type TurnEvent } from "@/api/mani";
 import { AuthProvider } from "@/auth/AuthContext";
 import { ToastProvider } from "@/components";
@@ -212,6 +213,16 @@ describe("stream reader", () => {
     await expect(run()).rejects.toMatchObject({ status: 403 });
     expect(calls("/messages", "POST")[0][1].headers["X-CSRF-Token"]).toBe("tok123");
     document.cookie = "priveo_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  });
+
+  it("shows the sign-in prompt when the session has ended (401)", async () => {
+    const signedOut = vi.fn();
+    setUnauthorizedListener(signedOut);
+    routes["/v1/admin/mani/conversations/c1/messages"] = () => json(401, { code: "unauthorized", message: "Please sign in." });
+    const run = async () => { const out: TurnEvent[] = []; for await (const e of sendMessage("c1", "hi")) out.push(e); return out; };
+    await expect(run()).rejects.toMatchObject({ status: 401 });
+    expect(signedOut).toHaveBeenCalledTimes(1);
+    setUnauthorizedListener(null);
   });
 });
 

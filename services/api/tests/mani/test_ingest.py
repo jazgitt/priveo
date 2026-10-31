@@ -9,6 +9,7 @@ from app.mani.ingest import (
     IngestReport,
     chunk_code,
     chunk_markdown,
+    drop_sections,
     ingest,
     requirement_ids,
 )
@@ -263,3 +264,18 @@ def test_json_chunks_are_labelled_by_key():
     body = ",\n".join(f'  "key{i}": {{\n    "v": "{"x" * 200}"\n  }}' for i in range(12))
     chunks = chunk_code("{\n" + body + "\n}\n", json_like=True)
     assert len(chunks) > 1 and all(c.heading.startswith("key") for c in chunks[1:])
+
+
+def test_an_excluded_section_is_dropped_to_the_next_heading_of_its_level():
+    text = ("# T\n\n## A\nkeep a\n\n## Appendix A: question set (x)\nQ1 secret\n### Sub\nQ2 secret\n\n"
+            "## Appendix B: sources\nkeep b\n")
+    kept = drop_sections("docs/agent/agent-architecure.md", text)
+    assert "keep a" in kept and "keep b" in kept
+    assert "secret" not in kept and "Appendix A" not in kept
+    assert drop_sections("docs/other.md", text) == text
+
+
+def test_the_evaluation_answer_key_is_not_indexed():
+    from app.mani.sources import is_included
+    assert not is_included("docs/agent/mani-question-set-review.md")
+    assert is_included("docs/agent/agent-architecure.md")

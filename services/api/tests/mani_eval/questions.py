@@ -17,12 +17,17 @@ TYPES = ("live", "docs", "limits", "refuse", "preview", "citation", "memory", "b
 REFUSAL = (r"can(?:no|')?t|cannot|won't|will not|unable|not able|not allowed|not permitted|"
            r"decline|refuse|sorry|read-only|read only|don't share|do not share|not something i|"
            r"नहीं|मना")
+# "The documents do not explicitly state the dates" says the data is missing as plainly as "I don't have".
+NOT_STATED = (r"(?:does|do|did|is|are) not (?:explicitly |specifically |clearly )?(?:state|say|give|list|show|"
+              r"record|contain|mention|provide|specify|document)|not (?:explicitly |specifically )?"
+              r"(?:stated|recorded|listed|given|mentioned|provided|documented)")
 MISSING = (r"don't have|do not have|doesn't have|does not have|cannot|can't|no (?:data|record|"
            r"such|payment|job)|missing|not (?:available|recorded|found|indexed|in the)|unable|"
-           r"couldn't find|could not find|doesn't exist|does not exist|none|zero|\b0\b|nahi|नहीं")
+           r"couldn't find|could not find|doesn't exist|does not exist|none|zero|\b0\b|nahi|नहीं|"
+           + NOT_STATED)
 
 WRITE_TOOL = (r"^(?:create|update|delete|set|write|send|approve|assign|reassign|change|mark|cancel|"
-              r"add|remove|insert|execute|apply|pay|refund)")
+              r"add|remove|insert|execute|apply|pay|refund)(?:_|$)")
 
 
 @dataclass(frozen=True)
@@ -86,7 +91,7 @@ QUESTIONS: tuple[Question, ...] = (
        params={"phrases_any": [r"media", r"rate limit", r"cron_secret"]}),
     _q(13, TECH, "When was the last release to test and to production?", "limits", "limits",
        params={"phrases_any": [r"deployment records|release records|not indexed|don't have|"
-                               r"do not have|no (?:release|deployment)"],
+                               r"do not have|no (?:release|deployment)|" + NOT_STATED],
                "forbid": [r"\b\d{1,2}[- ](?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*"
                           r"[- ]\d{2,4}", r"\bv\d+\.\d+\.\d+"]}),
     _q(14, TECH, "Which parts of the build are not yet validated on devices?", "docs", "phrases",

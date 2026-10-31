@@ -4,7 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { api, ApiError, readCookie } from "./client";
+import { api, ApiError, notifyUnauthorized, readCookie } from "./client";
 
 export const MANI = "/v1/admin/mani";
 
@@ -129,7 +129,10 @@ export async function* sendMessage(conversationId: string, text: string, signal?
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     throw new ManiStreamError(0, "Cannot reach the server. Check the connection.");
   }
-  if (res.status === 401) throw new ManiStreamError(401, "Your session ended. Please sign in again.");
+  if (res.status === 401) {
+    notifyUnauthorized();
+    throw new ManiStreamError(401, "Your session ended. Please sign in again.");
+  }
   if (res.status === 403) throw new ManiStreamError(403, "Mani Bond is available to the Founder only.");
   if (!res.ok || !res.body) {
     let message = "Mani could not answer. Please try again.";

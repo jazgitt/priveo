@@ -28,6 +28,7 @@ from app.mani.contracts import (
     EmbedResult,
     LLMClient,
     ModelError,
+    Passage,
     Retriever,
     Scrubber,
     ToolCall,
@@ -140,6 +141,9 @@ class _Turn:
     user_message_id: uuid.UUID
     now: datetime
     citations: list[Citation] = field(default_factory=list)
+    # Passages looked up in code before the model ran. Cited only if no live tool was used.
+    prefetched: list[Citation] = field(default_factory=list)
+    live_tool_used: bool = False
 
     def cite(self, citation: Citation) -> None:
         key = (citation.kind, citation.path, citation.title, citation.requirement_id, citation.commit_id)
@@ -219,8 +223,9 @@ class ManiAgent:
     def _loop(self, turn: _Turn, history: list[ChatMessage], user_text: str) -> Iterator[TurnEvent]:
         db, run = turn.db, turn.run
         facts = memory.list_facts(db, limit=memory.PROMPT_FACTS, confirmed_only=True)
+        context = self._prefetch(turn, user_text)
         messages = [ChatMessage("system", build_system_prompt(facts, turn.now)), *history,
-                    ChatMessage("user", user_text)]
+                    *context, ChatMessage("user", user_text)]
         rounds = 0
         limit_note = ""
         while True:
@@ -252,6 +257,32 @@ class ManiAgent:
                 yield TurnEvent("tool_result", {"name": call.name, "summary": summary})
                 messages.append(ChatMessage("tool", content, tool_call_id=call.id, name=call.name))
             db.commit()
+
+    def _prefetch(self, turn: _Turn, user_text: str) -> list[ChatMessage]:
+        """Look the question up in the indexed sources before the model runs. A small model
+        often skips search_sources and answers from memory; this puts the documents in front
+        of it every time. A failed lookup is skipped: the model can still search itself."""
+        if self._stop_reason(turn):
+            return []
+        try:
+            passages = self._retrieve(turn, user_text)
+        except (ModelError, ToolError):
+            return []
+        except Exception:
+            log.exception("Mani prefetch failed")
+            turn.db.rollback()
+            return []
+        if not passages:
+            return []
+        turn.prefetched = [p.citation for p in passages]
+        items = [{"source": p.citation.title, "path": p.citation.path,
+                  "requirement_id": p.citation.requirement_id, "text": self.scrubber.scrub(p.text).text}
+                 for p in passages]
+        body = json.dumps({"tool": "source_lookup", "passages": items}, ensure_ascii=False, default=str)
+        note = ("Passages found in the indexed documents and code for the next question. Use them for "
+                "requirements, rules, code, migrations and releases, and name the file. They are not live "
+                "numbers: use the live tools for those.")
+        return [ChatMessage("system", f"{note}\n{DATA_OPEN}\n{body}\n{DATA_CLOSE}")]
 
     def _stop_reason(self, turn: _Turn) -> str:
         """Checked before every model call: the total budget, then this run's own limit."""
@@ -287,6 +318,9 @@ class ManiAgent:
         text = self.scrubber.scrub(content or "").text.strip() or NO_ANSWER_MESSAGE
         if note:
             text = f"{text}\n\n{note}"
+        if not turn.live_tool_used:  # a document answer: the looked-up passages are its evidence
+            for citation in turn.prefetched:
+                turn.cite(citation)
         citations = [citation_dict(c) for c in turn.citations]
         message = self._save_answer(turn, text, citations)
         self._finish(turn.db, turn.run, "succeeded")
@@ -316,6 +350,7 @@ class ManiAgent:
             turn.db.rollback()
             return self._report(call, "The tool failed.", {"error": "The tool failed. Say so; do not guess."})
         if call.name not in NO_CITATION:
+            turn.live_tool_used = True
             turn.cite(result.citation)
         return self._report(call, result.summary or f"{call.name} returned data.",
                             {"summary": result.summary, "as_of": result.citation.as_of.isoformat()
@@ -338,18 +373,22 @@ class ManiAgent:
             return self._forget(turn, args)
         return self.registry.run(turn.db, call.name, args, now=turn.now)
 
-    def _search(self, turn: _Turn, args: dict[str, Any]) -> ToolResult:
-        query = str(args.get("query") or "").strip()
-        if not query:
-            raise ToolError("search_sources needs a query.")
-        if self._stop_reason(turn):
-            raise ToolError("The usage budget is used up, so no search can run.")
+    def _retrieve(self, turn: _Turn, query: str) -> list[Passage]:
         token = _EMBED_CONTEXT.set((turn.db, turn.run.id))
         try:
             passages = self.retriever.search(turn.db, query, limit=SEARCH_LIMIT)
         finally:
             _EMBED_CONTEXT.reset(token)
         turn.db.commit()
+        return passages
+
+    def _search(self, turn: _Turn, args: dict[str, Any]) -> ToolResult:
+        query = str(args.get("query") or "").strip()
+        if not query:
+            raise ToolError("search_sources needs a query.")
+        if self._stop_reason(turn):
+            raise ToolError("The usage budget is used up, so no search can run.")
+        passages = self._retrieve(turn, query)
         now = turn.now
         items = []
         for p in passages:

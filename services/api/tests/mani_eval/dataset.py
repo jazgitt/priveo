@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import Engine, func, select
+from sqlalchemy import Engine, func, select, update
 from sqlalchemy.orm import Session
 
 from app.addons.models import AddonBooking
@@ -17,6 +17,7 @@ from app.customers.models import Customer, Subscription, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
 from app.platform.clock import IST
+from app.platform.db import Base
 from app.scheduling.models import Job, SchedulingCrew
 from app.support.models import Complaint, VisitRating
 from scripts.test_data import catalogue, initialize, open_database, refresh
@@ -66,8 +67,20 @@ def build_dataset(session: Session, now: datetime = FIXED_NOW) -> DatasetReport:
     initialize(engine, FIXTURE_PASSWORD, FIXTURE_ADMIN_PASSWORD)
     day = now.astimezone(IST).date()
     refresh(engine, [item["id"] for item in catalogue()], day, FIXTURE_PASSWORD)
+    _clamp_created_at(session, now)
     session.expire_all()
     return describe_dataset(session, day.isoformat())
+
+
+def _clamp_created_at(session: Session, now: datetime) -> None:
+    """The seed stamps new rows with the real clock, which can be after the fixed `now`. A
+    question about "so far" or "this week" would then miss them. Nothing is created in the
+    future of the day the eval pretends it is."""
+    for mapper in Base.registry.mappers:
+        column = mapper.local_table.c.get("created_at")
+        if column is not None:
+            session.execute(update(mapper.local_table).where(column > now).values(created_at=now))
+    session.commit()
 
 
 def describe_dataset(session: Session, today: str) -> DatasetReport:

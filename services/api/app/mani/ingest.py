@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.mani.contracts import Embedder, Scrubber
 from app.mani.models import ManiChunk, ManiSource
-from app.mani.sources import SourceFile, discover
+from app.mani.sources import EXCLUDE_SECTIONS, SourceFile, discover
 from app.platform.db import utcnow
 
 MAX_FILE_BYTES = 1_000_000
@@ -200,6 +200,26 @@ def _read(root: Path, source: SourceFile) -> tuple[bytes, str]:
         raise ValueError("The file is not UTF-8 text.") from exc
 
 
+def drop_sections(path: str, text: str) -> str:
+    """Remove the sections the source list leaves out of this file (see EXCLUDE_SECTIONS)."""
+    prefixes = EXCLUDE_SECTIONS.get(path)
+    if not prefixes:
+        return text
+    kept: list[str] = []
+    skipping_level = 0
+    for line in text.split("\n"):
+        heading = re.match(r"(#{1,6}) ", line)
+        if heading:
+            level = len(heading.group(1))
+            if skipping_level and level <= skipping_level:
+                skipping_level = 0
+            if not skipping_level and line.startswith(prefixes):
+                skipping_level = level
+        if not skipping_level:
+            kept.append(line)
+    return "\n".join(kept)
+
+
 def _embed(embedder: Embedder, texts: list[str]) -> tuple[list[list[float]], int]:
     vectors: list[list[float]] = []
     tokens = 0
@@ -236,6 +256,9 @@ def ingest(db: Session, root: Path, embedder: Embedder, scrubber: Scrubber, *,
         row = existing.get(source.path)
         try:
             raw, text = _read(root, source)
+            if source.path in EXCLUDE_SECTIONS:
+                text = drop_sections(source.path, text)
+                raw = text.encode("utf-8")
             digest = hashlib.sha256(raw).hexdigest()
             if (row is not None and row.status == "active" and row.content_hash == digest
                     and row.embedding_model == embedder.model
