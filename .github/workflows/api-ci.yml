@@ -2,6 +2,7 @@ name: api-ci
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "services/api/**"
       - "packages/api-contract/**"
@@ -10,8 +11,14 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR cancels the older run, and a draft PR is not checked until it is marked ready.
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     defaults:
       run:
