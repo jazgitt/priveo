@@ -251,6 +251,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--sources-postgres", metavar="DATABASE_URL",
                         help="search the sources on this local, ingested PostgreSQL database (read "
                              "only), so vector search is used")
+    parser.add_argument("--conversations", action="store_true",
+                        help="run the scripted multi-turn conversations (conversations.py) instead of the "
+                             "question set; --only then takes conversation numbers")
     args = parser.parse_args(argv)
     if not args.list and not args.agent:
         parser.error("give --list or --agent")
@@ -285,6 +288,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                         print(error, file=sys.stderr)
                         return 2
                     print("Searching the sources on PostgreSQL (read only).", file=sys.stderr, flush=True)
+                if args.conversations:
+                    from tests.mani_eval import conversations as convo
+
+                    picked = convo.CONVERSATIONS
+                    if args.only:
+                        wanted = {int(n) for n in args.only.split(",")}
+                        picked = tuple(c for c in picked if c.id in wanted)
+                    result = convo.run_conversations(agent, db, conversations=picked, expected=expected,
+                                                     dataset=dataset, progress=convo.stderr_progress)
+                    print(result.to_text())
+                    if args.out:
+                        result.save(args.out)
+                        print(f"\nSaved {args.out}")
+                    return 0 if result.all_passed else 1
                 chosen = tuple(q for name in args.sets for q in SETS[name]) if args.sets else ACTIVE
                 if args.only:
                     wanted = {int(n) for n in args.only.split(",")}
