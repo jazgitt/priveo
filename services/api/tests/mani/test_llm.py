@@ -177,6 +177,51 @@ class TestChat:
             build_llm(settings(server)).chat([ChatMessage("user", "x")])
 
 
+class TestProvider:
+    def test_each_provider_picks_its_route_address_and_key(self):
+        local = ManiSettings(_env_file=None, provider="localllm")
+        assert (local.backend, local.base_url) == ("local", "http://localhost:11434/v1")
+        router = ManiSettings(_env_file=None, provider="openrouter", MANI_API_KEY="or-key")
+        assert (router.backend, router.base_url) == ("openrouter", "https://openrouter.ai/api/v1")
+        google = ManiSettings(_env_file=None, provider="google", GEMINI_API_KEY="g-key", MANI_API_KEY="other")
+        assert google.backend == "google" and google.api_key == "g-key"
+        assert google.base_url.startswith("https://generativelanguage.googleapis.com/")
+        assert google.embeddings_backend == "local"  # the stored vectors come from the local model
+
+    def test_an_unknown_provider_is_refused_and_awsbedrock_is_not_built(self):
+        import pytest
+        with pytest.raises(ValueError, match="MANI_PROVIDER"):
+            ManiSettings(_env_file=None, provider="azure")
+        with pytest.raises(ModelError, match="not built yet"):
+            build_llm(ManiSettings(_env_file=None, provider="awsbedrock"))
+
+    def test_google_sends_a_bearer_key_and_no_openrouter_privacy_block(self, server):
+        server.body = chat_reply({"content": "hi"})
+        google = ManiSettings(_env_file=None, provider="google", base_url=server.url, GEMINI_API_KEY="g-key",
+                              chat_model="gemini-x")
+        build_llm(google).chat([ChatMessage("user", "x")])
+        request = server.requests[-1]
+        assert request["headers"]["Authorization"] == "Bearer g-key" and "provider" not in request["body"]
+
+    def test_a_tool_calls_provider_data_goes_back_with_it(self, server):
+        signed = {"google": {"thought_signature": "sig-1"}}
+        server.body = chat_reply({"content": "", "tool_calls": [
+            {"id": "c1", "type": "function", "function": {"name": "t", "arguments": "{}"}, "extra_content": signed}]})
+        google = ManiSettings(_env_file=None, provider="google", base_url=server.url, GEMINI_API_KEY="g-key",
+                              chat_model="gemini-x")
+        client = build_llm(google)
+        call = client.chat([ChatMessage("user", "x")]).message.tool_calls[0]
+        assert call.extra == signed
+        server.body = chat_reply({"content": "done"})
+        client.chat([ChatMessage("user", "x"), ChatMessage("assistant", "", tool_calls=(call,))])
+        assert server.requests[-1]["body"]["messages"][1]["tool_calls"][0]["extra_content"] == signed
+
+    def test_a_hosted_provider_without_its_key_is_refused(self):
+        import pytest
+        with pytest.raises(ModelError, match="needs an API key"):
+            build_llm(ManiSettings(_env_file=None, provider="google", GEMINI_API_KEY="", MANI_API_KEY=""))
+
+
 class TestEmbeddings:
     def test_the_no_retention_rule_is_on_unless_the_evaluation_switches_it_off(self, server):
         server.body = chat_reply({"content": "hi"})

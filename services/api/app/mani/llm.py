@@ -33,11 +33,16 @@ _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
 _BODY_LIMIT = 300  # characters of an error body kept in a message
 
 
+HOSTED = ("openrouter", "google")  # the routes that need a key
+
+
 def _check_backend(backend: str, api_key: str) -> None:
+    if backend == "awsbedrock":
+        raise ModelError("The awsbedrock provider is not built yet. Use localllm, openrouter or google.")
     if backend not in BACKENDS:
         raise ModelError(f"The model backend '{backend}' is not approved. Use one of: {', '.join(BACKENDS)}.")
-    if backend == "openrouter" and not api_key:
-        raise ModelError("The openrouter backend needs an API key, and none is set.")
+    if backend in HOSTED and not api_key:
+        raise ModelError(f"The {backend} backend needs an API key, and none is set.")
 
 
 class _Endpoint:
@@ -50,7 +55,7 @@ class _Endpoint:
         self.backend = backend
         self.model = model
         self._base = (base_url or settings.base_url).rstrip("/")
-        self._key = settings.api_key if backend == "openrouter" else ""
+        self._key = settings.api_key if backend in HOSTED else ""
         self._timeout = settings.request_timeout_seconds
         self._provider = _RELAXED if settings.eval_allow_data_retention else _PRIVACY
 
@@ -65,6 +70,7 @@ class _Endpoint:
         headers = {"Content-Type": "application/json"}
         if self.backend == "openrouter":
             payload["provider"] = dict(self._provider)
+        if self.backend in HOSTED:
             headers["Authorization"] = f"Bearer {self._key}"
         request = urllib.request.Request(
             self._base + path, data=json.dumps(payload).encode(), headers=headers, method="POST")
@@ -114,7 +120,8 @@ def _wire_message(message: ChatMessage) -> dict[str, Any]:
     if message.role == "assistant" and message.tool_calls:
         wire["tool_calls"] = [
             {"id": call.id, "type": "function",
-             "function": {"name": call.name, "arguments": json.dumps(call.arguments)}}
+             "function": {"name": call.name, "arguments": json.dumps(call.arguments)},
+             **({"extra_content": call.extra} if call.extra else {})}
             for call in message.tool_calls
         ]
     if message.role == "tool":
@@ -145,7 +152,9 @@ def _parse_tool_calls(raw_calls: Any) -> tuple[ToolCall, ...]:
                 raise ModelError(f"The model sent invalid JSON arguments for the tool '{name}'.") from None
         if not isinstance(arguments, dict):
             raise ModelError(f"The model sent arguments for the tool '{name}' that are not an object.")
-        calls.append(ToolCall(id=str(raw.get("id") or f"call_{index}"), name=str(name), arguments=arguments))
+        extra = raw.get("extra_content")
+        calls.append(ToolCall(id=str(raw.get("id") or f"call_{index}"), name=str(name), arguments=arguments,
+                              extra=extra if isinstance(extra, dict) else None))
     return tuple(calls)
 
 
