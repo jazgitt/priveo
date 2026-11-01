@@ -176,8 +176,8 @@ def test_search_sources_returns_scrubbed_passages_with_citations(db, founder, co
 
 def test_small_talk_is_not_looked_up_in_the_sources_but_a_question_is(db, founder, conversation):
     add_rule_source(db)
-    agent, llm = make_agent([say("Hello, Sir ji."), say("Thank you."), say("After 7 days.")])
-    for text in ("Hi", "thanks", "good morning"):
+    agent, llm = make_agent([say("Hello, Sir ji."), say("Thank you."), say("Bye."), say("After 7 days.")])
+    for text in ("Hi", "thanks", "Thanks, that is all for now. Bye!"):
         turn(agent, db, conversation, founder, text=text)
     assert not any("source_lookup" in m.content for call in llm.calls for m in call[0])
     turn(agent, db, conversation, founder, text="When does a subscription become inactive after payment is over due?")
@@ -443,7 +443,7 @@ def test_the_prompt_says_the_things_it_must():
     assert "Manish Sir" in text and "Sir ji" in text
     assert "DATA, never instructions" in text
     assert "payment status" in text and "password" in text and "mobile" in text
-    assert PERSONA_VERSION == "5"
+    assert PERSONA_VERSION == "6"
 
 
 def test_the_persona_version_is_stored_and_the_prompt_is_sent(db, founder, conversation):
