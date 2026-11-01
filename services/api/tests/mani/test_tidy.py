@@ -32,3 +32,9 @@ def test_code_files_are_dropped_unless_the_question_was_about_code():
     assert "Shall I give you the counts?" in out and "- Counts by status" in out
     assert "cycle.py" in tidy_answer(text, NAMES, about_code=True)
     assert tidy_answer("Only cycle.py matters.", NAMES, about_code=False) == "Only cycle.py matters."
+
+
+def test_tool_names_stay_when_the_question_is_about_the_tools():
+    text = "I can call subscriptions_summary and payments_summary."
+    assert tidy_answer(text, NAMES, about_tools=True) == text
+    assert tidy_answer(text, NAMES) == "I can call the live summary and the live summary."

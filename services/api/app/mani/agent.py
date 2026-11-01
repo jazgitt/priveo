@@ -413,8 +413,9 @@ class ManiAgent:
 
     def _answer(self, turn: _Turn, content: str, note: str) -> Iterator[TurnEvent]:
         about_code = any(w in turn.question.lower() for w in DOCUMENT_WORDS + CODE_WORDS)
+        about_tools = any(w in turn.question.lower() for w in ("tool", "capabilit", "what can you", "live data"))
         text = tidy_answer(self.scrubber.scrub(content or "").text, [t.name for t in self.tool_specs],
-                           about_code=about_code)
+                           about_code=about_code, about_tools=about_tools)
         text = text.strip() or NO_ANSWER_MESSAGE
         if note:
             text = f"{text}\n\n{note}"

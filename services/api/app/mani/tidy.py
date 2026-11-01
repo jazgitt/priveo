@@ -26,15 +26,15 @@ def drop_code_references(text: str) -> str:
     return result if result else text
 
 
-def tidy_answer(text: str, tool_names: Iterable[str], *, about_code: bool = True) -> str:
+def tidy_answer(text: str, tool_names: Iterable[str], *, about_code: bool = True, about_tools: bool = False) -> str:
     # The prompt labels what it sends "TOOL DATA", and a small model repeats the label.
     text = re.sub(r"\b(the\s+)?tool data\b", lambda m: ("T" if m.group(1)[0] == "T" else "t") + "he data"
                   if m.group(1) else "data", text, flags=re.I)
     if not about_code:
         text = drop_code_references(text)
     names = "|".join(re.escape(n) for n in sorted(set(tool_names), key=len, reverse=True))
-    if not names:
-        return text
+    if not names or about_tools:  # asked which tools there are: the names are the answer
+        return re.sub(r"[ \t]{2,}", " ", text).strip()
     name = rf"`?(?:{names})`?"
     # "(from the `x` tool)", "(via x)": the whole aside goes.
     text = re.sub(rf"\s*\((?:from|via|using|per|source:?)\s[^)]*?{name}[^)]*\)", "", text, flags=re.I)
