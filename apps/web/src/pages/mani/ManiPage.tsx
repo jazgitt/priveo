@@ -17,6 +17,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
 import { ManiGate } from "./ManiGate";
+import { RichText } from "./RichText";
 import { MemoryPanel } from "./MemoryPanel";
 import { SourcesPanel } from "./SourcesPanel";
 
@@ -51,7 +52,7 @@ function Content({ text }: { text: string }) {
       </div>
     );
   }
-  return <p className="m-0 whitespace-pre-wrap break-words text-sm">{text}</p>;
+  return <RichText text={text} />;
 }
 
 function Bubble({ m }: { m: Pick<ManiMessage, "role" | "content" | "citations"> }) {

@@ -39,10 +39,10 @@ def failed(report):
     return {c.name for t in report.turns for c in t.failed_checks}
 
 
-def test_ten_conversations_of_two_to_four_turns_with_unique_ids():
-    assert [c.id for c in convo.CONVERSATIONS] == list(range(1, 11))
+def test_eleven_conversations_of_two_to_four_turns_with_unique_ids():
+    assert [c.id for c in convo.CONVERSATIONS] == list(range(1, 12))
     assert all(2 <= len(c.turns) <= 4 for c in convo.CONVERSATIONS)
-    assert len({c.name for c in convo.CONVERSATIONS}) == 10
+    assert len({c.name for c in convo.CONVERSATIONS}) == 11
 
 
 def test_expected_numbers_exist(eval_world):
@@ -169,3 +169,15 @@ def test_runner_flag_is_wired(monkeypatch, capsys):
     monkeypatch.setitem(runner.AGENTS, "reference", lambda expected, now: Scripted({}))
     assert runner.main(["--agent", "reference", "--conversations", "--only", "1"]) == 1
     assert "C1 greeting_then_capabilities: FAIL" in capsys.readouterr().out
+
+
+def test_an_answer_that_names_a_tool_or_a_file_fails_the_internal_names_check():
+    from tests.mani_eval.conversations import internal_name_checks
+
+    def passed(text, params=None):
+        return internal_name_checks(text, params or {})[0].passed
+
+    assert passed("There are 2 active subscriptions as of 01-Nov-26 13:55.")
+    assert not passed("There are 2 (from `subscriptions_summary` tool).")
+    assert not passed("Based on registry.py, customers can book a Deep Spa.")
+    assert passed("Run check-local.sh before every push.", {"phrases_all": [r"check-local\.sh"]})

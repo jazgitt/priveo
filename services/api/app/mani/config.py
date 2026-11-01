@@ -56,6 +56,8 @@ class ManiSettings(BaseSettings):
     budget_usd: float = 1.0
     per_request_budget_usd: float = 0.0  # 0 means no per-request limit
     max_tool_rounds: int = 6
+    # 0 gave stiff, repeated wording. A little warmth reads as a person; tool arguments stay reliable at this value.
+    temperature: float = 0.3
     request_timeout_seconds: float = 120.0
     conversation_retention_days: int = 90
 

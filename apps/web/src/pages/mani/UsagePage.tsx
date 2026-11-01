@@ -13,7 +13,7 @@ function Usage() {
   const u = q.data;
   return (
     <>
-      <PageHeader title="Agent" description="What Mani Bond has used against the budget. Counts and cost only, never what was said." />
+      <PageHeader title="Agent reports" description="What Mani Bond has used against the budget. Counts and cost only, never what was said." />
       {q.isError && <div className="mb-4"><ErrorState message="Could not load the usage." onRetry={() => void q.refetch()} /></div>}
       {u?.budget_exhausted && (
         <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">

@@ -14,7 +14,7 @@ import { TaskTray, TasksProvider } from "./blocks/tasks";
 import { AlertBell } from "./components/AlertBell";
 import { useToast } from "./components";
 import { cn } from "./lib/utils";
-import { MANI_NAV, MANI_REPORTS_NAV, NAV, type NavItem } from "./nav";
+import { AGENT_NAV, NAV, type NavItem } from "./nav";
 import { SiteProvider, useSite } from "./site/SiteContext";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
@@ -108,8 +108,7 @@ function SidebarBody({ navLabel, onNavigate }: { navLabel: string; onNavigate?: 
         <NavGroup items={NAV.filter((n) => !n.group)} onNavigate={onNavigate} />
         <NavGroup title="This site" items={NAV.filter((n) => n.group === "site")} onNavigate={onNavigate} />
         <NavGroup title="All sites" items={NAV.filter((n) => n.group === "master")} onNavigate={onNavigate} />
-        {founder && <NavGroup title="Founder" items={MANI_NAV} onNavigate={onNavigate} />}
-        {founder && <NavGroup title="Reports" items={MANI_REPORTS_NAV} onNavigate={onNavigate} />}
+        {founder && <NavGroup title="Agent" items={AGENT_NAV} onNavigate={onNavigate} />}
       </nav>
       <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
         <span className="truncate text-sm text-muted-foreground">{user?.display_name}</span>

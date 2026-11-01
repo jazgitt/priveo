@@ -31,12 +31,10 @@ export const NAV: NavItem[] = [
 ];
 
 /**
- * Founder-only pages (Mani Bond). They are not in NAV: the Shell adds them only
- * when GET /v1/admin/mani/status answers 200, so no other admin ever sees them.
+ * The Agent section (Mani Bond): Founder-only, and only agent pages. They are not in NAV: the Shell adds
+ * them only when GET /v1/admin/mani/status answers 200, so no other admin ever sees them.
  */
-export const MANI_NAV: NavItem[] = [
+export const AGENT_NAV: NavItem[] = [
   { path: "/mani", label: "Mani Bond", about: "Your Chief of Staff: chat, memory and sources." },
-];
-export const MANI_REPORTS_NAV: NavItem[] = [
-  { path: "/reports/agent", label: "Agent", about: "Mani Bond usage against the budget." },
+  { path: "/reports/agent", label: "Reports", about: "Mani Bond usage against the budget." },
 ];
