@@ -32,7 +32,7 @@ def find_bin_dir() -> Path:
         if (candidate / f"initdb{suffix}").exists():
             return candidate
     raise RuntimeError(
-        "PostgreSQL was not found. Install it (macOS: brew install postgresql@16) "
+        "PostgreSQL was not found. Install it (macOS: brew install postgresql@17 pgvector) "
         "or set POSTGRES_BIN to its bin folder. Looked in: "
         + ", ".join(str(c) for c in candidates))
 
