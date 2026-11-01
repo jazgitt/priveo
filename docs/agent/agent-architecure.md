@@ -426,10 +426,10 @@ Status: **Proposed**, with the owner's two answers below. Built from the reposit
 | `CLAUDE.md`, `README.md`, `wiki/` | Product and team summaries | |
 | `docs/reqs/` (customer, admin, crew requirements and owner decisions) | Business requirements | Requirement IDs kept for citations |
 | `docs/agent/` | Mani spec and this architecture | |
-| `docs/architecture.md`, `docs/system-component-diagram.md`, `docs/tech-stack.md`, `docs/build-plan.md`, `docs/build-and-release.md`, `docs/security-backlog.md`, `docs/hosting-assessment/`, `docs/design/`, `docs/testing/`, `docs/coverage/`, `docs/feature-status.json`, `docs/overnight-build-report.md` | Technology and status | |
+| `docs/architecture.md`, `docs/system-component-diagram.md`, `docs/tech-stack.md`, `docs/build-and-release.md`, `docs/security-backlog.md`, `docs/design/`, `docs/testing/`, `docs/coverage/`, `docs/feature-status.json`, `docs/overnight-build-report.md` | Technology and status | |
 | `services/api/app/`, `services/api/migrations/`, `services/api/scripts/`, `services/api/pyproject.toml` | API code, schema history | Technology source of truth (PR-4) |
 | `apps/web/src/`, `apps/mobile/lib/` (hand-written code and `app_en.arb`) | Portal and app code | |
-| `packages/api-contract/openapi.json` | API contract | |
+| `packages/api-contract/openapi.json`, `docs/build-plan.md`, `docs/hosting-assessment/` | Not indexed (owner decision 1-Nov-26): the contract is generated noise; the plans are historical AWS plans | Listed in `EXCLUDE_PATHS` |
 | `docs/brand/tokens.json`, `tools/` (scripts and docs) | Tooling | |
 
 **Exclude**
