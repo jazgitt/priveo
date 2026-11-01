@@ -36,6 +36,8 @@ class ToolCall:
     id: str
     name: str
     arguments: dict[str, Any]
+    # Provider data that must go back with the call (Gemini's "thought signature"). Kept as received.
+    extra: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
