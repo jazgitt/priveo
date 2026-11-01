@@ -99,8 +99,10 @@ describe("Founder gating", () => {
     app("/mani");
     const nav = await screen.findByRole("navigation", { name: "Admin areas" });
     expect(await within(nav).findByRole("link", { name: "Mani Bond" })).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Agent" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Reports" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Mani Bond" })).toBeInTheDocument();
+    const group = within(nav).getByText("Agent").parentElement;
+    expect(within(group as HTMLElement).getAllByRole("link").map((a) => a.textContent)).toEqual(["Mani Bond", "Reports"]);
   });
 
   it("hides the nav items from another admin and says Not available at the URL", async () => {
@@ -109,7 +111,7 @@ describe("Founder gating", () => {
     expect(await screen.findByRole("heading", { name: "Not available" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Admin areas" });
     expect(within(nav).queryByRole("link", { name: "Mani Bond" })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole("link", { name: "Agent" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
     expect(calls("/conversations")).toHaveLength(0);
   });
 

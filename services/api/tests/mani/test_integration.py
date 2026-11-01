@@ -70,10 +70,10 @@ def test_a_question_goes_through_a_tool_to_a_cited_saved_answer(client, founder)
     assert [c["path"] for c in answer["citations"]] == ["operations_summary"]
     assert events[-1]["data"]["status"] == "succeeded"
 
-    # The tool result went back to the model as data, and the model was offered every tool.
+    # The tool result went back to the model as data, and the model was offered only the tools the question needs.
     assert len(llm.calls) == 2
     offered = {spec.name for spec in llm.calls[0][1]}
-    assert {"operations_summary", "payments_summary", "search_sources", "remember_fact"} <= offered
+    assert {"operations_summary", "search_sources"} <= offered and "remember_fact" not in offered
     assert any(m.role == "tool" for m in llm.calls[1][0])
 
     # What a reload shows: both messages, the citation, the title.

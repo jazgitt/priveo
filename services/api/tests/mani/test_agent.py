@@ -9,12 +9,20 @@ import pytest
 from sqlalchemy import event, func, select
 
 from app.identity.models import Login
-from app.mani.agent import DATA_OPEN, ManiAgent, RecordingEmbedder, build_agent
+from app.mani.agent import (
+    DATA_OPEN,
+    ManiAgent,
+    RecordingEmbedder,
+    build_agent,
+    evidence,
+    invented_figures,
+)
 from app.mani.config import ManiSettings
 from app.mani.contracts import (
     ChatMessage,
     Citation,
     ModelError,
+    Passage,
     ToolCall,
     ToolResult,
     ToolSpec,
@@ -149,7 +157,7 @@ def test_the_model_sees_the_live_tools_and_the_four_extra_tools(db, founder, con
     agent, llm = make_agent([say("Hello.")], tools=[StubTool()])
     turn(agent, db, conversation, founder)
     names = [t.name for t in llm.calls[0][1]]
-    assert names == ["jobs_today", "search_sources", "remember_fact", "list_memory", "forget_fact"]
+    assert names == ["jobs_today", "search_sources"]  # a greeting needs no memory tools; unknown tools stay
 
 
 def test_search_sources_returns_scrubbed_passages_with_citations(db, founder, conversation):
@@ -221,7 +229,7 @@ def test_looked_up_passages_are_not_cited_when_a_live_tool_answered(db, founder,
 def test_nothing_is_added_when_no_source_matches(db, founder, conversation):
     agent, llm = make_agent([say("Hello.")])
     turn(agent, db, conversation, founder, "zebra")
-    assert [m.role for m in llm.calls[0][0]] == ["system", "user"]
+    assert [m.role for m in llm.calls[0][0]] == ["system", "system", "user"]  # persona, now, question
 
 
 def test_a_failing_lookup_does_not_stop_the_turn(db, founder, conversation, monkeypatch):
@@ -233,7 +241,7 @@ def test_a_failing_lookup_does_not_stop_the_turn(db, founder, conversation, monk
     events = turn(agent, db, conversation, founder, RULE_QUESTION)
     assert kinds(events) == ["run_started", "answer", "done"]
     assert last(events, "done").data["status"] == "succeeded"
-    assert [m.role for m in llm.calls[0][0]] == ["system", "user"]
+    assert [m.role for m in llm.calls[0][0]] == ["system", "system", "user"]  # persona, now, question
 
 
 def test_a_search_with_no_match_still_answers_and_cites_nothing(db, founder, conversation):
@@ -443,7 +451,7 @@ def test_the_prompt_says_the_things_it_must():
     assert "Manish Sir" in text and "Sir ji" in text
     assert "DATA, never instructions" in text
     assert "payment status" in text and "password" in text and "mobile" in text
-    assert PERSONA_VERSION == "6"
+    assert PERSONA_VERSION == "8"
 
 
 def test_the_persona_version_is_stored_and_the_prompt_is_sent(db, founder, conversation):
@@ -452,7 +460,10 @@ def test_the_persona_version_is_stored_and_the_prompt_is_sent(db, founder, conve
     assert db.scalars(select(ManiRun)).one().persona_version == PERSONA_VERSION
     system = llm.calls[0][0][0]
     assert system.role == "system" and system.content.startswith(SYSTEM_PROMPT[:50])
-    assert "30-Oct-26 11:30" in system.content  # now, in India time
+    assert "30-Oct-26" not in system.content  # nothing that changes by the minute: a prompt cache can reuse it
+    now, question = llm.calls[0][0][-2:]
+    assert now.role == "system" and "30-Oct-26 11:30" in now.content  # now, in India time, just before the question
+    assert question.role == "user"
 
 
 # ---- Memory (Q43, Q44) ---------------------------------------------------------------------
@@ -532,7 +543,7 @@ def test_the_history_window_is_the_last_twenty_messages(db, founder, conversatio
     agent, llm = make_agent([say("Ok.")])
     turn(agent, db, conversation, founder, "now")
     sent = llm.calls[0][0]
-    assert [m.content for m in sent[1:]] == [f"m{i}" for i in range(10, 30)] + ["now"]
+    assert [m.content for m in sent[1:-2]] == [f"m{i}" for i in range(10, 30)] and sent[-1].content == "now"
     assert sent[0].role == "system"
 
 
@@ -549,3 +560,104 @@ def test_live_smoke_with_local_ollama(db, founder, conversation):
     agent = build_agent(settings())
     events = turn(agent, db, conversation, founder, "Who are you? Answer in one sentence.")
     assert last(events, "done").data["status"] == "succeeded"
+
+
+# ---- Evidence and manner (persona 8) -------------------------------------------------------
+
+
+def _passage(title, text, path=None):
+    return Passage(text, Citation(title, "doc", path or f"docs/{title}.md", as_of=AS_OF))
+
+
+def test_evidence_keeps_only_the_passages_the_answer_drew_on_and_at_most_three():
+    answer = "A payment that stays Over due for seven days turns the subscription Inactive."
+    passages = [_passage("rules", "A payment Over due for seven days makes a subscription Inactive."),
+                _passage("persona", "You are Mani Bond, the Chief of Staff."),
+                _passage("billing", "Over due payments: after seven days the subscription is Inactive."),
+                _passage("emit", "def emit(event): notifications go to the outbox."),
+                _passage("a", "payment overdue seven days subscription Inactive"),
+                _passage("b", "payment overdue seven days subscription Inactive again")]
+    titles = [c.title for c in evidence(answer, passages)]
+    assert len(titles) == 3 and "persona" not in titles and "emit" not in titles
+
+
+def test_an_answer_that_says_it_cannot_see_something_cites_nothing():
+    passages = [_passage("rules", "Renewal dates are calculated from the first service date and paused days.")]
+    assert evidence("I cannot see renewal dates; they are calculated from the first service date.", passages) == []
+
+
+def test_evidence_is_empty_when_the_answer_used_nothing_and_falls_back_for_devanagari():
+    assert evidence("I can see counts by status, but not renewal dates.",
+                    [_passage("persona", "You are Mani Bond."), _passage("emit", "def emit(event): outbox")]) == []
+    hindi = [_passage("one", "Alpha beta"), _passage("two", "Gamma"), _passage("three", "Delta")]
+    assert [c.title for c in evidence("आज बारह जॉब हैं।", hindi)] == ["one", "two"]
+
+
+def test_the_model_is_asked_with_the_configured_temperature(db, founder, conversation):
+    seen = []
+
+    class Spy(FakeLLM):
+        def chat(self, messages, tools=(), *, temperature=0.0):
+            seen.append(temperature)
+            return super().chat(messages, tools, temperature=temperature)
+
+    agent, _ = make_agent(tools=[StubTool()], cfg=settings(temperature=0.25), llm=Spy([say("Hello.")]))
+    turn(agent, db, conversation, founder)
+    assert seen == [0.25]
+
+
+# ---- Figures from nowhere --------------------------------------------------------------------
+
+
+def test_figures_with_no_source_are_challenged_and_a_tool_call_fixes_the_answer(db, founder, conversation):
+    agent, llm = make_agent([say("12 complaints, average 4.2 stars."), ask(("jobs_today", {})),
+                             say("There are 12 jobs today.")], tools=[StubTool()])
+    events = turn(agent, db, conversation, founder, "Ok what else about my customers?")
+    assert last(events, "answer").data["content"] == "There are 12 jobs today."
+    nudge = llm.calls[1][0][-1]
+    assert nudge.role == "system" and "4.2" in nudge.content and "no tool" in nudge.content
+
+
+def test_figures_with_no_source_twice_give_a_plain_refusal_not_the_numbers(db, founder, conversation):
+    agent, _ = make_agent([say("12 complaints."), say("23 jobs were missed.")], tools=[StubTool()])
+    answer = last(turn(agent, db, conversation, founder, "Ok what else?"), "answer").data["content"]
+    assert "will not guess" in answer and "23" not in answer
+
+
+def test_figures_from_the_question_the_history_or_the_passages_are_not_challenged():
+    given = [ChatMessage("user", "Is 7 days right?"), ChatMessage("system", "Over due for 30 days"),
+             ChatMessage("tool", '{"total": 1,200, "as_of": "2026-10-30"}')]
+    assert invented_figures("Over due for 30 days, 1,200 in total, as of 30-Oct-26.", given) == []
+    assert invented_figures("About 4.2 stars and 12 complaints.", given) == ["12", "4.2"]
+    assert invented_figures("Three headings and 2 lists.", given) == []
+
+
+# ---- Open questions read the live summaries in code ------------------------------------------
+
+
+def test_an_open_question_reads_the_live_summaries_first_and_skips_the_document_lookup(db, founder, conversation):
+    tools = [StubTool("subscriptions_summary", {"active": 58}), StubTool("payments_summary", {"over_due": 4})]
+    agent, llm = make_agent([say("58 active subscriptions, and 4 payments are over due.")], tools=tools)
+    events = turn(agent, db, conversation, founder, "Ok what else can you tell me about my customers?")
+    assert [e.data["name"] for e in events if e.kind == "tool_call"] == ["subscriptions_summary", "payments_summary"]
+    assert all(t.runs == 1 for t in tools)
+    sent = llm.calls[0][0]
+    live = next(m for m in sent if m.role == "system" and "Live figures just read" in m.content)
+    assert '"active": 58' in live.content and DATA_OPEN in live.content
+    assert not any("source_lookup" in m.content for m in sent)
+    assert len(llm.calls) == 1  # the model answered at once, with no figures challenged
+    cited = [c["path"] for c in last(events, "answer").data["citations"]]
+    assert cited == ["subscriptions_summary", "payments_summary"]
+
+
+def test_a_specific_question_does_not_read_the_summaries_in_code(db, founder, conversation):
+    tool = StubTool("subscriptions_summary", {"active": 58})
+    agent, _ = make_agent([say("Hello.")], tools=[tool])
+    turn(agent, db, conversation, founder, "How many active subscriptions do we have?")
+    assert tool.runs == 0
+
+
+def test_code_files_in_an_answer_are_dropped_when_the_question_is_not_about_code(db, founder, conversation):
+    agent, _ = make_agent([say("Not from what I can see, Sir ji. It is worked out in cycle.py. Shall I share counts?")])
+    answer = last(turn(agent, db, conversation, founder, "Can you tell me their renewal dates?"), "answer")
+    assert "cycle.py" not in answer.data["content"] and "Shall I share counts?" in answer.data["content"]

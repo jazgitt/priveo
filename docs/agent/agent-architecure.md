@@ -262,10 +262,10 @@ Exit: a bounded backlog with acceptance criteria.
 - Orchestration loop, versioned persona, model adapter with `local` and `openrouter`; the `bedrock` adapter comes after the MVP (D16).
 - Ingest approved sources with PII and secret scrub, refresh and citations.
 - Live read tools (section 6.4) with deterministic summaries and PII-scrubbed results (customer names allowed).
-- Attributable memory and a question digest.
+- Attributable memory. (The question digest, AU-5, moved to Phase 3 on 1-Nov-26 at the owner's request, so Crawl can focus on answer quality.)
 - Portal page with chat, history, sources, freshness, streaming.
 - Reports, then Agent page: usage and cost trends against configured budgets.
-- Proposal preview cards with no domain writes.
+- Proposal preview cards moved to Phase 3 on 1-Nov-26 at the owner's request. Until then Mani drafts a proposal as text ("Proposal:"), with no domain writes.
 - Business-question evaluation; non-Founder rejection tests.
 
 Exit: the Founder can ask useful business, technology, operations and available-finance questions, see evidence, and get draft recommendations on test with seed data. No domain action is possible. Audit and access foundations exist from here on.
@@ -277,7 +277,7 @@ Exit: practical English and Hindi use with the same access and policy as text.
 
 ### Phase 3: Walk, Level 2 (3-5 weeks)
 
-A small agreed action catalogue (scheduling, data setup); secure code verification; exact-proposal approval, expiry, version checks, rotation; durable idempotent execution; linked audit; scheduled portal reports and agreed alerts.
+A small agreed action catalogue (scheduling, data setup); secure code verification; exact-proposal approval, expiry, version checks, rotation; durable idempotent execution; linked audit; scheduled portal reports and agreed alerts; the question digest (AU-5) and proposal cards (typed preview, then approval), both moved here from Phase 1.
 Exit: only approved, permitted operations execute, and every executed action has a complete audit entry.
 
 ### Phase 4: production hardening and acceptance (2-3 weeks)
@@ -321,9 +321,9 @@ Recurring costs: model input and output, embeddings, speech minutes, storage, ba
 |---|---|---|
 | 1 | Closed (D6): `priveopapa` is the Founder login | Access binding |
 | 2 | Closed (D12): text-only Crawl is the MVP | Scope |
-| 3 | Owner has answered the two Appendix B questions. Final approval of the Appendix B list is still pending (D8) | Knowledge and PII safety |
+| 3 | Closed (D8, owner, 1-Nov-26): the Appendix B list is approved. The exclusions were agreed on 30-Oct | Knowledge and PII safety |
 | 4 | Closed (D9, D19): question set reviewed 30-Oct, all 50 kept. Expected answers for live questions are filled in from the seed data in Phase 1 | Accuracy testing |
-| 5 | OpenRouter check done and strict prod filters accepted (section 8.1). Embedding model chosen (D15). Left: repeat the live embedding call with the prod key before real data flows | Prod data safety |
+| 5 | OpenRouter check done and strict prod filters accepted (section 8.1). Embedding model chosen (D15). Left, for Phase 4 and not Crawl: repeat the live embedding call with the prod key before real data flows | Prod data safety |
 | 6 | Closed (D14): customer names allowed; address, mobile, email, admin data excluded | Data sent to OpenRouter in prod |
 | 7 | Closed (D13, D17): local PostgreSQL and build-time source snapshots | Environment setup |
 | 8 | Closed (D18): configuration value, $1 total usage limit per environment to start, no time period | Cost control |

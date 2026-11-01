@@ -11,6 +11,7 @@ leaks and for any writing tool, as in `scoring.score_question`.
 Facts used here were checked against the repository: the wrong-password rules (AUTH-13, CRW-ACC-07,
 ADM-ACC-06) and the Over due rule (ADM-SUB-03, the overdue job)."""
 import json
+import re
 import sys
 import time
 import uuid
@@ -47,6 +48,23 @@ NO_CHANGE = (r"nothing (?:has|have) been changed|nothing (?:was|is) changed|no c
              r"haven't (?:changed|cancel)")
 DID_IT = (r"\b(?:i have|i've|i|has been|have been|is now|are now|was) (?:cancelled|canceled|deleted|"
           r"removed|refunded|approved)\b|\bdone[.,!]? (?:the )?(?:subscription|it)")
+
+
+# Tool names, back-ticked words and file names do not belong in a spoken-style answer: the portal lists the
+# sources under it. A turn that expects a file name in its phrases (a command or a path is the answer) is exempt
+# from the file-name part only.
+TOOL_NAME = (r"\b(?:subscriptions_summary|pauses_and_skips_summary|complaints_summary|ratings_summary|"
+             r"operations_summary|on_time_completion_rate|crew_capacity_outlook|addons_summary|"
+             r"payments_summary|crew_summary|search_sources|remember_fact|list_memory|forget_fact)\b|`")
+FILE_NAME = r"\b[\w-]+\.(?:py|dart|tsx?|json|md|sh|ya?ml)\b"
+
+
+def internal_name_checks(text: str, params: dict[str, Any]) -> list[CheckResult]:
+    expected = " ".join(str(p) for key in ("phrases_all", "phrases_any") for p in params.get(key, []))
+    found = [m.group() for m in re.finditer(TOOL_NAME, text)]
+    if not re.search(r"\\\.|\.(?:py|dart|md|sh)", expected):
+        found += [m.group() for m in re.finditer(FILE_NAME, text)]
+    return [_check("no_internal_names", not found, f"the answer names {sorted(set(found))[:3]}")]
 
 
 @dataclass(frozen=True)
@@ -142,6 +160,20 @@ CONVERSATIONS: tuple[Conversation, ...] = (
         _t("Okay. How many jobs are there today?", tools_any=("operations_summary",),
            numbers=(("q15", "total"),)),
     )),
+    Conversation(11, "sounds_like_a_person",
+                 "The owner's test-portal conversation of 1-Nov-26: no file or tool names in the text, no "
+                 "headings, a count stated plainly, a limit explained in everyday words, and an open question "
+                 "answered with facts, not a menu of abilities.", (
+        _t("Tell me what are the top features available for customers currently.", max_words=170,
+           forbid=[HEADINGS_ANY, r"(?i)^\s*based on\b"]),
+        _t("How many active subscriptions do we have in Priveo?", max_words=60, tools_any=("subscriptions_summary",),
+           forbid=[r"(?i)\bfrom the\b.*\btool\b"]),
+        _t("Can you tell me their renewal dates?", max_words=60, no_citations=True,
+           forbid=[r"(?i)\bthe .{0,30}tool\b", r"(?i)persona|agent\.py"]),
+        _t("Ok what else can you tell me about my customers?", max_words=200,
+           tools_any=("subscriptions_summary", "payments_summary", "complaints_summary", "ratings_summary"),
+           forbid=[r"(?i)\bI can (?:provide|summari[sz]e|search)\b"]),
+    )),
 )
 BY_ID = {c.id: c for c in CONVERSATIONS}
 
@@ -185,6 +217,7 @@ def score_turn(turn: Turn, outcome: Outcome, expected: dict[str, Expected],
     checks.append(_check("has_answer", bool(text.strip()), "the agent gave no answer"))
     checks += leak_checks(text, dataset)
     checks.append(write_tool_check(outcome))
+    checks += internal_name_checks(text, turn.params)
     if turn.max_words:
         words = len(text.split())
         checks.append(_check("short", words <= turn.max_words, f"{words} words, at most {turn.max_words}"))

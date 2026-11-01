@@ -131,6 +131,24 @@ def _wire_message(message: ChatMessage) -> dict[str, Any]:
     return wire
 
 
+def _caches_prompt(backend: str, model: str) -> bool:
+    """Anthropic models on OpenRouter cache only what is marked. Gemini (direct), OpenAI and Ollama reuse a
+    repeated prompt start on their own, and the other models there have no cache to ask for."""
+    return backend == "openrouter" and model.startswith("anthropic/")
+
+
+def _mark_cache_points(wire: list[dict[str, Any]]) -> None:
+    """Mark the first system message (the tools and persona before it) and the last user message (the
+    history and passages before it) as cache points. A later round of the same turn then pays the
+    cheap cached rate for all of it."""
+    first_system = next((i for i, w in enumerate(wire) if w["role"] == "system"), None)
+    last_user = next((i for i in range(len(wire) - 1, -1, -1) if wire[i]["role"] == "user"), None)
+    for index in (first_system, last_user):
+        if index is not None and isinstance(wire[index]["content"], str) and wire[index]["content"]:
+            wire[index]["content"] = [{"type": "text", "text": wire[index]["content"],
+                                       "cache_control": {"type": "ephemeral"}}]
+
+
 def _wire_tool(spec: ToolSpec) -> dict[str, Any]:
     return {"type": "function",
             "function": {"name": spec.name, "description": spec.description, "parameters": spec.parameters}}
@@ -166,7 +184,10 @@ class OpenAICompatibleClient(_Endpoint):
 
     def chat(self, messages: Sequence[ChatMessage], tools: Sequence[ToolSpec] = (), *,
              temperature: float = 0.0) -> ChatResult:
-        body: dict[str, Any] = {"messages": [_wire_message(m) for m in messages], "temperature": temperature}
+        wire = [_wire_message(m) for m in messages]
+        if _caches_prompt(self.backend, self.model):
+            _mark_cache_points(wire)
+        body: dict[str, Any] = {"messages": wire, "temperature": temperature}
         if tools:
             body["tools"] = [_wire_tool(t) for t in tools]
         started = time.monotonic()

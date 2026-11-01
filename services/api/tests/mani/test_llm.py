@@ -119,6 +119,26 @@ class TestChat:
         assert request["body"]["provider"] == PRIVACY
         assert str(result.usage.cost_usd) == "0.0042"
 
+    def test_anthropic_on_openrouter_marks_the_system_and_last_user_message_for_caching(self, server):
+        server.body = chat_reply({"content": "ok"})
+        cfg = settings(server, "openrouter", KEY)
+        cfg.chat_model = "anthropic/claude-haiku-4.5"
+        build_llm(cfg).chat([ChatMessage("system", "persona"), ChatMessage("user", "first"),
+                             ChatMessage("assistant", "a"), ChatMessage("system", "passages"),
+                             ChatMessage("user", "second")], [TOOL])
+        sent = server.requests[0]["body"]["messages"]
+        mark = {"type": "ephemeral"}
+        assert sent[0]["content"] == [{"type": "text", "text": "persona", "cache_control": mark}]
+        assert sent[-1]["content"] == [{"type": "text", "text": "second", "cache_control": mark}]
+        assert sent[1]["content"] == "first" and sent[3]["content"] == "passages"
+
+    def test_other_models_get_no_cache_marks(self, server):
+        server.body = chat_reply({"content": "ok"})
+        build_llm(settings(server, "openrouter", KEY)).chat([ChatMessage("system", "p"), ChatMessage("user", "q")])
+        assert [m["content"] for m in server.requests[0]["body"]["messages"]] == ["p", "q"]
+        build_llm(settings(server)).chat([ChatMessage("system", "p"), ChatMessage("user", "q")])
+        assert [m["content"] for m in server.requests[1]["body"]["messages"]] == ["p", "q"]
+
     def test_openrouter_without_cost_is_zero_and_local_ignores_cost(self, server):
         server.body = chat_reply({"content": "ok"}, {"prompt_tokens": 3, "completion_tokens": 2})
         assert build_llm(settings(server, "openrouter", KEY)).chat([ChatMessage("user", "x")]).usage.cost_usd == 0
