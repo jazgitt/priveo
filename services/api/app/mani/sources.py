@@ -17,13 +17,12 @@ INCLUDE = (
     "CLAUDE.md", "README.md", "wiki/",
     "docs/reqs/", "docs/agent/",
     "docs/architecture.md", "docs/system-component-diagram.md", "docs/tech-stack.md",
-    "docs/build-plan.md", "docs/build-and-release.md", "docs/security-backlog.md",
-    "docs/hosting-assessment/", "docs/design/", "docs/testing/",
+    "docs/build-and-release.md", "docs/security-backlog.md",
+    "docs/design/", "docs/testing/",
     "docs/feature-status.json", "docs/overnight-build-report.md",
     "services/api/app/", "services/api/migrations/", "services/api/scripts/",
     "services/api/pyproject.toml", "services/api/vercel.json",
     "apps/web/src/", "apps/mobile/lib/", "apps/mobile/tool/",
-    "packages/api-contract/openapi.json",
     "docs/brand/tokens.json", "tools/",
 )
 
@@ -40,6 +39,9 @@ EXTENSIONS = {
 EXCLUDE_PATHS = (
     "docs/prototype/",                      # large read-only prototype, owner decision 30-Oct
     "docs/coverage/",                       # generated audit data
+    "docs/hosting-assessment/",             # old AWS/ECS/Neon plans; now Vercel + Supabase (owner 1-Nov)
+    "docs/build-plan.md",                   # old AWS/EventBridge/ECS plan, superseded (owner 1-Nov)
+    "packages/api-contract/openapi.json",   # generated, hundreds of noise chunks (owner 1-Nov)
     "docs/design/Priveo Showroom Splash.html",
     ".claude/",                             # local tooling and worktrees
     ".github/workflows/",                   # hold admin login literals
@@ -55,6 +57,7 @@ EXCLUDE_PATHS = (
     "docs/agent/mani-question-set-review.md", "docs/agent/mani-question-set-review-A1.md",
     "docs/agent/mani-question-set-review-A2.md", "docs/agent/mani-question-set-review-B.md",
     "docs/agent/mani-question-set-review-C.md", "docs/agent/mani-question-set-review-D.md",
+    "docs/agent/mani-stale-claims.md",      # quotes the old AWS claims it lists; would feed them back
 )
 
 # Sections left out of an indexed file: path -> heading prefixes. A section runs from its heading
