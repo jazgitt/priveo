@@ -171,8 +171,10 @@ def test_search_sources_returns_scrubbed_passages_with_citations(db, founder, co
     agent, llm = make_agent([ask(("search_sources", {"query": "when does a subscription become inactive"})),
                              say("After 7 days Over due.")], scrubber=PatternScrubber())
     events = turn(agent, db, conversation, founder)
-    content = llm.calls[1][0][-1].content
-    assert "7 days" in content and "a@b.in" not in content
+    # SQLite hands the passage over in the tool result. PostgreSQL finds it in the first lookup, so the tool
+    # result says it is already above; either way the model saw it once, scrubbed.
+    sent = " ".join(m.content for m in llm.calls[1][0])
+    assert "7 days" in sent and "a@b.in" not in sent
     citations = last(events, "answer").data["citations"]
     assert [c["path"] for c in citations] == ["docs/rules.md"]
     assert citations[0]["commit_id"] == "abc"
