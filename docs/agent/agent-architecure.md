@@ -1,6 +1,6 @@
 # Mani Bond: architecture, stack and phased plan (golden copy)
 
-Date: 30-Oct-2026, version 2 (supersedes the 20-Oct-2026 assessment and the solution plan, now merged here)
+Date: 2-Nov-2026, version 3 (phase order changed and Walk decisions recorded on 2-Nov-2026; version 2 of 30-Oct-2026 superseded the 20-Oct-2026 assessment and the solution plan, now merged here)
 Status: Architecture proposed; owner decisions of 30-Oct-2026 recorded in section 2. Implementation has not started.
 Audience: Founder, Claude, Codex and implementation engineers.
 Requirement source: [Mani Bond final spec v3](mani-bond-spec_final.md). This file is the single architecture document for Mani Bond.
@@ -11,7 +11,7 @@ Mani Bond is the Founder's Chief of Staff, created by Glowing Spoon. Always use 
 
 Mani is feasible inside Priveo's architecture but is a substantial new subsystem. The chat screen is a small part. The main work is reliable knowledge retrieval, current business data, secure approvals, controlled execution and proof that the assistant behaves correctly.
 
-Recommended build: one agent module inside the existing FastAPI service and one Founder-only page in the React portal. The first release (MVP) is **Crawl, text only**: answer, report, cite sources, remember, and draft proposals, with no tool that changes business records. Voice follows, then approved actions (Walk), then bounded autonomy (Run).
+Recommended build: one agent module inside the existing FastAPI service and one Founder-only page in the React portal. The first release (MVP) is **Crawl, text only**: answer, report, cite sources, remember, and draft proposals, with no tool that changes business records. Approved actions (Walk) follow, then production hardening, then bounded autonomy (Run), and voice comes last.
 
 How to read status in this document: the spec and explicit owner decisions win. Owner decisions are in section 2 and marked **Owner**; my fill-ins are marked **Derived** and need confirming. Everything else is a **proposal**. Items marked **Open** need an owner decision and must not become silent assumptions. This document does not authorise implementation, deployment, migrations or provisioning of external services.
 
@@ -30,7 +30,7 @@ How to read status in this document: the spec and explicit owner decisions win. 
 | D9 | I draft the question set (Appendix A); the owner reviews and updates it | Owner (replaced 31-Oct by the code, architecture, business and how-to-run set: all 50 kept) |
 | D10 | Budgets are set in configuration. Usage trends show in the Admin portal under Reports, then Agent | Owner |
 | D11 | Retention: conversations 90 days. Action audit 3 months (shorter than the earlier one-year proposal) | Owner |
-| D12 | The MVP is text-only Crawl (Levels 0 and 1). Voice, Walk and Run follow | Owner (confirmed 30-Oct) |
+| D12 | The MVP is text-only Crawl (Levels 0 and 1). Walk and Run follow, then Voice as the last phase (order changed 2-Nov, D21) | Owner (confirmed 30-Oct; order changed 2-Nov) |
 | D13 | Local PostgreSQL with `pgvector` is installed during implementation | Owner |
 | D14 | Customer names are not PII. They may appear in indexes, tool results and answers. Address, mobile, email and all admin data stay excluded | Owner |
 | D15 | OpenRouter offers embedding models (https://openrouter.ai/models?output_modalities=embeddings). Test and prod embeddings use it. Model chosen 30-Oct: `qwen/qwen3-embedding-8b`, index at 1024 dimensions (native output is 4096, truncated and re-normalised, because pgvector HNSW stops at 2000). Fallback: `baai/bge-m3` (native 1024). Live check 30-Oct with the test key: a call with `zdr: true`, `data_collection: deny`, fallback off and `require_parameters` succeeded (HTTP 200, served by Nebius). With `dimensions: 1024` the vector was 1024 long and unit length, so OpenRouter passes the parameter through and no client-side truncation is needed. Without it the vector was 4096 long. Cost was about $0.0000002 for 17 tokens | Owner (model chosen; test live check done, prod key check pending) |
@@ -39,6 +39,11 @@ How to read status in this document: the spec and explicit owner decisions win. 
 | D17 | Sources are bundled as a snapshot at build time and ingested from it on Vercel | Owner (confirmed 30-Oct) |
 | D18 | Budgets are configuration values, added during implementation. The starting value is a total usage limit of $1 per environment, with no time period. When it is used up, Mani stops calling the model and asks the owner for more budget. The owner raises it by changing the configuration value | Owner |
 | D19 | The owner reviews the question set (Appendix A) | Owner (done 31-Oct) |
+| D21 | Phase order: Crawl, Walk, Hardening, Run, then Voice as the last phase | Owner (2-Nov) |
+| D22 | Walk action catalogue approved as listed in Phase 2: run the schedule, move a job, release an absent crew member's jobs, freeze or unfreeze a schedule, and small data setup. The exact data-setup actions are chosen from what the existing services support and shown to the owner in the pull request | Owner (2-Nov) |
+| D23 | No customer notifications from Walk actions for now. An action that would notify a customer is not offered until the owner reopens this | Owner (2-Nov) |
+| D24 | The approval code is set during the Walk development cycle, as an environment secret. It is never written in the repository, the documents, memory or logs | Owner (2-Nov) |
+| D25 | Scheduled reports and alerts run once per day. The every-minute monitoring and two-minute alert goal is dropped for Walk | Owner (2-Nov) |
 
 ## 3. Environments and model paths
 
@@ -106,15 +111,15 @@ flowchart TD
     W --> R
     W --> D[Founder alerts and reports in portal]
 
-    API --> STT[Speech to text: Voice phase]
-    API --> TTS[Text to speech: Voice phase]
+    API --> STT[Speech to text: Voice, last phase]
+    API --> TTS[Text to speech: Voice, last phase]
 ```
 
 One agent with business, technology, operations and finance tools. Orchestration lives in the existing backend codebase. Domain expertise comes from evidence and tools, not from separate autonomous agents. A separate assistant microservice is not needed.
 
 ### 6.1 Conversation and orchestration
 
-- Private Mani page: chat, history, source references, freshness indicators, reports and proposal cards (voice controls in the Voice phase).
+- Private Mani page: chat, history, source references, freshness indicators, reports and proposal cards (voice controls in the Voice phase, the last phase).
 - Bind access to the Founder's configured login. Enforce on every endpoint, stream, and background result.
 - Explicit Python loop with typed tools, bounded model calls, timeouts, request and tool limits, and persisted run status. No agent framework at the start.
 - Persona, tool list and autonomy policy are versioned. Retrieved content can never change them.
@@ -147,7 +152,7 @@ Crew data is not PII and may be indexed. Customer names are not PII (D14) and ma
 
 **Live tools and PII (decided, D14).** Live read tools also send results to the model, and in prod that means OpenRouter. Tool results never include customer address, mobile number, email or admin data. Customer names may appear. The scrub is applied to tool results as well as to the index.
 
-Refresh defaults (proposed): operational answers query live; operational monitoring every minute with alerts within about two minutes (see 6.5 for what the host allows); code and config on release plus a daily reconcile; documents on change; finance inputs when supplied, with their reporting period shown.
+Refresh defaults (proposed): operational answers query live; monitoring and alerts once per day (D25); code and config on release plus a daily reconcile; documents on change; finance inputs when supplied, with their reporting period shown.
 
 ### 6.3 Founder-only access
 
@@ -162,7 +167,7 @@ Narrow functions with validated inputs and bounded outputs. Start with: operatio
 - Cron-triggered short steps for indexing, monitoring and scheduled reports; resumable and idempotent. Use a transactional outbox so committed work is not lost.
 - Duplicate delivery is possible, so execution records and idempotency keys must prevent duplicate business effects. Failed tasks stop after bounded retries and surface in monitoring.
 - Reports and alerts stay in the Founder's portal. Monitoring continues when the Founder is offline; changes needing approval wait. Do not add email, WhatsApp or crew messaging by assumption.
-- Minute-level monitoring depends on the cron granularity of the chosen host. Treat the two-minute alert target as a goal to verify, not a promise.
+- Reports and alerts run once per day (D25), which fits any cron schedule the host allows. The earlier every-minute monitoring and two-minute alert goal is dropped for Walk. A faster target needs a new owner decision and a check of the host's cron granularity.
 
 ### 6.6 Approval and execution (Walk onward)
 
@@ -178,7 +183,7 @@ State flow: draft, awaiting approval, approved, executing, succeeded or failed. 
 
 Example: reassigning an absent crew member's jobs previews the jobs, capacity, schedule state and customer notifications. The approval covers that change only.
 
-Blocked or Founder-only: money movement, sensitive HR decisions, irreversible or customer-facing commitments, permission changes. A code alone never unlocks a forbidden tool. Schedule proposals with customer-facing effects stay blocked until their treatment is defined. For voice, the code is entered in the app control, never spoken. Run adds a versioned, Founder-approved policy (exact actions, limits, expiry, revocation) whose action list starts empty.
+Blocked or Founder-only: money movement, sensitive HR decisions, irreversible or customer-facing commitments, permission changes. A code alone never unlocks a forbidden tool. No Walk action may notify a customer for now (D23); a preview lists any notification an action would cause, and an action that would send one is not offered. When Voice arrives (the last phase), the code is still entered in the app control, never spoken, and the second in-app check of AU-4 applies from then. Run adds a versioned, Founder-approved policy (exact actions, limits, expiry, revocation) whose action list starts empty.
 
 ## 7. Interfaces and records
 
@@ -188,7 +193,7 @@ Founder-only APIs under `/v1/admin/mani`:
 - Source ingestion, freshness and citation retrieval.
 - Reports, alerts, memory correction and deletion.
 - Usage and cost trends for Reports, then Agent.
-- Voice upload, transcript review, playback (Voice phase).
+- Voice upload, transcript review, playback (Voice phase, the last phase).
 - Proposals, approval, rejection, execution status (Walk).
 
 Typed records: conversations and runs, evidence, sources and chunks, memory facts, model usage (backend, model, tokens, latency, cost; no content), proposals and approvals, execution and audit, outbox. Keep action approval separate from chat messages. Schema changes go through hand-written Alembic migrations as in the rest of the repo. Update the OpenAPI contract and regenerate the app and portal clients as usual.
@@ -209,7 +214,7 @@ Typed records: conversations and runs, evidence, sources and chunks, memory fact
 | Scheduling | Existing protected cron endpoints now | Proposed |
 | Secrets | Host environment variables now, secrets manager later | Proposed |
 | Monitoring | Redacted logs and metrics; no prompts or content in external telemetry | Proposed |
-| Voice (later) | English and Hindi speech to text and text to speech | **Open** |
+| Voice (last phase) | English and Hindi speech to text and text to speech | **Open** |
 | Tests | pytest on SQLite and PostgreSQL, Vitest, Playwright | Existing |
 
 Start without an extra agent framework, separate vector database, Redis or Kubernetes.
@@ -242,7 +247,7 @@ Rules for every backend:
 - **Embeddings.** The first read, which listed only Amazon Titan models, was incomplete. A fuller check on 30-Oct (OpenRouter's embeddings model list, about 38 models, and its ZDR endpoint list) chose `qwen/qwen3-embedding-8b` at $0.01 per million tokens, 40,960 token context, with zero-data-retention endpoints on DeepInfra, SiliconFlow and Nebius. Hindi and code quality are from general knowledge, not verified. Live call on 30-Oct with both filters on, fallback off and `dimensions: 1024` returned a 1024-long unit vector from Nebius, so both open points are settled. The call proves the filters were accepted by a matching endpoint. It does not prove OpenRouter's or Nebius's retention terms, which remain as stated in the second bullet above. Repeat the call once with the prod key. Voyage models were not seen on the ZDR list.
 - **Two points for the owner.** (a) The prod filters are strict: accept that some models drop out. (b) OpenRouter's own retention period is not stated publicly in what I read. Ask OpenRouter support or the account's data-policy page if you need it in writing before real data flows.
 
-### 8.2 Voice notes (later phase)
+### 8.2 Voice notes (last phase)
 
 Earlier proposal: Amazon Transcribe (Hindi supported) and Amazon Polly Neural voice Kajal (Hindi and Indian English), Mumbai, with the AI-service-improvement opt-out set before real content. Acceptance testing must cover mixed-language speech, names, dates and amounts. Record only after an explicit button press, let the Founder edit the transcript, then submit through the same conversation path as text. Continuous listening is not required. The voice route is **Open** and should be revisited given D2.
 
@@ -262,39 +267,39 @@ Exit: a bounded backlog with acceptance criteria.
 - Orchestration loop, versioned persona, model adapter with `local` and `openrouter`; the `bedrock` adapter comes after the MVP (D16).
 - Ingest approved sources with PII and secret scrub, refresh and citations.
 - Live read tools (section 6.4) with deterministic summaries and PII-scrubbed results (customer names allowed).
-- Attributable memory. (The question digest, AU-5, moved to Phase 3 on 1-Nov-26 at the owner's request, so Crawl can focus on answer quality.)
+- Attributable memory. (The question digest, AU-5, moved to Phase 2 (Walk) on 1-Nov-26 at the owner's request, so Crawl can focus on answer quality.)
 - Portal page with chat, history, sources, freshness, streaming.
 - Reports, then Agent page: usage and cost trends against configured budgets.
-- Proposal preview cards moved to Phase 3 on 1-Nov-26 at the owner's request. Until then Mani drafts a proposal as text ("Proposal:"), with no domain writes.
+- Proposal preview cards moved to Phase 2 (Walk) on 1-Nov-26 at the owner's request. Until then Mani drafts a proposal as text ("Proposal:"), with no domain writes.
 - Business-question evaluation; non-Founder rejection tests.
 
 Exit: the Founder can ask useful business, technology, operations and available-finance questions, see evidence, and get draft recommendations on test with seed data. No domain action is possible. Audit and access foundations exist from here on.
 
-### Phase 2: English and Hindi voice (1-2 weeks)
+### Phase 2: Walk, Level 2 (3-5 weeks)
 
-Push-to-talk, transcript review, spoken playback on the same conversation service. Code entry stays outside speech.
-Exit: practical English and Hindi use with the same access and policy as text.
-
-### Phase 3: Walk, Level 2 (3-5 weeks)
-
-A small agreed action catalogue (scheduling, data setup); secure code verification; exact-proposal approval, expiry, version checks, rotation; durable idempotent execution; linked audit; scheduled portal reports and agreed alerts; the question digest (AU-5) and proposal cards (typed preview, then approval), both moved here from Phase 1.
+An agreed action catalogue (D22: run the schedule, move a job, release an absent crew member's jobs, freeze or unfreeze a schedule, small data setup); secure code verification (the code is set during this phase, D24); exact-proposal approval, expiry, version checks, rotation; durable idempotent execution; linked audit; scheduled portal reports and alerts once per day (D25); no customer notifications (D23); the question digest (AU-5) and proposal cards (typed preview, then approval), both moved here from Phase 1. Execution has a configuration switch that starts off.
 Exit: only approved, permitted operations execute, and every executed action has a complete audit entry.
 
-### Phase 4: production hardening and acceptance (2-3 weeks)
+### Phase 3: production hardening and acceptance (2-3 weeks)
 
-Access isolation, secret and PII redaction, prompt-injection resistance, policy enforcement; concurrent edits, duplicate requests, expired and replayed approvals, restarts, provider outages, refresh failures; PostgreSQL behaviour, backups, monitoring, recovery; the full evaluation on the prod backend before real data is enabled.
+Access isolation, secret and PII redaction, prompt-injection resistance, policy enforcement; concurrent edits, duplicate requests, expired and replayed approvals, restarts, provider outages, refresh failures; PostgreSQL behaviour, backups, monitoring, recovery; the full evaluation on the prod backend before real data is enabled. Text only: voice-specific tests belong to Phase 5.
 Exit: acceptance criteria pass in the intended deployment.
 
-### Phase 5: Run, Level 3 (estimate after scope)
+### Phase 4: Run, Level 3 (estimate after scope)
 
 Define the pre-approved action policy, limits, revocation and pause controls first. Crew-facing HR and more dialects (Maithili and other Bihar dialects) need their own workflows, permissions and success criteria. Run does not switch on automatically after Walk.
+
+### Phase 5: English and Hindi voice, the last phase (1-2 weeks)
+
+Push-to-talk, transcript review, spoken playback on the same conversation service and the same approval service as Walk. Code entry stays outside speech, with the second in-app check of AU-4 for high-risk actions. Voice-specific hardening: mixed-language speech, names, dates and amounts, replayed audio, and no code in audio or transcripts.
+Exit: practical English and Hindi use with the same access and policy as text.
 
 | Stage | Engineer-weeks |
 |---|---:|
 | Crawl including foundation | 4-6 |
-| Voice | 1-2 |
 | Walk | 3-5 |
 | Hardening | 2-3 |
+| Voice (last) | 1-2 |
 | Total | 10-16 |
 
 Recurring costs: model input and output, embeddings, speech minutes, storage, background execution, observability. No price quotes were verified. Budgets are set in configuration (D10).
@@ -323,19 +328,19 @@ Recurring costs: model input and output, embeddings, speech minutes, storage, ba
 | 2 | Closed (D12): text-only Crawl is the MVP | Scope |
 | 3 | Closed (D8, owner, 1-Nov-26): the Appendix B list is approved. The exclusions were agreed on 30-Oct | Knowledge and PII safety |
 | 4 | Closed (D9, D19): question set reviewed 30-Oct, all 50 kept. Expected answers for live questions are filled in from the seed data in Phase 1 | Accuracy testing |
-| 5 | OpenRouter check done and strict prod filters accepted (section 8.1). Embedding model chosen (D15). Left, for Phase 4 and not Crawl: repeat the live embedding call with the prod key before real data flows | Prod data safety |
+| 5 | OpenRouter check done and strict prod filters accepted (section 8.1). Embedding model chosen (D15). Left, for Phase 3 (hardening) and not Crawl: repeat the live embedding call with the prod key before real data flows | Prod data safety |
 | 6 | Closed (D14): customer names allowed; address, mobile, email, admin data excluded | Data sent to OpenRouter in prod |
 | 7 | Closed (D13, D17): local PostgreSQL and build-time source snapshots | Environment setup |
 | 8 | Closed (D18): configuration value, $1 total usage limit per environment to start, no time period | Cost control |
 | 9 | Finance inputs: costs, payroll, allocation rules. Without them, MVP reports revenue and collections only. No expense ledger exists in the code | Profitability claims |
-| 10 | Action catalogue for Walk, with side effects | Walk scope |
+| 10 | Closed (D22, 2-Nov): action catalogue approved as listed in Phase 2 | Walk scope |
 | 11 | Level 3 versus the code rule: AU-2 needs the code for every operation, Level 3 allows pre-approved actions | Run scope |
 | 12 | Crew-facing HR versus "only the Founder can talk to Mani" | Channel and access change, Run |
-| 13 | Customer-facing effects of scheduling actions: which are allowed | Walk safety |
-| 14 | Freshness and alert targets per source, measurable | Monitoring |
+| 13 | Closed (D23, 2-Nov): no customer notifications from Walk actions for now | Walk safety |
+| 14 | Closed for Walk (D25, 2-Nov): reports and alerts once per day. Per-source freshness targets stay open for later phases | Monitoring |
 | 15 | Hosting for background work if Vercel limits bite (section 4) | Reliability |
 | 16 | Closed (D16): Bedrock kept for the future, built after the MVP. AWS account needed only then | AWS account and effort |
-| 17 | Voice route and its data handling | Voice phase |
+| 17 | Voice route and its data handling | Voice phase (last, Phase 5) |
 
 ## 12. Handoff guidance for Claude and Codex
 
