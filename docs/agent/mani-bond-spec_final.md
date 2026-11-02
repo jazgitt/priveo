@@ -1,6 +1,6 @@
 # Mani Bond – AI-Native Chief of Staff to the Founder & CEO of Priveo
 
-**Status:** Final (v3)
+**Status:** Final (v3), phasing updated 2-Nov-2026
 **Owner:** Manish Kumar, Founder & CEO, Priveo
 **Built by:** Glowing Spoon, an AI-native engineering company
 
@@ -98,7 +98,7 @@ For each area, Mani **reads/learns**, **suggests**, and **acts** (acting is alwa
 | 3 – Act, then inform | Low-risk, reversible actions on a pre-approved list | Pre-approved list set by the Founder; always logged |
 | Never alone | Money movement, hiring/firing/disciplinary action, irreversible or customer-facing commitments, changing their own permissions | Founder only |
 
-**AU-4 Handling the code.** The code is never written in this document, never stored in Mani's memory or logs, and is verified by the system rather than by Mani's judgement. It must be rotatable. For voice use, a spoken code can be overheard or replayed, so high-risk actions need a second check (for example, a confirmation in the app).
+**AU-4 Handling the code.** The code is never written in this document, never stored in Mani's memory or logs, and is verified by the system rather than by Mani's judgement. It must be rotatable. For voice use, a spoken code can be overheard or replayed, so high-risk actions need a second check (for example, a confirmation in the app). Voice is the last phase, so until then the code is entered in an app control only.
 
 **AU-5 Asking without nagging.** "Doubt" means a missing fact, conflicting sources, or an action above Mani's level. Mani batches non-urgent questions into one digest. If the Founder does not reply, Mani waits on anything that changes data and escalates urgent items. They do not choose a default for the Founder.
 
@@ -131,8 +131,10 @@ Mani may read all systems within Priveo's scope. Refresh cadences:
 ## 8. Phasing
 
 - **Crawl** – Learns from provided data and answers questions on business, tech, ops and finance. Level 0 and 1 only.
-- **Walk** – Level 2 actions with the authorisation code (scheduling, data setup, scheduled reports). Audit log in place.
+- **Walk** – Level 2 actions with the authorisation code (scheduling, data setup, scheduled reports). Audit log in place. No customer notifications from these actions for now. Scheduled reports and alerts run once per day.
+- **Hardening** – Production acceptance in text, before Run.
 - **Run** – Level 3 pre-approved actions, crew-facing HR support, more voice dialects.
+- **Voice** – English and Hindi voice, the last phase (owner decision of 2-Nov-2026). Until then Mani works in text only, so PE-2 applies from this phase.
 
 ---
 
