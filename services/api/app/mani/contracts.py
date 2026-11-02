@@ -176,3 +176,28 @@ class TurnEvent:
 class Agent(Protocol):
     def run_turn(self, db: Session, *, conversation_id: Any, login_id: Any,
                  user_text: str) -> Iterator[TurnEvent]: ...
+
+
+# ---- Actions (Walk) -----------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ActionSpec:
+    """One thing Mani may propose. The model only ever sees a `propose_*` tool built from this;
+    running it needs an approved proposal."""
+
+    name: str
+    description: str
+    parameters: dict[str, Any]  # a JSON Schema object
+
+
+@dataclass(frozen=True)
+class Preview:
+    """What the Founder reviews before approving. Pure data from a read, never a write."""
+
+    summary: str
+    affected: list[dict[str, Any]] = field(default_factory=list)  # records the action touches
+    changes: list[dict[str, Any]] = field(default_factory=list)  # {"what", "before", "after"}
+    # Owner, 2-Nov-26: no customer notifications for now, so a preview carrying any is refused.
+    notifications: list[str] = field(default_factory=list)
+    record_versions: dict[str, str] = field(default_factory=dict)

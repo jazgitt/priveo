@@ -84,7 +84,9 @@ def test_the_cron_route_needs_the_secret(client, db, founder_id, cron_secret):
 
     r = client.post(CRON, headers={"Authorization": f"Bearer {cron_secret}"})
     assert r.status_code == 200, r.text
-    assert r.json()["job"] == "mani-retention" and r.json()["result"] == {"deleted": 1}
+    assert r.json()["job"] == "mani-retention"
+    assert r.json()["result"] == {"deleted": 1, "proposals_expired": 0, "audit_deleted": 0,
+                                  "proposals_deleted": 0}
     db.expire_all()
     assert db.get(ManiConversation, old_id) is None
 

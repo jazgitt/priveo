@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
+from app.mani.actions.models import ManiProposal
 from app.mani.config import ManiSettings
 from app.mani.models import (
     ManiChunk,
@@ -142,13 +143,16 @@ def run_in_progress(db: Session, conversation_id: uuid.UUID, now: datetime) -> b
 
 def delete_conversation_rows(db: Session, ids: list[uuid.UUID]) -> None:
     """Removes conversations with their messages and runs. Usage rows are counts, not
-    content, so they stay with run_id cleared. Done by hand so it does not depend on the
-    database enforcing foreign-key actions. Does not commit."""
+    content, so they stay with run_id cleared; so do proposals, with their links cleared. Done by
+    hand so it does not depend on the database enforcing foreign-key actions. Does not commit."""
     if not ids:
         return
     run_ids = select(ManiRun.id).where(ManiRun.conversation_id.in_(ids))
     message_ids = select(ManiMessage.id).where(ManiMessage.conversation_id.in_(ids))
     db.execute(update(ManiModelUsage).where(ManiModelUsage.run_id.in_(run_ids)).values(run_id=None))
+    # Proposals belong to the audit trail (3 months), so they outlive the chat that made them.
+    db.execute(update(ManiProposal).where(ManiProposal.run_id.in_(run_ids)).values(run_id=None))
+    db.execute(update(ManiProposal).where(ManiProposal.conversation_id.in_(ids)).values(conversation_id=None))
     db.execute(update(ManiMemoryFact).where(ManiMemoryFact.source_message_id.in_(message_ids))
                .values(source_message_id=None))
     db.execute(update(ManiMessage).where(ManiMessage.conversation_id.in_(ids)).values(run_id=None))

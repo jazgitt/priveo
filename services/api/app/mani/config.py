@@ -60,6 +60,7 @@ class ManiSettings(BaseSettings):
     temperature: float = 0.3
     request_timeout_seconds: float = 120.0
     conversation_retention_days: int = 90
+    audit_retention_days: int = 92  # D11: the action audit is kept 3 months
 
 
     @model_validator(mode="after")
