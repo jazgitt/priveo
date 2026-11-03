@@ -183,6 +183,7 @@ export function CustomerDetailPage() {
               { label: "Email", value: <span className="break-all">{c.email ?? "None yet"}</span> },
               { label: "Mobile", value: c.mobile },
               { label: "Flat", value: c.flat },
+              { label: "Alternate names", value: c.alternate_names },
               { label: "Society", value: c.society_id ? site.sites.find((x) => x.id === c.society_id)?.name : undefined },
               { label: "Address line 1", value: c.address_line1 },
               { label: "Address line 2", value: c.address_line2 },

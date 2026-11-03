@@ -26,7 +26,7 @@ export interface Vehicle {
 export interface Customer { id: string; first_name: string; last_name: string; email: string | null; mobile: string;
   imported_history?: { id: string; date: string | null; service: string; vehicle: string;
     payment_status: string | null; notes: string }[];
-  flat: string; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; password_set: boolean; onboarding_confirmed: boolean;
+  flat: string; alternate_names?: string | null; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; password_set: boolean; onboarding_confirmed: boolean;
   vehicles: Vehicle[]; welcome_sent?: boolean; existing?: boolean }
 /** One row of the customer list. */
 export interface CustomerRow {

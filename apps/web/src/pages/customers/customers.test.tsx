@@ -91,14 +91,14 @@ it("lists vehicles and sign-in state, pages the search and resets the offset whe
   expect(within(first).getByText("Confirmed")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(await screen.findByRole("link", { name: "Second page" })).toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "new");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "new");
   await waitFor(() => expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=new&limit=50&offset=0"))).toBe(true));
 });
 
 it("waits for typing to stop before searching", async () => {
   page();
   await screen.findByRole("link", { name: "Asha Rao" });
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "Asha Rao");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "Asha Rao");
   await waitFor(() => expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=Asha%20Rao"))).toBe(true));
   expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=As&"))).toBe(false);
 });
@@ -107,7 +107,7 @@ it("says when nothing matches", async () => {
   const original = fetchMock.getMockImplementation()!;
   fetchMock.mockImplementation(async (path: string, o?: RequestInit) => (path.startsWith("/v1/admin/customers?q=zz") ? reply([]) : original(path, o)));
   page();
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "zz");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "zz");
   expect(await screen.findByText("No customers found")).toBeInTheDocument();
 });
 
@@ -256,7 +256,7 @@ it("edits details, corrects the email, and confirms password, notification and s
   const edit = screen.getByRole("dialog");
   await userEvent.clear(within(edit).getByLabelText("First name")); await userEvent.type(within(edit).getByLabelText("First name"), "Ash");
   await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
-  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12", address_line1: "", address_line2: "" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12", address_line1: "", address_line2: "", alternate_names: "" }));
 
   await userEvent.click(screen.getAllByRole("button", { name: "Update email" })[0]);
   const email = await screen.findByRole("dialog");
@@ -665,4 +665,29 @@ it("sets up the subscription of a vehicle that has none", async () => {
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/subscription", "POST")).toEqual({
     plan_id: "p1", cutoff_time: "09:00", first_payment_status: "Due",
     interior_day: "Custom", interior_day_notes: "Odd weeks" }));
+});
+
+it("shows the alternate names and sends them when the details are edited", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, o?: RequestInit) =>
+    path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET"
+      ? reply({ ...customer, alternate_names: "Mrs Rao" }) : original(path, o));
+  page("/customers/c1");
+  expect(await screen.findByText("Mrs Rao")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Edit details" }));
+  const edit = screen.getByRole("dialog");
+  expect(within(edit).getByLabelText(/Alternate names/)).toHaveValue("Mrs Rao");
+  await userEvent.type(within(edit).getByLabelText(/Alternate names/), ", A. Rao");
+  await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toMatchObject({ alternate_names: "Mrs Rao, A. Rao" }));
+});
+
+it("creates a customer without an email and says they have no sign-in yet", async () => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Last name", "Rao"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  expect(screen.getByText(/no sign-in yet/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  await userEvent.type(screen.getByLabelText(/^Email/), "not-an-email");
+  expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
 });

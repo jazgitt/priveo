@@ -63,6 +63,7 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
   const [v, setV] = useState({
     first_name: c.first_name, last_name: c.last_name, mobile: c.mobile, flat: c.flat ?? "",
     address_line1: c.address_line1 ?? "", address_line2: c.address_line2 ?? "", society_id: societyId,
+    alternate_names: c.alternate_names ?? "",
   });
   const [touched, setTouched] = useState(false);
   const shown = touched ? v : {
@@ -89,6 +90,9 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
           {(p) => <Input {...p} inputMode="numeric" value={shown.mobile} onChange={set("mobile")} />}
         </Field>
         <Field label="Flat" optional>{(p) => <Input {...p} value={shown.flat} onChange={set("flat")} />}</Field>
+        <Field label="Alternate names" optional className="sm:col-span-2" hint="Other names the customer is known by. Separate them with commas.">
+          {(p) => <Input {...p} maxLength={500} value={shown.alternate_names} onChange={set("alternate_names")} />}
+        </Field>
         <Field label="Address line 1" optional className="sm:col-span-2">
           {(p) => <Input {...p} value={shown.address_line1} onChange={set("address_line1")} />}
         </Field>

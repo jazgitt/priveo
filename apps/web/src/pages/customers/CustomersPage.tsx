@@ -177,8 +177,8 @@ export function CustomersPage() {
               <div className="relative w-full max-w-md">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <Input
-                  aria-label="Search by name, mobile, registration or society"
-                  placeholder="Search by name, mobile, registration or society"
+                  aria-label="Search by name, mobile, registration, parking, zone or society"
+                  placeholder="Search by name, mobile, registration, parking, zone or society"
                   className="bg-card pl-9"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(0); }}
