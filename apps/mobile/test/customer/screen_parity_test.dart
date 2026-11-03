@@ -37,6 +37,24 @@ void main() {
     expect(find.text('B1'), findsNothing);
   });
 
+  testWidgets('the vehicle shows its parking and never a zone (internal to the office and the crew)', (tester) async {
+    await show(tester, const VehicleAccountSection(vehicle: car));
+    await tester.tap(find.text('Edit parking'));
+    await tester.pumpAndSettle();
+    expect(find.text('P1'), findsOneWidget);
+    expect(find.textContaining('Zone'), findsNothing);
+    // A reply that carries a zone is read without showing it.
+    final shown = VehicleDetailDto.fromJson({
+      'id': 'v1', 'registration': 'HR01ZZ1234', 'model': 'Creta', 'society': 'Meadows',
+      'subscription_status': 'Active', 'make': 'Hyundai', 'variant': 'SX', 'category': 'SUV',
+      'parking': 'P1-99', 'monthly_price_rupees': 999, 'cutoff_time': '09:00',
+      'interior_day': 'Monday', 'parking_basement': 'P1', 'parking_number': '99',
+      'rc_status': 'Verified', 'parking_basements': ['P1', 'P2'], 'zone': 'Zone 7',
+    });
+    await show(tester, VehicleAccountSection(vehicle: shown));
+    expect(find.textContaining('Zone'), findsNothing);
+  });
+
   testWidgets('completed calendar card includes finish time and checked count', (tester) async {
     await show(tester, DayCard(date: DateTime(2026, 11, 7), today: DateTime(2026, 11, 8),
       fallbackCutoff: null, visits: [CalendarVisit(vehicleId: 'v1', date: DateTime(2026, 11, 7),

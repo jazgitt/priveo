@@ -479,16 +479,12 @@ class VehicleDetailDto extends VehicleSummaryDto {
     required this.interiorDay,
     this.parkingBasement = '',
     this.parkingNumber = '',
-    this.zone = '',
     this.rcStatus = 'Not uploaded',
     this.parkingBasements = const ['B1', 'B2', 'B3', 'B4'],
   });
 
   final String parkingBasement;
   final String parkingNumber;
-
-  /// The vehicle's zone, set by the office; shown with the parking.
-  final String zone;
 
   /// Uploaded or Not uploaded (VEH-03).
   final String rcStatus;
@@ -517,7 +513,6 @@ class VehicleDetailDto extends VehicleSummaryDto {
     interiorDay: j['interior_day'] as String?,
     parkingBasement: (j['parking_basement'] as String?) ?? '',
     parkingNumber: (j['parking_number'] as String?) ?? '',
-    zone: (j['zone'] as String?) ?? '',
     rcStatus: (j['rc_status'] as String?) ?? 'Not uploaded',
     parkingBasements: (j['parking_basements'] as List?)?.cast<String>() ?? const ['B1', 'B2', 'B3', 'B4'],
   );

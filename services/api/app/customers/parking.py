@@ -11,8 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, Vehicle, VehicleParkingChange
-from app.customers.parking_rules import zone_names
-from app.directory import lookup
+from app.customers.parking_rules import PARKING_NUMBER_MAX, basement_ok, clean_number, zone_names
 from app.directory.models import DirectoryAudit
 from app.identity.service import User
 from app.platform.clock import today_ist
@@ -58,8 +57,10 @@ def slots(db: Session, pairs: Iterable[tuple[Vehicle, date]]) -> dict[tuple[uuid
 
 class ParkingChangeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    basement: str
-    number: str = Field(min_length=1, max_length=20)
+    # May be empty when the vehicle has a zone (the same rule as the vehicle's own parking).
+    basement: str = ""
+    # Free text up to 60 characters, for example "214" or "Under D25".
+    number: str = Field(min_length=1, max_length=PARKING_NUMBER_MAX + 20)
     from_date: date
     # Empty: permanent from `from_date`.
     to_date: date | None = None
@@ -115,17 +116,19 @@ def add_change(vehicle_id: uuid.UUID, body: ParkingChangeIn,
     society_id = v.society_id
     if society_id is None:
         society_id = db.get(Customer, v.customer_id).society_id
-    if body.basement.upper() not in lookup.society_basements(db, society_id):
+    basement = body.basement.strip().upper()
+    if not basement_ok(db, society_id, basement, has_zone=v.zone_id is not None):
         raise ApiError("validation_failed", "Choose a basement.", 422)
-    number = body.number.strip()
-    if not number:
-        raise ApiError("validation_failed", "Enter the parking number.", 422)
+    number = clean_number(body.number)
+    if number is None:
+        raise ApiError("validation_failed",
+                       f"Enter the parking number, up to {PARKING_NUMBER_MAX} characters.", 422)
     if body.to_date is not None and body.to_date < body.from_date:
         raise ApiError("validation_failed", "The end date is before the start date.", 422)
     if (body.to_date or body.from_date) < today_ist():
         raise ApiError("validation_failed", "The change is already over. Choose a later date.", 422)
     change = VehicleParkingChange(
-        vehicle_id=v.id, basement=body.basement.upper(), number=number,
+        vehicle_id=v.id, basement=basement, number=number,
         start_date=body.from_date, end_date=body.to_date, note=body.note.strip(),
         created_by=user.id)
     db.add(change)

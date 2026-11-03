@@ -65,7 +65,6 @@ class VehicleAccountDto {
     required this.id,
     required this.parkingBasement,
     required this.parkingNumber,
-    this.zone = '',
     required this.photoUrl,
     required this.rcStatus,
   });
@@ -73,7 +72,6 @@ class VehicleAccountDto {
   final String id;
   final String parkingBasement;
   final String parkingNumber;
-  final String zone;
   final String? photoUrl;
   final String rcStatus;
 
@@ -82,7 +80,6 @@ class VehicleAccountDto {
         id: j['id'] as String,
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
-        zone: (j['zone'] as String?) ?? '',
         photoUrl: j['photo_url'] as String?,
         rcStatus: j['rc_status'] as String,
       );

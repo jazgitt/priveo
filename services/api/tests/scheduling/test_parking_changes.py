@@ -162,3 +162,33 @@ def test_zone_shows_with_the_parking_on_cards_rows_and_the_crew_day(world, api, 
     assert card_parking(world, jobs, SUNDAY)["Cleaning-External"] == "Zone 4 · B1-24"
     panel = api.get(url(vehicle), headers=admin).json()
     assert panel["zone"] == "Zone 4"
+
+
+def test_a_change_takes_free_text_up_to_60_characters(world, api, admin):
+    """ADM-CUS-27 (owner, 3 Nov 2026): the same rule as the vehicle's own parking."""
+    vehicle, _, _, _ = setup(world, api, admin)
+    text = "Under D25 near the second pillar"
+    r = change(api, admin, vehicle, number=f"  {text}  ")
+    assert r.status_code == 201, r.text
+    assert r.json()["number"] == text
+    longest = "x" * 60
+    assert change(api, admin, vehicle, number=longest).status_code == 201
+    too_long = change(api, admin, vehicle, number="x" * 61)
+    assert too_long.status_code == 422
+    assert "60 characters" in str(too_long.json())
+
+
+def test_a_change_may_leave_the_basement_empty_only_with_a_zone(world, api, admin):
+    from app.customers.models import Customer
+    from app.directory.models import Zone
+    vehicle, _, _, _ = setup(world, api, admin)
+    assert change(api, admin, vehicle, basement="").status_code == 422
+    society_id = vehicle.society_id or world.db.get(Customer, vehicle.customer_id).society_id
+    zone = Zone(society_id=society_id, name="Zone 5")
+    world.db.add(zone)
+    world.db.flush()
+    vehicle.zone_id = zone.id
+    world.db.commit()
+    r = change(api, admin, vehicle, basement="", number="Under D25")
+    assert r.status_code == 201, r.text
+    assert r.json()["basement"] == "" and r.json()["number"] == "Under D25"

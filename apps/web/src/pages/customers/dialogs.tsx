@@ -515,7 +515,8 @@ export function ParkingDialog({ v, customerId, onClose }: { v: Vehicle; customer
   const [note, setNote] = useState("");
   const save = useCustomerSave(customerId, "Parking change saved.", onClose);
   const order = temporary && from && to && to < from ? "The change must end on or after its first day." : undefined;
-  const valid = basement && number.trim() !== "" && from && (!temporary || to) && !order;
+  // The basement may stay empty only while the vehicle has a zone; the number is free text.
+  const valid = parkingOk(basement, number, v.zone_id) && from && (!temporary || to) && !order;
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Change parking, ${v.registration}`} size="sm"
                 description="The crew see this slot on the job card for these days. The vehicle's own slot is not changed."
@@ -527,11 +528,15 @@ export function ParkingDialog({ v, customerId, onClose }: { v: Vehicle; customer
       <div className="grid grid-cols-2 gap-4">
         <Field label="Basement">
           {(p) => basements.length > 0
-            ? <SelectBox {...p} value={basement} onChange={setBasement}
-                         choices={[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))} />
+            ? <SelectBox {...p} value={basement || NONE} onChange={(b) => setBasement(b === NONE ? "" : b)}
+                         choices={[...(v.zone_id ? [{ value: NONE, label: "No basement" }] : []),
+                                   ...[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))]} />
             : <Input {...p} value={basement} onChange={(e) => setBasement(e.target.value)} />}
         </Field>
-        <Field label="Parking number">{(p) => <Input {...p} value={number} onChange={(e) => setNumber(e.target.value)} />}</Field>
+        <Field label="Parking number" hint="A number or short text, for example 214 or Under D25."
+               error={number.trim().length > PARKING_NUMBER_MAX ? `Up to ${PARKING_NUMBER_MAX} characters.` : undefined}>
+          {(p) => <Input {...p} maxLength={PARKING_NUMBER_MAX + 20} value={number} onChange={(e) => setNumber(e.target.value)} />}
+        </Field>
       </div>
       <Field label="Applies">
         {(p) => <SelectBox {...p} value={temporary ? "temporary" : "permanent"} onChange={(x) => setTemporary(x === "temporary")}
