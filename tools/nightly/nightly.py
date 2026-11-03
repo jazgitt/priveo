@@ -108,18 +108,41 @@ def preflight(log: RunLog, home: Path, repo: str, args) -> str:
     log.run("hard reset", ["git", "reset", "-q", "--hard", "origin/main"], cwd=repo)
     if dirty:
         log.note("the nightly clone had uncommitted tracked changes; they were discarded (it is a private clone)")
-    runs = gh_json(log, "gh run list api-deploy", ["gh", "run", "list", "--workflow", "api-deploy.yml", "--limit", "8",
-                   "--json", "createdAt,event,conclusion,status,headBranch,url"], cwd=repo) or []
-    now = datetime.now().astimezone()
-    for r in runs:
-        age = (now - datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))).total_seconds()
-        if age < RECENT_DEPLOY_SECONDS and not args.ignore_recent_deploy:
-            raise Skipped(f"a deploy ran {int(age // 60)} minutes ago ({r['url']}); skipping the night")
+    list_runs = ["gh", "run", "list", "--workflow", "api-deploy.yml", "--limit", "8",
+                 "--json", "createdAt,event,conclusion,status,headBranch,url"]
+    runs = gh_json(log, "gh run list api-deploy", list_runs, cwd=repo)
+    if runs is None:
+        raise StageFailed("cannot read the deploy history from GitHub")
+    # A deploy in the last 2 hours means someone is working (hotfix path): wait for quiet if that
+    # is soon enough, otherwise skip the night.
+    while not args.ignore_recent_deploy:
+        wait, url = recent_deploy_wait(runs, datetime.now().astimezone())
+        if wait <= 0:
+            break
+        if wait > args.max_wait:
+            raise Skipped(f"a deploy ran less than 2 hours ago ({url}); it will be 2 hours old in "
+                          f"{int(wait // 60)} minutes, more than the {int(args.max_wait // 60)} allowed wait; skipping the night")
+        log.note(f"a deploy ran less than 2 hours ago ({url}); waiting {int(wait // 60) + 1} minutes")
+        time.sleep(wait + 60)
+        between(Path(repo), log, args.dry_run)
+        runs = gh_json(log, "gh run list api-deploy", list_runs, cwd=repo)
+        if runs is None:
+            raise StageFailed("cannot read the deploy history from GitHub")
     last_main = next((r for r in runs if r["event"] == "push" and r["headBranch"] == "main"
                       and r["status"] == "completed"), None)
     if last_main and last_main["conclusion"] == "failure":
         raise StageFailed(f"main is red: the last test deploy failed ({last_main['url']})")
     return datetime.now().astimezone().strftime("%Y-%m-%d")
+
+
+def recent_deploy_wait(runs: list[dict], now: datetime) -> tuple[float, str]:
+    """Seconds until the newest deploy is 2 hours old (0 when none is that recent), and its link."""
+    wait, url = 0.0, ""
+    for r in runs:
+        age = (now - datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))).total_seconds()
+        if RECENT_DEPLOY_SECONDS - age > wait:
+            wait, url = RECENT_DEPLOY_SECONDS - age, r.get("url", "")
+    return wait, url
 
 
 def between(home: Path, log: RunLog, dry: bool = False) -> None:
@@ -344,6 +367,7 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--skip-checks", action="store_true")
     ap.add_argument("--ignore-recent-deploy", action="store_true")
+    ap.add_argument("--max-wait", type=int, default=5400, help="seconds to wait for the 2-hour deploy quiet period")
     ap.add_argument("--home", default=str(DEFAULT_HOME))
     ap.add_argument("--allow-any-clone", action="store_true", help="tests only")
     return run(ap.parse_args())
