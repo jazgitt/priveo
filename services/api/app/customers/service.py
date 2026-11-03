@@ -16,7 +16,7 @@ from app.customers.models import (
     Subscription,
     Vehicle,
 )
-from app.customers.parking_rules import basement_ok, clean_number
+from app.customers.parking_rules import basement_ok, clean_number, with_zone, zone_names
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.home.schemas import CustomerHome, QuickAction, VehicleCard
@@ -47,6 +47,8 @@ class OnboardingVehicle(BaseModel):
     parking_basements: list[str] = ["B1", "B2", "B3", "B4"]
     parking_basement: str
     parking_number: str
+    # The vehicle's zone (read only for the customer).
+    zone: str = ""
     has_subscription: bool
     plan_name: str | None
     monthly_price_rupees: int | None
@@ -168,7 +170,9 @@ class CustomerService:
         photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
         for vehicle, sub in owned:
             plan = self._plan(sub)
-            parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
+            parking = with_zone(
+                zone_names(self._db, [vehicle]).get(vehicle.id, ""),
+                "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p))
             cards.append(
                 VehicleCard(
                     id=str(vehicle.id),
@@ -213,6 +217,7 @@ class CustomerService:
                         self._db, vehicle.society_id or customer.society_id),
                     parking_basement=vehicle.parking_basement,
                     parking_number=vehicle.parking_number,
+                    zone=zone_names(self._db, [vehicle]).get(vehicle.id, ""),
                     has_subscription=sub is not None,
                     plan_name=plan.name if plan else None,
                     monthly_price_rupees=sub.monthly_price_rupees if sub else None,

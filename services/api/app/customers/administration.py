@@ -989,6 +989,7 @@ def edit_vehicle(
             entry.category,
         )
     c = db.get(Customer, v.customer_id)
+    old_zone = v.zone_id
     if body.zone_id is not None:
         v.zone_id = zone_for(db, body.zone_id, v.society_id or c.society_id).id
     elif body.clear_zone:
@@ -1025,7 +1026,13 @@ def edit_vehicle(
                 422,
             )
         v.active = body.active
-    audit(db, user.id, "vehicle", v.id, "update", body.model_dump(mode="json"))
+    detail = body.model_dump(mode="json")
+    if v.zone_id != old_zone:
+        # The zone change is recorded by name, from and to (owner, 3 Nov 2026).
+        names = {z.id: z.name for z in db.scalars(select(Zone).where(
+            Zone.id.in_([i for i in (old_zone, v.zone_id) if i])))}
+        detail["zone"] = [names.get(old_zone), names.get(v.zone_id)]
+    audit(db, user.id, "vehicle", v.id, "update", detail)
     db.commit()
     return vehicle_out(db, v, store)
 

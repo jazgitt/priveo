@@ -34,8 +34,10 @@ class CrewJobCard(BaseModel):
     status: str
     vehicle: VehicleInfo
     society: str
-    # For example "B2-14". Empty when it is not on file.
+    # For example "B2-14", with the zone in front when the vehicle has one ("Zone 3 · B2-14").
+    # Empty when it is not on file.
     parking: str
+    zone: str = ""
     # "HH:MM", the assigned slot (CRW-SCH-02).
     start_time: str | None
     # "HH:MM", the time the job must be finished by (CRW-SCH-04).

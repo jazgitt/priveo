@@ -112,3 +112,18 @@ def test_parking_number_is_free_text_and_basement_is_optional_with_a_zone(client
     # Editing something else on a vehicle with no basement is not blocked.
     other = client.patch(f"/v1/admin/vehicles/{vehicle['id']}", headers=admin, json={"active": True})
     assert other.status_code == 200
+
+
+def test_changing_the_zone_of_a_vehicle_is_audited_by_name(client, directory, db):
+    admin, society = _admin(client), directory[0]
+    zones = [client.post(f"{ZONES}/societies/{society.id}/zones", headers=admin,
+                         json={"name": name}).json() for name in ("North", "South")]
+    made = _create(client, directory, admin, email="zone@example.com").json()
+    car = made["vehicles"][0]["id"]
+    client.patch(f"/v1/admin/vehicles/{car}", headers=admin, json={"zone_id": zones[0]["id"]})
+    client.patch(f"/v1/admin/vehicles/{car}", headers=admin, json={"zone_id": zones[1]["id"]})
+    client.patch(f"/v1/admin/vehicles/{car}", headers=admin, json={"clear_zone": True})
+    changes = [a.detail["zone"] for a in db.scalars(
+        select(DirectoryAudit).where(DirectoryAudit.entity == "vehicle")
+        .order_by(DirectoryAudit.at)) if "zone" in a.detail]
+    assert changes == [[None, "North"], ["North", "South"], ["South", None]]

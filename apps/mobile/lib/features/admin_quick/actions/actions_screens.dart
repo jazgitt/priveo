@@ -212,7 +212,13 @@ class _VehicleActionsState extends ConsumerState<_VehicleActions> {
         children: [
           Text('${v['registration']} · ${v['make']} ${v['model']}'),
           Text(
-            '${v['society']} · ${v['parking_basement']}-${v['parking_number']}',
+            [
+              v['society'],
+              if ((v['zone'] as String?)?.isNotEmpty ?? false) v['zone'],
+              [v['parking_basement'], v['parking_number']]
+                  .where((p) => (p as String?)?.isNotEmpty ?? false)
+                  .join('-'),
+            ].join(' · '),
           ),
           if (sub != null)
             Text(

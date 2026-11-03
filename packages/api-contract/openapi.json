@@ -19276,6 +19276,11 @@
             "type": "string",
             "title": "Parking Number"
           },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
+            "default": ""
+          },
           "photo_url": {
             "anyOf": [
               {
@@ -20383,6 +20388,11 @@
           "parking": {
             "type": "string",
             "title": "Parking",
+            "default": ""
+          },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
             "default": ""
           },
           "customer_name": {
@@ -22358,6 +22368,11 @@
             "type": "string",
             "title": "Parking Number"
           },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
+            "default": ""
+          },
           "society": {
             "type": "string",
             "title": "Society"
@@ -22723,6 +22738,11 @@
           "parking": {
             "type": "string",
             "title": "Parking"
+          },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
+            "default": ""
           },
           "start_time": {
             "anyOf": [
@@ -27142,6 +27162,11 @@
             "type": "string",
             "title": "Parking Number"
           },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
+            "default": ""
+          },
           "has_subscription": {
             "type": "boolean",
             "title": "Has Subscription"
@@ -30470,6 +30495,11 @@
           "parking": {
             "type": "string",
             "title": "Parking"
+          },
+          "zone": {
+            "type": "string",
+            "title": "Zone",
+            "default": ""
           },
           "rc_status": {
             "type": "string",

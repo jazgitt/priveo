@@ -384,7 +384,11 @@ class _ReviewState extends ConsumerState<_Review> {
     final price = v.monthlyPriceRupees;
     final preview = d.basement == null && d.number.text.trim().isEmpty
         ? null
-        : '${d.basement ?? '–'} · ${d.number.text.trim().isEmpty ? '–' : d.number.text.trim()}';
+        : [
+            if ((d.vehicle.zone ?? '').isNotEmpty) d.vehicle.zone!,
+            d.basement ?? '–',
+            d.number.text.trim().isEmpty ? '–' : d.number.text.trim(),
+          ].join(' · ');
     return [
       if (part == 0) ...[
       _ReadOnly(
@@ -572,7 +576,16 @@ class _ReviewState extends ConsumerState<_Review> {
                 ? l.noRegistration
                 : d.vehicle.registration,
           ),
-          row(l.parking, '${d.basement}-${d.number.text.trim()}'),
+          row(
+            l.parking,
+            [
+              if ((d.vehicle.zone ?? '').isNotEmpty) d.vehicle.zone!,
+              [
+                d.basement ?? '',
+                d.number.text.trim(),
+              ].where((p) => p.isNotEmpty).join('-'),
+            ].where((p) => p.isNotEmpty).join(' · '),
+          ),
           if (d.cutoff != null) row(l.cutoffTime, formatClock(d.cutoff!)),
           if (d.vehicle.asksInteriorDay && d.day != null)
             row(l.interiorCareDay, d.day!),

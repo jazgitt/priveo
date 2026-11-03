@@ -765,3 +765,8 @@ it("edits the parking of a car as free text", async () => {
   await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ parking_basement: "B1", parking_number: "Near Tesla" }));
 });
+
+it("shows the zone and the parking slot together on the vehicle", async () => {
+  detail([{ ...car(), zone_id: "z1", zone: "Zone 2" }]);
+  expect(await screen.findByText("Zone 2 · B1-17")).toBeInTheDocument();
+});

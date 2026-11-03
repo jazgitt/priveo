@@ -171,6 +171,13 @@ class _EditParkingState extends ConsumerState<_EditParking> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(AccountStrings.editParking, style: text.titleMedium),
+          if (widget.vehicle.zone.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${AccountStrings.zoneLabel}: ${widget.vehicle.zone} (${AccountStrings.zoneSetByOffice})',
+              style: text.bodyMedium,
+            ),
+          ],
           const SizedBox(height: 12),
           Text(AccountStrings.basement, style: text.labelMedium),
           const SizedBox(height: 8),
