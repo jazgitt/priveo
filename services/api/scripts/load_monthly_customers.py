@@ -3,6 +3,7 @@
   python scripts/load_monthly_customers.py "<file.xlsx>"                   trial run, saves nothing
   python scripts/load_monthly_customers.py "<file.xlsx>" --apply           saves
   python scripts/load_monthly_customers.py "<file.xlsx>" --society "Name"  names the society
+  ... --reuse-plans-by-price   keep plans that already have a price (no rename), create only a missing one
 
 Without --society it uses the only society in the database, and stops if there is
 more than one. Reads DATABASE_URL (the database it loads into: check it first).
@@ -29,14 +30,16 @@ def main() -> None:
         at = args.index("--society")
         society = args[at + 1] if at + 1 < len(args) else None
         del args[at:at + 2]
-    args = [a for a in args if a != "--apply"]
+    reuse = "--reuse-plans-by-price" in args
+    args = [a for a in args if a not in ("--apply", "--reuse-plans-by-price")]
     if len(args) != 1:
         raise SystemExit(__doc__)
     engine = get_engine()
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     with Session(engine) as db:
         try:
-            report = load_monthly_customers(db, args[0], society_name=society, apply=apply)
+            report = load_monthly_customers(db, args[0], society_name=society, apply=apply,
+                                           reuse_plans_by_price=reuse)
         except ValueError as problem:
             raise SystemExit(str(problem)) from None
 
