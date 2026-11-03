@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text, Time, Uuid, false
+from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -189,6 +189,26 @@ class AddonRequest(Base):
     payment_status: Mapped[str | None] = mapped_column(String(16))
     notes: Mapped[str] = mapped_column(Text, default="")
     source_ref: Mapped[str | None] = mapped_column(String(40), unique=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class LegacyServiceRecord(Base):
+    """One day of a vehicle's service history from before the app (the owner's
+    calendar sheet, loaded once). Read-only history: it never feeds the
+    schedule, the crew app, notifications or payments. A skipped day shows as
+    Cancelled in the vehicle's service history, with the reason if there is one."""
+
+    __tablename__ = "legacy_service_records"
+    __table_args__ = (UniqueConstraint("vehicle_id", "service_date", name="uq_legacy_service_vehicle_date"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
+    service_date: Mapped[date] = mapped_column(Date)
+    # "Exterior" or "Exterior + Interior"; empty for a skipped day.
+    services: Mapped[str] = mapped_column(String(40), default="")
+    # Completed or Skipped.
+    outcome: Mapped[str] = mapped_column(String(12))
+    skip_reason: Mapped[str] = mapped_column(String(60), default="")
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
