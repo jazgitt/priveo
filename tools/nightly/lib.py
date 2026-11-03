@@ -167,10 +167,13 @@ class RunLog:
 
 def gh_json(log: RunLog, name: str, argv: list[str], cwd=None):
     """Run a gh command, return parsed JSON (or None on failure)."""
-    res = log.run(name, argv, cwd=cwd, timeout=120)
-    if not res.ok:
-        return None
-    try:
-        return json.loads(res.text())
-    except json.JSONDecodeError:
-        return None
+    for attempt in range(3):  # GitHub resets connections now and then
+        res = log.run(name, argv, cwd=cwd, timeout=120)
+        if res.ok:
+            try:
+                return json.loads(res.text())
+            except json.JSONDecodeError:
+                return None
+        if attempt < 2:
+            time.sleep(15)
+    return None

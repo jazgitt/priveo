@@ -42,6 +42,18 @@ class Lock(unittest.TestCase):
             self.assertIn("unreadable", nightly.acquire_lock(home))
 
 
+class RecentDeploy(unittest.TestCase):
+    def test_wait_until_two_hours_old(self):
+        from datetime import datetime, timedelta, timezone
+        now = datetime(2026, 11, 5, 2, 0, tzinfo=timezone.utc)
+        runs = [{"createdAt": (now - timedelta(minutes=84)).strftime("%Y-%m-%dT%H:%M:%SZ"), "url": "u1"},
+                {"createdAt": (now - timedelta(hours=9)).strftime("%Y-%m-%dT%H:%M:%SZ"), "url": "u2"}]
+        wait, url = nightly.recent_deploy_wait(runs, now)
+        self.assertEqual((int(wait // 60), url), (36, "u1"))
+        self.assertEqual(nightly.recent_deploy_wait(runs[1:], now)[0], 0)
+        self.assertEqual(nightly.recent_deploy_wait([], now), (0.0, ""))
+
+
 class KillSwitch(unittest.TestCase):
     def test_kill_file_and_enabled_flag(self):
         with tempfile.TemporaryDirectory() as d:
