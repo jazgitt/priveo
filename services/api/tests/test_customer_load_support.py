@@ -101,31 +101,35 @@ def test_a_customer_with_no_email_shows_in_the_portal(client, directory, db):
     admin, customer = _admin(client), _loaded_without_email(db, directory)
     one = client.get(f"/v1/admin/customers/{customer.id}", headers=admin)
     assert one.status_code == 200, one.text
-    assert one.json()["email"] is None and one.json()["password_set"] is False
+    assert one.json()["email"] is None and one.json()["mpin_changed"] is False
     listed = client.get("/v1/admin/customers?q=email", headers=admin)
     assert listed.status_code == 200
     assert any(r["id"] == str(customer.id) and r["email"] is None for r in listed.json())
     assert client.get("/v1/admin/customers", headers=admin).status_code == 200
     assert client.get(f"/v1/admin/customers/{customer.id}/sessions", headers=admin).json() == []
-    assert client.post(f"/v1/admin/customers/{customer.id}/reset-password",
-                       headers=admin).status_code == 200
     assert client.patch(f"/v1/admin/customers/{customer.id}", headers=admin, json={
         "first_name": "No", "last_name": "Email", "mobile": "9000000111", "flat": "A-1",
         "address_line1": "", "address_line2": ""}).status_code == 200
     prefs = client.get(f"/v1/admin/customers/{customer.id}/notification-preferences",
                        headers=admin)
     assert prefs.status_code == 409 and prefs.json()["code"] == "no_sign_in"
+    assert client.post(f"/v1/admin/customers/{customer.id}/reset-mpin",
+                       headers=admin).status_code == 200
+    # Resetting the MPIN gives a customer who has no sign-in one.
+    assert client.get(f"/v1/admin/customers/{customer.id}/notification-preferences",
+                      headers=admin).status_code == 200
 
 
-def test_adding_an_email_later_gives_the_customer_a_sign_in(client, directory, db):
+def test_adding_an_email_later_keeps_the_mobile_sign_in(client, directory, db):
     admin, customer = _admin(client), _loaded_without_email(db, directory)
     done = client.patch(f"/v1/admin/customers/{customer.id}/email", headers=admin,
                         json={"email": "later@example.com"})
     assert done.status_code == 200, done.text
     db.expire_all()
     fresh = db.get(Customer, customer.id)
-    assert fresh.email == "later@example.com" and fresh.login_id is not None
-
+    assert fresh.email == "later@example.com"
+    # The email is a contact only: the mobile number is still how they sign in.
+    assert fresh.login_id is None or fresh.login_id != "later@example.com"
 
 def test_custom_interior_day_is_stored_with_its_notes(client, directory, db):
     admin = _admin(client)

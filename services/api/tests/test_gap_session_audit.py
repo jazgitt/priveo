@@ -12,7 +12,7 @@ from tests.test_api import auth, login
 def test_admin_and_customer_reads_observe_last_committed_profile_edit(client, db):
     customer, admin = login(client, "customer"), login(client, "admin")
     c = db.scalar(select(Customer))
-    body = {"first_name": "Admin", "last_name": "Edit", "mobile": "9876543210", "flat": "A1"}
+    body = {"first_name": "Admin", "last_name": "Edit", "mobile": c.mobile, "flat": "A1"}
     edited = client.patch(f"/v1/admin/customers/{c.id}", headers=auth(admin["access_token"]), json=body)
     assert edited.status_code == 200
     assert client.get("/v1/customer/profile", headers=auth(customer["access_token"])).json()["first_name"] == "Admin"

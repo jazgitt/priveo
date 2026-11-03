@@ -10,7 +10,6 @@ from app.identity.service import (
     CodeSent,
     CodeVerified,
     LoginResult,
-    StartResult,
     User,
 )
 from app.platform.db import get_db
@@ -23,23 +22,23 @@ admin = APIRouter(prefix="/v1/admin", tags=["admin"])
 
 class LoginRequest(BaseModel):
     login_id: str
+    # The customer's 6-digit MPIN, or the crew or admin password.
     password: str
+    # Which sign-in this is: "customer", "crew" or "admin". Leave it out and a
+    # 10-digit ID is crew and any other ID is an admin.
+    role: str | None = None
 
 
 class RefreshRequest(BaseModel):
     refresh_token: str
 
 
-class StartRequest(BaseModel):
-    login_id: str
-
-
 class CodeRequest(BaseModel):
-    email: str
+    mobile: str
 
 
 class VerifyCodeRequest(BaseModel):
-    email: str
+    mobile: str
     code: str
 
 
@@ -53,9 +52,9 @@ class CustomerSessionsEnded(BaseModel):
     ended: int
 
 
-class SetPasswordRequest(BaseModel):
-    password_token: str
-    password: str
+class SetMpinRequest(BaseModel):
+    mpin_token: str
+    mpin: str
 
 
 @router.get("/support-contact", response_model=AuthSupportContact)
@@ -76,32 +75,26 @@ def legal_links():
     return {"terms": settings.terms_url, "privacy": settings.privacy_url}
 
 
-@router.post("/start", response_model=StartResult)
-def start(body: StartRequest, auth: AuthService = Depends(get_auth_service)):
-    """Says what to ask for next: the password, or the code just emailed."""
-    return auth.start(body.login_id)
-
-
 @router.post("/code", response_model=CodeSent)
 def send_code(body: CodeRequest, auth: AuthService = Depends(get_auth_service)):
-    """Emails a customer a new code: "resend" and "forgot password"."""
-    return auth.send_code(body.email)
+    """Emails a customer a code to the email on file: "resend" and "forgot MPIN"."""
+    return auth.send_code(body.mobile)
 
 
 @router.post("/code/verify", response_model=CodeVerified)
 def verify_code(body: VerifyCodeRequest, auth: AuthService = Depends(get_auth_service)):
-    return auth.verify_code(body.email, body.code)
+    return auth.verify_code(body.mobile, body.code)
 
 
-@router.post("/password", response_model=LoginResult)
-def set_password(body: SetPasswordRequest, auth: AuthService = Depends(get_auth_service)):
-    """Sets the password after a correct code and signs the customer in."""
-    return auth.set_password(body.password_token, body.password)
+@router.post("/mpin", response_model=LoginResult)
+def set_mpin(body: SetMpinRequest, auth: AuthService = Depends(get_auth_service)):
+    """Sets a new MPIN after a correct code and signs the customer in."""
+    return auth.set_mpin(body.mpin_token, body.mpin)
 
 
 @router.post("/login", response_model=LoginResult)
 def login(body: LoginRequest, auth: AuthService = Depends(get_auth_service)):
-    return auth.login(body.login_id, body.password)
+    return auth.login(body.login_id, body.password, role=body.role)
 
 
 @router.post("/refresh", response_model=LoginResult)

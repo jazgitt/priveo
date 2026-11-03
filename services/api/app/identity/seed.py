@@ -21,7 +21,7 @@ ADMIN_LOGIN_ID = "priveopapa"
 
 
 def _upsert(db: Session, role: str, login_id: str, display_name: str, password: str) -> str:
-    login = db.scalar(select(Login).where(Login.login_id == login_id))
+    login = db.scalar(select(Login).where(Login.login_id == login_id, Login.role == role))
     if login is None:
         login = Login(role=role, login_id=login_id, display_name=display_name)
         db.add(login)
@@ -32,6 +32,8 @@ def _upsert(db: Session, role: str, login_id: str, display_name: str, password: 
         login.password_hash = hash_password(password)
         login.password_changed_at = utcnow()
         outcome = "created" if outcome == "created" else "password set"
+    # A demo customer signs in at once, without choosing a new MPIN.
+    login.must_change_mpin = False
     # Seeding is also how a locked admin gets back in.
     login.locked = False
     login.failed_attempts = 0
@@ -39,14 +41,18 @@ def _upsert(db: Session, role: str, login_id: str, display_name: str, password: 
     return outcome
 
 
-DEMO_CUSTOMER = "customer@priveo.test"
+# The demo customer signs in with this mobile number (it was customer@priveo.test
+# before customers signed in with their mobile number).
+DEMO_CUSTOMER = "9000000001"
+_OLD_DEMO_CUSTOMER = "customer@priveo.test"
 DEMO_SOCIETY = "Priveo Demo Society"
 
 
 def _demo_customer(db: Session) -> None:
     """The demo customer's own record: two vehicles, already reviewed, so the
     demo login opens Home and shows the vehicle switcher."""
-    login = db.scalar(select(Login).where(Login.login_id == DEMO_CUSTOMER))
+    login = db.scalar(select(Login).where(
+        Login.login_id == DEMO_CUSTOMER, Login.role == "customer"))
     db.flush()
     if db.scalar(select(Customer).where(Customer.login_id == login.id)) is not None:
         return
@@ -57,8 +63,8 @@ def _demo_customer(db: Session) -> None:
         db.flush()
     now = utcnow()
     customer = Customer(
-        login_id=login.id, first_name="Aarav", last_name="Mehta", email=DEMO_CUSTOMER,
-        mobile="9000000001", society_id=society.id, flat="A-101", source="demo",
+        login_id=login.id, first_name="Aarav", last_name="Mehta", email=_OLD_DEMO_CUSTOMER,
+        mobile=DEMO_CUSTOMER, society_id=society.id, flat="A-101", source="demo",
         terms_accepted_at=now, onboarding_confirmed_at=now)
     db.add(customer)
     db.flush()
@@ -90,6 +96,12 @@ def seed_logins(db: Session, settings: Settings) -> dict[str, str]:
             ("customer", DEMO_CUSTOMER, "Aarav Mehta", settings.mock_customer_password),
             ("crew", "9000000002", "Ravi Kumar", settings.mock_crew_password),
         ]
+        # An earlier demo customer signed in with the email: move it to the mobile number.
+        old = db.scalar(select(Login).where(
+            Login.login_id == _OLD_DEMO_CUSTOMER, Login.role == "customer"))
+        if old is not None and db.scalar(select(Login.id).where(
+                Login.login_id == DEMO_CUSTOMER, Login.role == "customer")) is None:
+            old.login_id = DEMO_CUSTOMER
         for role, login_id, name, password in demo:
             done[login_id] = (_upsert(db, role, login_id, name, password) if password
                               else "skipped: no password is configured")

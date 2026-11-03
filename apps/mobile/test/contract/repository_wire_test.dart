@@ -24,8 +24,8 @@ void main() {
   late ContractHttp http;
   setUp(()=>http=ContractHttp());
   test('authentication repository exchanges credentials and tolerates logout network failure',()async{
-    final r=ApiAuthRepository(wire.PriveoApi(http.dio()));await r.start('customer@example.test');expect(await r.sendCode('customer@example.test'),isA<int>());expect(await r.verifyCode('customer@example.test','246810'),isNotEmpty);
-    expect((await r.setPassword('token','Password12')).accessToken,isNotEmpty);expect((await r.login('customer@example.test','Password12')).refreshToken,isNotEmpty);await r.refresh('refresh');await r.logoutAll();
+    final r=ApiAuthRepository(wire.PriveoApi(http.dio()));expect(await r.sendCode('9000000001'),isA<int>());expect(await r.verifyCode('9000000001','246810'),isNotEmpty);
+    expect((await r.setMpin('token','482915')).accessToken,isNotEmpty);expect((await r.login('9000000001','482915','customer')).refreshToken,isNotEmpty);await r.refresh('refresh');await r.logoutAll();
     http.status=409;await r.logout();await expectLater(r.logoutAll(),throwsA(isA<ApiFailure>()));
   });
   test('customer file upload sends bytes to a signed URL without API authentication',()async{
@@ -98,7 +98,7 @@ void main() {
   });
   test('account, calendar and preference changes preserve optional fields',()async{
     final r=DioAccountRepository(http.dio());await r.profile();await r.editProfile(firstName:'Asha',lastName:'Rao',mobile:'9000000001');
-    expect(http.requests.last.data,{'first_name':'Asha','last_name':'Rao','mobile':'9000000001'});await r.startEmailChange('new@example.test');await r.verifyEmail('246810');await r.changePassword(current:'old',next:'New123!');
+    expect(http.requests.last.data,{'first_name':'Asha','last_name':'Rao','mobile':'9000000001'});await r.startEmailChange('new@example.test');await r.verifyEmail('246810');await r.changeMpin(current:'000001',next:'482915');
     await r.vehicleAccount('v1');await r.editParking('v1',basement:'B2',number:'14');expect(http.requests.last.data,{'parking_basement':'B2','parking_number':'14'});
     final calendar=DioCalendarActions(http.dio());await calendar.skip('v1',day);await calendar.unskip('v1','s1');await calendar.changeCutoff('v1',day,'08:00');await calendar.updatePreferences('v1',cutoffTime:'08:00',interiorDay:'Friday');
     final prefs=DioNotificationPrefsRepository(http.dio());expect(await prefs.load(),isNotEmpty);await prefs.set('service_completed',false);
@@ -107,7 +107,7 @@ void main() {
   test('all adapters preserve backend error codes and user-facing messages',()async{
     http.status=409;final dio=http.dio();
     final requests=<Future<dynamic> Function()>[
-      ()=>DioCustomerReadsRepository(dio).vehicles(),()=>DioProofReadsRepository(dio).today(),()=>DioMoneyRepository(dio).addons(),()=>ApiCrewRepository(dio).job('j1'),()=>ApiAdminQuickRepository(dio).home(),()=>DioAdminPaymentsRepository(dio).confirm('p1'),()=>ApiAlertsRepository(dio).markAllRead(),()=>AdminActionsRepository(dio).post('/v1/admin/test',{}),()=>ApiSupportRepository(dio).contact(),()=>DioAccountRepository(dio).profile(),()=>DioAccountRepository(dio).changePassword(current:'old',next:'new'),()=>DioCalendarActions(dio).skip('v1',day),()=>DioNotificationPrefsRepository(dio).load(),()=>DioNotificationPrefsRepository(dio).set('service_completed',true),
+      ()=>DioCustomerReadsRepository(dio).vehicles(),()=>DioProofReadsRepository(dio).today(),()=>DioMoneyRepository(dio).addons(),()=>ApiCrewRepository(dio).job('j1'),()=>ApiAdminQuickRepository(dio).home(),()=>DioAdminPaymentsRepository(dio).confirm('p1'),()=>ApiAlertsRepository(dio).markAllRead(),()=>AdminActionsRepository(dio).post('/v1/admin/test',{}),()=>ApiSupportRepository(dio).contact(),()=>DioAccountRepository(dio).profile(),()=>DioAccountRepository(dio).changeMpin(current:'000001',next:'482915'),()=>DioCalendarActions(dio).skip('v1',day),()=>DioNotificationPrefsRepository(dio).load(),()=>DioNotificationPrefsRepository(dio).set('service_completed',true),
     ];
     for(final send in requests){await expectLater(send(),throwsA(isA<ApiFailure>().having((e)=>e.code,'code','conflict').having((e)=>e.message,'message','Please review the change.').having((e)=>e.statusCode,'status',409)));}
   });

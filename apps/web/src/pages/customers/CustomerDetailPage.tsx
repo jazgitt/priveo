@@ -84,17 +84,17 @@ export function CustomerDetailPage() {
   const selected = shownVehicles.find((v) => v.id === picked) ?? shownVehicles[0];
   const hasHistory = (c.imported_history?.length ?? 0) > 0;
 
-  const clearPassword = async () => {
+  const resetMpin = async () => {
     if (await confirm({
-      title: `Clear ${name}'s password?`,
-      description: "They are signed out on every device. At the next sign-in they get an emailed code and set a new password.",
-      confirmLabel: "Clear password", tone: "danger",
-    })) account.mutate({ path: `/v1/admin/customers/${id}/reset-password`, done: "Password cleared. The customer is signed out." });
+      title: `Reset ${name}'s MPIN?`,
+      description: "They are signed out on every device. Their MPIN goes back to the last 6 digits of their mobile number, and they choose a new one at the next sign-in.",
+      confirmLabel: "Reset MPIN", tone: "danger",
+    })) account.mutate({ path: `/v1/admin/customers/${id}/reset-mpin`, done: "MPIN reset. The customer is signed out." });
   };
   const signOutAll = async () => {
     if (await confirm({
       title: `Sign ${name} out everywhere?`,
-      description: "Every session of this customer ends now. They sign in again with their password.",
+      description: "Every session of this customer ends now. They sign in again with their MPIN.",
       confirmLabel: "Sign out all sessions", tone: "danger",
     })) account.mutate({ path: `/v1/admin/customers/${id}/sessions/logout`, done: "All sessions signed out." });
   };
@@ -190,7 +190,7 @@ export function CustomerDetailPage() {
                 <div className="flex flex-col gap-1.5">
                   <StatusBadge status={signIn.label} tone={signIn.tone} className="self-start" />
                   <span className="text-xs text-muted-foreground">
-                    Email {c.email_verified ? "verified" : "not verified"} · Password {c.password_set ? "set" : "not set"} · Review {c.onboarding_confirmed ? "confirmed" : "pending"}
+                    {c.email ? `Email ${c.email_verified ? "verified" : "not verified"} · ` : ""}MPIN {c.mpin_changed ? "chosen by the customer" : "not changed yet"} · Review {c.onboarding_confirmed ? "confirmed" : "pending"}
                   </span>
                 </div>
               ) },
@@ -200,7 +200,7 @@ export function CustomerDetailPage() {
           <Panel title="Account actions" description="These end the customer's sign-in. They are recorded in the audit log.">
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> {c.email ? "Update email" : "Add email"}</Button>
-              <Button variant="outline" onClick={() => void clearPassword()}><KeyRound aria-hidden /> Clear password</Button>
+              <Button variant="outline" onClick={() => void resetMpin()}><KeyRound aria-hidden /> Reset MPIN</Button>
               <Button variant="outline" className="text-destructive" onClick={() => void signOutAll()}>
                 <LogOut aria-hidden /> Sign out all sessions
               </Button>

@@ -21,6 +21,7 @@ class Session {
     required this.displayName,
     required this.accessToken,
     required this.refreshToken,
+    this.mustChangeMpin = false,
   });
 
   final Role role;
@@ -28,11 +29,29 @@ class Session {
   final String accessToken;
   final String refreshToken;
 
+  /// A customer who still has the MPIN the admin gave. The app opens the
+  /// "choose your MPIN" screen first, and the API refuses everything else.
+  final bool mustChangeMpin;
+
+  Session withMpinChanged() => Session(
+    role: role,
+    displayName: displayName,
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+  );
+
   /// Stable local queue partition. API authorization still validates the JWT.
   String? get loginId {
     try {
-      final payload = jsonDecode(utf8.decode(base64Url.decode(
-          base64Url.normalize(accessToken.split('.')[1])))) as Map;
+      final payload =
+          jsonDecode(
+                utf8.decode(
+                  base64Url.decode(
+                    base64Url.normalize(accessToken.split('.')[1]),
+                  ),
+                ),
+              )
+              as Map;
       final id = payload['sub'];
       return id is String && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)
           ? id.toLowerCase()
@@ -43,26 +62,29 @@ class Session {
   }
 
   factory Session.fromLogin(LoginResult r) => Session(
-        role: Role.parse(r.role),
-        displayName: r.displayName,
-        accessToken: r.accessToken,
-        refreshToken: r.refreshToken,
-      );
+    role: Role.parse(r.role),
+    displayName: r.displayName,
+    accessToken: r.accessToken,
+    refreshToken: r.refreshToken,
+    mustChangeMpin: r.mustChangeMpin ?? false,
+  );
 
   /// Reads the session saved on the phone by [toJson].
   factory Session.fromLoginJson(Map<String, dynamic> j) => Session(
-        role: Role.parse(j['role'] as String),
-        displayName: j['display_name'] as String,
-        accessToken: j['access_token'] as String,
-        refreshToken: j['refresh_token'] as String,
-      );
+    role: Role.parse(j['role'] as String),
+    displayName: j['display_name'] as String,
+    accessToken: j['access_token'] as String,
+    refreshToken: j['refresh_token'] as String,
+    mustChangeMpin: j['must_change_mpin'] == true,
+  );
 
   Map<String, dynamic> toJson() => {
-        'role': role.name,
-        'display_name': displayName,
-        'access_token': accessToken,
-        'refresh_token': refreshToken,
-      };
+    'role': role.name,
+    'display_name': displayName,
+    'access_token': accessToken,
+    'refresh_token': refreshToken,
+    'must_change_mpin': mustChangeMpin,
+  };
 }
 
 /// Tokens live only in secure storage.

@@ -17,14 +17,13 @@ import '../data/support_contact.dart';
 import 'auth_strings.dart';
 
 /// The steps of signing in. Everyone starts at [id]: the welcome buttons are
-/// on the splash screen, which opens this screen. A customer who has no
-/// password yet, or has forgotten it, goes through [code] and [newPassword]
-/// (AUTH-03, AUTH-16). Everyone else goes to [password].
-enum _Step { id, password, code, newPassword }
+/// on the splash screen, which opens this screen. Then [password] (a customer
+/// types their MPIN there). A customer who forgot the MPIN goes through [code]
+/// and [newMpin] (AUTH-16).
+enum _Step { id, password, code, newMpin }
 
-/// AUTH-12: at least 8 characters, with a letter and a number.
-bool isAcceptablePassword(String p) =>
-    p.length >= 8 && p.contains(RegExp('[A-Za-z]')) && p.contains(RegExp(r'\d'));
+/// A customer's MPIN is exactly 6 digits.
+bool isAcceptableMpin(String p) => RegExp(r'^\d{6}$').hasMatch(p);
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -37,9 +36,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _id = TextEditingController();
   final _password = TextEditingController();
   final _code = TextEditingController();
-  final _newPassword = TextEditingController();
+  final _newMpin = TextEditingController();
   final _confirm = TextEditingController();
   _Step _step = _Step.id;
+  // A 10-digit ID is a customer's or a crew member's mobile number: the person
+  // says which. Any other ID is an admin's.
+  String _pickedRole = 'customer';
   bool _notRegistered = false;
   late final _termsTap = TapGestureRecognizer()
     ..onTap = () => openLegalLink(ref, 'terms');
@@ -48,38 +50,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscure = true;
   bool _busy = false;
   String? _error;
-  String _passwordToken = '';
+  String _mpinToken = '';
   int _resendIn = 0;
   Timer? _countdown;
 
   String get _loginId => _id.text.trim();
-  bool get _isEmail => _loginId.contains('@');
+  bool get _isMobile => RegExp(r'^\d{10}$').hasMatch(_loginId);
+  String get _role => _isMobile ? _pickedRole : 'admin';
+  bool get _isCustomer => _role == 'customer';
 
   @override
   void dispose() {
     _countdown?.cancel();
     _termsTap.dispose();
     _privacyTap.dispose();
-    for (final c in [_id, _password, _code, _newPassword, _confirm]) {
+    for (final c in [_id, _password, _code, _newMpin, _confirm]) {
       c.dispose();
     }
     super.dispose();
   }
 
   void _go(_Step step) => setState(() {
-        _step = step;
-        _error = null;
-        _notRegistered = false;
-        _obscure = true;
-        if (step == _Step.id) {
-          _countdown?.cancel();
-          _password.clear();
-        }
-        if (step != _Step.newPassword) {
-          _newPassword.clear();
-          _confirm.clear();
-        }
-      });
+    _step = step;
+    _error = null;
+    _notRegistered = false;
+    _obscure = true;
+    if (step == _Step.id) {
+      _countdown?.cancel();
+      _password.clear();
+    }
+    if (step != _Step.newMpin) {
+      _newMpin.clear();
+      _confirm.clear();
+    }
+  });
 
   void _startCountdown(int seconds) {
     _countdown?.cancel();
@@ -105,7 +109,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         setState(() {
           _error = e.message ?? l.networkError;
-          _notRegistered = e.code == 'email_not_registered';
+          _notRegistered =
+              e.code == 'mobile_not_registered' || e.code == 'no_email';
         });
       }
     } finally {
@@ -113,24 +118,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _continue() async {
+  void _continue() {
+    final l = AppLocalizations.of(context);
     if (_loginId.isEmpty) {
-      setState(() => _error = AppLocalizations.of(context).enterId);
+      setState(() => _error = l.enterId);
       return;
     }
-    if (_isEmail && !isPlausibleEmail(_loginId)) {
-      setState(() => _error = const AuthText().emailInvalid);
+    // Only digits: a mobile number, so it must have 10.
+    if (RegExp(r'^\d+$').hasMatch(_loginId) && !_isMobile) {
+      setState(() => _error = l.mobileInvalid);
       return;
     }
-    await _run(() async {
-      final next = await ref.read(authRepositoryProvider).start(_loginId);
-      if (!mounted) return;
-      if (next.next == 'code') {
-        _openCode(next.resendInSeconds);
-      } else {
-        _go(_Step.password);
-      }
-    });
+    _go(_Step.password);
   }
 
   void _openCode(int resendIn) {
@@ -141,16 +140,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _signIn() async {
     if (_password.text.isEmpty) {
-      setState(() => _error = AppLocalizations.of(context).enterPassword);
+      final l = AppLocalizations.of(context);
+      setState(() => _error = _isCustomer ? l.enterMpin : l.enterPassword);
       return;
     }
     // The router sends the user to their home once the session is set.
-    await _run(() => ref
-        .read(authControllerProvider.notifier)
-        .login(_loginId, _password.text));
+    await _run(
+      () => ref
+          .read(authControllerProvider.notifier)
+          .login(_loginId, _password.text, _role),
+    );
   }
 
-  /// "Forgot password" and "Resend code".
+  /// "Forgot MPIN" and "Resend code".
   Future<void> _sendCode() => _run(() async {
         final wait = await ref.read(authRepositoryProvider).sendCode(_loginId);
         if (mounted) _openCode(wait);
@@ -162,32 +164,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     await _run(() async {
-      _passwordToken = await ref
+      _mpinToken = await ref
           .read(authRepositoryProvider)
           .verifyCode(_loginId, _code.text);
-      if (mounted) _go(_Step.newPassword);
+      if (mounted) _go(_Step.newMpin);
     });
   }
 
-  Future<void> _savePassword() async {
+  Future<void> _saveMpin() async {
     final l = AppLocalizations.of(context);
-    if (!isAcceptablePassword(_newPassword.text)) {
-      setState(() => _error = l.passwordRule);
+    if (!isAcceptableMpin(_newMpin.text)) {
+      setState(() => _error = l.mpinRule);
       return;
     }
-    if (_newPassword.text != _confirm.text) {
-      setState(() => _error = l.passwordsDiffer);
+    if (_newMpin.text != _confirm.text) {
+      setState(() => _error = l.mpinsDiffer);
       return;
     }
-    await _run(() => ref
-        .read(authControllerProvider.notifier)
-        .setPassword(_passwordToken, _newPassword.text));
+    await _run(
+      () => ref
+          .read(authControllerProvider.notifier)
+          .setMpin(_mpinToken, _newMpin.text),
+    );
   }
 
+  /// The password field. With [mpin] it takes a customer's 6 digits.
   Widget _passwordField({
     required String label,
     required TextEditingController controller,
     required bool isNew,
+    bool mpin = false,
     VoidCallback? onSubmitted,
   }) {
     final l = AppLocalizations.of(context);
@@ -197,6 +203,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         controller: controller,
         enabled: !_busy,
         obscureText: _obscure,
+        keyboardType: mpin ? TextInputType.number : null,
+        inputFormatters: mpin
+            ? [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ]
+            : null,
         autofillHints: [
           isNew ? AutofillHints.newPassword : AutofillHints.password,
         ],
@@ -205,7 +218,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         onSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
         decoration: InputDecoration(
           suffixIcon: IconButton(
-            tooltip: _obscure ? l.showPassword : l.hidePassword,
+            tooltip: _obscure
+                ? (mpin ? l.showMpin : l.showPassword)
+                : (mpin ? l.hideMpin : l.hidePassword),
             icon: Icon(
               _obscure
                   ? Symbols.visibility_rounded
@@ -291,10 +306,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// (AUTH-04).
   Widget _termsNotice() {
     final t = const AuthText();
-    final base = Theme.of(context)
-        .textTheme
-        .bodySmall
-        ?.copyWith(color: context.brand.mute);
+    final base = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: context.brand.mute);
     final link = base?.copyWith(
       decoration: TextDecoration.underline,
       color: Theme.of(context).colorScheme.primary,
@@ -324,12 +338,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: TextField(
           controller: _id,
           enabled: !_busy,
-          keyboardType: TextInputType.emailAddress,
           autofillHints: const [AutofillHints.username],
           textInputAction: TextInputAction.done,
+          onChanged: (_) => setState(() => _error = null),
           onSubmitted: (_) => _continue(),
         ),
       ),
+      // A 10-digit number is a customer's or a crew member's: say which.
+      if (_isMobile) ...[
+        const SizedBox(height: 16),
+        Text(l.signInAs, style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 8),
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(value: 'customer', label: Text(l.roleCustomer)),
+            ButtonSegment(value: 'crew', label: Text(l.roleCrew)),
+          ],
+          selected: {_pickedRole},
+          onSelectionChanged: (v) => setState(() => _pickedRole = v.first),
+        ),
+      ],
       _errorSlot(),
       if (_notRegistered) _supportButtons(),
       PrimaryButton(label: l.continueButton, busy: _busy, onPressed: _continue),
@@ -339,32 +367,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   List<Widget> _passwordStep(AppLocalizations l) => [
-        _idLine(),
-        const SizedBox(height: 8),
-        _passwordField(
-          label: l.passwordLabel,
-          controller: _password,
-          isNew: false,
-          onSubmitted: _signIn,
+    _idLine(),
+    const SizedBox(height: 8),
+    _passwordField(
+      label: _isCustomer ? l.mpinLabel : l.passwordLabel,
+      controller: _password,
+      isNew: false,
+      mpin: _isCustomer,
+      onSubmitted: _signIn,
+    ),
+    _errorSlot(),
+    PrimaryButton(label: l.signInButton, busy: _busy, onPressed: _signIn),
+    if (_isCustomer) ...[
+      const SizedBox(height: 8),
+      Center(
+        child: TextButton(
+          onPressed: _busy ? null : _sendCode,
+          child: Text(l.forgotMpin),
         ),
-        _errorSlot(),
-        PrimaryButton(label: l.signInButton, busy: _busy, onPressed: _signIn),
-        if (_isEmail) ...[
-          const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: _busy ? null : _sendCode,
-              child: Text(l.forgotPassword),
-            ),
-          ),
-        ],
-      ];
+      ),
+      if (_notRegistered) _supportButtons(),
+    ],
+  ];
 
   List<Widget> _codeStep(AppLocalizations l) {
     final time = '00:${_resendIn.toString().padLeft(2, '0')}';
     return [
       Text(
-        l.codeSentTo(_loginId),
+        l.codeSentToEmailOnFile,
         style: Theme.of(context).textTheme.bodyMedium,
       ),
       const SizedBox(height: 24),
@@ -383,7 +413,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         children: [
           TextButton(
             onPressed: _busy ? null : () => _go(_Step.id),
-            child: Text(l.changeEmail),
+            child: Text(l.changeId),
           ),
           if (_resendIn > 0)
             Text(
@@ -402,28 +432,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ];
   }
 
-  List<Widget> _newPasswordStep(AppLocalizations l) => [
-        Text(l.passwordRule, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 24),
-        _passwordField(
-          label: l.newPasswordLabel,
-          controller: _newPassword,
-          isNew: true,
-        ),
-        const SizedBox(height: 16),
-        _passwordField(
-          label: l.confirmPasswordLabel,
-          controller: _confirm,
-          isNew: true,
-          onSubmitted: _savePassword,
-        ),
-        _errorSlot(),
-        PrimaryButton(
-          label: l.savePassword,
-          busy: _busy,
-          onPressed: _savePassword,
-        ),
-      ];
+  List<Widget> _newMpinStep(AppLocalizations l) => [
+    Text(l.mpinRule, style: Theme.of(context).textTheme.bodyMedium),
+    const SizedBox(height: 24),
+    _passwordField(
+      label: l.newMpinLabel,
+      controller: _newMpin,
+      isNew: true,
+      mpin: true,
+    ),
+    const SizedBox(height: 16),
+    _passwordField(
+      label: l.confirmMpinLabel,
+      controller: _confirm,
+      isNew: true,
+      mpin: true,
+      onSubmitted: _saveMpin,
+    ),
+    _errorSlot(),
+    PrimaryButton(label: l.saveMpin, busy: _busy, onPressed: _saveMpin),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +460,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _Step.id => (l.loginTitle, _idStep(l)),
       _Step.password => (l.loginTitle, _passwordStep(l)),
       _Step.code => (l.codeTitle, _codeStep(l)),
-      _Step.newPassword => (l.newPasswordTitle, _newPasswordStep(l)),
+      _Step.newMpin => (l.newMpinTitle, _newMpinStep(l)),
     };
     return Scaffold(
       body: SafeArea(

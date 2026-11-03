@@ -13,9 +13,11 @@ from app.identity.models import Login
 from app.identity.service import hash_password
 from app.media.models import MediaUpload
 from app.platform.db import utcnow
+from tests.people import sign_in_customer
 from tests.test_api import auth, login
 
 EMAIL = "asha@example.com"
+MOBILE = "9000000101"
 PASSWORD = "carwash2026"
 
 
@@ -32,13 +34,13 @@ def add_photo(db, login_id, vehicle_id):
 def asha(client, db):
     """A migrated customer: two subscribed cars with gaps, and a third car
     that only had a Deep Spa. She has not reviewed her details yet."""
-    row = Login(role="customer", login_id=EMAIL, display_name="Asha",
+    row = Login(role="customer", login_id=MOBILE, display_name="Asha",
                 password_hash=hash_password(PASSWORD))
     society = Society(name="DLF Meadows")
     db.add_all([row, society])
     db.flush()
     customer = Customer(login_id=row.id, first_name="Asha", last_name="", email=EMAIL,
-                        mobile="9xxxxx0101", society_id=society.id, flat="A-101",
+                        mobile=MOBILE, society_id=society.id, flat="A-101",
                         source="migration")
     db.add(customer)
     db.flush()
@@ -59,7 +61,7 @@ def asha(client, db):
                                 first_service_date=date(2026, 9, 14), cutoff_time=cutoff,
                                 interior_day=day))
     db.commit()
-    r = client.post("/v1/auth/login", json={"login_id": EMAIL, "password": PASSWORD})
+    r = sign_in_customer(client, MOBILE, PASSWORD)
     return auth(r.json()["access_token"])
 
 
@@ -205,11 +207,10 @@ def test_crew_and_admin_cannot_read_customer_screens(client):
 
 
 def test_a_customer_login_with_no_record_is_told_so(client, db):
-    db.add(Login(role="customer", login_id="bare@example.com", display_name="Bare",
+    db.add(Login(role="customer", login_id="9000000102", display_name="Bare",
                  password_hash=hash_password(PASSWORD)))
     db.commit()
-    r = client.post("/v1/auth/login", json={"login_id": "bare@example.com",
-                                            "password": PASSWORD})
+    r = sign_in_customer(client, "9000000102", PASSWORD)
     r = client.get("/v1/customer/home", headers=auth(r.json()["access_token"]))
     assert r.status_code == 404 and r.json()["code"] == "no_customer_record"
 
@@ -218,7 +219,7 @@ def test_the_review_shows_what_the_admin_entered(client, asha):
     o = client.get("/v1/customer/onboarding", headers=asha).json()
     assert (o["confirmed"], o["first_name"], o["last_name"], o["email"], o["mobile"],
             o["society"], o["flat"]) == (
-        False, "Asha", "", EMAIL, "9xxxxx0101", "DLF Meadows", "A-101")
+        False, "Asha", "", EMAIL, MOBILE, "DLF Meadows", "A-101")
     creta, swift, punch = o["vehicles"]
     assert (creta["has_subscription"], creta["asks_interior_day"], creta["interior_day"],
             creta["monthly_price_rupees"], creta["plan_name"]) == (

@@ -18,7 +18,7 @@ const booking = {
   requested_date: "2026-11-16", requested_finish_by: "13:00",
 };
 const asha = { id: "c1", first_name: "Asha", last_name: "Rao", email: "a@x.com", mobile: "9", flat: "1",
-  email_verified: true, password_set: true, onboarding_confirmed: true, vehicles: [
+  email_verified: true, mpin_changed: true, onboarding_confirmed: true, vehicles: [
     { id: "v1", society: "Meadows", registration: "HR01", make: "Tata", model: "Nexon", variant: "", category: "", parking_basement: "B1", parking_number: "1", photo_url: null, payments: [], subscription: null },
     { id: "v2", society: "Meadows", registration: "HR02", make: "Tata", model: "Nexon", variant: "", category: "", parking_basement: "B1", parking_number: "2", photo_url: null, payments: [],
       subscription: { id: "s2", status: "Inactive", plan_id: "p", plan_name: "", price_rupees: 0, cutoff_time: "", interior_day: null, first_service_date: null, pending_plan_id: null, pending_from: null } }] };

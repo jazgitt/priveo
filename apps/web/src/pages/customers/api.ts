@@ -26,12 +26,12 @@ export interface Vehicle {
 export interface Customer { id: string; first_name: string; last_name: string; email: string | null; mobile: string;
   imported_history?: { id: string; date: string | null; service: string; vehicle: string;
     payment_status: string | null; notes: string }[];
-  flat: string; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; password_set: boolean; onboarding_confirmed: boolean;
+  flat: string; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; mpin_changed: boolean; has_login?: boolean; onboarding_confirmed: boolean;
   vehicles: Vehicle[]; welcome_sent?: boolean; existing?: boolean }
 /** One row of the customer list. */
 export interface CustomerRow {
   id: string; name: string; email: string | null; mobile: string; flat?: string;
-  email_verified?: boolean; password_set?: boolean; onboarding_confirmed?: boolean;
+  email_verified?: boolean; mpin_changed?: boolean; onboarding_confirmed?: boolean;
   vehicles?: { id: string; registration: string; status: string | null }[];
 }
 /** The numbers above the customer list (ADM-CUS-08). */
@@ -89,11 +89,10 @@ export const times = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i
 export const PAGE_SIZE = 50;
 
 /** How far a customer has got with their own sign-in (ADM-CUS-17). */
-export function onboardingState(c: { email_verified?: boolean; password_set?: boolean; onboarding_confirmed?: boolean }):
+export function onboardingState(c: { mpin_changed?: boolean; onboarding_confirmed?: boolean }):
     { label: string; tone: "ok" | "warn" | "neutral" } {
   if (c.onboarding_confirmed) return { label: "Confirmed", tone: "ok" };
-  if (c.password_set) return { label: "Review pending", tone: "warn" };
-  if (c.email_verified) return { label: "Password not set", tone: "warn" };
+  if (c.mpin_changed) return { label: "Review pending", tone: "warn" };
   return { label: "Not signed in yet", tone: "neutral" };
 }
 

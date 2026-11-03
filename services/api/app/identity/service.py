@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.customers.models import Customer
 from app.identity import tokens
-from app.identity.models import AuthEvent, AuthSession, EmailCode, Login
+from app.identity.models import ROLES, AuthEvent, AuthSession, EmailCode, Login
+from app.identity.mpin import mpin_problem
 from app.platform.config import Settings
 from app.platform.db import utcnow
 from app.platform.email import (
@@ -42,7 +43,7 @@ CODE_LIFETIME = timedelta(minutes=30)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
 MAX_WRONG_CODES = 5  # AUTH-07
 MAX_CODES_AN_HOUR = 5  # AUTH-07
-# How long a customer has to set the password after a correct code.
+# How long a customer has to set the MPIN after a correct code.
 PASSWORD_TOKEN_LIFETIME = timedelta(minutes=10)
 
 _hasher = PasswordHasher()
@@ -56,12 +57,9 @@ class LoginResult(BaseModel):
     access_token: str
     refresh_token: str
     expires_in: int
-
-
-class StartResult(BaseModel):
-    # "password": ask for the password. "code": a code was emailed.
-    next: str
-    resend_in_seconds: int
+    # Customer: the MPIN is still the one the admin gave, so the app must ask
+    # for a new one before anything else.
+    must_change_mpin: bool = False
 
 
 class CodeSent(BaseModel):
@@ -69,7 +67,7 @@ class CodeSent(BaseModel):
 
 
 class CodeVerified(BaseModel):
-    password_token: str
+    mpin_token: str
 
 
 @dataclass(frozen=True)
@@ -80,6 +78,7 @@ class User:
     role: str
     display_name: str
     session_id: uuid.UUID
+    must_change_mpin: bool = False
 
 
 def hash_password(password: str) -> str:
@@ -94,10 +93,9 @@ def _password_matches(password_hash: str | None, password: str) -> bool:
 
 
 def role_for(login_id: str) -> str:
-    """An email is a customer, a 10-digit mobile is crew, the rest is an admin
-    user ID (CRW-ACC-02)."""
-    if "@" in login_id:
-        return "customer"
+    """The role a sign-in is for when the request does not name one: a 10-digit
+    mobile is crew, the rest is an admin user ID (CRW-ACC-02). A customer also
+    has a 10-digit mobile, so a customer's sign-in must name its role."""
     if re.fullmatch(r"\d{10}", login_id):
         return "crew"
     return "admin"
@@ -107,13 +105,16 @@ def normalise(login_id: str) -> str:
     return login_id.strip().lower()
 
 
-def _invalid() -> ApiError:
+def _invalid(customer: bool = False) -> ApiError:
+    if customer:
+        return ApiError("invalid_credentials",
+                        "The mobile number or MPIN is not correct.", 401)
     return ApiError("invalid_credentials", "The ID or password is not correct.", 401)
 
 
 def _not_registered() -> ApiError:
-    return ApiError("email_not_registered",
-                    "This email is not registered. Contact Priveo.", 404)  # AUTH-15
+    return ApiError("mobile_not_registered",
+                    "This mobile number is not registered. Contact Priveo.", 404)  # AUTH-15
 
 
 def _new_code_needed(message: str) -> ApiError:
@@ -162,6 +163,7 @@ class AuthService:
                 self._s, login.id, session.id, login.role, minutes),
             refresh_token=refresh_token,
             expires_in=minutes * 60,
+            must_change_mpin=login.must_change_mpin,
         )
 
     def _end(self, session: AuthSession, reason: str) -> None:
@@ -192,26 +194,34 @@ class AuthService:
             AuthEvent.at > since)) or 0
         return STAFF_BLOCKS[min(earlier, len(STAFF_BLOCKS) - 1)]
 
-    def login(self, login_id: str, password: str, channel: str = "mobile") -> LoginResult:
+    def login(self, login_id: str, password: str, channel: str = "mobile",
+              role: str | None = None) -> LoginResult:
+        """Signs in. `role` is what the sign-in screen says it is for: a customer
+        and a crew member can have the same mobile number. Without it, a
+        10-digit ID is crew and any other ID is an admin."""
         key = normalise(login_id)
+        wanted = (role or role_for(key)).strip().lower()
+        customer = wanted == "customer"
         login = self._db.scalar(
-            select(Login).where(Login.login_id == key, Login.role == role_for(key)))
+            select(Login).where(Login.login_id == key, Login.role == wanted)
+        ) if wanted in ROLES else None
         if login is None or not login.active:
             _password_matches(None, password)
-            raise _invalid()
+            raise _invalid(customer)
 
         now = utcnow()
         # A lock set before blocks became timed stays until the admin lifts it.
         if login.locked:
             raise ApiError("account_locked",
-                           "This login is locked. Ask the admin to reset your password.", 403)
+                           "This login is locked. Ask the admin to reset your "
+                           + ("MPIN." if customer else "password."), 403)
         if login.blocked_until and login.blocked_until > now:
             raise _blocked(login.blocked_until, now)
 
         if not _password_matches(login.password_hash, password):
             login.failed_attempts += 1
             self._event(login, "login_failed")
-            error = _invalid()
+            error = _invalid(customer)
             if login.failed_attempts >= MAX_WRONG_ATTEMPTS:
                 login.failed_attempts = 0
                 login.blocked_until = now + self._block_length(login, now)
@@ -224,28 +234,21 @@ class AuthService:
         login.blocked_until = None
         return self._open_session(login, channel, "login")
 
-    # --- A customer's first sign-in and forgotten password (AUTH-03, AUTH-16) ---
+    # --- A customer who forgot the MPIN (AUTH-16) ---
+    # With an email on file, a code is emailed and the customer sets a new MPIN.
+    # Without one, the admin resets it.
 
-    def _customer(self, email: str) -> Login:
-        key = normalise(email)
+    def _customer(self, mobile: str) -> Login:
+        key = normalise(mobile)
         login = self._db.scalar(
             select(Login).where(Login.login_id == key, Login.role == "customer"))
         if login is None or not login.active:
             raise _not_registered()
         return login
 
-    def start(self, login_id: str) -> StartResult:
-        """What the sign-in screen asks for next (AUTH-03, AUTH-11)."""
-        if role_for(normalise(login_id)) != "customer":
-            return StartResult(next="password", resend_in_seconds=0)
-        login = self._customer(login_id)
-        if login.password_hash:
-            return StartResult(next="password", resend_in_seconds=0)
-        return StartResult(next="code", resend_in_seconds=self._send_code(login))
-
-    def send_code(self, email: str) -> CodeSent:
-        """Sends a code: "resend", and the start of "forgot password"."""
-        return CodeSent(resend_in_seconds=self._send_code(self._customer(email)))
+    def send_code(self, mobile: str) -> CodeSent:
+        """Emails a code to the customer's email: "resend" and "forgot MPIN"."""
+        return CodeSent(resend_in_seconds=self._send_code(self._customer(mobile)))
 
     def _code_hash(self, code_id: uuid.UUID, code: str) -> str:
         return tokens.keyed_hash(self._s, f"{code_id}:{code}")
@@ -259,6 +262,11 @@ class AuthService:
     def _send_code(self, login: Login) -> int:
         """Returns the seconds until another code can be asked for."""
         now = utcnow()
+        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+        if customer is None or not customer.email:
+            raise ApiError(
+                "no_email", "No email is saved for this number. Ask Priveo to reset your MPIN.",
+                409)
         wait = int(CODE_RESEND_AFTER.total_seconds())
         current = self._live_code(login)
         if (current is not None and current.verified_at is None
@@ -288,10 +296,8 @@ class AuthService:
         row.code_hash = self._code_hash(row.id, code)
         self._db.add(row)
         self._event(login, "code_sent")
-        purpose = ("sign_in_code" if login.password_hash is None
-                   else "password_reset_code")
         try:
-            self._email.send_code(login.login_id, code, purpose)
+            self._email.send_code(customer.email, code, "mpin_reset_code")
         except EmailSendError as exc:
             # The customer never got it, so it does not count as one sent.
             self._db.rollback()
@@ -300,8 +306,8 @@ class AuthService:
         self._db.commit()
         return wait
 
-    def verify_code(self, email: str, code: str) -> CodeVerified:
-        login = self._customer(email)
+    def verify_code(self, mobile: str, code: str) -> CodeVerified:
+        login = self._customer(mobile)
         row = self._live_code(login)
         now = utcnow()
         if row is None or row.verified_at is not None:
@@ -321,50 +327,48 @@ class AuthService:
             self._db.commit()
             raise error
 
-        password_token = tokens.new_refresh_token()
+        mpin_token = tokens.new_refresh_token()
         row.verified_at = now
         from app.customers.models import Customer
         customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
         if customer is not None:
             customer.email_verified_at = now
-        row.password_token_hash = tokens.refresh_hash(password_token)
+        row.password_token_hash = tokens.refresh_hash(mpin_token)
         row.password_token_expires_at = now + PASSWORD_TOKEN_LIFETIME
         self._event(login, "code_verified")
         self._db.commit()
-        return CodeVerified(password_token=password_token)
+        return CodeVerified(mpin_token=mpin_token)
 
-    def set_password(self, password_token: str, password: str,
-                     channel: str = "mobile") -> LoginResult:
-        """Sets the password after a correct code, and signs the customer in."""
+    def set_mpin(self, mpin_token: str, mpin: str, channel: str = "mobile") -> LoginResult:
+        """Sets a new MPIN after a correct code, and signs the customer in."""
         now = utcnow()
         row = self._db.scalar(select(EmailCode).where(
-            EmailCode.password_token_hash == tokens.refresh_hash(password_token),
+            EmailCode.password_token_hash == tokens.refresh_hash(mpin_token),
             EmailCode.ended_at.is_(None)))
         login = self._db.get(Login, row.login_id) if row else None
         if (row is None or login is None or not login.active
                 or row.password_token_expires_at is None
                 or row.password_token_expires_at <= now):
             raise _new_code_needed("This took too long. Request a new code.")
-        problem = password_problem(password)
+        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+        problem = mpin_problem(mpin, customer.mobile if customer else None)
         if problem:
-            raise ApiError("weak_password", problem, 422, {"password": problem})
+            raise ApiError("weak_mpin", problem, 422, {"mpin": problem})
 
-        first_time = login.password_hash is None
-        login.password_hash = hash_password(password)
+        login.password_hash = hash_password(mpin)
         login.password_changed_at = now
+        login.must_change_mpin = False
         login.failed_attempts = 0
         login.blocked_until = None
         row.ended_at, row.ended_reason = now, "used"
-        # The old password stops working everywhere (AUTH-16, AUTH-17).
+        # The old MPIN stops working everywhere (AUTH-16, AUTH-17).
         self._db.execute(
             update(AuthSession)
             .where(AuthSession.login_id == login.id, AuthSession.ended_at.is_(None))
-            .values(ended_at=now, ended_reason="password_reset"))
-        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+            .values(ended_at=now, ended_reason="mpin_reset"))
         if customer is not None and customer.terms_accepted_at is None:
             customer.terms_accepted_at = now  # AUTH-04
-        return self._open_session(
-            login, channel, "password_set" if first_time else "password_reset")
+        return self._open_session(login, channel, "mpin_reset")
 
     def _live(self, session: AuthSession | None) -> tuple[AuthSession, Login]:
         """The session and its login, when the device is still signed in."""
@@ -403,7 +407,8 @@ class AuthService:
         if now - session.last_used_at > touch_every:
             session.last_used_at = now
             self._db.commit()
-        return User(login.id, login.role, login.display_name, session.id)
+        return User(login.id, login.role, login.display_name, session.id,
+                    login.must_change_mpin)
 
     def logout(self, access_token: str | None) -> None:
         """Ends this device's session. Never fails: the phone signs out anyway."""

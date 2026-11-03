@@ -1,8 +1,8 @@
 """Smoke test for a deployed API: health, a wrong password and each role's entry data.
 
 Usage: python scripts/smoke_test.py https://api-dev.example.com
-Passwords come from SMOKE_CUSTOMER_PASSWORD, SMOKE_CREW_PASSWORD and
-SMOKE_ADMIN_PASSWORD. Nothing is printed except IDs and status codes.
+The customer's MPIN and the crew and admin passwords come from
+SMOKE_CUSTOMER_PASSWORD, SMOKE_CREW_PASSWORD and SMOKE_ADMIN_PASSWORD. Nothing is printed except IDs and status codes.
 SMOKE_ROLES (default "customer,crew,admin") limits the logins tried: production
 has no demo logins, so it runs with SMOKE_ROLES=admin.
 """
@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 
 LOGINS = [
-    ("customer", "customer@priveo.test", "SMOKE_CUSTOMER_PASSWORD"),
+    ("customer", "9000000001", "SMOKE_CUSTOMER_PASSWORD"),
     ("crew", "9000000002", "SMOKE_CREW_PASSWORD"),
     ("admin", "priveopapa", "SMOKE_ADMIN_PASSWORD"),
 ]
@@ -46,16 +46,16 @@ def main() -> None:
           f"health (build {body.get('build_number')})")
     # The wrong password goes first. The admin's right password below then
     # clears the wrong-attempt count, so a deploy never uses up a try.
-    status, body = call(base, "/v1/auth/login", {"login_id": "priveopapa", "password": "wrong"})
+    status, body = call(base, "/v1/auth/login",
+                        {"login_id": "priveopapa", "password": "wrong", "role": "admin"})
     check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
-    status, body = call(base, "/v1/auth/start", {"login_id": "priveopapa"})
-    check(status == 200 and body.get("next") == "password", "sign-in start")
     roles = os.environ.get("SMOKE_ROLES", "customer,crew,admin").split(",")
     for role, login_id, env in LOGINS:
         if role not in roles:
             continue
         password = os.environ.get(env, "")
-        status, body = call(base, "/v1/auth/login", {"login_id": login_id, "password": password})
+        status, body = call(base, "/v1/auth/login",
+                            {"login_id": login_id, "password": password, "role": role})
         check(status == 200 and body.get("role") == role, f"login {role}")
         # Crew home now reads real visits; the old mock /crew/home was removed.
         path = "/v1/crew/visits" if role == "crew" else f"/v1/{role}/home"

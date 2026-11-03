@@ -54,8 +54,13 @@ Future<void> tapFinder(WidgetTester tester, Finder finder) async {
 Future<Session> signInApi(
   WidgetTester tester,
   String id,
-  String password,
-) async {
+  String password, {
+  String? role,
+}) async {
+  // A user ID that is not a number is an admin's. A mobile number is a
+  // customer's unless the caller says it is crew.
+  final signInRole =
+      role ?? (RegExp(r'^\d+$').hasMatch(id) ? 'customer' : 'admin');
   Session? session;
   Object? failure;
   await tester.runAsync(() async {
@@ -72,7 +77,7 @@ Future<Session> signInApi(
     try {
       session = await container
           .read(authRepositoryProvider)
-          .login(id, password);
+          .login(id, password, signInRole);
     } catch (e) {
       // runAsync would swallow it; rethrow outside.
       failure = e;

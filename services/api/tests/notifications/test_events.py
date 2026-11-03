@@ -33,8 +33,8 @@ from tests.visits.conftest import (  # noqa: F401
     world,
 )
 
-CUSTOMER_LOGIN = "owner@priveo.test"
-FORBIDDEN_IN_CREW_TEXT = ("Secret", "Name", "9123456789", "owner@priveo.test")
+CUSTOMER_LOGIN = "9123456789"
+FORBIDDEN_IN_CREW_TEXT = ("Secret", "Name", "9123456789")
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def push():
 
 @pytest.fixture
 def customer_login(db, world):
-    return db.scalar(select(Login).where(Login.login_id == CUSTOMER_LOGIN))
+    return db.scalar(select(Login).where(Login.login_id == CUSTOMER_LOGIN, Login.role == "customer"))
 
 
 @pytest.fixture

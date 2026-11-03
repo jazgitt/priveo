@@ -67,15 +67,15 @@ def test_invoice_pdf_checks_authentication_roles_and_customer_ownership(money):
     m = money
     p, _ = issued(m)
     original = m.db.get(Customer, m.customer_id)
-    login = Login(role="customer", login_id="other-invoice@example.com", display_name="Other",
+    login = Login(role="customer", login_id="9876543219", display_name="Other",
                   password_hash=hash_password("pw-other-invoice1"), active=True)
     m.db.add(login)
     m.db.flush()
     m.db.add(Customer(login_id=login.id, first_name="Other", last_name="Customer",
-                      email=login.login_id, mobile="9876543219", society_id=original.society_id))
+                      email="other-invoice@example.com", mobile="9876543219", society_id=original.society_id))
     m.db.commit()
     token = m.client.post("/v1/auth/login", json={
-        "login_id": login.login_id, "password": "pw-other-invoice1",
+        "login_id": login.login_id, "password": "pw-other-invoice1", "role": "customer",
     }).json()["access_token"]
     url = f"/v1/customer/payments/{p['id']}/invoice.pdf"
     assert m.client.get(url).status_code == 401

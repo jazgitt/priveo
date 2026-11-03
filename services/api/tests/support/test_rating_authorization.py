@@ -28,11 +28,11 @@ def test_rating_requires_completed_visit(client, customer, db, rating_visit, sta
 
 
 def test_rating_foreign_completed_visit_is_rejected(client, customer, db, rating_visit):
-    login = Login(role="customer", login_id="other@example.com", display_name="Other")
+    login = Login(role="customer", login_id="9999999999", display_name="Other")
     db.add(login)
     db.flush()
     original = db.get(Customer, db.get(Vehicle, rating_visit.vehicle_id).customer_id)
-    owner = Customer(login_id=login.id, email=login.login_id, first_name="Other", last_name="Owner",
+    owner = Customer(login_id=login.id, email="other@example.com", first_name="Other", last_name="Owner",
                      mobile="9999999999", society_id=original.society_id)
     db.add(owner)
     db.flush()

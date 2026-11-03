@@ -60,23 +60,23 @@ class AccountEmailCodeSent {
       };
 }
 
-class AccountPasswordChange {
-  const AccountPasswordChange({
-    required this.currentPassword,
-    required this.newPassword,
+class AccountMpinChange {
+  const AccountMpinChange({
+    required this.currentMpin,
+    required this.newMpin,
   });
 
-  final String currentPassword;
-  final String newPassword;
+  final String currentMpin;
+  final String newMpin;
 
-  factory AccountPasswordChange.fromJson(Map<String, dynamic> j) => AccountPasswordChange(
-        currentPassword: j['current_password'] as String,
-        newPassword: j['new_password'] as String,
+  factory AccountMpinChange.fromJson(Map<String, dynamic> j) => AccountMpinChange(
+        currentMpin: j['current_mpin'] as String,
+        newMpin: j['new_mpin'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'current_password': currentPassword,
-        'new_password': newPassword,
+        'current_mpin': currentMpin,
+        'new_mpin': newMpin,
       };
 }
 
@@ -119,7 +119,7 @@ class AccountProfileOut {
 
   final String firstName;
   final String lastName;
-  final String email;
+  final String? email;
   final String mobile;
   final String society;
   final String flat;
@@ -130,7 +130,7 @@ class AccountProfileOut {
   factory AccountProfileOut.fromJson(Map<String, dynamic> j) => AccountProfileOut(
         firstName: j['first_name'] as String,
         lastName: j['last_name'] as String,
-        email: j['email'] as String,
+        email: j['email'] == null ? null : j['email'] as String,
         mobile: j['mobile'] as String,
         society: j['society'] as String,
         flat: j['flat'] as String,
@@ -2006,17 +2006,17 @@ class CitationOut {
 
 class CodeRequest {
   const CodeRequest({
-    required this.email,
+    required this.mobile,
   });
 
-  final String email;
+  final String mobile;
 
   factory CodeRequest.fromJson(Map<String, dynamic> j) => CodeRequest(
-        email: j['email'] as String,
+        mobile: j['mobile'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'email': email,
+        'mobile': mobile,
       };
 }
 
@@ -2038,17 +2038,17 @@ class CodeSent {
 
 class CodeVerified {
   const CodeVerified({
-    required this.passwordToken,
+    required this.mpinToken,
   });
 
-  final String passwordToken;
+  final String mpinToken;
 
   factory CodeVerified.fromJson(Map<String, dynamic> j) => CodeVerified(
-        passwordToken: j['password_token'] as String,
+        mpinToken: j['mpin_token'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'password_token': passwordToken,
+        'mpin_token': mpinToken,
       };
 }
 
@@ -3364,7 +3364,7 @@ class CustomerCreate {
 
   final String firstName;
   final String lastName;
-  final String email;
+  final String? email;
   final String mobile;
   final String? flat;
   final VehicleCreate vehicle;
@@ -3372,7 +3372,7 @@ class CustomerCreate {
   factory CustomerCreate.fromJson(Map<String, dynamic> j) => CustomerCreate(
         firstName: j['first_name'] as String,
         lastName: j['last_name'] as String,
-        email: j['email'] as String,
+        email: j['email'] == null ? null : j['email'] as String,
         mobile: j['mobile'] as String,
         flat: j['flat'] == null ? null : j['flat'] as String,
         vehicle: VehicleCreate.fromJson(j['vehicle'] as Map<String, dynamic>),
@@ -5388,19 +5388,23 @@ class LoginRequest {
   const LoginRequest({
     required this.loginId,
     required this.password,
+    required this.role,
   });
 
   final String loginId;
   final String password;
+  final String? role;
 
   factory LoginRequest.fromJson(Map<String, dynamic> j) => LoginRequest(
         loginId: j['login_id'] as String,
         password: j['password'] as String,
+        role: j['role'] == null ? null : j['role'] as String,
       );
 
   Map<String, dynamic> toJson() => {
         'login_id': loginId,
         'password': password,
+        'role': role,
       };
 }
 
@@ -5411,6 +5415,7 @@ class LoginResult {
     required this.accessToken,
     required this.refreshToken,
     required this.expiresIn,
+    this.mustChangeMpin,
   });
 
   final String role;
@@ -5418,6 +5423,7 @@ class LoginResult {
   final String accessToken;
   final String refreshToken;
   final int expiresIn;
+  final bool? mustChangeMpin;
 
   factory LoginResult.fromJson(Map<String, dynamic> j) => LoginResult(
         role: j['role'] as String,
@@ -5425,6 +5431,7 @@ class LoginResult {
         accessToken: j['access_token'] as String,
         refreshToken: j['refresh_token'] as String,
         expiresIn: j['expires_in'] as int,
+        mustChangeMpin: j['must_change_mpin'] == null ? null : j['must_change_mpin'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -5433,6 +5440,7 @@ class LoginResult {
         'access_token': accessToken,
         'refresh_token': refreshToken,
         'expires_in': expiresIn,
+        'must_change_mpin': mustChangeMpin,
       };
 }
 
@@ -7248,23 +7256,23 @@ class SessionDevice {
       };
 }
 
-class SetPasswordRequest {
-  const SetPasswordRequest({
-    required this.passwordToken,
-    required this.password,
+class SetMpinRequest {
+  const SetMpinRequest({
+    required this.mpinToken,
+    required this.mpin,
   });
 
-  final String passwordToken;
-  final String password;
+  final String mpinToken;
+  final String mpin;
 
-  factory SetPasswordRequest.fromJson(Map<String, dynamic> j) => SetPasswordRequest(
-        passwordToken: j['password_token'] as String,
-        password: j['password'] as String,
+  factory SetMpinRequest.fromJson(Map<String, dynamic> j) => SetMpinRequest(
+        mpinToken: j['mpin_token'] as String,
+        mpin: j['mpin'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'password_token': passwordToken,
-        'password': password,
+        'mpin_token': mpinToken,
+        'mpin': mpin,
       };
 }
 
@@ -7405,42 +7413,6 @@ class StandaloneIn {
         'finish_by': finishBy,
         'contact_mobile': contactMobile,
         'notes': notes,
-      };
-}
-
-class StartRequest {
-  const StartRequest({
-    required this.loginId,
-  });
-
-  final String loginId;
-
-  factory StartRequest.fromJson(Map<String, dynamic> j) => StartRequest(
-        loginId: j['login_id'] as String,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'login_id': loginId,
-      };
-}
-
-class StartResult {
-  const StartResult({
-    required this.next,
-    required this.resendInSeconds,
-  });
-
-  final String next;
-  final int resendInSeconds;
-
-  factory StartResult.fromJson(Map<String, dynamic> j) => StartResult(
-        next: j['next'] as String,
-        resendInSeconds: j['resend_in_seconds'] as int,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'next': next,
-        'resend_in_seconds': resendInSeconds,
       };
 }
 
@@ -8762,20 +8734,20 @@ class VehicleSummary {
 
 class VerifyCodeRequest {
   const VerifyCodeRequest({
-    required this.email,
+    required this.mobile,
     required this.code,
   });
 
-  final String email;
+  final String mobile;
   final String code;
 
   factory VerifyCodeRequest.fromJson(Map<String, dynamic> j) => VerifyCodeRequest(
-        email: j['email'] as String,
+        mobile: j['mobile'] as String,
         code: j['code'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'email': email,
+        'mobile': mobile,
         'code': code,
       };
 }
@@ -9019,16 +8991,6 @@ class PriveoApi {
     }
   }
 
-  /// Start
-  Future<StartResult> start(StartRequest body) async {
-    try {
-      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/start', data: body.toJson(), options: _noAuth);
-      return StartResult.fromJson(r.data!);
-    } on DioException catch (e) {
-      throw ApiFailure.fromDio(e);
-    }
-  }
-
   /// Send Code
   Future<CodeSent> sendCode(CodeRequest body) async {
     try {
@@ -9049,10 +9011,10 @@ class PriveoApi {
     }
   }
 
-  /// Set Password
-  Future<LoginResult> setPassword(SetPasswordRequest body) async {
+  /// Set Mpin
+  Future<LoginResult> setMpin(SetMpinRequest body) async {
     try {
-      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/password', data: body.toJson(), options: _noAuth);
+      final r = await _dio.post<Map<String, dynamic>>('/v1/auth/mpin', data: body.toJson(), options: _noAuth);
       return LoginResult.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
@@ -9137,10 +9099,10 @@ class PriveoApi {
     }
   }
 
-  /// Change Password
-  Future<void> changePassword(AccountPasswordChange body) async {
+  /// Change Mpin
+  Future<void> changeMpin(AccountMpinChange body) async {
     try {
-      await _dio.post<void>('/v1/customer/password', data: body.toJson());
+      await _dio.post<void>('/v1/customer/mpin', data: body.toJson());
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

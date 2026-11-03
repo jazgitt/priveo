@@ -24,12 +24,17 @@ class AccountStrings {
   static const verify = 'Verify email';
   static const emailChanged = 'Your email is changed.';
   static const pendingEmail = 'Waiting for the code sent to';
-  static const changePassword = 'Change password';
-  static const currentPassword = 'Current password';
-  static const newPassword = 'New password';
-  static const passwordRule =
-      'Use at least 8 characters, with a letter and a number.';
-  static const passwordChanged = 'Your password is changed.';
+  static const changeMpin = 'Change MPIN';
+  static const chooseMpin = 'Choose your MPIN';
+  static const chooseMpinIntro =
+      'Your first MPIN is the last 6 digits of your mobile number. Choose your own MPIN to continue.';
+  static const firstMpin = 'First MPIN (last 6 digits of your mobile number)';
+  static const currentMpin = 'Current MPIN';
+  static const newMpin = 'New MPIN';
+  static const confirmMpin = 'Confirm new MPIN';
+  static const mpinRule = 'Use exactly 6 digits.';
+  static const mpinsDiffer = 'The two MPINs are not the same.';
+  static const mpinChanged = 'Your MPIN is changed.';
   static const memberSince = 'Member since';
   static const subscriptions = 'Subscriptions';
   static const renews = 'Renews';

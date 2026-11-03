@@ -17,7 +17,7 @@ import { Switch } from "@/ui/switch";
 import { CUSTOM_DAY, interiorDays, newVehicle, times, uploadCustomerAsset, type VehicleInput } from "./api";
 import { useCatalogue, usePlans, useSocietyList, useZones } from "./dialogs";
 
-const LABELS = { first_name: "First name", last_name: "Last name", email: "Email", mobile: "Mobile number", flat: "Flat" } as const;
+const LABELS = { first_name: "First name", last_name: "Last name", mobile: "Mobile number", email: "Email", flat: "Flat" } as const;
 
 /** Create a customer with their first vehicle (ADM-CUS-01), or add a vehicle (ADM-CUS-05). */
 export function VehicleWizard({ customerId, onClose, onSaved }: {
@@ -65,7 +65,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   const save = useAppMutation<void, { id: string; existing?: boolean }>({
     event: EVENTS.customerOrVehicleAdded,
     mutationFn: () => api(customerId ? `/v1/admin/customers/${customerId}/vehicles` : "/v1/admin/customers", {
-      method: "POST", body: customerId ? payload() : { ...person, vehicle: payload() },
+      method: "POST", body: customerId ? payload() : { ...person, email: person.email.trim() || null, vehicle: payload() },
     }),
     pending: customerId ? "Adding the vehicle…" : "Creating the customer…",
     success: (r) => customerId ? "Vehicle added."
@@ -74,7 +74,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
     onSuccess: (r) => onSaved(customerId ?? r.id),
   });
 
-  const emailOk = /^\S+@\S+\.\S+$/.test(person.email);
+  const emailOk = !person.email.trim() || /^\S+@\S+\.\S+$/.test(person.email.trim());
   const mobileOk = /^\d{10}$/.test(person.mobile);
   const valid = stage === "Customer" ? Boolean(person.first_name.trim() && person.last_name.trim() && emailOk && mobileOk)
     : stage === "Society" ? Boolean(vehicle.society_id)
@@ -111,14 +111,14 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
       {stage === "Customer" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(Object.keys(LABELS) as (keyof typeof LABELS)[]).map((key) => (
-            <Field key={key} label={LABELS[key]} optional={key === "flat"} className={key === "email" ? "sm:col-span-2" : undefined}
-                   error={key === "email" && person.email && !emailOk ? "Enter a valid email address."
+            <Field key={key} label={LABELS[key]} optional={key === "flat" || key === "email"} className={key === "email" ? "sm:col-span-2" : undefined}
+                   error={key === "email" && !emailOk ? "Enter a valid email address."
                      : key === "mobile" && person.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
               {(p) => <Input {...p} type={key === "email" ? "email" : "text"} inputMode={key === "mobile" ? "numeric" : undefined}
                              value={person[key]} onChange={(e) => setPerson((x) => ({ ...x, [key]: e.target.value }))} />}
             </Field>
           ))}
-          <p className="text-xs text-muted-foreground sm:col-span-2">A welcome email goes to this address. It holds no code or password.</p>
+          <p className="text-xs text-muted-foreground sm:col-span-2">The customer signs in with the mobile number. Their first MPIN is its last 6 digits, and they choose their own at the first sign-in. If you give an email, a welcome email goes to it.</p>
         </div>
       )}
 
@@ -239,7 +239,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           <DetailList columns={2} items={[
             ...(!customerId ? [
               { label: "Customer", value: `${person.first_name} ${person.last_name}` },
-              { label: "Email", value: person.email },
+              { label: "Email", value: person.email.trim() || "None" },
               { label: "Mobile", value: person.mobile },
               { label: "Flat", value: person.flat },
             ] : []),

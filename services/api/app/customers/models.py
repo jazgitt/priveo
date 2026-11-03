@@ -13,23 +13,23 @@ INTERIOR_DAYS = (*WEEKDAYS, INTERIOR_DAY_CUSTOM)
 
 
 class Customer(Base):
-    """A customer the admin created (AUTH-14). Signs in with the email."""
+    """A customer the admin created (AUTH-14). Signs in with the mobile number and an MPIN."""
 
     __tablename__ = "customers"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    # Empty for a customer loaded without an email: no sign-in until the
-    # owner settles the login logic for those customers.
+    # Empty only until the customer's sign-in is made (a customer loaded from a
+    # sheet has none until the admin resets the MPIN or the conversion script runs).
     login_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"), unique=True)
     first_name: Mapped[str] = mapped_column(String(80))
     last_name: Mapped[str] = mapped_column(String(80), default="")
-    # Lower case. An email belongs to one customer only (ADM-CUS-03). Empty
-    # for a customer loaded from a sheet that had none.
+    # A contact, not a login. Lower case. An email belongs to one customer
+    # only (ADM-CUS-03). Optional.
     email: Mapped[str | None] = mapped_column(String(254), unique=True)
     # Other names the customer is known by (a partner, a relative). Stored only.
     alternate_names: Mapped[str | None] = mapped_column(Text)
     email_verified_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
-    # A contact number. It is not checked for duplicates (ADM-CUS-03).
+    # 10 digits. It is the sign-in ID, so it belongs to one customer only.
     mobile: Mapped[str] = mapped_column(String(10))
     society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
     flat: Mapped[str] = mapped_column(String(40), default="")

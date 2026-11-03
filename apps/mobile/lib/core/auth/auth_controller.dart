@@ -13,19 +13,29 @@ class AuthController extends AsyncNotifier<Session?> {
 
   Session? get session => state.value;
 
+  /// [role] is 'customer', 'crew' or 'admin'.
   /// Throws [ApiFailure] when sign-in fails.
-  Future<void> login(String loginId, String password) async {
-    final s = await ref.read(authRepositoryProvider).login(loginId, password);
+  Future<void> login(String loginId, String password, String role) async {
+    final s = await ref
+        .read(authRepositoryProvider)
+        .login(loginId, password, role);
     await ref.read(sessionStoreProvider).write(s);
     state = AsyncData(s);
   }
 
-  /// Sets a customer's password after a correct code, and signs them in.
+  /// Sets a customer's MPIN after a correct code, and signs them in.
   /// Throws [ApiFailure] when it fails.
-  Future<void> setPassword(String passwordToken, String password) async {
-    final s = await ref
-        .read(authRepositoryProvider)
-        .setPassword(passwordToken, password);
+  Future<void> setMpin(String mpinToken, String mpin) async {
+    final s = await ref.read(authRepositoryProvider).setMpin(mpinToken, mpin);
+    await ref.read(sessionStoreProvider).write(s);
+    state = AsyncData(s);
+  }
+
+  /// The customer has chosen their own MPIN: the app may open Home now.
+  Future<void> mpinChanged() async {
+    final current = session;
+    if (current == null || !current.mustChangeMpin) return;
+    final s = current.withMpinChanged();
     await ref.read(sessionStoreProvider).write(s);
     state = AsyncData(s);
   }

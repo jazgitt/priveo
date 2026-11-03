@@ -35,7 +35,7 @@ def world(db: Session) -> World:
     society = Society(name="Green Meadows")
     db.add(society)
     db.flush()
-    owner = Login(role="customer", login_id="owner@priveo.test", display_name="Secret Name")
+    owner = Login(role="customer", login_id="9123456789", display_name="Secret Name")
     db.add(owner)
     db.flush()
     customer = Customer(login_id=owner.id, first_name="Secret", last_name="Name",

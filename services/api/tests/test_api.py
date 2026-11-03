@@ -14,6 +14,7 @@ def sign_in(client, role, password=None):
     return client.post("/v1/auth/login", json={
         "login_id": LOGIN_IDS[role],
         "password": PASSWORDS[role] if password is None else password,
+        "role": role,
     })
 
 
@@ -58,8 +59,8 @@ def test_login_and_home(client, role):
     assert r.status_code == 200
 
 
-def test_login_id_decides_the_role():
-    assert role_for("someone@example.com") == "customer"
+def test_login_id_decides_the_role_when_the_request_names_none():
+    # A customer also has a 10-digit mobile, so a customer sign-in names its role.
     assert role_for("9000000002") == "crew"
     assert role_for("priveopapa") == "admin"
     assert role_for("900000000") == "admin"  # nine digits is not a mobile number

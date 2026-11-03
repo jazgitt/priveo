@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Uuid
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -15,17 +15,25 @@ class Login(Base):
     __tablename__ = "logins"
     __table_args__ = (
         CheckConstraint("role in ('customer', 'crew', 'admin')", name="logins_role_check"),
+        # The same mobile number can be a customer and a crew member: each has
+        # its own login, and the sign-in screen says which one is meant.
+        UniqueConstraint("role", "login_id", name="uq_logins_role_login_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     role: Mapped[str] = mapped_column(String(16))
-    # Lower-case email (customer), 10-digit mobile (crew) or user ID (admin).
-    login_id: Mapped[str] = mapped_column(String(254), unique=True)
+    # 10-digit mobile (customer and crew) or user ID (admin).
+    login_id: Mapped[str] = mapped_column(String(254))
     display_name: Mapped[str] = mapped_column(String(120))
-    # Empty until a password is set. Only the Argon2 hash is stored.
+    # The password (crew, admin) or the 6-digit MPIN (customer). Only the
+    # Argon2 hash is stored.
     password_hash: Mapped[str | None] = mapped_column(String(255))
     password_changed_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Customer: the MPIN is still the one the admin gave (the last 6 digits of
+    # the mobile number), so the customer must choose their own before using
+    # anything else. The API enforces it.
+    must_change_mpin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     alert_email: Mapped[str] = mapped_column(String(254), default="", server_default="")
     alert_email_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
@@ -69,8 +77,9 @@ class AuthEvent(Base):
 
 
 class EmailCode(Base):
-    """A 6-digit code emailed to a customer, for the first sign-in or a
-    forgotten password (AUTH-03, AUTH-16). Only a keyed hash is stored."""
+    """A 6-digit code emailed to a customer who forgot the MPIN (AUTH-16).
+    Only a keyed hash is stored. (The "password_token" columns hold the
+    one-time token that lets the customer set the new MPIN.)"""
 
     __tablename__ = "email_codes"
 

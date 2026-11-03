@@ -34,10 +34,11 @@ void main(){
     await text(t,AccountStrings.code,'123456');http.status=409;await t.tap(find.text(AccountStrings.verify));await t.pumpAndSettle();expect(find.text('Please review the change.'),findsOneWidget);
     http.status=200;await t.tap(find.text(AccountStrings.verify));await t.pumpAndSettle();expect(find.text('Open'),findsOneWidget);
   });
-  testWidgets('password policy blocks weak values and retries a rejected change',(t)async{
-    final http=ContractHttp();await open(t,http,const ChangePasswordScreen());
-    await text(t,AccountStrings.newPassword,'short');await t.tap(find.text(AccountStrings.save));await t.pumpAndSettle();expect(find.text(AccountStrings.passwordRule),findsNWidgets(2));
-    await text(t,AccountStrings.currentPassword,'old');await text(t,AccountStrings.newPassword,'NewPassword12');http.status=409;
+  testWidgets('MPIN policy blocks weak values and retries a rejected change',(t)async{
+    final http=ContractHttp();await open(t,http,const ChangeMpinScreen());
+    await text(t,AccountStrings.newMpin,'12345');await t.tap(find.text(AccountStrings.save));await t.pumpAndSettle();expect(find.text(AccountStrings.mpinRule),findsNWidgets(2));
+    await text(t,AccountStrings.newMpin,'482915');await text(t,AccountStrings.confirmMpin,'482916');await t.tap(find.text(AccountStrings.save));await t.pumpAndSettle();expect(find.text(AccountStrings.mpinsDiffer),findsOneWidget);
+    await text(t,AccountStrings.currentMpin,'000001');await text(t,AccountStrings.confirmMpin,'482915');http.status=409;
     await t.tap(find.text(AccountStrings.save));await t.pumpAndSettle();expect(find.text('Please review the change.'),findsOneWidget);
     http.status=200;await t.tap(find.text(AccountStrings.save));await t.pumpAndSettle();expect(find.text('Open'),findsOneWidget);
   });

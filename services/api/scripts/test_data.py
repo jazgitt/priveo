@@ -33,6 +33,7 @@ from app.directory.defaults import CHECKLISTS, WEEKDAYS
 from app.directory.models import Plan, Society, WorkingSlot
 from app.directory.seed import seed_defaults
 from app.identity.models import Login
+from app.identity.mpin import default_mpin
 from app.identity.service import hash_password
 from app.notifications.models import Notification, NotificationPreference
 from app.platform.clock import IST, today_ist
@@ -216,6 +217,12 @@ def _remove_scenario(db: Session, scenario: str) -> None:
             db.execute(delete(table).where(keys_condition(table)))
 
 
+def scenario_mobile(scenario: str) -> str:
+    """The customer's mobile number, which is also the sign-in ID."""
+    number = next(index for index, item in enumerate(catalogue(), 1) if item["id"] == scenario)
+    return f"99000{number:05d}"
+
+
 def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> dict:
     scenario = config["id"]
     number = next(index for index, item in enumerate(catalogue(), 1) if item["id"] == scenario)
@@ -230,11 +237,13 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
     login = Login(
         id=identity(scenario, "customer-login"),
         role="customer",
-        login_id=f"test.{scenario.lower()}@priveo.test",
+        login_id=scenario_mobile(scenario),
         display_name=f"Test {scenario}",
-        # C30 has no password yet: its first sign-in is by the emailed code.
-        password_hash=None if config.get("no_password") else password_hash,
+        # C30 has never signed in: its MPIN is the last 6 digits and must be changed.
+        password_hash=(hash_password(default_mpin(scenario_mobile(scenario)))
+                       if config.get("no_password") else password_hash),
         password_changed_at=None if config.get("no_password") else now,
+        must_change_mpin=bool(config.get("no_password")),
     )
     db.add_all([society, login])
     db.flush()
@@ -244,8 +253,8 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
         login_id=login.id,
         first_name="Test",
         last_name=scenario,
-        email=login.login_id,
-        mobile=f"99000{number:05d}",
+        email=f"test.{scenario.lower()}@priveo.test",
+        mobile=scenario_mobile(scenario),
         society_id=society.id,
         flat="TEST-101",
         source="migration" if config.get("legacy") else "admin",

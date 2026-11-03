@@ -13,8 +13,9 @@ from app.main import create_app
 from app.platform.config import get_settings
 from app.platform.db import Base, get_db, make_engine
 
-PASSWORDS = {"customer": "pw-customer1", "crew": "Rav4821$", "admin": "pw-admin1"}
-LOGIN_IDS = {"customer": "customer@priveo.test", "crew": "9000000002", "admin": "priveopapa"}
+# The demo customer's MPIN is 6 digits; crew and admin have passwords.
+PASSWORDS = {"customer": "483920", "crew": "Rav4821$", "admin": "pw-admin1"}
+LOGIN_IDS = {"customer": "9000000001", "crew": "9000000002", "admin": "priveopapa"}
 
 
 @pytest.fixture

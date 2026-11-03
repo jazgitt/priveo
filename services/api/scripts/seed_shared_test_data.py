@@ -16,7 +16,7 @@ from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.config import get_settings
 from app.platform.db import get_engine, utcnow
-from scripts.test_data import _seed_scenario, catalogue, identity
+from scripts.test_data import _seed_scenario, catalogue, identity, scenario_mobile
 
 
 def sync_accounts(db, config, snapshot, password_hash):
@@ -30,7 +30,7 @@ def sync_accounts(db, config, snapshot, password_hash):
         login = db.get(Login, key)
         if login is None or login.login_id != login_id or login.role != role:
             raise ValueError(f"Synthetic account identity mismatch: {scenario}.")
-        # A first-sign-in account (no password yet) stays without one.
+        # A first-sign-in account keeps its default MPIN.
         if not (config.get("no_password") and role == "customer"):
             login.password_hash = password_hash
             login.password_changed_at = now
@@ -82,7 +82,7 @@ def seed_additive(engine, day, password, *, sync_passwords=False):
                                    "WHERE scenario=:scenario"), {"scenario": scenario})
             login = db.get(Login, identity(scenario, "customer-login"))
             if saved:
-                if login is None or login.login_id != f"test.{scenario.lower()}@priveo.test":
+                if login is None or login.login_id != scenario_mobile(scenario):
                     raise ValueError(f"Stored scenario {scenario} has missing/conflicting data.")
                 snapshot = json.loads(saved)
                 if sync_passwords:

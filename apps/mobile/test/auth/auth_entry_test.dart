@@ -50,11 +50,11 @@ Future<List<Uri>> pumpLogin(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('the sign-in screen opens on the email step, with no welcome step or demo accounts',
+  testWidgets('the sign-in screen opens on the mobile number step, with no welcome step or demo accounts',
       (tester) async {
     await pumpLogin(tester);
     expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Email, mobile or user ID'), findsOneWidget);
+    expect(find.text('Mobile number or user ID'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Get started'), findsNothing);
     expect(find.text('Already a member? Log in'), findsNothing);
@@ -64,18 +64,36 @@ void main() {
     expect(find.text('Admin'), findsNothing);
   });
 
-  testWidgets('an email with a bad format shows an error', (tester) async {
+  testWidgets('a mobile number that is not 10 digits shows an error',
+      (tester) async {
     await pumpLogin(tester);
-    await tester.enterText(find.byType(TextField), 'asha@example');
+    await tester.enterText(find.byType(TextField), '98765');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter a valid email address.'), findsOneWidget);
+    expect(find.text('Enter a 10-digit mobile number.'), findsOneWidget);
+  });
+
+  testWidgets('a 10-digit number asks whether it is a customer or crew',
+      (tester) async {
+    await pumpLogin(tester);
+    expect(find.text('Sign in as'), findsNothing);
+    await tester.enterText(find.byType(TextField), '9000000001');
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in as'), findsOneWidget);
+    expect(find.text('Customer'), findsOneWidget);
+    expect(find.text('Crew'), findsOneWidget);
+    // An admin user ID is not a number: no question.
+    await tester.enterText(find.byType(TextField), 'priveopapa');
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in as'), findsNothing);
   });
 
   testWidgets('not registered shows the support buttons', (tester) async {
     final opened = await pumpLogin(tester);
-    await tester.enterText(find.byType(TextField), 'stranger@priveo.test');
+    await tester.enterText(find.byType(TextField), FakeAuthRepository.unknownMobile);
     await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forgot MPIN?'));
     await tester.pumpAndSettle();
     expect(find.text(FakeAuthRepository.notRegistered), findsOneWidget);
 

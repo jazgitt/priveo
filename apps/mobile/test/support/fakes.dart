@@ -36,63 +36,74 @@ const adminSession = Session(
     accessToken: 'a-admin',
     refreshToken: 'r-admin');
 
-/// Accepts the password "secret" for the three demo IDs. Anything else gets
-/// the API's message. [newCustomer] has no password yet: it gets the code
-/// [code], and then signs in as the customer.
+/// Accepts the password "secret" (a customer: the MPIN [mpin]) for the three demo IDs: a customer and a crew
+/// member by mobile number, an admin by user ID. A customer who forgot the MPIN
+/// gets the code [code] at the email on file, then sets a new MPIN and signs in.
 class FakeAuthRepository implements AuthRepository {
   static const wrongMessage = 'The ID or password is not correct.';
-  static const notRegistered = 'This email is not registered. Contact Priveo.';
+  static const notRegistered =
+      'This mobile number is not registered. Contact Priveo.';
+  static const noEmail =
+      'No email is saved for this number. Ask Priveo to reset your MPIN.';
   static const wrongCode = 'The code is not correct.';
-  static const newCustomer = 'new@priveo.test';
+  static const customerId = '9000000001';
+  static const crewId = '9000000002';
+  static const unknownMobile = '9111111111';
+  static const noEmailMobile = '9000000004';
   static const code = '246810';
+  // A customer's MPIN is 6 digits; crew and admin use the password "secret".
+  static const mpin = '482915';
   static const _accounts = {
-    'customer@priveo.test': customerSession,
-    '9000000002': crewSession,
-    'priveopapa': adminSession,
+    'customer:9000000001': customerSession,
+    'crew:9000000002': crewSession,
+    'admin:priveopapa': adminSession,
   };
 
   int logoutCalls = 0;
   int codesSent = 0;
-  String? passwordSet;
+  String? mpinSet;
+  String? lastRole;
 
   @override
-  Future<StartResult> start(String loginId) async {
-    if (loginId == newCustomer) {
-      codesSent++;
-      return const StartResult(next: 'code', resendInSeconds: 30);
-    }
-    if (loginId.contains('@') && !_accounts.containsKey(loginId)) {
+  Future<int> sendCode(String mobile) async {
+    if (mobile == unknownMobile) {
       throw const ApiFailure(
-          code: 'email_not_registered', message: notRegistered, statusCode: 404);
+        code: 'mobile_not_registered',
+        message: notRegistered,
+        statusCode: 404,
+      );
     }
-    return const StartResult(next: 'password', resendInSeconds: 0);
-  }
-
-  @override
-  Future<int> sendCode(String email) async {
+    if (mobile == noEmailMobile) {
+      throw const ApiFailure(
+        code: 'no_email',
+        message: noEmail,
+        statusCode: 409,
+      );
+    }
     codesSent++;
     return 30;
   }
 
   @override
-  Future<String> verifyCode(String email, String code) async {
+  Future<String> verifyCode(String mobile, String code) async {
     if (code != FakeAuthRepository.code) {
       throw const ApiFailure(
           code: 'invalid_code', message: wrongCode, statusCode: 400);
     }
-    return 'password-token';
+    return 'mpin-token';
   }
 
   @override
-  Future<Session> setPassword(String passwordToken, String password) async {
-    passwordSet = password;
+  Future<Session> setMpin(String mpinToken, String mpin) async {
+    mpinSet = mpin;
     return customerSession;
   }
 
   @override
-  Future<Session> login(String loginId, String password) async {
-    final s = _accounts[loginId];
-    if (s == null || password != 'secret') {
+  Future<Session> login(String loginId, String password, String role) async {
+    lastRole = role;
+    final s = _accounts['$role:$loginId'];
+    if (s == null || password != (role == 'customer' ? mpin : 'secret')) {
       throw const ApiFailure(
           code: 'invalid_credentials', message: wrongMessage, statusCode: 401);
     }

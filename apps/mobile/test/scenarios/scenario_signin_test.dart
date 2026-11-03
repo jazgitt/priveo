@@ -13,8 +13,6 @@ import 'package:priveo/features/customer/home/home_schedule.dart';
 
 import 'scenario_support.dart';
 
-const _devCode = '246810';
-
 void main() {
   if (scenarioUrl.isEmpty) {
     test('scenario sign-in', () {}, skip: 'SCENARIO_API_URL not set');
@@ -26,7 +24,7 @@ void main() {
   String crew(String id, int i) =>
       (scenarios[id]!['crew_logins'] as List)[i] as String;
 
-  /// Starts on the splash, which has the welcome buttons, and opens the email step.
+  /// Starts on the splash, which has the welcome buttons, and opens the mobile number step.
   Future<void> openSignIn(WidgetTester tester) async {
     await openApp(tester);
     await untilFound(tester, find.text('Get started'));
@@ -37,9 +35,12 @@ void main() {
   Future<void> enterIdAndPassword(
     WidgetTester tester,
     String id,
-    String password,
-  ) async {
+    String password, {
+    bool crew = false,
+  }) async {
     await tester.enterText(find.byType(TextField), id);
+    await tester.pumpAndSettle();
+    if (crew) await tapFinder(tester, find.text('Crew'));
     await tapFinder(tester, find.text('Continue'));
     await untilFound(tester, find.text('Change'));
     await tester.enterText(find.byType(TextField), password);
@@ -47,7 +48,7 @@ void main() {
     await tapFinder(tester, find.widgetWithText(PrimaryButton, 'Sign in'));
   }
 
-  group('welcome and email step', () {
+  group('welcome and mobile number step', () {
     testWidgets('the welcome screen offers Get started and Log in [AUTH-01]', (
       tester,
     ) async {
@@ -58,7 +59,7 @@ void main() {
       expect(find.text('Already a member? Log in'), findsOneWidget);
 
       await tapFinder(tester, find.text('Already a member? Log in'));
-      await untilFound(tester, find.text('Email, mobile or user ID'));
+      await untilFound(tester, find.text('Mobile number or user ID'));
       expect(find.text('Continue'), findsOneWidget);
       expect(
         find.text('By continuing you accept the Terms and the Privacy Policy.'),
@@ -67,44 +68,60 @@ void main() {
       await letTimersFinish(tester);
     });
 
-    testWidgets('an email Priveo does not know is told to contact Priveo [AUTH-15]', (
-      tester,
-    ) async {
-      await openSignIn(tester);
-      await tester.enterText(find.byType(TextField), 'nobody@priveo.test');
-      await tapFinder(tester, find.text('Continue'));
-      await untilFound(
-        tester,
-        find.text('This email is not registered. Contact Priveo.'),
-      );
-      await untilFound(tester, find.text('Call support'));
-      expect(find.text('WhatsApp support'), findsOneWidget);
-      await letTimersFinish(tester);
-    });
+    testWidgets(
+      'a mobile number Priveo does not know is told to contact Priveo [AUTH-15]',
+      (tester) async {
+        await openSignIn(tester);
+        await tester.enterText(find.byType(TextField), '9111111111');
+        await tapFinder(tester, find.text('Continue'));
+        await untilFound(tester, find.text('Forgot MPIN?'));
+        await tapFinder(tester, find.text('Forgot MPIN?'));
+        await untilFound(
+          tester,
+          find.text('This mobile number is not registered. Contact Priveo.'),
+        );
+        await untilFound(tester, find.text('Call support'));
+        expect(find.text('WhatsApp support'), findsOneWidget);
+        await letTimersFinish(tester);
+      },
+    );
   });
 
-  group('password sign-in', () {
-    testWidgets('a customer signs in by email and password [AUTH-13]', (tester) async {
+  group('MPIN and password sign-in', () {
+    testWidgets('a customer signs in by mobile number and MPIN [AUTH-13]', (
+      tester,
+    ) async {
       await openSignIn(tester);
       await enterIdAndPassword(tester, customer('C01'), scenarioPassword);
       await untilFound(tester, find.byType(GreetingLine));
       await letTimersFinish(tester);
     });
 
-    testWidgets('a wrong password does not sign in and offers a reset [AUTH-13, AUTH-16]', (
+    testWidgets(
+      'a wrong MPIN does not sign in and offers a reset [AUTH-13, AUTH-16]',
+      (tester) async {
+        await openSignIn(tester);
+        await enterIdAndPassword(tester, customer('C01'), '000000');
+        await untilFound(
+          tester,
+          find.text('The mobile number or MPIN is not correct.'),
+        );
+        expect(find.text('Forgot MPIN?'), findsOneWidget);
+        expect(find.byType(GreetingLine), findsNothing);
+        await letTimersFinish(tester);
+      },
+    );
+
+    testWidgets('crew sign in by mobile number [CRW-ACC-02, CRW-ACC-03]', (
       tester,
     ) async {
       await openSignIn(tester);
-      await enterIdAndPassword(tester, customer('C01'), 'wrong-password-1');
-      await untilFound(tester, find.text('The ID or password is not correct.'));
-      expect(find.text('Forgot password?'), findsOneWidget);
-      expect(find.byType(GreetingLine), findsNothing);
-      await letTimersFinish(tester);
-    });
-
-    testWidgets('crew sign in by mobile number [CRW-ACC-02, CRW-ACC-03]', (tester) async {
-      await openSignIn(tester);
-      await enterIdAndPassword(tester, crew('R01', 1), scenarioPassword);
+      await enterIdAndPassword(
+        tester,
+        crew('R01', 1),
+        scenarioPassword,
+        crew: true,
+      );
       await untilFound(tester, find.text('TS30TT0001'));
       expect(find.text('Total'), findsOneWidget);
       await letTimersFinish(tester);
@@ -122,7 +139,7 @@ void main() {
     testWidgets('an inactive crew account is refused [CRW-ACC-08]', (tester) async {
       Object? error;
       try {
-        await signInApi(tester, crew('R04', 4), scenarioPassword);
+        await signInApi(tester, crew('R04', 4), scenarioPassword, role: 'crew');
       } catch (e) {
         error = e;
       }
@@ -134,7 +151,7 @@ void main() {
     testWidgets('a locked crew account says to ask the admin [CRW-ACC-07]', (tester) async {
       Object? error;
       try {
-        await signInApi(tester, crew('R04', 5), scenarioPassword);
+        await signInApi(tester, crew('R04', 5), scenarioPassword, role: 'crew');
       } catch (e) {
         error = e;
       }
@@ -148,47 +165,42 @@ void main() {
   });
 
   group('first sign-in (C30)', () {
-    testWidgets('the emailed code, a new password, then onboarding [AUTH-05, AUTH-08, AUTH-12]', (
-      tester,
-    ) async {
-      await openSignIn(tester);
-      await tester.enterText(find.byType(TextField), customer('C30'));
-      await tapFinder(tester, find.text('Continue'));
+    testWidgets(
+      'the first MPIN is the last 6 digits and must be changed [AUTH-05, AUTH-12, AUTH-19]',
+      (tester) async {
+        await openSignIn(tester);
+        final mobile = customer('C30');
+        await enterIdAndPassword(tester, mobile, mobile.substring(4));
 
-      // No password yet, so a code is emailed.
-      await untilFound(tester, find.text('Enter the code'));
-      expect(find.textContaining('We sent a 6-digit code to'), findsOneWidget);
-      expect(find.textContaining(customer('C30')), findsWidgets);
-      expect(find.text('Change email'), findsOneWidget);
+        // Nothing opens until the customer chooses an MPIN.
+        await untilFound(tester, find.text('Choose your MPIN'));
+        expect(find.byType(GreetingLine), findsNothing);
 
-      await tester.enterText(find.byType(TextField), '000000');
-      await tapFinder(tester, find.text('Verify'));
-      await untilFound(tester, find.text('The code is not correct.'));
+        Future<void> save(String first, String next, String confirm) async {
+          await tester.enterText(find.byType(TextField).at(0), first);
+          await tester.enterText(find.byType(TextField).at(1), next);
+          await tester.enterText(find.byType(TextField).at(2), confirm);
+          await tapFinder(tester, find.text('Save'));
+        }
 
-      await tester.enterText(find.byType(TextField), _devCode);
-      await tapFinder(tester, find.text('Verify'));
-      await untilFound(tester, find.text('Set a password'));
+        await save(mobile.substring(4), '12345', '12345');
+        await untilFound(tester, find.text('Use exactly 6 digits.'));
+        await save(mobile.substring(4), '482915', '482916');
+        await untilFound(tester, find.text('The two MPINs are not the same.'));
+        await save(
+          mobile.substring(4),
+          mobile.substring(4),
+          mobile.substring(4),
+        );
+        await untilFound(tester, find.textContaining('different'));
 
-      const rule = 'Use at least 8 characters, with a letter and a number.';
-      expect(find.text(rule), findsOneWidget);
-      await tester.enterText(find.byType(TextField).at(0), 'abc');
-      await tester.enterText(find.byType(TextField).at(1), 'abc');
-      await tapFinder(tester, find.text('Save and continue'));
-      expect(find.text(rule), findsNWidgets(2));
-
-      await tester.enterText(find.byType(TextField).at(0), 'NewPassword123');
-      await tester.enterText(find.byType(TextField).at(1), 'Different123');
-      await tapFinder(tester, find.text('Save and continue'));
-      expect(find.text('The two passwords do not match.'), findsOneWidget);
-
-      await tester.enterText(find.byType(TextField).at(1), 'NewPassword123');
-      await tapFinder(tester, find.text('Save and continue'));
-
-      // Signed in, and onboarding starts with the customer's details.
-      await untilFound(tester, find.text('Step 1 of 7'));
-      expect(find.text('Your details'), findsOneWidget);
-      expect(find.byType(GreetingLine), findsNothing);
-      await letTimersFinish(tester);
-    });
+        await save(mobile.substring(4), '482915', '482915');
+        // Signed in, and onboarding starts with the customer's details.
+        await untilFound(tester, find.text('Step 1 of 7'));
+        expect(find.text('Your details'), findsOneWidget);
+        expect(find.byType(GreetingLine), findsNothing);
+        await letTimersFinish(tester);
+      },
+    );
   });
 }

@@ -40,7 +40,7 @@ def web_login(body: WebAuthLoginRequest, response: Response,
     if role_for(normalise(body.login_id)) != "admin":
         # The portal is for admins. Crew and customers are told nothing more.
         raise ApiError("invalid_credentials", "The ID or password is not correct.", 401)
-    result = auth.login(body.login_id, body.password, channel="web")
+    result = auth.login(body.login_id, body.password, channel="web", role="admin")
     claims = tokens.read_access(settings, result.access_token)
     assert claims is not None
     set_session_cookies(response, settings, result.access_token, claims.session_id,

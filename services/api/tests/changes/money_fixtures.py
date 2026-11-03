@@ -26,6 +26,7 @@ from app.platform.db import get_db
 from tests.test_api import auth
 
 EMAIL = "meera@example.com"
+MOBILE = "9000004321"
 PASSWORD = "carwash2026"
 
 
@@ -72,13 +73,13 @@ class Money:
 def money(settings, engine, db) -> Money:
     with Session(engine) as session:
         seed_logins(session, settings)
-    login = Login(role="customer", login_id=EMAIL, display_name="Meera Rao",
+    login = Login(role="customer", login_id=MOBILE, display_name="Meera Rao",
                   password_hash=hash_password(PASSWORD))
     society = Society(name="DLF Meadows")
     db.add_all([login, society])
     db.flush()
     customer = Customer(login_id=login.id, first_name="Meera", last_name="Rao", email=EMAIL,
-                        mobile="9000004321", society_id=society.id, flat="A-101",
+                        mobile=MOBILE, society_id=society.id, flat="A-101",
                         onboarding_confirmed_at=datetime(2026, 9, 1, tzinfo=IST))
     db.add(customer)
     db.flush()
@@ -106,11 +107,13 @@ def money(settings, engine, db) -> Money:
     app.dependency_overrides[get_schedule_gateway] = lambda: gateway
     client = TestClient(app)
 
-    def token(login_id, password):
-        r = client.post("/v1/auth/login", json={"login_id": login_id, "password": password})
+    def token(login_id, password, role):
+        r = client.post("/v1/auth/login", json={
+            "login_id": login_id, "password": password, "role": role})
         assert r.status_code == 200, r.text
         return auth(r.json()["access_token"])
 
     return Money(client=client, db=db, clock=clock, gateway=gateway,
-                 customer=token(EMAIL, PASSWORD), admin=token("priveopapa", "pw-admin1"),
+                 customer=token(MOBILE, PASSWORD, "customer"),
+                 admin=token("priveopapa", "pw-admin1", "admin"),
                  customer_id=customer.id, vehicle_id=str(vehicle.id), subscription_id=sub.id)

@@ -9,9 +9,9 @@
     "email": "wire-value",
     "expires_in_seconds": 1
   },
-  "AccountPasswordChange": {
-    "current_password": "wire-value",
-    "new_password": "wire-value"
+  "AccountMpinChange": {
+    "current_mpin": "wire-value",
+    "new_mpin": "wire-value"
   },
   "AccountProfileEdit": {
     "first_name": "wire-value",
@@ -771,13 +771,13 @@
     "as_of": "2026-10-20T07:30:00+00:00"
   },
   "CodeRequest": {
-    "email": "wire-value"
+    "mobile": "wire-value"
   },
   "CodeSent": {
     "resend_in_seconds": 1
   },
   "CodeVerified": {
-    "password_token": "wire-value"
+    "mpin_token": "wire-value"
   },
   "ComplaintCreate": {
     "category": "wire-value",
@@ -2192,14 +2192,16 @@
   },
   "LoginRequest": {
     "login_id": "wire-value",
-    "password": "wire-value"
+    "password": "wire-value",
+    "role": "wire-value"
   },
   "LoginResult": {
     "role": "wire-value",
     "display_name": "wire-value",
     "access_token": "wire-value",
     "refresh_token": "wire-value",
-    "expires_in": 1
+    "expires_in": 1,
+    "must_change_mpin": true
   },
   "ManagerSchedule": {
     "date": "2026-10-20",
@@ -2923,9 +2925,9 @@
     "platform": "wire-value",
     "app_version": "wire-value"
   },
-  "SetPasswordRequest": {
-    "password_token": "wire-value",
-    "password": "wire-value"
+  "SetMpinRequest": {
+    "mpin_token": "wire-value",
+    "mpin": "wire-value"
   },
   "SkipIn": {
     "date": "2026-10-20"
@@ -2966,13 +2968,6 @@
     "finish_by": "wire-value",
     "contact_mobile": "wire-value",
     "notes": "wire-value"
-  },
-  "StartRequest": {
-    "login_id": "wire-value"
-  },
-  "StartResult": {
-    "next": "wire-value",
-    "resend_in_seconds": 1
   },
   "StatusChange": {
     "status": "wire-value",
@@ -3370,7 +3365,7 @@
     "photo_url": "wire-value"
   },
   "VerifyCodeRequest": {
-    "email": "wire-value",
+    "mobile": "wire-value",
     "code": "wire-value"
   },
   "VisitChecklistItem": {

@@ -42,7 +42,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 | A 2-hour cleaning slot picker | The customer sets a service cutoff time, in 30-minute steps. The admin assigns the slot |
 | The monthly full spa on the interior day | Deep Spa is 2 hours and bought separately: as an add-on by a subscriber, who proposes one date and a finish-by time, or as a standalone service by a customer without a subscription |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |
-| Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by email: a code on first sign-in, then a password. Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
+| Sign-in by mobile number and SMS OTP, then the customer fills in their own details | Sign-in by mobile number and a 6-digit MPIN (the first MPIN is the last 6 digits of the number and must be changed at once). Only customers the admin created can sign in, and the onboarding steps open pre-filled for review |
 | A "My Vehicles" bottom tab | Bottom tabs are Home, Calendar, Account, Support. Vehicles sit under Account |
 | Sample renewal dates that disagree with each other | A billing cycle is 30 calendar days |
 

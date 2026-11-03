@@ -82,7 +82,7 @@ void main() {
       expect(find.byType(FractionallySizedBox), findsNothing);
       await tester.tap(find.text('Already a member? Log in'));
       await tester.pumpAndSettle();
-      expect(find.text('Email, mobile or user ID'), findsOneWidget);
+      expect(find.text('Mobile number or user ID'), findsOneWidget);
     });
 
     testWidgets('shows the bar after the scene and fills it as the first screen loads', (tester) async {

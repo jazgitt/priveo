@@ -22,7 +22,7 @@ void main() {
   Future<void> teamScreen(WidgetTester tester, String id) async {
     await openApp(
       tester,
-      await signInApi(tester, crew(id, 0), scenarioPassword),
+      await signInApi(tester, crew(id, 0), scenarioPassword, role: 'crew'),
     );
     await untilFound(tester, find.text('Total'));
     await untilFound(tester, find.byTooltip('Team'));
@@ -35,7 +35,7 @@ void main() {
     testWidgets('a Member and a Trainee do not see the team [CRW-MGR-01]', (tester) async {
       await openApp(
         tester,
-        await signInApi(tester, crew('R01', 1), scenarioPassword),
+        await signInApi(tester, crew('R01', 1), scenarioPassword, role: 'crew'),
       );
       await untilFound(tester, find.text('TS30TT0001'));
       expect(find.byTooltip('Team'), findsNothing);

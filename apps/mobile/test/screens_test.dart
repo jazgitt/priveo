@@ -7,15 +7,19 @@ import 'package:priveo/features/crew/home/crew_home_screen.dart';
 import 'support/fakes.dart';
 import 'package:priveo/core/auth/session.dart';
 
-Future<void> signIn(WidgetTester tester, String id, String password) async {
-  await enterId(tester, id);
+Future<void> signIn(WidgetTester tester, String id, String password,
+    {bool crew = false}) async {
+  await enterId(tester, id, crew: crew);
   await tester.enterText(find.byType(TextField), password);
   await tester.tap(find.text('Sign in').last);
   await tester.pumpAndSettle();
 }
 
-Future<void> enterId(WidgetTester tester, String id) async {
+Future<void> enterId(WidgetTester tester, String id,
+    {bool crew = false}) async {
   await tester.enterText(find.byType(TextField), id);
+  await tester.pumpAndSettle();
+  if (crew) await tester.tap(find.text('Crew'));
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
 }
@@ -56,38 +60,64 @@ void main() {
     await passSplash(tester);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Enter your email, mobile number or user ID.'),
+    expect(find.text('Enter your mobile number or user ID.'),
         findsOneWidget);
 
     await enterId(tester, 'priveopapa');
     await tester.tap(find.text('Sign in').last);
     await tester.pumpAndSettle();
     expect(find.text('Enter your password.'), findsOneWidget);
-    // Only a customer can reset a password with an emailed code.
-    expect(find.text('Forgot password?'), findsNothing);
+    // Only a customer can reset an MPIN with an emailed code.
+    expect(find.text('Forgot MPIN?'), findsNothing);
 
     await tester.tap(find.text('Change'));
     await tester.pumpAndSettle();
     expect(find.text('Continue'), findsOneWidget);
   });
 
-  testWidgets('an email that is not registered shows the API message',
+  testWidgets('a mobile number that is not registered shows the API message',
       (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
-    await enterId(tester, 'stranger@priveo.test');
+    await enterId(tester, FakeAuthRepository.unknownMobile);
+    await tester.tap(find.text('Forgot MPIN?'));
+    await tester.pumpAndSettle();
     expect(find.text(FakeAuthRepository.notRegistered), findsOneWidget);
-    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('Sign in').last, findsOneWidget);
   });
 
-  testWidgets('first sign-in: code, then a password, then home',
+  testWidgets('a customer with no email on file is told to ask Priveo',
       (tester) async {
+    await pumpApp(tester);
+    await passSplash(tester);
+    await enterId(tester, FakeAuthRepository.noEmailMobile);
+    await tester.tap(find.text('Forgot MPIN?'));
+    await tester.pumpAndSettle();
+    expect(find.text(FakeAuthRepository.noEmail), findsOneWidget);
+  });
+
+  testWidgets('a customer signs in with the mobile number and says so',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
     final auth = FakeAuthRepository();
     await pumpApp(tester, auth: auth);
     await passSplash(tester);
-    await enterId(tester, FakeAuthRepository.newCustomer);
+    await signIn(tester, FakeAuthRepository.customerId, FakeAuthRepository.mpin);
+    expect(auth.lastRole, 'customer');
+  });
+
+  testWidgets('forgot MPIN: code, then a new MPIN, then home', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+    await passSplash(tester);
+    await enterId(tester, FakeAuthRepository.customerId);
+    await tester.tap(find.text('Forgot MPIN?'));
+    await tester.pumpAndSettle();
+    expect(auth.codesSent, 1);
     expect(find.text('Enter the code'), findsOneWidget);
-    expect(find.textContaining(FakeAuthRepository.newCustomer), findsOneWidget);
+    expect(find.textContaining('email saved for this number'), findsOneWidget);
     expect(find.text('Resend code in 00:30'), findsOneWidget);
 
     await tester.tap(find.text('Verify'));
@@ -103,21 +133,22 @@ void main() {
     await tester.enterText(find.byType(TextField), FakeAuthRepository.code);
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
-    expect(find.text('Set a password'), findsOneWidget);
+    expect(find.text('Set a new MPIN'), findsOneWidget);
 
-    Future<void> save(String password, String confirm) async {
-      await tester.enterText(find.byType(TextField).at(0), password);
+    Future<void> save(String mpin, String confirm) async {
+      await tester.enterText(find.byType(TextField).at(0), mpin);
       await tester.enterText(find.byType(TextField).at(1), confirm);
       await tester.tap(find.text('Save and continue'));
       await tester.pumpAndSettle();
     }
 
-    await save('short1', 'short1');
-    expect(auth.passwordSet, isNull);
-    await save('carwash2026', 'carwash2027');
-    expect(find.text('The two passwords do not match.'), findsOneWidget);
-    await save('carwash2026', 'carwash2026');
-    expect(auth.passwordSet, 'carwash2026');
+    await save('12345', '12345');
+    expect(auth.mpinSet, isNull);
+    expect(find.text('Use exactly 6 digits.'), findsWidgets);
+    await save('482915', '482916');
+    expect(find.text('The two MPINs do not match.'), findsOneWidget);
+    await save('482915', '482915');
+    expect(auth.mpinSet, '482915');
     expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
   });
 
@@ -126,7 +157,9 @@ void main() {
     final auth = FakeAuthRepository();
     await pumpApp(tester, auth: auth);
     await passSplash(tester);
-    await enterId(tester, FakeAuthRepository.newCustomer);
+    await enterId(tester, FakeAuthRepository.customerId);
+    await tester.tap(find.text('Forgot MPIN?'));
+    await tester.pumpAndSettle();
     expect(find.text('Resend code'), findsNothing);
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Resend code in 00:28'), findsOneWidget);
@@ -137,17 +170,14 @@ void main() {
     expect(find.text('Resend code in 00:30'), findsOneWidget);
   });
 
-  testWidgets('forgot password sends a code', (tester) async {
-    final auth = FakeAuthRepository();
-    await pumpApp(tester, auth: auth);
+  testWidgets('change on the code step goes back to the mobile number',
+      (tester) async {
+    await pumpApp(tester);
     await passSplash(tester);
-    await enterId(tester, 'customer@priveo.test');
-    await tester.tap(find.text('Forgot password?'));
+    await enterId(tester, FakeAuthRepository.customerId);
+    await tester.tap(find.text('Forgot MPIN?'));
     await tester.pumpAndSettle();
-    expect(auth.codesSent, 1);
-    expect(find.text('Enter the code'), findsOneWidget);
-
-    await tester.tap(find.text('Change email'));
+    await tester.tap(find.text('Change'));
     await tester.pumpAndSettle();
     expect(find.text('Continue'), findsOneWidget);
   });
@@ -158,7 +188,7 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpApp(tester);
     await passSplash(tester);
-    await signIn(tester, 'customer@priveo.test', 'secret');
+    await signIn(tester, FakeAuthRepository.customerId, FakeAuthRepository.mpin);
     expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
     expect(find.text('Aarav'), findsOneWidget);
     expect(find.text('MH 12 AB 1234'), findsOneWidget);
@@ -181,7 +211,7 @@ void main() {
   testWidgets('crew login lands on the crew home', (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
-    await signIn(tester, '9000000002', 'secret');
+    await signIn(tester, FakeAuthRepository.crewId, 'secret', crew: true);
     // The cards come from the crew API (see test/crew), which these tests
     // do not fake. The role's own home is what they check.
     expect(find.byType(CrewHomeScreen), findsOneWidget);

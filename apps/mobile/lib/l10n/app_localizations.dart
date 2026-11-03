@@ -115,8 +115,32 @@ abstract class AppLocalizations {
   /// No description provided for @loginIdLabel.
   ///
   /// In en, this message translates to:
-  /// **'Email, mobile or user ID'**
+  /// **'Mobile number or user ID'**
   String get loginIdLabel;
+
+  /// No description provided for @signInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in as'**
+  String get signInAs;
+
+  /// No description provided for @roleCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get roleCustomer;
+
+  /// No description provided for @roleCrew.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew'**
+  String get roleCrew;
+
+  /// No description provided for @mobileInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a 10-digit mobile number.'**
+  String get mobileInvalid;
 
   /// No description provided for @passwordLabel.
   ///
@@ -157,7 +181,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterId.
   ///
   /// In en, this message translates to:
-  /// **'Enter your email, mobile number or user ID.'**
+  /// **'Enter your mobile number or user ID.'**
   String get enterId;
 
   /// No description provided for @enterPassword.
@@ -165,6 +189,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter your password.'**
   String get enterPassword;
+
+  /// No description provided for @mpinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'MPIN'**
+  String get mpinLabel;
+
+  /// No description provided for @showMpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Show MPIN'**
+  String get showMpin;
+
+  /// No description provided for @hideMpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide MPIN'**
+  String get hideMpin;
+
+  /// No description provided for @enterMpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your MPIN.'**
+  String get enterMpin;
 
   /// No description provided for @termsNotice.
   ///
@@ -178,17 +226,11 @@ abstract class AppLocalizations {
   /// **'Change'**
   String get changeId;
 
-  /// No description provided for @changeEmail.
+  /// No description provided for @forgotMpin.
   ///
   /// In en, this message translates to:
-  /// **'Change email'**
-  String get changeEmail;
-
-  /// No description provided for @forgotPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Forgot password?'**
-  String get forgotPassword;
+  /// **'Forgot MPIN?'**
+  String get forgotMpin;
 
   /// No description provided for @codeTitle.
   ///
@@ -196,11 +238,11 @@ abstract class AppLocalizations {
   /// **'Enter the code'**
   String get codeTitle;
 
-  /// No description provided for @codeSentTo.
+  /// No description provided for @codeSentToEmailOnFile.
   ///
   /// In en, this message translates to:
-  /// **'We sent a 6-digit code to {email}. It works for 30 minutes.'**
-  String codeSentTo(String email);
+  /// **'We sent a 6-digit code to the email saved for this number. It works for 30 minutes.'**
+  String get codeSentToEmailOnFile;
 
   /// No description provided for @codeLabel.
   ///
@@ -232,41 +274,41 @@ abstract class AppLocalizations {
   /// **'Resend code'**
   String get resendCode;
 
-  /// No description provided for @newPasswordTitle.
+  /// No description provided for @newMpinTitle.
   ///
   /// In en, this message translates to:
-  /// **'Set a password'**
-  String get newPasswordTitle;
+  /// **'Set a new MPIN'**
+  String get newMpinTitle;
 
-  /// No description provided for @passwordRule.
+  /// No description provided for @mpinRule.
   ///
   /// In en, this message translates to:
-  /// **'Use at least 8 characters, with a letter and a number.'**
-  String get passwordRule;
+  /// **'Use exactly 6 digits.'**
+  String get mpinRule;
 
-  /// No description provided for @newPasswordLabel.
+  /// No description provided for @newMpinLabel.
   ///
   /// In en, this message translates to:
-  /// **'New password'**
-  String get newPasswordLabel;
+  /// **'New MPIN'**
+  String get newMpinLabel;
 
-  /// No description provided for @confirmPasswordLabel.
+  /// No description provided for @confirmMpinLabel.
   ///
   /// In en, this message translates to:
-  /// **'Confirm password'**
-  String get confirmPasswordLabel;
+  /// **'Confirm MPIN'**
+  String get confirmMpinLabel;
 
-  /// No description provided for @passwordsDiffer.
+  /// No description provided for @mpinsDiffer.
   ///
   /// In en, this message translates to:
-  /// **'The two passwords do not match.'**
-  String get passwordsDiffer;
+  /// **'The two MPINs do not match.'**
+  String get mpinsDiffer;
 
-  /// No description provided for @savePassword.
+  /// No description provided for @saveMpin.
   ///
   /// In en, this message translates to:
   /// **'Save and continue'**
-  String get savePassword;
+  String get saveMpin;
 
   /// No description provided for @networkError.
   ///

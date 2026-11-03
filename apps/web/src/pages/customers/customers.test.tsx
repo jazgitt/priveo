@@ -14,7 +14,7 @@ const fetchMock = vi.fn();
 const society = { id: "s1", name: "DLF Meadows", active: true, parking_basements: ["B1", "B2"] };
 const plan = { id: "p1", name: "Premium", active: true, monthly_price_rupees: 999, list_price_rupees: 1499, includes_interior: true, inclusions: ["Daily exterior", "Weekly interior"], badge: "Founding member" };
 const catalogue = { id: "cat1", make: "Tata", model: "Nexon", variant: "Pure", category: "Compact SUV", active: true };
-const customer = { id: "c1", first_name: "Asha", last_name: "Rao", email: "asha@example.com", mobile: "9876543210", flat: "A-12", email_verified: false, password_set: false, onboarding_confirmed: false, vehicles: [] };
+const customer = { id: "c1", first_name: "Asha", last_name: "Rao", email: "asha@example.com", mobile: "9876543210", flat: "A-12", email_verified: false, mpin_changed: false, onboarding_confirmed: false, vehicles: [] };
 const car = (sub: Partial<NonNullable<Vehicle["subscription"]>> = {}): Vehicle => ({
   id: "v1", society_id: "s1", society: "DLF Meadows", registration: "HR01ZZ1234",
   make: "Tata", model: "Nexon", variant: "Pure", category: "Compact SUV",
@@ -52,7 +52,7 @@ beforeEach(() => {
     if (path === "/v1/admin/customers" && method === "POST") { created = JSON.parse(options!.body as string); return reply({ id: "c1", welcome_sent: true }, 201); }
     if (path === "/v1/admin/customers/c1" && method === "GET") return reply(customer);
     if (path.startsWith("/v1/admin/customers/summary")) return reply(summary);
-    if (path.startsWith("/v1/admin/customers?")) return reply([{ id: "c1", name: "Asha Rao", email: customer.email, mobile: customer.mobile, flat: "A-12", email_verified: false, password_set: false, onboarding_confirmed: false, vehicles: [{ id: "v1", registration: "HR01ZZ1234", status: "Activating" }] }]);
+    if (path.startsWith("/v1/admin/customers?")) return reply([{ id: "c1", name: "Asha Rao", email: customer.email, mobile: customer.mobile, flat: "A-12", email_verified: false, mpin_changed: false, onboarding_confirmed: false, vehicles: [{ id: "v1", registration: "HR01ZZ1234", status: "Activating" }] }]);
     return reply({ saved: true });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -80,7 +80,7 @@ it("lists vehicles and sign-in state, pages the search and resets the offset whe
       const query = new URL(path, "https://test").searchParams;
       return reply(query.get("offset") === "50" ? [{ id: "second", name: "Second page", email: "second@example.com", mobile: "1", vehicles: [] }]
         : Array.from({ length: 50 }, (_, i) => ({ id: `row${i}`, name: `First ${i}`, email: "first@example.com", mobile: "1",
-          email_verified: true, password_set: true, onboarding_confirmed: i === 0, vehicles: [{ id: `v${i}`, registration: `HR01AA${i}`, status: "Active" }] })));
+          email_verified: true, mpin_changed: true, onboarding_confirmed: i === 0, vehicles: [{ id: `v${i}`, registration: `HR01AA${i}`, status: "Active" }] })));
     }
     return original(path, options);
   });
@@ -241,7 +241,7 @@ it("edits car and parking in a dialog", async () => {
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ parking_basement: "B2", parking_number: "42" }));
 });
 
-it("edits details, corrects the email, and confirms password, notification and session changes", async () => {
+it("edits details, corrects the email, and confirms MPIN, notification and session changes", async () => {
   const original = fetchMock.getMockImplementation()!;
   fetchMock.mockImplementation(async (path: string, o?: RequestInit) => {
     const method = o?.method ?? "GET";
@@ -264,10 +264,10 @@ it("edits details, corrects the email, and confirms password, notification and s
   await userEvent.click(within(email).getByRole("button", { name: "Update email" }));
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/email", "PATCH")).toEqual({ email: "new@example.com" }));
 
-  await userEvent.click(await screen.findByRole("button", { name: "Clear password" }));
-  expect(sentTo("/v1/admin/customers/c1/reset-password", "POST")).toHaveLength(0);
-  await confirmWith("Clear password");
-  await waitFor(() => expect(sentTo("/v1/admin/customers/c1/reset-password", "POST")).toHaveLength(1));
+  await userEvent.click(await screen.findByRole("button", { name: "Reset MPIN" }));
+  expect(sentTo("/v1/admin/customers/c1/reset-mpin", "POST")).toHaveLength(0);
+  await confirmWith("Reset MPIN");
+  await waitFor(() => expect(sentTo("/v1/admin/customers/c1/reset-mpin", "POST")).toHaveLength(1));
 
   await userEvent.click(await screen.findByRole("switch", { name: "Payments" }));
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/notification-preferences", "PUT")).toEqual({ items: [{ event: "payment_due", enabled: false }] }));

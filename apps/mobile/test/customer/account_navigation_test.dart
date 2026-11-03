@@ -33,7 +33,7 @@ void main(){
     router.pop();await t.pumpAndSettle();await t.tap(find.text(AccountStrings.menuSkipPause));await t.pumpAndSettle();await t.tap(find.text('Creta'));await t.pumpAndSettle();expect(find.text('Destination /customer/vehicles/v1/skip-pause'),findsOneWidget);
     router.pop();await t.pumpAndSettle();await t.tap(find.text(AccountStrings.menuComplaints));await t.pumpAndSettle();expect(find.text('Destination /customer/support/complaints'),findsOneWidget);
     router.pop();await t.pumpAndSettle();await t.tap(find.text(AccountStrings.menuHelp));await t.pumpAndSettle();expect(find.text('Destination /customer/support'),findsOneWidget);
-    router.pop();await t.pumpAndSettle();await t.tap(find.text(AccountStrings.changePassword));await t.pumpAndSettle();expect(find.widgetWithText(TextField,AccountStrings.currentPassword),findsOneWidget);
+    router.pop();await t.pumpAndSettle();await t.tap(find.text(AccountStrings.changeMpin));await t.pumpAndSettle();expect(find.widgetWithText(TextField,AccountStrings.currentMpin),findsOneWidget);
   });
   testWidgets('one vehicle opens directly and subscription card links to that car',(t)async{
     final router=await show(t,1);await t.tap(find.text(AccountStrings.menuAddons));await t.pumpAndSettle();expect(find.text('Destination /customer/vehicles/v1/addons'),findsOneWidget);

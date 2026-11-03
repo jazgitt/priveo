@@ -186,7 +186,7 @@ Future<String?> _chooseVehicle(BuildContext context, WidgetRef ref) async {
 }
 
 /// The menu rows ACC-03 adds to Account: calendar, add-ons, skip or pause,
-/// complaints, help and support, and change password.
+/// complaints, help and support, and change MPIN.
 class AccountMoreLinks extends ConsumerWidget {
   const AccountMoreLinks({super.key});
 
@@ -240,8 +240,8 @@ class AccountMoreLinks extends ConsumerWidget {
           ),
         link(
           Symbols.lock_rounded,
-          AccountStrings.changePassword,
-          () => openChangePassword(context),
+          AccountStrings.changeMpin,
+          () => openChangeMpin(context),
         ),
       ],
     );

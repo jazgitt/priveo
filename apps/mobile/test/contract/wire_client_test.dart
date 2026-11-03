@@ -32,14 +32,6 @@ void main() {
     http.status=409;
     await expectLater(api.legalLinks(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
-  test('POST /v1/auth/start uses the published wire contract', () async {
-    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
-    await api.start(wire.StartRequest.fromJson((http.examples['StartRequest'] as Map).cast<String,dynamic>()));
-    expect(http.requests.last.path, '/v1/auth/start'); expect(http.requests.last.method, 'POST');
-    expect(http.requests.last.data, http.examples['StartRequest']);
-    http.status=409;
-    await expectLater(api.start(wire.StartRequest.fromJson((http.examples['StartRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
-  });
   test('POST /v1/auth/code uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
     await api.sendCode(wire.CodeRequest.fromJson((http.examples['CodeRequest'] as Map).cast<String,dynamic>()));
@@ -56,13 +48,13 @@ void main() {
     http.status=409;
     await expectLater(api.verifyCode(wire.VerifyCodeRequest.fromJson((http.examples['VerifyCodeRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
-  test('POST /v1/auth/password uses the published wire contract', () async {
+  test('POST /v1/auth/mpin uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
-    await api.setPassword(wire.SetPasswordRequest.fromJson((http.examples['SetPasswordRequest'] as Map).cast<String,dynamic>()));
-    expect(http.requests.last.path, '/v1/auth/password'); expect(http.requests.last.method, 'POST');
-    expect(http.requests.last.data, http.examples['SetPasswordRequest']);
+    await api.setMpin(wire.SetMpinRequest.fromJson((http.examples['SetMpinRequest'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/auth/mpin'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['SetMpinRequest']);
     http.status=409;
-    await expectLater(api.setPassword(wire.SetPasswordRequest.fromJson((http.examples['SetPasswordRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+    await expectLater(api.setMpin(wire.SetMpinRequest.fromJson((http.examples['SetMpinRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
   test('POST /v1/auth/login uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
@@ -125,13 +117,13 @@ void main() {
     http.status=409;
     await expectLater(api.verifyEmailChange(wire.AccountEmailCode.fromJson((http.examples['AccountEmailCode'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
-  test('POST /v1/customer/password uses the published wire contract', () async {
+  test('POST /v1/customer/mpin uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
-    await api.changePassword(wire.AccountPasswordChange.fromJson((http.examples['AccountPasswordChange'] as Map).cast<String,dynamic>()));
-    expect(http.requests.last.path, '/v1/customer/password'); expect(http.requests.last.method, 'POST');
-    expect(http.requests.last.data, http.examples['AccountPasswordChange']);
+    await api.changeMpin(wire.AccountMpinChange.fromJson((http.examples['AccountMpinChange'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/customer/mpin'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['AccountMpinChange']);
     http.status=409;
-    await expectLater(api.changePassword(wire.AccountPasswordChange.fromJson((http.examples['AccountPasswordChange'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+    await expectLater(api.changeMpin(wire.AccountMpinChange.fromJson((http.examples['AccountMpinChange'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
   test('POST /v1/customer/uploads uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());

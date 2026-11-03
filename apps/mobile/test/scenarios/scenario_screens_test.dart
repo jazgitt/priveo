@@ -148,7 +148,7 @@ void main() {
       testWidgets('$id crew sees the day counts [CRW-SCH-01]', (tester) async {
         await openApp(
           tester,
-          await signInApi(tester, crew(id), scenarioPassword),
+          await signInApi(tester, crew(id), scenarioPassword, role: 'crew'),
         );
         await untilFound(tester, find.text('Total'));
       });
