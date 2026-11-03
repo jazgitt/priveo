@@ -26,7 +26,7 @@ export interface Vehicle {
 export interface Customer { id: string; first_name: string; last_name: string; email: string | null; mobile: string;
   imported_history?: { id: string; date: string | null; service: string; vehicle: string;
     payment_status: string | null; notes: string }[];
-  flat: string; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; mpin_changed: boolean; has_login?: boolean; onboarding_confirmed: boolean;
+  flat: string; alternate_names?: string | null; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; mpin_changed: boolean; has_login?: boolean; onboarding_confirmed: boolean;
   vehicles: Vehicle[]; welcome_sent?: boolean; existing?: boolean }
 /** One row of the customer list. */
 export interface CustomerRow {
@@ -49,7 +49,7 @@ export interface ParkingChange {
   id: string; basement: string; number: string; from_date: string; to_date: string | null;
   kind: "Temporary" | "Permanent"; note: string; state: "Upcoming" | "Current" | "Ended" | "Cancelled";
 }
-export interface ParkingChanges { base: string; today: string; changes: ParkingChange[] }
+export interface ParkingChanges { zone?: string; base: string; today: string; changes: ParkingChange[] }
 /** One plan change of a subscription (ADM-SUB-08). */
 export interface PlanChange {
   id: string; from_plan: string; from_price_rupees: number | null; to_plan: string; to_price_rupees: number;
@@ -82,8 +82,18 @@ export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 export const CUSTOM_DAY = "Custom";
 export const interiorDays = [...weekdays, CUSTOM_DAY];
 /** The parking of a vehicle: "B1-214", free text, or a dash when it has none. */
-export const parkingText = (v: { parking_basement: string; parking_number: string }) =>
-  v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement || "-";
+/** The parking number is free text, up to the 60 characters the database holds. */
+export const PARKING_NUMBER_MAX = 60;
+export const parkingNumberOk = (text: string) => text.trim().length > 0 && text.trim().length <= PARKING_NUMBER_MAX;
+/** A basement is needed unless the vehicle has a zone. */
+export const parkingOk = (basement: string, number: string, zoneId: string | null | undefined) =>
+  parkingNumberOk(number) && Boolean(basement || zoneId);
+
+/** The zone and the parking slot always show together: "Zone 3 · B1-214". */
+export const parkingText = (v: { parking_basement: string; parking_number: string; zone?: string | null }) => {
+  const slot = v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement;
+  return [v.zone, slot].filter(Boolean).join(" · ") || "-";
+};
 export interface ZoneChoice { id: string; name: string; active: boolean }
 export const times = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
 export const PAGE_SIZE = 50;

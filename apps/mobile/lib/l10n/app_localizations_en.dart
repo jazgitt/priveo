@@ -296,7 +296,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectBasement => 'Select the basement.';
 
   @override
-  String get enterParkingNumber => 'Enter the parking number, in digits.';
+  String get enterParkingNumber =>
+      'Enter the parking number (up to 60 characters).';
 
   @override
   String get selectCutoff => 'Please select your service cutoff time.';

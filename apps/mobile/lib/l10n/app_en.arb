@@ -144,7 +144,7 @@
   "enterLastName": "Enter your last name, using letters only.",
   "enterMobile": "Enter a 10-digit mobile number.",
   "selectBasement": "Select the basement.",
-  "enterParkingNumber": "Enter the parking number, in digits.",
+  "enterParkingNumber": "Enter the parking number (up to 60 characters).",
   "selectCutoff": "Please select your service cutoff time.",
   "selectInteriorDay": "Please select your interior care day.",
   "edit": "Edit",

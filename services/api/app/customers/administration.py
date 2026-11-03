@@ -23,6 +23,7 @@ from app.customers.models import (
     Subscription,
     Vehicle,
 )
+from app.customers.parking_rules import basement_ok, clean_number
 from app.customers.service import _NAME, read_cutoff, show_registration
 from app.customers.welcome import send_welcome
 from app.directory import lookup
@@ -87,6 +88,8 @@ class CustomerEdit(Input):
     address_line1: str = Field(default="", max_length=120)
     address_line2: str = Field(default="", max_length=120)
     society_id: uuid.UUID | None = None
+    # Other names the customer is known by. Empty clears; not sent leaves it as it is.
+    alternate_names: str | None = Field(default=None, max_length=500)
 
 
 class SubscriptionSetup(Input):
@@ -282,12 +285,11 @@ def add_vehicle(db, c, body, owner, by=None):
     ):
         raise ApiError("validation_failed", "Choose an active society, vehicle and plan.", 422)
     cutoff = read_cutoff(body.cutoff_time)
-    basement, number = body.parking_basement.upper(), body.parking_number.strip()
+    basement, number = body.parking_basement.strip().upper(), clean_number(body.parking_number)
     if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in INTERIOR_DAYS)):
         raise ApiError("validation_failed", "Choose a cutoff and interior care day.", 422)
-    if basement not in lookup.society_basements(db, society.id) or not re.fullmatch(
-        r"\d{1,5}", number
-    ):
+    if number is None or not basement_ok(db, society.id, basement,
+                                         has_zone=body.zone_id is not None):
         raise ApiError("validation_failed", "Check the parking location.", 422)
     reg = registration(db, body.registration)
     photo = asset(db, body.photo_upload_id, owner, "vehicle") if body.photo_upload_id else None
@@ -393,6 +395,7 @@ def detail(db, c, store):
         "email": c.email,
         "mobile": c.mobile,
         "flat": c.flat,
+        "alternate_names": c.alternate_names,
         "address_line1": c.address_line1,
         "address_line2": c.address_line2,
         "society_id": str(c.society_id),
@@ -438,6 +441,7 @@ def _matching(q: str, society_id: uuid.UUID | None):
     query = (
         select(Customer.id)
         .outerjoin(Vehicle, Vehicle.customer_id == Customer.id)
+        .outerjoin(Zone, Zone.id == Vehicle.zone_id)
         .outerjoin(Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id))
     )
     if q:
@@ -450,6 +454,9 @@ def _matching(q: str, society_id: uuid.UUID | None):
                 Customer.mobile.ilike(text),
                 Vehicle.registration.ilike(text.replace(" ", "")),
                 Society.name.ilike(text),
+                Customer.alternate_names.ilike(text),
+                Vehicle.parking_number.ilike(text),
+                Zone.name.ilike(text),
             )
         )
     if society_id:
@@ -625,6 +632,8 @@ def edit_customer(
     c.flat = body.flat
     c.address_line1 = body.address_line1.strip()
     c.address_line2 = body.address_line2.strip()
+    if body.alternate_names is not None:
+        c.alternate_names = " ".join(body.alternate_names.split()) or None
     if body.society_id is not None and body.society_id != c.society_id:
         society = db.get(Society, body.society_id)
         if society is None or not society.active:
@@ -632,7 +641,9 @@ def edit_customer(
         c.society_id = society.id
     if c.login_id:
         db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
-    audit(db, user.id, "customer", c.id, "update", body.model_dump(mode="json"))
+    # Alternate names are not written to the audit log (owner, 3 Nov 2026).
+    audit(db, user.id, "customer", c.id, "update",
+          body.model_dump(mode="json", exclude={"alternate_names"}))
     db.commit()
     return detail(db, c, store)
 
@@ -993,20 +1004,25 @@ def edit_vehicle(
             entry.category,
         )
     c = db.get(Customer, v.customer_id)
-    if body.parking_basement is not None:
-        if body.parking_basement.upper() not in lookup.society_basements(
-            db, v.society_id or c.society_id
-        ):
-            raise ApiError("validation_failed", "Choose a basement.", 422)
-        v.parking_basement = body.parking_basement.upper()
-    if body.parking_number is not None:
-        if not re.fullmatch(r"\d{1,5}", body.parking_number):
-            raise ApiError("validation_failed", "Enter a numeric parking number.", 422)
-        v.parking_number = body.parking_number
+    old_zone = v.zone_id
     if body.zone_id is not None:
         v.zone_id = zone_for(db, body.zone_id, v.society_id or c.society_id).id
     elif body.clear_zone:
         v.zone_id = None
+    if body.parking_basement is not None:
+        basement = body.parking_basement.strip().upper()
+        if not basement_ok(db, v.society_id or c.society_id, basement,
+                           has_zone=v.zone_id is not None):
+            raise ApiError("validation_failed", "Choose a basement, or give the vehicle a zone.", 422)
+        v.parking_basement = basement
+    elif body.clear_zone and not v.parking_basement:
+        # Removing the zone of a vehicle that has no basement would leave it without a place.
+        raise ApiError("validation_failed", "Choose a basement, or keep the vehicle's zone.", 422)
+    if body.parking_number is not None:
+        number = clean_number(body.parking_number)
+        if number is None:
+            raise ApiError("validation_failed", "Enter the parking number (up to 60 characters).", 422)
+        v.parking_number = number
     if body.photo_upload_id:
         v.photo_upload_id = asset(db, body.photo_upload_id, user.id, "vehicle", v.id)
     if body.rc_upload_id:
@@ -1025,7 +1041,13 @@ def edit_vehicle(
                 422,
             )
         v.active = body.active
-    audit(db, user.id, "vehicle", v.id, "update", body.model_dump(mode="json"))
+    detail = body.model_dump(mode="json")
+    if v.zone_id != old_zone:
+        # The zone change is recorded by name, from and to (owner, 3 Nov 2026).
+        names = {z.id: z.name for z in db.scalars(select(Zone).where(
+            Zone.id.in_([i for i in (old_zone, v.zone_id) if i])))}
+        detail["zone"] = [names.get(old_zone), names.get(v.zone_id)]
+    audit(db, user.id, "vehicle", v.id, "update", detail)
     db.commit()
     return vehicle_out(db, v, store)
 

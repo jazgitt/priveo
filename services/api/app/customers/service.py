@@ -16,6 +16,7 @@ from app.customers.models import (
     Subscription,
     Vehicle,
 )
+from app.customers.parking_rules import basement_ok, clean_number, with_zone, zone_names
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.home.schemas import CustomerHome, QuickAction, VehicleCard
@@ -46,6 +47,8 @@ class OnboardingVehicle(BaseModel):
     parking_basements: list[str] = ["B1", "B2", "B3", "B4"]
     parking_basement: str
     parking_number: str
+    # The vehicle's zone (read only for the customer).
+    zone: str = ""
     has_subscription: bool
     plan_name: str | None
     monthly_price_rupees: int | None
@@ -167,7 +170,9 @@ class CustomerService:
         photos = media.vehicle_photo_urls(self._db, self._store, [v.id for v, _ in owned])
         for vehicle, sub in owned:
             plan = self._plan(sub)
-            parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
+            parking = with_zone(
+                zone_names(self._db, [vehicle]).get(vehicle.id, ""),
+                "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p))
             cards.append(
                 VehicleCard(
                     id=str(vehicle.id),
@@ -212,6 +217,7 @@ class CustomerService:
                         self._db, vehicle.society_id or customer.society_id),
                     parking_basement=vehicle.parking_basement,
                     parking_number=vehicle.parking_number,
+                    zone=zone_names(self._db, [vehicle]).get(vehicle.id, ""),
                     has_subscription=sub is not None,
                     plan_name=plan.name if plan else None,
                     monthly_price_rupees=sub.monthly_price_rupees if sub else None,
@@ -249,15 +255,15 @@ class CustomerService:
             values = {}
             if answer.parking_basement is not None:
                 basement = answer.parking_basement.strip().upper()
-                if basement not in lookup.society_basements(
-                    self._db, vehicle.society_id or customer.society_id
-                ):
+                if not basement_ok(self._db, vehicle.society_id or customer.society_id,
+                                   basement, has_zone=vehicle.zone_id is not None):
                     raise ApiError("validation_failed", "Select the basement.", 422)
                 values["parking_basement"] = basement
             if answer.parking_number is not None:
-                if not re.fullmatch(r"\d{1,5}", answer.parking_number.strip()):
+                number = clean_number(answer.parking_number)
+                if number is None:
                     raise ApiError("validation_failed", "Enter the parking number.", 422)
-                values["parking_number"] = answer.parking_number.strip()
+                values["parking_number"] = number
             if answer.cutoff_time is not None:
                 cutoff = read_cutoff(answer.cutoff_time)
                 if sub is None or cutoff is None:
@@ -325,15 +331,14 @@ class CustomerService:
             answer = given[str(vehicle.id)]
             at = f"vehicles.{index}"
             basement = answer.parking_basement.strip().upper()
-            number = answer.parking_number.strip()
+            number = clean_number(answer.parking_number)
             if vehicle.id not in media.vehicle_photo_urls(self._db, self._store, [vehicle.id]):
                 errors[f"{at}.photo"] = "Add a photo of your car."  # ONB-22
-            if basement not in lookup.society_basements(
-                self._db, vehicle.society_id or customer.society_id
-            ):
+            if not basement_ok(self._db, vehicle.society_id or customer.society_id,
+                               basement, has_zone=vehicle.zone_id is not None):
                 errors[f"{at}.parking_basement"] = "Select the basement."
-            if not re.fullmatch(r"\d{1,5}", number):
-                errors[f"{at}.parking_number"] = "Enter the parking number, in digits."
+            if number is None:
+                errors[f"{at}.parking_number"] = "Enter the parking number (up to 60 characters)."
             cutoff = day = None
             if sub is not None:
                 cutoff = read_cutoff(answer.cutoff_time)

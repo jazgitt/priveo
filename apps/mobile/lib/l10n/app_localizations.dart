@@ -631,7 +631,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterParkingNumber.
   ///
   /// In en, this message translates to:
-  /// **'Enter the parking number, in digits.'**
+  /// **'Enter the parking number (up to 60 characters).'**
   String get enterParkingNumber;
 
   /// No description provided for @selectCutoff.

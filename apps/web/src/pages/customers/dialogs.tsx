@@ -12,7 +12,7 @@ import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
 import {
-  CUSTOM_DAY, interiorDays, times, uploadCustomerAsset, weekdays,
+  CUSTOM_DAY, interiorDays, PARKING_NUMBER_MAX, parkingOk, times, uploadCustomerAsset, weekdays,
   type Catalogue, type Customer, type Plan, type PlanChangeQuote, type SchedulePattern, type Society, type Subscription, type Vehicle, type ZoneChoice,
 } from "./api";
 
@@ -63,6 +63,7 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
   const [v, setV] = useState({
     first_name: c.first_name, last_name: c.last_name, mobile: c.mobile, flat: c.flat ?? "",
     address_line1: c.address_line1 ?? "", address_line2: c.address_line2 ?? "", society_id: societyId,
+    alternate_names: c.alternate_names ?? "",
   });
   const [touched, setTouched] = useState(false);
   const shown = touched ? v : {
@@ -89,6 +90,9 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
           {(p) => <Input {...p} inputMode="numeric" value={shown.mobile} onChange={set("mobile")} />}
         </Field>
         <Field label="Flat" optional>{(p) => <Input {...p} value={shown.flat} onChange={set("flat")} />}</Field>
+        <Field label="Alternate names" optional className="sm:col-span-2" hint="Other names the customer is known by. Separate them with commas.">
+          {(p) => <Input {...p} maxLength={500} value={shown.alternate_names} onChange={set("alternate_names")} />}
+        </Field>
         <Field label="Address line 1" optional className="sm:col-span-2">
           {(p) => <Input {...p} value={shown.address_line1} onChange={set("address_line1")} />}
         </Field>
@@ -161,7 +165,9 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
   const regChanged = reg !== v.registration.replaceAll(" ", "");
   const parkingChanged = basement !== v.parking_basement || parking !== v.parking_number;
   const zoneChanged = zoneId !== (v.zone_id ?? NONE);
-  const valid = reg.trim() !== "" && (!parkingChanged || (basement && /^\d{1,5}$/.test(parking)));
+  // The basement may stay empty only while the vehicle has a zone.
+  const valid = reg.trim() !== "" && (!parkingChanged || parkingOk(basement, parking, zoneId === NONE ? null : zoneId))
+    && !(zoneChanged && zoneId === NONE && !basement);
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Edit car and parking, ${v.registration}`} size="lg"
                 submitLabel="Save car details" busy={save.isPending} disabled={!valid}
@@ -185,14 +191,15 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
             ]} />
           )}
         </Field>
-        <Field label="Basement">
+        <Field label="Basement" optional={zoneId !== NONE} hint={zoneId !== NONE ? "Optional when a zone is chosen." : undefined}>
           {(p) => basements.length > 0
-            ? <SelectBox {...p} value={basement} onChange={setBasement}
-                         choices={[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))} />
+            ? <SelectBox {...p} value={basement || NONE} onChange={(b) => setBasement(b === NONE ? "" : b)}
+                         choices={[{ value: NONE, label: "No basement" }, ...[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))]} />
             : <Input {...p} value={basement} onChange={(e) => setBasement(e.target.value)} />}
         </Field>
-        <Field label="Parking number" error={parkingChanged && parking && !/^\d{1,5}$/.test(parking) ? "Up to 5 digits." : undefined}>
-          {(p) => <Input {...p} inputMode="numeric" value={parking} onChange={(e) => setParking(e.target.value)} />}
+        <Field label="Parking number" hint="A number or short text, for example 214 or Under D25."
+               error={parking.trim().length > PARKING_NUMBER_MAX ? `Up to ${PARKING_NUMBER_MAX} characters.` : undefined}>
+          {(p) => <Input {...p} maxLength={PARKING_NUMBER_MAX + 20} value={parking} onChange={(e) => setParking(e.target.value)} />}
         </Field>
         <Field label="Zone" hint={v.zone_id && !(zones.data ?? []).some((z) => z.id === v.zone_id) ? `Now ${v.zone} (no longer offered)` : undefined}>
           {(p) => <SelectBox {...p} value={zoneId} onChange={setZoneId} choices={zoneChoices(zones.data, v)} />}

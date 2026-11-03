@@ -93,9 +93,9 @@ def _password_matches(password_hash: str | None, password: str) -> bool:
 
 
 def role_for(login_id: str) -> str:
-    """The role a sign-in is for when the request does not name one: a 10-digit
-    mobile is crew, the rest is an admin user ID (CRW-ACC-02). A customer also
-    has a 10-digit mobile, so a customer's sign-in must name its role."""
+    """Whether an ID has the shape of a mobile number (crew) or of an admin user
+    ID. The web portal uses it to refuse non-admin IDs. The sign-in itself does
+    not use it: the request names its role."""
     if re.fullmatch(r"\d{10}", login_id):
         return "crew"
     return "admin"
@@ -197,10 +197,15 @@ class AuthService:
     def login(self, login_id: str, password: str, channel: str = "mobile",
               role: str | None = None) -> LoginResult:
         """Signs in. `role` is what the sign-in screen says it is for: a customer
-        and a crew member can have the same mobile number. Without it, a
-        10-digit ID is crew and any other ID is an admin."""
+        and a crew member can have the same mobile number. It is required: there
+        is no guessing from the shape of the ID (AUTH-11)."""
         key = normalise(login_id)
-        wanted = (role or role_for(key)).strip().lower()
+        if role is None or not role.strip():
+            raise ApiError(
+                "role_required",
+                "Update the Priveo app, then sign in again. The sign-in must say whether "
+                "it is for a customer, crew or admin.", 422)
+        wanted = role.strip().lower()
         customer = wanted == "customer"
         login = self._db.scalar(
             select(Login).where(Login.login_id == key, Login.role == wanted)

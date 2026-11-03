@@ -192,7 +192,7 @@ def test_a_migrated_customer_cannot_sign_in_before_setting_a_password(client, en
     from sqlalchemy.orm import Session
     with Session(engine) as session:
         import_workbook(session, _workbook(tmp_path, ROWS), apply=True)
-    r = client.post("/v1/auth/login", json={"login_id": ASHA, "password": ""})
+    r = client.post("/v1/auth/login", json={"login_id": ASHA, "password": "", "role": "customer"})
     assert r.status_code == 401 and r.json()["code"] == "invalid_credentials"
 
 

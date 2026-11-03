@@ -57,7 +57,7 @@
   "cust_acct_parking_number": "Parking number",
   "cust_acct_parking_saved": "Your parking details are saved.",
   "cust_acct_select_basement": "Select the basement.",
-  "cust_acct_enter_parking": "Enter the parking number, in digits.",
+  "cust_acct_enter_parking": "Enter the parking number (up to 60 characters).",
   "cust_acct_linked_visit": "Linked visit",
   "cust_acct_no_linked_visit": "No linked visit",
   "cust_acct_attach_photos": "Photos (optional)",

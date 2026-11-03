@@ -160,7 +160,7 @@ def test_another_admin_cannot_use_the_stream(client, db):
     db.add(Login(role="admin", login_id="otheradmin", display_name="Other", active=True,
                  password_hash=hash_password("pw-other-admin1"), password_changed_at=utcnow()))
     db.commit()
-    token = client.post("/v1/auth/login", json={"login_id": "otheradmin", "password": "pw-other-admin1"})
+    token = client.post("/v1/auth/login", json={"login_id": "otheradmin", "password": "pw-other-admin1", "role": "admin"})
     other = auth(token.json()["access_token"])
     use(client, real_agent(FakeLLM([])))
     founder_headers = auth(login(client, "admin")["access_token"])

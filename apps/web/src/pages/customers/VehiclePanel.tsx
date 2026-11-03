@@ -165,8 +165,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           : <div className="flex aspect-[4/3] w-40 items-center justify-center rounded-lg border border-dashed text-muted-foreground"><Car aria-hidden /></div>}
         <DetailList columns={3} items={[
           { label: "Society", value: v.society },
-          { label: "Parking", value: parkingText(v) },
-          { label: "Zone", value: v.zone ?? "None" },
+          { label: "Zone and parking", value: parkingText(v) },
           { label: "Category", value: v.category },
         ]} />
       </div>
@@ -266,7 +265,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           {parking.error && <ErrorState message={errorMessage(parking.error)} />}
           {parking.data && (
             <p className="mb-2 text-sm text-muted-foreground">
-              Own slot {parking.data.base || "not set"}. Today the crew go to <strong className="text-foreground">{parking.data.today || "not set"}</strong>.
+              {parking.data.zone ? `Zone ${parking.data.zone}. ` : ""}Own slot {parking.data.base || "not set"}. Today the crew go to <strong className="text-foreground">{parking.data.today || "not set"}</strong>.
             </p>
           )}
           <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0 empty:hidden">

@@ -12,8 +12,8 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, EmailChange, Vehicle
+from app.customers.parking_rules import basement_ok, clean_number, zone_names
 from app.customers.service import _NAME
-from app.directory.lookup import society_basements
 from app.directory.models import Society
 from app.identity import tokens
 from app.identity.models import AuthSession, Login
@@ -96,6 +96,8 @@ class AccountVehicleOut(BaseModel):
     id: str
     parking_basement: str
     parking_number: str
+    # The vehicle's zone, shown with the parking (read only for the customer).
+    zone: str = ""
     photo_url: str | None
     rc_status: str
 
@@ -277,6 +279,7 @@ class AccountService:
         photo = media.vehicle_photo_urls(self.db, self.store, [v.id]).get(v.id)
         return AccountVehicleOut(
             id=str(v.id), parking_basement=v.parking_basement, parking_number=v.parking_number,
+            zone=zone_names(self.db, [v]).get(v.id, ""),
             photo_url=photo, rc_status="Verified" if v.rc_verified else "Uploaded"
                 if v.rc_upload_id else rc_status(self.db, v.id))
 
@@ -289,12 +292,13 @@ class AccountService:
         basement = number = None
         if body.parking_basement is not None:
             basement = body.parking_basement.strip().upper()
-            if basement not in society_basements(self.db, v.society_id or c.society_id):
+            if not basement_ok(self.db, v.society_id or c.society_id, basement,
+                               has_zone=v.zone_id is not None):
                 errors["parking_basement"] = "Select the basement."
         if body.parking_number is not None:
-            number = body.parking_number.strip()
-            if not re.fullmatch(r"\d{1,5}", number):
-                errors["parking_number"] = "Enter the parking number, in digits."
+            number = clean_number(body.parking_number)
+            if number is None:
+                errors["parking_number"] = "Enter the parking number (up to 60 characters)."
         if errors:
             raise ApiError("validation_failed", "Please check the details.", 422, errors)
         if basement is not None:

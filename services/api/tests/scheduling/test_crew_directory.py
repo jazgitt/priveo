@@ -68,7 +68,8 @@ def needs(api, admin, world):
 
 def sign_in(api, created):
     return api.post("/v1/auth/login", json={"login_id": created["login_id"],
-                                            "password": created["password"]})
+                                            "password": created["password"],
+                                            "role": "crew"})
 
 
 def test_an_onboarded_crew_member_gets_jobs(api, admin, world, directory):
@@ -320,9 +321,10 @@ def test_edit_details_and_login_id(api, admin, directory):
     assert r.status_code == 200 and r.json()["mobile"] == "9899999999"
     # The old login ID is gone, the signed-in phone is out.
     assert api.post("/v1/auth/login", json={
-        "login_id": created["login_id"], "password": created["password"]}).status_code == 401
+        "login_id": created["login_id"], "password": created["password"],
+        "role": "crew"}).status_code == 401
     assert api.post("/v1/auth/login", json={
-        "login_id": "9899999999", "password": created["password"]}).status_code == 200
+        "login_id": "9899999999", "password": created["password"], "role": "crew"}).status_code == 200
     taken = api.patch(f"{CREW}/{crew_id}", headers=admin, json={"mobile": "9000000002"})
     assert taken.status_code == 409
 

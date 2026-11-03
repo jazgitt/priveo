@@ -149,15 +149,21 @@ def test_the_same_mobile_can_be_a_customer_and_a_crew_member(client, db, custome
     assert sign_in(client, FIRST_MPIN, role="crew").status_code == 401
 
 
-def test_without_a_role_a_ten_digit_id_is_crew_and_the_rest_is_admin(client, customer):
-    assert sign_in(client, role=None).status_code == 401  # a customer must say so
-    crew = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["crew"], "password": PASSWORDS["crew"]})
-    admin = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"]})
-    assert (crew.json()["role"], admin.json()["role"]) == ("crew", "admin")
+def test_a_sign_in_without_a_role_is_refused_with_a_clear_message(client, customer):
+    for login_id, password in ((MOBILE, FIRST_MPIN), (LOGIN_IDS["crew"], PASSWORDS["crew"]),
+                               (LOGIN_IDS["admin"], PASSWORDS["admin"])):
+        r = client.post("/v1/auth/login", json={"login_id": login_id, "password": password})
+        assert r.status_code == 422 and r.json()["code"] == "role_required"
+        assert "Update the Priveo app" in r.json()["message"]
+    blank = client.post("/v1/auth/login", json={
+        "login_id": MOBILE, "password": FIRST_MPIN, "role": " "})
+    assert blank.json()["code"] == "role_required"
     unknown = sign_in(client, role="boss")
     assert unknown.status_code == 401 and unknown.json()["code"] == "invalid_credentials"
+    for who, role in (("crew", "crew"), ("admin", "admin")):
+        ok = client.post("/v1/auth/login", json={
+            "login_id": LOGIN_IDS[who], "password": PASSWORDS[who], "role": role})
+        assert ok.status_code == 200 and ok.json()["role"] == role
 
 
 def test_a_wrong_mpin_looks_the_same_as_an_unknown_number(client, customer):

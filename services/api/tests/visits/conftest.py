@@ -99,7 +99,8 @@ def signin(crew_client: TestClient, db: Session):
     def go(member: SchedulingCrew) -> dict[str, str]:
         login = db.get(Login, member.login_id)
         r = crew_client.post("/v1/auth/login",
-                             json={"login_id": login.login_id, "password": PASSWORD})
+                             json={"login_id": login.login_id, "password": PASSWORD,
+                                  "role": login.role})
         assert r.status_code == 200, r.text
         return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.customers.models import Vehicle
 from app.customers.parking import label as parking_label
 from app.customers.parking import slots as parking_slots
+from app.customers.parking_rules import with_zone, zone_names
 from app.directory import lookup
 from app.directory.models import Society
 from app.identity.models import Login
@@ -155,12 +156,14 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
     states = queue.states_for(db, jobs)
 
     parking_on = parking_slots(db, [(vehicles[v.vehicle_id], v.date) for v in visits.values()])
+    zones = zone_names(db, list(vehicles.values()))
     cards = []
     for job in jobs:
         visit = visits[job.visit_id]
         vehicle = vehicles[visit.vehicle_id]
         state = states.get(job.id)
-        parking = parking_label(parking_on[(vehicle.id, visit.date)])
+        zone = zones.get(vehicle.id, "")
+        parking = with_zone(zone, parking_label(parking_on[(vehicle.id, visit.date)]))
         cards.append(
             s.CrewJobCard(
                 id=str(job.id),
@@ -182,6 +185,7 @@ def _cards(db: Session, jobs: list[Job]) -> list[s.CrewJobCard]:
                 ),
                 society=societies.get(schedules[visit.schedule_id].society_id, ""),
                 parking=parking,
+                zone=zone,
                 start_time=rules.hhmm(job.start_minute),
                 finish_by=rules.hhmm(job.finish_by_minute),
                 checklist_total=len(items_for_job(db, job)),

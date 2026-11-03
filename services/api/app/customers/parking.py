@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, Vehicle, VehicleParkingChange
+from app.customers.parking_rules import zone_names
 from app.directory import lookup
 from app.directory.models import DirectoryAudit
 from app.identity.service import User
@@ -100,6 +101,7 @@ def list_changes(vehicle_id: uuid.UUID, user: User = Depends(require_role("admin
         select(VehicleParkingChange).where(VehicleParkingChange.vehicle_id == v.id)
         .order_by(VehicleParkingChange.created_at.desc(), VehicleParkingChange.id)).all()
     return {
+        "zone": zone_names(db, [v]).get(v.id, ""),
         "base": label((v.parking_basement, v.parking_number)),
         "today": label(slots(db, [(v, today)])[(v.id, today)]),
         "changes": [_row(c, today) for c in rows],

@@ -65,9 +65,11 @@ class AccountStrings {
   static const editParking = 'Edit parking';
   static const basement = 'Basement';
   static const parkingNumber = 'Parking number';
+  static const zoneLabel = 'Zone';
+  static const zoneSetByOffice = 'Set by Priveo';
   static const parkingSaved = 'Your parking details are saved.';
   static const selectBasement = 'Select the basement.';
-  static const enterParking = 'Enter the parking number, in digits.';
+  static const enterParking = 'Enter the parking number (up to 60 characters).';
 
   // Report an issue (ISS-02, ISS-04).
   static const linkedVisit = 'Linked visit';

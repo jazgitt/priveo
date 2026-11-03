@@ -1,6 +1,6 @@
 # Owner decision, 3 Nov 2026: customers sign in with the mobile number and an MPIN
 
-Recorded from the owner's message of 3 Nov 2026 and the owner's four answers to the questions that followed. Requirement rows: AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-08, AUTH-11 to AUTH-21, ACC-06, ACC-08, ACC-09 (customer file), ADM-CUS-01 to ADM-CUS-04, ADM-CUS-17, ADM-CUS-19 to ADM-CUS-21, ADM-CUS-24, ADM-CUS-30 to ADM-CUS-32 (admin file), CRW-ACC-02, CRW-ACC-10, CRW-ACC-13 (crew file).
+Recorded from the owner's message of 3 Nov 2026 and the owner's four answers to the questions that followed. Requirement rows: AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-08, AUTH-11 to AUTH-21, ACC-06, ACC-08, ACC-09 (customer file), ADM-CUS-01 to ADM-CUS-04, ADM-CUS-17, ADM-CUS-19 to ADM-CUS-21, ADM-CUS-24, ADM-CUS-30, ADM-CUS-33 and ADM-CUS-34 (admin file), CRW-ACC-02, CRW-ACC-10, CRW-ACC-13 (crew file).
 
 ## What the owner decided
 

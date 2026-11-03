@@ -160,8 +160,12 @@ class _ReviewState extends ConsumerState<_Review> {
       if (part == 0 && !ref.read(vehiclePhotoDoneProvider(d.vehicle.id))) {
         errors['photo'] = AccountStrings.photoRequired;
       }
-      if (part == 1 && d.basement == null) errors['basement'] = l.selectBasement;
-      if (part == 1 && !RegExp(r'^\d{1,5}$').hasMatch(d.number.text.trim())) {
+      // A vehicle the office placed in a zone may have no basement.
+      if (part == 1 && d.basement == null && d.vehicle.parkingBasement.isNotEmpty) {
+        errors['basement'] = l.selectBasement;
+      }
+      if (part == 1 &&
+          (d.number.text.trim().isEmpty || d.number.text.trim().length > 60)) {
         errors['number'] = l.enterParkingNumber;
       }
       if (part == 3 && d.vehicle.hasSubscription) {
@@ -380,7 +384,11 @@ class _ReviewState extends ConsumerState<_Review> {
     final price = v.monthlyPriceRupees;
     final preview = d.basement == null && d.number.text.trim().isEmpty
         ? null
-        : '${d.basement ?? '–'} · ${d.number.text.trim().isEmpty ? '–' : d.number.text.trim()}';
+        : [
+            if ((d.vehicle.zone ?? '').isNotEmpty) d.vehicle.zone!,
+            d.basement ?? '–',
+            d.number.text.trim().isEmpty ? '–' : d.number.text.trim(),
+          ].join(' · ');
     return [
       if (part == 0) ...[
       _ReadOnly(
@@ -421,11 +429,7 @@ class _ReviewState extends ConsumerState<_Review> {
         'number',
         l.parkingNumber,
         d.number,
-        keyboard: TextInputType.number,
-        formatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(5),
-        ],
+        formatters: [LengthLimitingTextInputFormatter(60)],
       ),
       if (preview != null)
         Text(
@@ -572,7 +576,16 @@ class _ReviewState extends ConsumerState<_Review> {
                 ? l.noRegistration
                 : d.vehicle.registration,
           ),
-          row(l.parking, '${d.basement}-${d.number.text.trim()}'),
+          row(
+            l.parking,
+            [
+              if ((d.vehicle.zone ?? '').isNotEmpty) d.vehicle.zone!,
+              [
+                d.basement ?? '',
+                d.number.text.trim(),
+              ].where((p) => p.isNotEmpty).join('-'),
+            ].where((p) => p.isNotEmpty).join(' · '),
+          ),
           if (d.cutoff != null) row(l.cutoffTime, formatClock(d.cutoff!)),
           if (d.vehicle.asksInteriorDay && d.day != null)
             row(l.interiorCareDay, d.day!),

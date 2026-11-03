@@ -25,8 +25,8 @@ def add_admin(db, login_id="otheradmin", password="pw-other-admin1", active=True
     return password
 
 
-def sign_in_as(client, login_id, password):
-    r = client.post("/v1/auth/login", json={"login_id": login_id, "password": password})
+def sign_in_as(client, login_id, password, role="admin"):
+    r = client.post("/v1/auth/login", json={"login_id": login_id, "password": password, "role": role})
     assert r.status_code == 200, r.text
     return auth(r.json()["access_token"])
 

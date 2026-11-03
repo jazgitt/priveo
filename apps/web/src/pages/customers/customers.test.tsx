@@ -91,14 +91,14 @@ it("lists vehicles and sign-in state, pages the search and resets the offset whe
   expect(within(first).getByText("Confirmed")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(await screen.findByRole("link", { name: "Second page" })).toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "new");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "new");
   await waitFor(() => expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=new&limit=50&offset=0"))).toBe(true));
 });
 
 it("waits for typing to stop before searching", async () => {
   page();
   await screen.findByRole("link", { name: "Asha Rao" });
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "Asha Rao");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "Asha Rao");
   await waitFor(() => expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=Asha%20Rao"))).toBe(true));
   expect(fetchMock.mock.calls.some(c => String(c[0]).includes("q=As&"))).toBe(false);
 });
@@ -107,7 +107,7 @@ it("says when nothing matches", async () => {
   const original = fetchMock.getMockImplementation()!;
   fetchMock.mockImplementation(async (path: string, o?: RequestInit) => (path.startsWith("/v1/admin/customers?q=zz") ? reply([]) : original(path, o)));
   page();
-  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration or society"), "zz");
+  await userEvent.type(screen.getByLabelText("Search by name, mobile, registration, parking, zone or society"), "zz");
   expect(await screen.findByText("No customers found")).toBeInTheDocument();
 });
 
@@ -256,7 +256,7 @@ it("edits details, corrects the email, and confirms MPIN, notification and sessi
   const edit = screen.getByRole("dialog");
   await userEvent.clear(within(edit).getByLabelText("First name")); await userEvent.type(within(edit).getByLabelText("First name"), "Ash");
   await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
-  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12", address_line1: "", address_line2: "" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toEqual({ first_name: "Ash", last_name: "Rao", mobile: "9876543210", flat: "A-12", address_line1: "", address_line2: "", alternate_names: "" }));
 
   await userEvent.click(screen.getAllByRole("button", { name: "Update email" })[0]);
   const email = await screen.findByRole("dialog");
@@ -667,6 +667,31 @@ it("sets up the subscription of a vehicle that has none", async () => {
     interior_day: "Custom", interior_day_notes: "Odd weeks" }));
 });
 
+it("shows the alternate names and sends them when the details are edited", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, o?: RequestInit) =>
+    path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET"
+      ? reply({ ...customer, alternate_names: "Mrs Rao" }) : original(path, o));
+  page("/customers/c1");
+  expect(await screen.findByText("Mrs Rao")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Edit details" }));
+  const edit = screen.getByRole("dialog");
+  expect(within(edit).getByLabelText(/Alternate names/)).toHaveValue("Mrs Rao");
+  await userEvent.type(within(edit).getByLabelText(/Alternate names/), ", A. Rao");
+  await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toMatchObject({ alternate_names: "Mrs Rao, A. Rao" }));
+});
+
+it("creates a customer without an email and says they sign in with the mobile number", async () => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Last name", "Rao"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  expect(screen.getByText(/last 6 digits/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  await userEvent.type(screen.getByLabelText(/^Email/), "not-an-email");
+  expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+});
+
 it("lets the admin pick a zone when adding a vehicle to an existing customer", async () => {
   const zones = [{ id: "z1", name: "Zone 2", active: true }, { id: "z2", name: "Zone 5", active: true }];
   detail([car()], (path, o) => path.includes("/societies/s1/zones") ? reply(zones)
@@ -706,4 +731,42 @@ it("clears the zone of a vehicle", async () => {
   await choose("Zone", "No zone");
   await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ clear_zone: true }));
+});
+
+it("accepts free-text parking with no basement when a zone is chosen", async () => {
+  const zones = [{ id: "z1", name: "Zone 2", active: true }];
+  detail([car()], (path, o) => path.includes("/societies/s1/zones") ? reply(zones)
+    : path === "/v1/admin/customers/c1/vehicles" && o?.method === "POST" ? reply({ id: "v2" }, 201) : undefined);
+  await userEvent.click((await screen.findAllByRole("button", { name: "Add vehicle" }))[0]);
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Make", "Tata"); await choose("Model", "Nexon"); await choose("Variant", "Pure");
+  await userEvent.type(screen.getByLabelText("Registration"), "hr01zz8888");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.type(screen.getByLabelText("Parking number"), "Under D25");
+  // No basement and no zone yet: not allowed.
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await choose("Zone", "Zone 2");
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("switch", { name: "Create a subscription" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(sentTo("/v1/admin/customers/c1/vehicles", "POST")).toHaveLength(1));
+  expect(bodyOf("/v1/admin/customers/c1/vehicles", "POST")).toMatchObject({ parking_basement: "", parking_number: "Under D25", zone_id: "z1" });
+}, 30000);
+
+it("edits the parking of a car as free text", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Edit car and parking" }));
+  const dialog = screen.getByRole("dialog");
+  await userEvent.clear(within(dialog).getByLabelText("Parking number"));
+  await userEvent.type(within(dialog).getByLabelText("Parking number"), "Near Tesla");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ parking_basement: "B1", parking_number: "Near Tesla" }));
+});
+
+it("shows the zone and the parking slot together on the vehicle", async () => {
+  detail([{ ...car(), zone_id: "z1", zone: "Zone 2" }]);
+  expect(await screen.findByText("Zone 2 · B1-17")).toBeInTheDocument();
 });
