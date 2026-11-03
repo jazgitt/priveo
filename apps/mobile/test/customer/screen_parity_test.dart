@@ -39,7 +39,9 @@ void main() {
 
   testWidgets('the vehicle shows its parking and never a zone (internal to the office and the crew)', (tester) async {
     await show(tester, const VehicleAccountSection(vehicle: car));
-    expect(find.textContaining('P1-99'), findsWidgets);
+    await tester.tap(find.text('Edit parking'));
+    await tester.pumpAndSettle();
+    expect(find.text('P1'), findsOneWidget);
     expect(find.textContaining('Zone'), findsNothing);
     // A reply that carries a zone is read without showing it.
     final shown = VehicleDetailDto.fromJson({
