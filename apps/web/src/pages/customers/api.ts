@@ -82,6 +82,13 @@ export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 export const CUSTOM_DAY = "Custom";
 export const interiorDays = [...weekdays, CUSTOM_DAY];
 /** The parking of a vehicle: "B1-214", free text, or a dash when it has none. */
+/** The parking number is free text, up to the 60 characters the database holds. */
+export const PARKING_NUMBER_MAX = 60;
+export const parkingNumberOk = (text: string) => text.trim().length > 0 && text.trim().length <= PARKING_NUMBER_MAX;
+/** A basement is needed unless the vehicle has a zone. */
+export const parkingOk = (basement: string, number: string, zoneId: string | null | undefined) =>
+  parkingNumberOk(number) && Boolean(basement || zoneId);
+
 export const parkingText = (v: { parking_basement: string; parking_number: string }) =>
   v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement || "-";
 export interface ZoneChoice { id: string; name: string; active: boolean }

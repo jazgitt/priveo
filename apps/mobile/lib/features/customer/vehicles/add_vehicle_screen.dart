@@ -159,7 +159,11 @@ class _State extends ConsumerState<AddVehicleScreen> {
             r'^(?:[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}|\d{2}BH\d{4}[A-Z]{1,2})$',
           ).hasMatch(_registration.text.replaceAll(' ', '').toUpperCase()) &&
           photoId != null,
-    2 => basement.isNotEmpty && RegExp(r'^\d{1,5}$').hasMatch(_parking.text),
+    // The number is free text, up to 60 characters (owner, 3 Nov 2026).
+    2 =>
+      basement.isNotEmpty &&
+          _parking.text.trim().isNotEmpty &&
+          _parking.text.trim().length <= 60,
     3 => planId.isNotEmpty,
     4 => plan?['includes_interior'] != true || interior.isNotEmpty,
     _ => true,
@@ -183,7 +187,7 @@ class _State extends ConsumerState<AddVehicleScreen> {
                       'catalogue_id': catalogueId,
                       'registration': _registration.text,
                       'parking_basement': basement,
-                      'parking_number': _parking.text,
+                      'parking_number': _parking.text.trim(),
                       'plan_id': planId,
                       'cutoff_time': cutoff,
                       'interior_day': plan['includes_interior'] == true
@@ -400,7 +404,7 @@ class _State extends ConsumerState<AddVehicleScreen> {
                       ),
                       TextField(
                         controller: _parking,
-                        keyboardType: TextInputType.number,
+                        maxLength: 60,
                         decoration: InputDecoration(
                           labelText: l.addVehicleParkingNumber,
                         ),

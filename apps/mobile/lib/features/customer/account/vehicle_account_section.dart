@@ -113,11 +113,12 @@ class _EditParkingState extends ConsumerState<_EditParking> {
   }
 
   Future<void> _save() async {
-    if (_basement == null) {
+    // A vehicle the office placed in a zone may have no basement.
+    if (_basement == null && widget.vehicle.parkingBasement.isNotEmpty) {
       setState(() => _error = AccountStrings.selectBasement);
       return;
     }
-    if (!RegExp(r'^\d{1,5}$').hasMatch(_number.text.trim())) {
+    if (_number.text.trim().isEmpty || _number.text.trim().length > 60) {
       setState(() => _error = AccountStrings.enterParking);
       return;
     }
@@ -188,11 +189,7 @@ class _EditParkingState extends ConsumerState<_EditParking> {
           TextField(
             controller: _number,
             enabled: !_busy,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(5),
-            ],
+            inputFormatters: [LengthLimitingTextInputFormatter(60)],
             decoration: const InputDecoration(
               labelText: AccountStrings.parkingNumber,
             ),

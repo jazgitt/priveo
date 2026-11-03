@@ -22,6 +22,7 @@ from app.customers.models import (
     Subscription,
     Vehicle,
 )
+from app.customers.parking_rules import basement_ok, clean_number
 from app.customers.service import _NAME, read_cutoff, show_registration
 from app.customers.welcome import send_welcome
 from app.directory import lookup
@@ -282,12 +283,11 @@ def add_vehicle(db, c, body, owner, by=None):
     ):
         raise ApiError("validation_failed", "Choose an active society, vehicle and plan.", 422)
     cutoff = read_cutoff(body.cutoff_time)
-    basement, number = body.parking_basement.upper(), body.parking_number.strip()
+    basement, number = body.parking_basement.strip().upper(), clean_number(body.parking_number)
     if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in INTERIOR_DAYS)):
         raise ApiError("validation_failed", "Choose a cutoff and interior care day.", 422)
-    if basement not in lookup.society_basements(db, society.id) or not re.fullmatch(
-        r"\d{1,5}", number
-    ):
+    if number is None or not basement_ok(db, society.id, basement,
+                                         has_zone=body.zone_id is not None):
         raise ApiError("validation_failed", "Check the parking location.", 422)
     reg = registration(db, body.registration)
     photo = asset(db, body.photo_upload_id, owner, "vehicle") if body.photo_upload_id else None
@@ -989,20 +989,24 @@ def edit_vehicle(
             entry.category,
         )
     c = db.get(Customer, v.customer_id)
-    if body.parking_basement is not None:
-        if body.parking_basement.upper() not in lookup.society_basements(
-            db, v.society_id or c.society_id
-        ):
-            raise ApiError("validation_failed", "Choose a basement.", 422)
-        v.parking_basement = body.parking_basement.upper()
-    if body.parking_number is not None:
-        if not re.fullmatch(r"\d{1,5}", body.parking_number):
-            raise ApiError("validation_failed", "Enter a numeric parking number.", 422)
-        v.parking_number = body.parking_number
     if body.zone_id is not None:
         v.zone_id = zone_for(db, body.zone_id, v.society_id or c.society_id).id
     elif body.clear_zone:
         v.zone_id = None
+    if body.parking_basement is not None:
+        basement = body.parking_basement.strip().upper()
+        if not basement_ok(db, v.society_id or c.society_id, basement,
+                           has_zone=v.zone_id is not None):
+            raise ApiError("validation_failed", "Choose a basement, or give the vehicle a zone.", 422)
+        v.parking_basement = basement
+    elif body.clear_zone and not v.parking_basement:
+        # Removing the zone of a vehicle that has no basement would leave it without a place.
+        raise ApiError("validation_failed", "Choose a basement, or keep the vehicle's zone.", 422)
+    if body.parking_number is not None:
+        number = clean_number(body.parking_number)
+        if number is None:
+            raise ApiError("validation_failed", "Enter the parking number (up to 60 characters).", 422)
+        v.parking_number = number
     if body.photo_upload_id:
         v.photo_upload_id = asset(db, body.photo_upload_id, user.id, "vehicle", v.id)
     if body.rc_upload_id:
