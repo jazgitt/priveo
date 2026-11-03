@@ -1425,7 +1425,8 @@
     "flat": "wire-value",
     "address_line1": "wire-value",
     "address_line2": "wire-value",
-    "society_id": "11111111-1111-1111-1111-111111111111"
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "alternate_names": "wire-value"
   },
   "CustomerHome": {
     "greeting_name": "wire-value",
