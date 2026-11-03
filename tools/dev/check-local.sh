@@ -8,10 +8,15 @@
 #   tools/dev/check-local.sh --no-pg         # skip the PostgreSQL run (the slowest)
 #   tools/dev/check-local.sh --e2e           # also the Playwright browser tests (needs: cd apps/web && npx playwright install chromium)
 #   tools/dev/check-local.sh --fail-fast     # stop at the first failing stage
+#   tools/dev/check-local.sh --skip-sync     # do not require the branch to be up to date with origin/main
 #
 # Works from any checkout or git worktree: it checks the code of the folder
 # you run it in. The API runs on SQLite, and on a disposable local PostgreSQL
 # cluster (scripts/test_postgres.py), never on a hosted database. No .env is read.
+#
+# Before any stage it checks that the branch is up to date with origin/main (CI tests
+# your branch merged with main, not alone) and that the migrations form one chain with
+# one head. Both fail the run early, with the fix in the message.
 #
 # Cannot run here: the golden-image tests (Linux only, skipped on macOS) and
 # the mobile-goldens workflow. Those stay in CI.
@@ -27,7 +32,8 @@ CHANGED=false
 PG=true
 E2E=false
 FAIL_FAST=false
-usage() { sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-2}"; }
+SKIP_SYNC=false
+usage() { sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-2}"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) ONLY="${2:?--only needs api, pg, mobile, web or e2e}"; shift ;;
@@ -35,6 +41,7 @@ while [ $# -gt 0 ]; do
     --no-pg) PG=false ;;
     --e2e) E2E=true ;;
     --fail-fast) FAIL_FAST=true ;;
+    --skip-sync) SKIP_SYNC=true ;;
     -h | --help) usage 0 ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
@@ -43,6 +50,48 @@ done
 case "$ONLY" in "" | api | pg | mobile | web | e2e) ;; *) echo "Unknown stage: $ONLY" >&2; usage ;; esac
 
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
+
+# ---- is this what CI will test? --------------------------------------------------
+# CI tests the branch merged with the current main. A branch that is behind main, or a
+# migration number that another merged branch also took, only fails there.
+sync_check() {
+  if $SKIP_SYNC; then
+    log "Skipping the up-to-date check (--skip-sync)."
+  elif git -C "$ROOT" fetch -q origin main 2> /dev/null; then
+    local behind
+    behind="$(git -C "$ROOT" rev-list --count HEAD..origin/main 2> /dev/null || echo 0)"
+    if [ "$behind" -gt 0 ]; then
+      echo "This checkout is $behind commit(s) behind origin/main. CI tests your branch merged with main," >&2
+      echo "so merge it first (git merge origin/main), or pass --skip-sync to run anyway." >&2
+      return 1
+    fi
+  else
+    log "Could not reach origin to compare with main: the up-to-date check is skipped."
+  fi
+  migration_chain_check
+}
+
+# One chain, one head: no two migrations with the same number, no two heads.
+migration_chain_check() {
+  local dir="$API/migrations/versions" revs downs dupes heads
+  ls "$dir"/*.py > /dev/null 2>&1 || return 0
+  revs="$(sed -nE 's/^revision *= *"([^"]+)".*/\1/p' "$dir"/*.py | sort)"
+  downs="$(sed -nE 's/^down_revision *=(.*)/\1/p' "$dir"/*.py | grep -oE '"[^"]+"' | tr -d '"' | sort -u)"
+  dupes="$(printf '%s\n' "$revs" | uniq -d)"
+  heads="$(comm -23 <(printf '%s\n' "$revs" | sort -u) <(printf '%s\n' "$downs") | grep -v '^$')"
+  if [ -n "$dupes" ]; then
+    echo "Two migrations have the same revision number: $(printf '%s' "$dupes" | tr '\n' ' ')" >&2
+    echo "Renumber yours so it follows the latest one on main." >&2
+    return 1
+  fi
+  if [ "$(printf '%s\n' "$heads" | grep -c .)" -ne 1 ]; then
+    echo "The migrations have more than one head: $(printf '%s' "$heads" | tr '\n' ' ')" >&2
+    echo "Make yours follow the latest migration on main (set its down_revision), or add a merge migration." >&2
+    return 1
+  fi
+}
+
+sync_check || exit 2
 
 # ---- which stages to run ------------------------------------------------------
 want_api=false; want_pg=false; want_mobile=false; want_web=false; want_e2e=false
