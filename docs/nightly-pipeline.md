@@ -23,7 +23,7 @@ Every stage is a hard gate. If a stage fails, the run stops, later stages do not
 
 | # | Stage | What happens | Stops the run when |
 |---|---|---|---|
-| 0 | Preflight | Take the lock. Check the kill switch. Check tools (git, gh, python, flutter, node, PostgreSQL). Check `main` is green. Check no deploy ran in the last 2 hours (see question 13). | Any check fails. |
+| 0 | Preflight | Take the lock. Check the kill switch. Check tools (git, gh, python, flutter, node, PostgreSQL). Check `main` is green. Check no deploy ran in the last 2 hours (see question 13): if one did and it will be 2 hours old within 90 minutes, the run waits, otherwise it skips the night. | Any check fails. |
 | 1 | Select PRs | List eligible pull requests (section 3). Order them. Detect migration clashes and multiple Alembic heads. Comment on and drop any that clash. | No eligible PR (this is a normal quiet night, not an error). |
 | 2 | Build the combined branch | Create `nightly/DATE` from `main` and merge the selected PRs in order. Record each PR head commit. | A merge conflict that cannot be resolved by dropping that PR. |
 | 3 | Local checks | Run `tools/dev/check-local.sh` with the PostgreSQL stage and the browser tests. | A check fails and stage 4 cannot fix it. |
@@ -202,7 +202,7 @@ First read the report and find the stage that stopped the run. Then:
 
 If a migration ran and the release was rolled back, the old API now runs on the new schema. This is why migrations must be forward-safe (step 5) and why question 14 must be confirmed first. If the old API cannot run on the new schema, restore from backup or point-in-time recovery, and do not roll the schema back by guesswork.
 
-A hotfix during the day still uses the manual tag and dispatch. The nightly skips its run if a deploy happened in the last 2 hours (question 13).
+A hotfix during the day still uses the manual tag and dispatch. The nightly waits (up to 90 minutes) or skips its run if a deploy happened in the last 2 hours (question 13).
 
 ### 8.6 The log trace
 
@@ -271,3 +271,11 @@ To undo: Settings, Branches, delete the rule, or `gh api -X DELETE repos/jazgitt
 - `in.priveo.nightly-watchdog`: starts `watchdog.py` at 06:30.
 - Plists are in `~/Library/LaunchAgents/`. Stop with `launchctl bootout gui/$(id -u)/in.priveo.nightly`.
 - Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate` so the Mac does not sleep during it.
+
+## 13. Built state (04-Nov-26)
+
+- Code: `tools/nightly/` (PRs #118, #120, #121, #122, #123, #124, #125, #126). Tests: `python3 -m unittest discover -s tools/nightly/tests`. They are not in a CI workflow; run them after changing the scripts.
+- The clone's virtualenv uses `python3.12` (`NIGHTLY_PYTHON` overrides), because the default `python3` has no ortools wheel.
+- Rollback drill on test (PR #127): a harmless file was merged, then `tools/nightly/rollback.py` reverted the merge on `main`. The revert deployed test, the smoke test step passed and `/v1/public/health` showed the run's build number. Net change in the repository: none.
+- `ci-gate` is the only required check on `main`. Admins are not bound by it (`enforce_admins` off).
+- Not built, by the owner's scope: stages 8 and 9, production rollback, `NIGHTLY_AUTO_PROD`, any tagging, Claude code fixes.
