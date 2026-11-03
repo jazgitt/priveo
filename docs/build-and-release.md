@@ -47,6 +47,9 @@ Passwords are configuration, never committed. The database keeps only an Argon2 
 | `tools/dev/check-local.sh --only pg` | One stage: `api`, `pg`, `mobile`, `web` or `e2e` |
 | `tools/dev/check-local.sh --no-pg` | Everything except the PostgreSQL run |
 | `tools/dev/check-local.sh --e2e` | Also the Playwright browser tests (first run: `cd apps/web && npx playwright install chromium`) |
+| `tools/dev/check-local.sh --skip-sync` | Do not require the branch to be up to date with `origin/main` (see below) |
+
+Before any stage, the script makes two checks that CI would otherwise find later. CI tests the pull request merged with the current `main`, not the branch alone. It fetches `origin/main` and stops (exit 2) if the branch is behind it, telling you to merge `origin/main` first. It also stops if two migrations share a revision number or if the migrations have more than one head, and names the numbers. `--skip-sync` skips only the first check; if `origin` cannot be reached, that check is skipped with a notice.
 
 - **PostgreSQL:** install it once (`brew install postgresql@17 pgvector` on macOS; the Mani migration needs the pgvector extension). The script finds it, starts a throwaway cluster inside the repo folder, and stops it afterwards. It never uses `DATABASE_URL` or a hosted database, and it reads no `.env`. Set `POSTGRES_BIN` for an install in another place.
 - **Worktrees:** run it from the folder you changed. It checks that folder's code, even when the virtualenv belongs to another checkout. (Run alone, `scripts/export_openapi.py` imports the code of the checkout that made the virtualenv, which gives a wrong contract in a worktree. The script sets `PYTHONPATH` to avoid that.)
