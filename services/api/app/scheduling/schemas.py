@@ -108,8 +108,10 @@ class AdminJob(BaseModel):
     vehicle_id: uuid.UUID
     registration: str
     vehicle: str
-    # The parking place, for example "B1-24" (basement and number).
+    # The parking place, for example "B1-24" (basement and number), with the zone in
+    # front when the vehicle has one: "Zone 3 · B1-24".
     parking: str = ""
+    zone: str = ""
     customer_name: str
     service: str
     status: str
@@ -188,6 +190,7 @@ class CrewDayJob(BaseModel):
     category: str
     parking_basement: str
     parking_number: str
+    zone: str = ""
     society: str
     service: str
     status: str

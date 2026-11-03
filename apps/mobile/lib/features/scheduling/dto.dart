@@ -68,6 +68,7 @@ class CrewDayJob {
     required this.category,
     required this.parkingBasement,
     required this.parkingNumber,
+    this.zone = '',
     required this.society,
     required this.service,
     required this.status,
@@ -85,6 +86,7 @@ class CrewDayJob {
   final String category;
   final String parkingBasement;
   final String parkingNumber;
+  final String zone;
   final String society;
   final String service;
   final String status;
@@ -102,6 +104,7 @@ class CrewDayJob {
         category: json['category'] as String,
         parkingBasement: json['parking_basement'] as String,
         parkingNumber: json['parking_number'] as String,
+        zone: (json['zone'] as String?) ?? '',
         society: json['society'] as String,
         service: json['service'] as String,
         status: json['status'] as String,

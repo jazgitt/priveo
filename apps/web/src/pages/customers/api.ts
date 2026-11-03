@@ -49,7 +49,7 @@ export interface ParkingChange {
   id: string; basement: string; number: string; from_date: string; to_date: string | null;
   kind: "Temporary" | "Permanent"; note: string; state: "Upcoming" | "Current" | "Ended" | "Cancelled";
 }
-export interface ParkingChanges { base: string; today: string; changes: ParkingChange[] }
+export interface ParkingChanges { zone?: string; base: string; today: string; changes: ParkingChange[] }
 /** One plan change of a subscription (ADM-SUB-08). */
 export interface PlanChange {
   id: string; from_plan: string; from_price_rupees: number | null; to_plan: string; to_price_rupees: number;
@@ -89,8 +89,11 @@ export const parkingNumberOk = (text: string) => text.trim().length > 0 && text.
 export const parkingOk = (basement: string, number: string, zoneId: string | null | undefined) =>
   parkingNumberOk(number) && Boolean(basement || zoneId);
 
-export const parkingText = (v: { parking_basement: string; parking_number: string }) =>
-  v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement || "-";
+/** The zone and the parking slot always show together: "Zone 3 · B1-214". */
+export const parkingText = (v: { parking_basement: string; parking_number: string; zone?: string | null }) => {
+  const slot = v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement;
+  return [v.zone, slot].filter(Boolean).join(" · ") || "-";
+};
 export interface ZoneChoice { id: string; name: string; active: boolean }
 export const times = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
 export const PAGE_SIZE = 50;

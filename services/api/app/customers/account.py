@@ -12,7 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer, EmailChange, Vehicle
-from app.customers.parking_rules import basement_ok, clean_number
+from app.customers.parking_rules import basement_ok, clean_number, zone_names
 from app.customers.service import _NAME
 from app.directory.models import Society
 from app.identity import tokens
@@ -93,6 +93,8 @@ class AccountVehicleOut(BaseModel):
     id: str
     parking_basement: str
     parking_number: str
+    # The vehicle's zone, shown with the parking (read only for the customer).
+    zone: str = ""
     photo_url: str | None
     rc_status: str
 
@@ -266,6 +268,7 @@ class AccountService:
         photo = media.vehicle_photo_urls(self.db, self.store, [v.id]).get(v.id)
         return AccountVehicleOut(
             id=str(v.id), parking_basement=v.parking_basement, parking_number=v.parking_number,
+            zone=zone_names(self.db, [v]).get(v.id, ""),
             photo_url=photo, rc_status="Verified" if v.rc_verified else "Uploaded"
                 if v.rc_upload_id else rc_status(self.db, v.id))
 

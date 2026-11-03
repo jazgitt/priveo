@@ -136,3 +136,29 @@ def test_a_range_without_changes_uses_the_vehicles_slot(world):
     assert slots(world.db, []) == {}
     assert slots(world.db, [(vehicle, date(2026, 1, 1))]) == {
         (vehicle.id, date(2026, 1, 1)): (vehicle.parking_basement, vehicle.parking_number)}
+
+
+def test_zone_shows_with_the_parking_on_cards_rows_and_the_crew_day(world, api, admin):
+    """Owner, 3 Nov 2026: the zone and the parking slot always appear together."""
+    from app.directory.models import Zone
+    vehicle, _, visit, jobs = setup(world, api, admin)
+    base = f"{vehicle.parking_basement}-{vehicle.parking_number}"
+    from app.customers.models import Customer
+    society_id = vehicle.society_id or world.db.get(Customer, vehicle.customer_id).society_id
+    zone = Zone(society_id=society_id, name="Zone 4")
+    world.db.add(zone)
+    world.db.flush()
+    vehicle.zone_id = zone.id
+    world.db.commit()
+    assert card_parking(world, jobs, SUNDAY)["Cleaning-External"] == f"Zone 4 · {base}"
+    rows = service.job_rows(world.db, Job.visit_id == visit.id)
+    assert {r["zone"] for r in rows} == {"Zone 4"}
+    assert {r["parking"] for r in rows} == {f"Zone 4 · {base}"}
+    day = service.crew_day(world.db, world.crew[0].login_id, SUNDAY)["jobs"]
+    assert {j["zone"] for j in day} == {"Zone 4"}
+    # A temporary change of the slot keeps the zone beside it.
+    change(api, admin, vehicle, to_date=SUNDAY.isoformat())
+    world.db.expire_all()
+    assert card_parking(world, jobs, SUNDAY)["Cleaning-External"] == "Zone 4 · B1-24"
+    panel = api.get(url(vehicle), headers=admin).json()
+    assert panel["zone"] == "Zone 4"
