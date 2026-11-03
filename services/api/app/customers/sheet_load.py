@@ -61,7 +61,20 @@ class SheetReport:
     errors: list[str] = field(default_factory=list)
 
 
-def ensure_plans(db: Session, report: SheetReport) -> None:
+def ensure_plans(db: Session, report: SheetReport, *, reuse_by_price: bool = False) -> None:
+    """Sets up the four plans. With reuse_by_price, a plan that already has the
+    price of one of them is kept as it is (name too) and only a missing price is
+    created; nothing is renamed."""
+    if reuse_by_price:
+        for name, price, order in PLANS:
+            if db.scalar(select(Plan.id).where(Plan.monthly_price_rupees == price,
+                                               Plan.active.is_(True))) is None:
+                db.add(Plan(code=next_code(db, Plan, "PLN"), name=name,
+                            monthly_price_rupees=price, includes_interior=True,
+                            sort_order=order, inclusions=[], badge=""))
+                db.flush()
+                report.plans_created += 1
+        return
     old, new = RENAMED_PLAN
     renamed = db.scalar(select(Plan).where(func.lower(Plan.name) == old.lower()))
     if renamed is not None and db.scalar(
@@ -250,7 +263,7 @@ def _society(db: Session, name: str | None) -> Society:
 
 
 def load_monthly_customers(db: Session, path: Path | str, *, society_name: str | None = None,
-                           apply: bool) -> SheetReport:
+                           apply: bool, reuse_plans_by_price: bool = False) -> SheetReport:
     """Loads the sheet. With apply=False nothing is saved: it is a trial run
     that reports what would happen."""
     report = SheetReport(applied=apply)
@@ -261,7 +274,7 @@ def load_monthly_customers(db: Session, path: Path | str, *, society_name: str |
     try:
         society = _society(db, society_name)
         report.society = re.sub(r"\s+", " ", society.name)
-        ensure_plans(db, report)
+        ensure_plans(db, report, reuse_by_price=reuse_plans_by_price)
         run = _Load(db, society, report)
         for row in _rows(workbook[SHEET]):
             run.row(row)
