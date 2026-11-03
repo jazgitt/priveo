@@ -732,3 +732,36 @@ it("clears the zone of a vehicle", async () => {
   await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ clear_zone: true }));
 });
+
+it("accepts free-text parking with no basement when a zone is chosen", async () => {
+  const zones = [{ id: "z1", name: "Zone 2", active: true }];
+  detail([car()], (path, o) => path.includes("/societies/s1/zones") ? reply(zones)
+    : path === "/v1/admin/customers/c1/vehicles" && o?.method === "POST" ? reply({ id: "v2" }, 201) : undefined);
+  await userEvent.click((await screen.findAllByRole("button", { name: "Add vehicle" }))[0]);
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Make", "Tata"); await choose("Model", "Nexon"); await choose("Variant", "Pure");
+  await userEvent.type(screen.getByLabelText("Registration"), "hr01zz8888");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.type(screen.getByLabelText("Parking number"), "Under D25");
+  // No basement and no zone yet: not allowed.
+  expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await choose("Zone", "Zone 2");
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("switch", { name: "Create a subscription" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(sentTo("/v1/admin/customers/c1/vehicles", "POST")).toHaveLength(1));
+  expect(bodyOf("/v1/admin/customers/c1/vehicles", "POST")).toMatchObject({ parking_basement: "", parking_number: "Under D25", zone_id: "z1" });
+}, 30000);
+
+it("edits the parking of a car as free text", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Edit car and parking" }));
+  const dialog = screen.getByRole("dialog");
+  await userEvent.clear(within(dialog).getByLabelText("Parking number"));
+  await userEvent.type(within(dialog).getByLabelText("Parking number"), "Near Tesla");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ parking_basement: "B1", parking_number: "Near Tesla" }));
+});

@@ -62,7 +62,7 @@ class AccountStrings {
   static const parkingNumber = 'Parking number';
   static const parkingSaved = 'Your parking details are saved.';
   static const selectBasement = 'Select the basement.';
-  static const enterParking = 'Enter the parking number, in digits.';
+  static const enterParking = 'Enter the parking number (up to 60 characters).';
 
   // Report an issue (ISS-02, ISS-04).
   static const linkedVisit = 'Linked visit';

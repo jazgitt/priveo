@@ -160,8 +160,12 @@ class _ReviewState extends ConsumerState<_Review> {
       if (part == 0 && !ref.read(vehiclePhotoDoneProvider(d.vehicle.id))) {
         errors['photo'] = AccountStrings.photoRequired;
       }
-      if (part == 1 && d.basement == null) errors['basement'] = l.selectBasement;
-      if (part == 1 && !RegExp(r'^\d{1,5}$').hasMatch(d.number.text.trim())) {
+      // A vehicle the office placed in a zone may have no basement.
+      if (part == 1 && d.basement == null && d.vehicle.parkingBasement.isNotEmpty) {
+        errors['basement'] = l.selectBasement;
+      }
+      if (part == 1 &&
+          (d.number.text.trim().isEmpty || d.number.text.trim().length > 60)) {
         errors['number'] = l.enterParkingNumber;
       }
       if (part == 3 && d.vehicle.hasSubscription) {
@@ -421,11 +425,7 @@ class _ReviewState extends ConsumerState<_Review> {
         'number',
         l.parkingNumber,
         d.number,
-        keyboard: TextInputType.number,
-        formatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(5),
-        ],
+        formatters: [LengthLimitingTextInputFormatter(60)],
       ),
       if (preview != null)
         Text(

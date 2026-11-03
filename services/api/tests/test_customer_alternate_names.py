@@ -80,3 +80,35 @@ def test_search_matches_alternate_names_parking_and_zone(client, directory, db):
         assert [c["id"] for c in found.json()] == [made["id"]], q
     assert client.get("/v1/admin/customers", headers=admin,
                       params={"q": "nobody-here"}).json() == []
+
+
+def test_parking_number_is_free_text_and_basement_is_optional_with_a_zone(client, directory, db):
+    admin, society = _admin(client), directory[0]
+    zone = client.post(f"{ZONES}/societies/{society.id}/zones", headers=admin,
+                       json={"name": "Zone 9"}).json()
+    car = {**vehicle_body(directory, upload(client, admin)), "registration": "HR01ZZ4321",
+           "parking_basement": "", "parking_number": "Under D25"}
+    # No zone and no basement: refused. With a zone: allowed.
+    refused = client.post("/v1/admin/customers", headers=admin, json={
+        "first_name": "Pia", "last_name": "Rao", "mobile": "9876543310", "vehicle": car})
+    assert refused.status_code == 422
+    made = client.post("/v1/admin/customers", headers=admin, json={
+        "first_name": "Pia", "last_name": "Rao", "mobile": "9876543310",
+        "vehicle": {**car, "zone_id": zone["id"]}})
+    assert made.status_code == 201, made.text
+    vehicle = made.json()["vehicles"][0]
+    assert vehicle["parking_number"] == "Under D25" and vehicle["parking_basement"] == ""
+    # Edit: free text again, and a 61-character entry is refused.
+    ok = client.patch(f"/v1/admin/vehicles/{vehicle['id']}", headers=admin,
+                      json={"parking_number": "Near   Tesla"})
+    assert ok.status_code == 200 and ok.json()["parking_number"] == "Near Tesla"
+    long = client.patch(f"/v1/admin/vehicles/{vehicle['id']}", headers=admin,
+                        json={"parking_number": "y" * 61})
+    assert long.status_code == 422
+    # The zone cannot be removed while the vehicle has no basement.
+    stuck = client.patch(f"/v1/admin/vehicles/{vehicle['id']}", headers=admin,
+                         json={"clear_zone": True})
+    assert stuck.status_code == 422
+    # Editing something else on a vehicle with no basement is not blocked.
+    other = client.patch(f"/v1/admin/vehicles/{vehicle['id']}", headers=admin, json={"active": True})
+    assert other.status_code == 200

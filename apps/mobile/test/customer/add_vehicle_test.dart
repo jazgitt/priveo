@@ -198,7 +198,8 @@ void main() {
       await tester.pumpAndSettle();
       await next(tester);
       await choose(tester, 'Basement', 'B2');
-      await tester.enterText(find.byType(TextField), '17');
+      // The parking number is free text (owner, 3 Nov 2026).
+      await tester.enterText(find.byType(TextField), 'Under D25');
       await next(tester);
       await tester.tap(find.text('Premium · ₹999/month'));
       await next(tester);
@@ -208,6 +209,7 @@ void main() {
       await next(tester, 'Confirm & pay');
       expect(adapter.submitted, containsPair('society_id', 's2'));
       expect(adapter.submitted, containsPair('photo_upload_id', 'photo1'));
+      expect(adapter.submitted, containsPair('parking_number', 'Under D25'));
       expect(adapter.submitted, containsPair('plan_id', 'plan1'));
       expect(adapter.submitted, isNot(contains('first_payment_status')));
       expect(find.text('Pay p1'), findsOneWidget);

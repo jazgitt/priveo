@@ -172,11 +172,18 @@ def test_parking_edit_checks_the_societys_basements(client, me):
     assert r.status_code == 200
     assert (r.json()["parking_basement"], r.json()["parking_number"]) == ("B3", "27")
     bad = client.patch(f"/v1/customer/vehicles/{vid}", headers=me,
-                       json={"parking_basement": "Z9", "parking_number": "x"})
+                       json={"parking_basement": "Z9", "parking_number": ""})
     assert bad.status_code == 422
     assert set(bad.json()["fields"]) == {"parking_basement", "parking_number"}
+    too_long = client.patch(f"/v1/customer/vehicles/{vid}", headers=me,
+                            json={"parking_number": "x" * 61})
+    assert too_long.status_code == 422
     detail = client.get(f"/v1/customer/vehicles/{vid}", headers=me).json()
     assert detail["parking"] == "B3-27"
+    # The number is free text (owner, 3 Nov 2026).
+    text = client.patch(f"/v1/customer/vehicles/{vid}", headers=me,
+                        json={"parking_number": "  Under   D25 "})
+    assert text.status_code == 200 and text.json()["parking_number"] == "Under D25"
 
 
 def test_complaint_photos_and_visit_must_be_the_customers_own(client, me):
