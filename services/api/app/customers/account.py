@@ -147,7 +147,7 @@ class AccountService:
     def profile(self, login_id: uuid.UUID) -> AccountProfileOut:
         c = self.customer(login_id)
         pending = self._pending(c)
-        initials = ((c.first_name[:1] + c.last_name[:1]) or c.email[:1]).upper()
+        initials = ((c.first_name[:1] + c.last_name[:1]) or (c.email or "")[:1]).upper()
         return AccountProfileOut(
             first_name=c.first_name, last_name=c.last_name, email=c.email, mobile=c.mobile,
             society=self.db.get(Society, c.society_id).name, flat=c.flat, initials=initials,

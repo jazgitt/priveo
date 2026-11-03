@@ -1832,6 +1832,74 @@
         }
       }
     },
+    "/v1/admin/vehicles/{vehicle_id}/subscription": {
+      "post": {
+        "tags": [
+          "customer-administration"
+        ],
+        "summary": "Set Up Subscription",
+        "description": "Starts the subscription of a vehicle that has none, for example one loaded\nfrom a sheet without plan details. It starts Activating, like a new vehicle's.",
+        "operationId": "set_up_subscription_v1_admin_vehicles__vehicle_id__subscription_post",
+        "parameters": [
+          {
+            "name": "vehicle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Vehicle Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionSetup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/customers/{customer_id}/email": {
       "patch": {
         "tags": [
@@ -14960,6 +15028,333 @@
         }
       }
     },
+    "/v1/admin/directory/societies/{society_id}/zones": {
+      "get": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "List Zones",
+        "operationId": "list_zones_v1_admin_directory_societies__society_id__zones_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Inactive"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DirectoryZoneOut"
+                  },
+                  "title": "Response List Zones V1 Admin Directory Societies  Society Id  Zones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Create Zone",
+        "operationId": "create_zone_v1_admin_directory_societies__society_id__zones_post",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectoryZoneCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryZoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/directory/zones/{zone_id}": {
+      "patch": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Rename Zone",
+        "operationId": "rename_zone_v1_admin_directory_zones__zone_id__patch",
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectoryZoneUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryZoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/directory/zones/{zone_id}/deactivate": {
+      "post": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Deactivate Zone",
+        "operationId": "deactivate_zone_v1_admin_directory_zones__zone_id__deactivate_post",
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryZoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/directory/zones/{zone_id}/reactivate": {
+      "post": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Reactivate Zone",
+        "operationId": "reactivate_zone_v1_admin_directory_zones__zone_id__reactivate_post",
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryZoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/directory/societies/{society_id}/slots": {
       "get": {
         "tags": [
@@ -25103,6 +25498,71 @@
         "type": "object",
         "title": "DirectoryVehicleUpdate"
       },
+      "DirectoryZoneCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DirectoryZoneCreate"
+      },
+      "DirectoryZoneOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "vehicles": {
+            "type": "integer",
+            "title": "Vehicles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "society_id",
+          "name",
+          "active",
+          "vehicles"
+        ],
+        "title": "DirectoryZoneOut"
+      },
+      "DirectoryZoneUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DirectoryZoneUpdate"
+      },
       "EmailCorrection": {
         "properties": {
           "email": {
@@ -28511,6 +28971,17 @@
               }
             ],
             "title": "Interior Day"
+          },
+          "interior_day_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day Notes"
           }
         },
         "additionalProperties": false,
@@ -28649,6 +29120,65 @@
         ],
         "title": "SubscriptionRowOut",
         "description": "One row of the admin Subscriptions list (ADM-SUB-01 to ADM-SUB-05)."
+      },
+      "SubscriptionSetup": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Plan Id"
+          },
+          "cutoff_time": {
+            "type": "string",
+            "title": "Cutoff Time"
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
+          },
+          "interior_day_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day Notes"
+          },
+          "first_service_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Service Date"
+          },
+          "first_payment_status": {
+            "type": "string",
+            "title": "First Payment Status",
+            "default": "Due"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_id",
+          "cutoff_time"
+        ],
+        "title": "SubscriptionSetup"
       },
       "SubscriptionStatusIn": {
         "properties": {
@@ -29748,6 +30278,18 @@
             "type": "string",
             "title": "Parking Number"
           },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
           "plan_id": {
             "anyOf": [
               {
@@ -29781,6 +30323,17 @@
               }
             ],
             "title": "Interior Day"
+          },
+          "interior_day_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day Notes"
           },
           "photo_upload_id": {
             "anyOf": [
@@ -30062,6 +30615,23 @@
               }
             ],
             "title": "Parking Number"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "clear_zone": {
+            "type": "boolean",
+            "title": "Clear Zone",
+            "default": false
           },
           "photo_upload_id": {
             "anyOf": [

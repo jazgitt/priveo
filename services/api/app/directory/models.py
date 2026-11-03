@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -28,6 +28,19 @@ class Society(Base):
     # The basements a customer can choose from (ONB-13).
     parking_basements: Mapped[list] = mapped_column(
         JSON, default=lambda: list(DEFAULT_BASEMENTS))
+
+
+class Zone(Base):
+    """A zone of a society that a vehicle is parked in (ADM-REF-). The admin
+    manages them in site setup and picks one in Add Vehicle."""
+
+    __tablename__ = "zones"
+    __table_args__ = (UniqueConstraint("society_id", "name", name="uq_zone_society_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class Plan(Base):

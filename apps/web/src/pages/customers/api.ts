@@ -7,29 +7,30 @@ export interface Catalogue { id: string; make: string; model: string; variant: s
 export interface Plan { id: string; name: string; monthly_price_rupees: number; list_price_rupees: number | null; includes_interior: boolean; inclusions: string[]; badge: string; active: boolean }
 export interface VehicleInput {
   society_id: string; catalogue_id: string; registration: string; parking_basement: string;
-  parking_number: string; plan_id: string; cutoff_time: string; interior_day: string | null;
-  photo_upload_id: string; first_payment_status: string;
+  parking_number: string; zone_id: string | null; plan_id: string; cutoff_time: string; interior_day: string | null;
+  interior_day_notes: string | null; photo_upload_id: string; first_payment_status: string;
 }
 export interface Subscription {
   id: string; status: string; plan_id: string; plan_name: string; price_rupees: number;
-  cutoff_time: string; interior_day: string | null; first_service_date: string | null;
+  cutoff_time: string; interior_day: string | null; interior_day_notes?: string | null; first_service_date: string | null;
   pending_plan_id: string | null; pending_from: string | null;
 }
 export interface Vehicle {
   id: string; active?: boolean; society_id?: string; society: string; registration: string; make: string; model: string;
   variant: string; category: string; parking_basement: string; parking_number: string;
+  zone_id?: string | null; zone?: string | null;
   photo_url: string | null;
   subscription: Subscription | null;
   payments: { id: string; status: string; amount_rupees: number; due_date: string }[];
 }
-export interface Customer { id: string; first_name: string; last_name: string; email: string; mobile: string;
+export interface Customer { id: string; first_name: string; last_name: string; email: string | null; mobile: string;
   imported_history?: { id: string; date: string | null; service: string; vehicle: string;
     payment_status: string | null; notes: string }[];
   flat: string; address_line1?: string; address_line2?: string; society_id?: string; email_verified: boolean; password_set: boolean; onboarding_confirmed: boolean;
   vehicles: Vehicle[]; welcome_sent?: boolean; existing?: boolean }
 /** One row of the customer list. */
 export interface CustomerRow {
-  id: string; name: string; email: string; mobile: string; flat?: string;
+  id: string; name: string; email: string | null; mobile: string; flat?: string;
   email_verified?: boolean; password_set?: boolean; onboarding_confirmed?: boolean;
   vehicles?: { id: string; registration: string; status: string | null }[];
 }
@@ -74,9 +75,16 @@ export interface ServiceHistory { counts: Record<(typeof HISTORY_STATES)[number]
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",
-  parking_basement: "", parking_number: "", plan_id: "", cutoff_time: "09:00", interior_day: null,
-  photo_upload_id: "", first_payment_status: "Due" });
+  parking_basement: "", parking_number: "", zone_id: null, plan_id: "", cutoff_time: "09:00", interior_day: null,
+  interior_day_notes: null, photo_upload_id: "", first_payment_status: "Due" });
 export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/** "Custom": the customer's cars take turns; the notes say whose turn it is. */
+export const CUSTOM_DAY = "Custom";
+export const interiorDays = [...weekdays, CUSTOM_DAY];
+/** The parking of a vehicle: "B1-214", free text, or a dash when it has none. */
+export const parkingText = (v: { parking_basement: string; parking_number: string }) =>
+  v.parking_basement && v.parking_number ? `${v.parking_basement}-${v.parking_number}` : v.parking_number || v.parking_basement || "-";
+export interface ZoneChoice { id: string; name: string; active: boolean }
 export const times = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
 export const PAGE_SIZE = 50;
 

@@ -111,7 +111,7 @@ export function CustomerDetailPage() {
       <PageHeader
         back={back}
         title={name}
-        description={<>{c.mobile} · {c.email}</>}
+        description={<>{c.mobile} · {c.email ?? "No email yet"}</>}
       />
 
       <Tabs value={tab} onValueChange={openTab}>
@@ -172,7 +172,7 @@ export function CustomerDetailPage() {
             description="The customer's fixed details. Vehicles are on their own tab."
             actions={(
               <>
-                <Button size="sm" variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> Update email</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> {c.email ? "Update email" : "Add email"}</Button>
                 <Button size="sm" onClick={() => setEditing("details")}><Pencil aria-hidden /> Edit details</Button>
               </>
             )}
@@ -180,7 +180,7 @@ export function CustomerDetailPage() {
             <DetailList columns={2} items={[
               { label: "First name", value: c.first_name },
               { label: "Last name", value: c.last_name },
-              { label: "Email", value: <span className="break-all">{c.email}</span> },
+              { label: "Email", value: <span className="break-all">{c.email ?? "None yet"}</span> },
               { label: "Mobile", value: c.mobile },
               { label: "Flat", value: c.flat },
               { label: "Society", value: c.society_id ? site.sites.find((x) => x.id === c.society_id)?.name : undefined },
@@ -199,7 +199,7 @@ export function CustomerDetailPage() {
 
           <Panel title="Account actions" description="These end the customer's sign-in. They are recorded in the audit log.">
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> Update email</Button>
+              <Button variant="outline" onClick={() => setEditing("email")}><Mail aria-hidden /> {c.email ? "Update email" : "Add email"}</Button>
               <Button variant="outline" onClick={() => void clearPassword()}><KeyRound aria-hidden /> Clear password</Button>
               <Button variant="outline" className="text-destructive" onClick={() => void signOutAll()}>
                 <LogOut aria-hidden /> Sign out all sessions

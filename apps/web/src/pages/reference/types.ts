@@ -12,6 +12,15 @@ export interface Society {
   active_crew: number;
 }
 
+export interface Zone {
+  id: string;
+  society_id: string;
+  name: string;
+  active: boolean;
+  /** Active vehicles parked in the zone. */
+  vehicles: number;
+}
+
 export interface Slot {
   id: string;
   society_id: string;

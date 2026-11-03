@@ -9,7 +9,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
+from app.customers.models import (
+    INTERIOR_DAY_CUSTOM,
+    WEEKDAYS,
+    Customer,
+    Subscription,
+    Vehicle,
+)
 from app.directory import lookup
 from app.directory.models import Plan, Society
 from app.home.schemas import CustomerHome, QuickAction, VehicleCard
@@ -257,7 +263,8 @@ class CustomerService:
                 if sub is None or cutoff is None:
                     raise ApiError("validation_failed", "Select the service cutoff.", 422)
                 values["cutoff_time"] = cutoff
-            if answer.interior_day is not None:
+            if answer.interior_day is not None and not (
+                    sub is not None and sub.interior_day == INTERIOR_DAY_CUSTOM):
                 if sub is None or not self._asks_interior_day(sub) or answer.interior_day not in WEEKDAYS:
                     raise ApiError("validation_failed", "Select the interior day.", 422)
                 values["interior_day"] = answer.interior_day
@@ -332,7 +339,7 @@ class CustomerService:
                 cutoff = read_cutoff(answer.cutoff_time)
                 if cutoff is None:
                     errors[f"{at}.cutoff_time"] = "Please select your service cutoff time."
-                if self._asks_interior_day(sub):
+                if self._asks_interior_day(sub) and sub.interior_day != INTERIOR_DAY_CUSTOM:
                     day = (answer.interior_day or "").strip().capitalize()
                     if day not in WEEKDAYS:
                         errors[f"{at}.interior_day"] = "Please select your interior care day."

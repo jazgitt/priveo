@@ -14,7 +14,8 @@ from app.billing.models import Payment, PaymentEvent
 from app.changes.cycle import renewal_date
 from app.customers import plan_changes
 from app.customers.models import (
-    WEEKDAYS,
+    INTERIOR_DAY_CUSTOM,
+    INTERIOR_DAYS,
     AddonRequest,
     Customer,
     EmailChange,
@@ -24,7 +25,7 @@ from app.customers.models import (
 from app.customers.service import _NAME, read_cutoff, show_registration
 from app.customers.welcome import send_welcome
 from app.directory import lookup
-from app.directory.models import DirectoryAudit, Plan, Society, VehicleCatalogueEntry
+from app.directory.models import DirectoryAudit, Plan, Society, VehicleCatalogueEntry, Zone
 from app.identity.models import AuthSession, EmailCode, Login
 from app.identity.service import User, normalise
 from app.media import service as media
@@ -53,9 +54,13 @@ class VehicleCreate(Input):
     registration: str
     parking_basement: str
     parking_number: str
+    # The zone of the society (site setup). Optional.
+    zone_id: uuid.UUID | None = None
     plan_id: uuid.UUID | None = None
     cutoff_time: str | None = None
     interior_day: str | None = None
+    # With "Custom": whose car's turn it is.
+    interior_day_notes: str | None = None
     # The admin may add a vehicle without a photo; the customer route still needs one.
     photo_upload_id: uuid.UUID | None = None
     rc_upload_id: uuid.UUID | None = None
@@ -81,6 +86,16 @@ class CustomerEdit(Input):
     society_id: uuid.UUID | None = None
 
 
+class SubscriptionSetup(Input):
+    plan_id: uuid.UUID
+    cutoff_time: str
+    interior_day: str | None = None
+    interior_day_notes: str | None = None
+    # Empty: today.
+    first_service_date: date | None = None
+    first_payment_status: str = "Due"
+
+
 class EmailCorrection(Input):
     email: str
 
@@ -90,6 +105,9 @@ class VehicleEdit(Input):
     catalogue_id: uuid.UUID | None = None
     parking_basement: str | None = None
     parking_number: str | None = None
+    zone_id: uuid.UUID | None = None
+    # Send true to remove the zone.
+    clear_zone: bool = False
     photo_upload_id: uuid.UUID | None = None
     rc_upload_id: uuid.UUID | None = None
     rc_verified: bool | None = None
@@ -105,6 +123,7 @@ class SubscriptionEdit(Input):
     charge_rupees: int | None = None
     cutoff_time: str | None = None
     interior_day: str | None = None
+    interior_day_notes: str | None = None
 
 
 class UploadIn(Input):
@@ -191,6 +210,62 @@ def asset(db, raw, owner, purpose, vehicle_id=None):
     return row.id
 
 
+def zone_for(db, zone_id, society_id):
+    """The zone to set on a vehicle: an active zone of the vehicle's society."""
+    zone = db.get(Zone, zone_id)
+    if zone is None or not zone.active or zone.society_id != society_id:
+        raise ApiError("validation_failed", "Choose an active zone of this society.", 422,
+                       {"zone_id": "Invalid."})
+    return zone
+
+
+def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_notes,
+                       first_payment_status, by, first_service_date=None):
+    """A new subscription (Activating) for a vehicle, with its first plan payment."""
+    first = first_service_date or today_ist()
+    sub = Subscription(
+        vehicle_id=v.id,
+        plan_id=plan.id,
+        monthly_price_rupees=plan.monthly_price_rupees,
+        status="Activating",
+        first_service_date=first,
+        cutoff_time=cutoff,
+        interior_day=interior_day if plan.includes_interior else None,
+        interior_day_notes=(interior_day_notes or "").strip() or None
+        if plan.includes_interior and interior_day == INTERIOR_DAY_CUSTOM else None,
+    )
+    db.add(sub)
+    db.flush()
+    payment = Payment(
+        customer_id=c.id,
+        vehicle_id=v.id,
+        subscription_id=sub.id,
+        kind="Plan",
+        description=f"First month of {plan.name}",
+        amount_rupees=sub.monthly_price_rupees,
+        status=first_payment_status,
+        due_date=first,
+        cycle_start=first,
+        cycle_end=first + timedelta(days=lookup.setting(db, "billing.cycle_days")),
+        received_at=utcnow() if first_payment_status == "Received" else None,
+        confirmed_by=by if first_payment_status == "Received" else None,
+        overdue_since=today_ist() if first_payment_status == "Over due" else None,
+        initiated_at=utcnow() if first_payment_status == "Initiated" else None,
+    )
+    db.add(payment)
+    db.flush()
+    db.add(
+        PaymentEvent(
+            payment_id=payment.id,
+            from_status=None,
+            to_status=payment.status,
+            by_login_id=by,
+            note="First payment at onboarding",
+        )
+    )
+    return sub, payment
+
+
 def add_vehicle(db, c, body, owner, by=None):
     society = db.get(Society, body.society_id)
     entry = db.get(VehicleCatalogueEntry, body.catalogue_id)
@@ -205,7 +280,7 @@ def add_vehicle(db, c, body, owner, by=None):
         raise ApiError("validation_failed", "Choose an active society, vehicle and plan.", 422)
     cutoff = read_cutoff(body.cutoff_time)
     basement, number = body.parking_basement.upper(), body.parking_number.strip()
-    if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in WEEKDAYS)):
+    if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in INTERIOR_DAYS)):
         raise ApiError("validation_failed", "Choose a cutoff and interior care day.", 422)
     if basement not in lookup.society_basements(db, society.id) or not re.fullmatch(
         r"\d{1,5}", number
@@ -226,6 +301,7 @@ def add_vehicle(db, c, body, owner, by=None):
         category=entry.category,
         parking_basement=basement,
         parking_number=number,
+        zone_id=zone_for(db, body.zone_id, society.id).id if body.zone_id else None,
         photo_upload_id=photo,
         rc_upload_id=rc,
     )
@@ -236,44 +312,10 @@ def add_vehicle(db, c, body, owner, by=None):
             audit(db, by, "vehicle", v.id, "create", {"customer_id": str(c.id),
                                                        "registration": reg, "subscription": False})
         return v, None, None
-    sub = Subscription(
-        vehicle_id=v.id,
-        plan_id=plan.id,
-        monthly_price_rupees=plan.monthly_price_rupees,
-        status="Activating",
-        first_service_date=today_ist(),
-        cutoff_time=cutoff,
-        interior_day=body.interior_day if plan.includes_interior else None,
-    )
-    db.add(sub)
-    db.flush()
-    payment = Payment(
-        customer_id=c.id,
-        vehicle_id=v.id,
-        subscription_id=sub.id,
-        kind="Plan",
-        description=f"First month of {plan.name}",
-        amount_rupees=sub.monthly_price_rupees,
-        status=body.first_payment_status,
-        due_date=today_ist(),
-        cycle_start=today_ist(),
-        cycle_end=today_ist() + timedelta(days=lookup.setting(db, "billing.cycle_days")),
-        received_at=utcnow() if body.first_payment_status == "Received" else None,
-        confirmed_by=by if body.first_payment_status == "Received" else None,
-        overdue_since=today_ist() if body.first_payment_status == "Over due" else None,
-        initiated_at=utcnow() if body.first_payment_status == "Initiated" else None,
-    )
-    db.add(payment)
-    db.flush()
-    db.add(
-        PaymentEvent(
-            payment_id=payment.id,
-            from_status=None,
-            to_status=payment.status,
-            by_login_id=by,
-            note="First payment at onboarding",
-        )
-    )
+    sub, payment = start_subscription(
+        db, c, v, plan, cutoff=cutoff, interior_day=body.interior_day,
+        interior_day_notes=body.interior_day_notes,
+        first_payment_status=body.first_payment_status, by=by)
     if by:
         audit(db, by, "vehicle", v.id, "create", {"customer_id": str(c.id), "registration": reg})
     return v, sub, payment
@@ -304,6 +346,8 @@ def vehicle_out(db, v, store):
         "category": v.category,
         "parking_basement": v.parking_basement,
         "parking_number": v.parking_number,
+        "zone_id": str(v.zone_id) if v.zone_id else None,
+        "zone": db.get(Zone, v.zone_id).name if v.zone_id else None,
         "photo_url": photo,
         "rc_verified": v.rc_verified,
         "rc_url": media.upload_urls(db, store, [str(v.rc_upload_id)])[0]
@@ -317,6 +361,7 @@ def vehicle_out(db, v, store):
             "price_rupees": sub.monthly_price_rupees,
             "cutoff_time": sub.cutoff_time.strftime("%H:%M") if sub.cutoff_time else "",
             "interior_day": sub.interior_day,
+            "interior_day_notes": sub.interior_day_notes,
             "first_service_date": sub.first_service_date,
             "pending_plan_id": str(sub.pending_plan_id) if sub.pending_plan_id else None,
             "pending_from": sub.pending_from,
@@ -337,7 +382,7 @@ def vehicle_out(db, v, store):
 
 def detail(db, c, store):
     from app.customers.history import imported_history
-    login = db.get(Login, c.login_id)
+    login = db.get(Login, c.login_id) if c.login_id else None
     return {
         "id": str(c.id),
         "first_name": c.first_name,
@@ -349,7 +394,7 @@ def detail(db, c, store):
         "address_line2": c.address_line2,
         "society_id": str(c.society_id),
         "email_verified": c.email_verified_at is not None,
-        "password_set": login.password_hash is not None,
+        "password_set": login is not None and login.password_hash is not None,
         "onboarding_confirmed": c.onboarding_confirmed_at is not None,
         "imported_history": imported_history(db, c.id),
         "vehicles": [
@@ -495,7 +540,7 @@ def list_customers(
         )
     password_set = dict(db.execute(
         select(Login.id, Login.password_hash.is_not(None))
-        .where(Login.id.in_([c.login_id for c in found]))
+        .where(Login.id.in_([c.login_id for c in found if c.login_id]))
     ).all()) if ids else {}
     return [
         {
@@ -577,7 +622,8 @@ def edit_customer(
         if society is None or not society.active:
             raise ApiError("validation_failed", "Choose an active society.", 422)
         c.society_id = society.id
-    db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
+    if c.login_id:
+        db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
     audit(db, user.id, "customer", c.id, "update", body.model_dump(mode="json"))
     db.commit()
     return detail(db, c, store)
@@ -594,6 +640,48 @@ def admin_add_vehicle(
     v, _, payment = add_vehicle(db, get_customer(db, customer_id), body, user.id, user.id)
     db.commit()
     return {**vehicle_out(db, v, store), "payment_id": str(payment.id) if payment else None}
+
+
+@admin.post("/vehicles/{vehicle_id}/subscription", status_code=201)
+def set_up_subscription(
+    vehicle_id: uuid.UUID,
+    body: SubscriptionSetup,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+    store: ObjectStore = Depends(get_object_store),
+):
+    """Starts the subscription of a vehicle that has none, for example one loaded
+    from a sheet without plan details. It starts Activating, like a new vehicle's."""
+    v = db.get(Vehicle, vehicle_id)
+    if v is None:
+        raise ApiError("not_found", "Vehicle not found.", 404)
+    if not v.active:
+        raise ApiError("validation_failed", "This vehicle is not active.", 422)
+    if db.scalar(select(Subscription.id).where(Subscription.vehicle_id == v.id)) is not None:
+        raise ApiError("subscription_exists", "This vehicle already has a subscription.", 409)
+    plan = db.get(Plan, body.plan_id)
+    if plan is None or not plan.active:
+        raise ApiError("validation_failed", "Choose an active plan.", 422,
+                       {"plan_id": "Invalid."})
+    cutoff = read_cutoff(body.cutoff_time)
+    if cutoff is None:
+        raise ApiError("validation_failed", "Choose a cutoff in 30-minute steps.", 422,
+                       {"cutoff_time": "Invalid."})
+    if plan.includes_interior and body.interior_day not in INTERIOR_DAYS:
+        raise ApiError("validation_failed", "Choose an interior care day.", 422,
+                       {"interior_day": "Required."})
+    if body.first_payment_status not in ("Due", "Over due", "Initiated", "Received"):
+        raise ApiError("validation_failed", "Choose a payment status.", 422)
+    c = db.get(Customer, v.customer_id)
+    sub, payment = start_subscription(
+        db, c, v, plan, cutoff=cutoff, interior_day=body.interior_day,
+        interior_day_notes=body.interior_day_notes,
+        first_payment_status=body.first_payment_status, by=user.id,
+        first_service_date=body.first_service_date)
+    audit(db, user.id, "subscription", sub.id, "create",
+          {"vehicle_id": str(v.id), "plan_id": str(plan.id)})
+    db.commit()
+    return {**vehicle_out(db, v, store), "payment_id": str(payment.id)}
 
 
 @customer.post("/vehicles", status_code=201,
@@ -667,10 +755,11 @@ def session_device(
 
 
 def reset_login(db, c, by, reason):
-    login = db.get(Login, c.login_id)
-    login.password_hash = None
-    login.password_changed_at = utcnow()
-    login.failed_attempts, login.blocked_until = 0, None
+    login = db.get(Login, c.login_id) if c.login_id else None
+    if login is not None:
+        login.password_hash = None
+        login.password_changed_at = utcnow()
+        login.failed_attempts, login.blocked_until = 0, None
     db.execute(
         update(AuthSession)
         .where(AuthSession.login_id == c.login_id, AuthSession.ended_at.is_(None))
@@ -706,7 +795,15 @@ def correct_email(
     reset_login(db, c, user.id, "email_corrected")
     c.email = email
     c.email_verified_at = None
-    db.get(Login, c.login_id).login_id = email
+    if c.login_id is None:
+        # A customer loaded without an email gets a sign-in with the first email.
+        login = Login(role="customer", login_id=email,
+                      display_name=f"{c.first_name} {c.last_name}".strip())
+        db.add(login)
+        db.flush()
+        c.login_id = login.id
+    else:
+        db.get(Login, c.login_id).login_id = email
     audit(db, user.id, "customer", c.id, "email", {"email": [old, email]})
     db.commit()
     return {"welcome_sent": send_welcome(db, c)}
@@ -774,7 +871,8 @@ def edit_subscription(
     sub = db.get(Subscription, subscription_id)
     if sub is None:
         raise ApiError("not_found", "Subscription not found.", 404)
-    watched = ("pending_plan_id", "pending_from", "cutoff_time", "interior_day")
+    watched = ("pending_plan_id", "pending_from", "cutoff_time", "interior_day",
+               "interior_day_notes")
     before = {k: getattr(sub, k) for k in watched}
     if body.plan_id:
         plan = db.get(Plan, body.plan_id)
@@ -800,9 +898,13 @@ def edit_subscription(
     if body.interior_day is not None:
         chosen_plan = sub.pending_plan_id or sub.plan_id
         plan = db.get(Plan, chosen_plan) if chosen_plan else None
-        if body.interior_day not in WEEKDAYS or (plan and not plan.includes_interior):
+        if body.interior_day not in INTERIOR_DAYS or (plan and not plan.includes_interior):
             raise ApiError("validation_failed", "Choose an interior care day for this plan.", 422)
         sub.interior_day = body.interior_day
+        if body.interior_day != INTERIOR_DAY_CUSTOM:
+            sub.interior_day_notes = None
+    if body.interior_day_notes is not None and sub.interior_day == INTERIOR_DAY_CUSTOM:
+        sub.interior_day_notes = body.interior_day_notes.strip() or None
     # A-04: {field: [old, new]} of what changed.
     diff = {k: [str(before[k]) if before[k] is not None else None,
                 str(getattr(sub, k)) if getattr(sub, k) is not None else None]
@@ -882,6 +984,10 @@ def edit_vehicle(
         if not re.fullmatch(r"\d{1,5}", body.parking_number):
             raise ApiError("validation_failed", "Enter a numeric parking number.", 422)
         v.parking_number = body.parking_number
+    if body.zone_id is not None:
+        v.zone_id = zone_for(db, body.zone_id, v.society_id or c.society_id).id
+    elif body.clear_zone:
+        v.zone_id = None
     if body.photo_upload_id:
         v.photo_upload_id = asset(db, body.photo_upload_id, user.id, "vehicle", v.id)
     if body.rc_upload_id:
@@ -952,6 +1058,8 @@ def notification_preferences(
     db: Session = Depends(get_db),
 ):
     c = get_customer(db, customer_id)
+    if c.login_id is None:
+        raise ApiError("no_sign_in", "This customer has no sign-in yet.", 409)
     return NotificationService(db, get_default_sender()).preferences(c.login_id)
 
 
@@ -963,6 +1071,8 @@ def set_notification_preferences(
     db: Session = Depends(get_db),
 ):
     c = get_customer(db, customer_id)
+    if c.login_id is None:
+        raise ApiError("no_sign_in", "This customer has no sign-in yet.", 409)
     audit(db, user.id, "customer", c.id, "notifications", body.model_dump())
     return NotificationService(db, get_default_sender()).set_preferences(
         c.login_id, {i.event: i.enabled for i in body.items}

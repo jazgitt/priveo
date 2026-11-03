@@ -238,7 +238,7 @@ it("edits car and parking in a dialog", async () => {
   await userEvent.clear(within(dialog).getByLabelText("Parking number"));
   await userEvent.type(within(dialog).getByLabelText("Parking number"), "42");
   await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
-  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ registration: "HR01ZZ1234", parking_basement: "B2", parking_number: "42" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ parking_basement: "B2", parking_number: "42" }));
 });
 
 it("edits details, corrects the email, and confirms password, notification and session changes", async () => {
@@ -633,4 +633,36 @@ it("lets the admin decide the charge for the days before the renewal", async () 
   await choose("Charge for the days before the renewal", /Prorated difference/);
   await userEvent.click(dialog.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(bodyOf("/v1/admin/subscriptions/sub1", "PATCH")).toMatchObject({ effective_from: "2026-12-01", charge: "prorated" }));
+});
+
+it("shows a customer loaded without an email and adds one", async () => {
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (path: string, o?: RequestInit) =>
+    path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET"
+      ? reply({ ...customer, email: null, vehicles: [] }) : original(path, o));
+  page("/customers/c1");
+  expect(await screen.findByText(/No email yet/)).toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole("button", { name: "Add email" })[0]);
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText("No email yet.")).toBeInTheDocument();
+  await userEvent.type(within(dialog).getByLabelText("Email"), "later@example.com");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Add email" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/email", "PATCH")).toEqual({ email: "later@example.com" }));
+});
+
+it("sets up the subscription of a vehicle that has none", async () => {
+  detail([{ ...car(), subscription: null, payments: [] }]);
+  expect(await screen.findByText(/No subscription/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Set up subscription" }));
+  const dialog = await screen.findByRole("dialog");
+  const submit = within(dialog).getByRole("button", { name: "Set up subscription" });
+  expect(submit).toBeDisabled();
+  await choose("Plan", /Premium/);
+  expect(submit).toBeDisabled(); // the plan includes interior, so a day is needed
+  await choose("Interior care day", "Custom");
+  await userEvent.type(within(dialog).getByLabelText(/Interior day notes/), "Odd weeks");
+  await userEvent.click(submit);
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/subscription", "POST")).toEqual({
+    plan_id: "p1", cutoff_time: "09:00", first_payment_status: "Due",
+    interior_day: "Custom", interior_day_notes: "Odd weeks" }));
 });

@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "@/api/client";
-import { Field, SelectBox } from "@/blocks/fields";
+import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
 import { DetailList, ErrorState } from "@/blocks/layout";
 import { EVENTS } from "@/analytics/events";
@@ -14,8 +14,8 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Switch } from "@/ui/switch";
 
-import { newVehicle, times, uploadCustomerAsset, weekdays, type VehicleInput } from "./api";
-import { useCatalogue, usePlans, useSocietyList } from "./dialogs";
+import { CUSTOM_DAY, interiorDays, newVehicle, times, uploadCustomerAsset, type VehicleInput } from "./api";
+import { useCatalogue, usePlans, useSocietyList, useZones } from "./dialogs";
 
 const LABELS = { first_name: "First name", last_name: "Last name", email: "Email", mobile: "Mobile number", flat: "Flat" } as const;
 
@@ -41,6 +41,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   const plan = plans.data?.find((p) => p.id === vehicle.plan_id);
   const entry = active.find((c) => c.id === vehicle.catalogue_id);
   const society = societies.data?.find((s) => s.id === vehicle.society_id);
+  const zones = useZones(vehicle.society_id || undefined);
   const set = <K extends keyof VehicleInput>(key: K, value: VehicleInput[K]) => setVehicle((v) => ({ ...v, [key]: value }));
   const stages = customerId ? ["Society", "Vehicle", "Parking", "Plan", "Preferences", "Review"]
     : ["Customer", "Society", "Vehicle", "Parking", "Plan", "Preferences", "Review"];
@@ -58,7 +59,8 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
   // The photo is optional: no photo is sent as null, not as an empty string.
   const payload = () => {
     const car = { ...vehicle, photo_upload_id: vehicle.photo_upload_id || null };
-    return withSubscription ? car : { ...car, plan_id: null, cutoff_time: null, interior_day: null };
+    const noNotes = car.interior_day === CUSTOM_DAY ? car : { ...car, interior_day_notes: null };
+    return withSubscription ? noNotes : { ...noNotes, plan_id: null, cutoff_time: null, interior_day: null };
   };
   const save = useAppMutation<void, { id: string; existing?: boolean }>({
     event: EVENTS.customerOrVehicleAdded,
@@ -127,7 +129,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
         <Field label="Society" hint="A vehicle's society cannot be changed after creation.">
           {(p) => (
             <SelectBox {...p} value={vehicle.society_id} placeholder="Choose a society"
-                       onChange={(id) => { set("society_id", id); set("parking_basement", ""); }}
+                       onChange={(id) => { set("society_id", id); set("parking_basement", ""); set("zone_id", null); }}
                        choices={(societies.data ?? []).filter((s) => s.active).map((s) => ({ value: s.id, label: s.name }))} />
           )}
         </Field>
@@ -171,6 +173,10 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           </Field>
           <Field label="Parking number" error={vehicle.parking_number && !/^\d{1,5}$/.test(vehicle.parking_number) ? "Up to 5 digits." : undefined}>
             {(p) => <Input {...p} inputMode="numeric" value={vehicle.parking_number} onChange={(e) => set("parking_number", e.target.value)} />}
+          </Field>
+          <Field label="Zone" optional hint={(zones.data ?? []).length === 0 ? "No zones yet. Add them under Site Setup." : undefined}>
+            {(p) => <SelectBox {...p} value={vehicle.zone_id ?? NONE} onChange={(z) => set("zone_id", z === NONE ? null : z)}
+                               choices={[{ value: NONE, label: "No zone" }, ...(zones.data ?? []).map((z) => ({ value: z.id, label: z.name }))]} />}
           </Field>
         </div>
       )}
@@ -217,7 +223,12 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           </Field>
           {plan?.includes_interior && (
             <Field label="Interior care day">
-              {(p) => <SelectBox {...p} value={vehicle.interior_day ?? ""} onChange={(d) => set("interior_day", d)} choices={weekdays.map((d) => ({ value: d, label: d }))} />}
+              {(p) => <SelectBox {...p} value={vehicle.interior_day ?? ""} onChange={(d) => set("interior_day", d)} choices={interiorDays.map((d) => ({ value: d, label: d }))} />}
+            </Field>
+          )}
+          {plan?.includes_interior && vehicle.interior_day === CUSTOM_DAY && (
+            <Field label="Interior day notes" optional className="sm:col-span-2" hint="Whose car's turn it is, for a customer whose cars take turns.">
+              {(p) => <Input {...p} maxLength={500} value={vehicle.interior_day_notes ?? ""} onChange={(e) => set("interior_day_notes", e.target.value)} />}
             </Field>
           )}
         </div>
@@ -236,6 +247,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
             { label: "Vehicle", value: entry ? `${entry.make} ${entry.model} ${entry.variant}` : "" },
             { label: "Registration", value: <span className="reg">{vehicle.registration}</span> },
             { label: "Parking", value: `${vehicle.parking_basement}-${vehicle.parking_number}` },
+            { label: "Zone", value: zones.data?.find((z) => z.id === vehicle.zone_id)?.name ?? "None" },
             ...(withSubscription ? [
               { label: "Plan", value: plan ? `${plan.name} · ${inr(plan.monthly_price_rupees)}/month, GST included` : "" },
               { label: "Service cutoff", value: vehicle.cutoff_time },

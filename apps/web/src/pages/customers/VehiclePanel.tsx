@@ -11,10 +11,10 @@ import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 
-import { HISTORY_STATES, type Changes, type ParkingChanges, type PlanHistory, type SchedulePattern, type ServiceHistory, type Vehicle, type VehicleCrew } from "./api";
-import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog } from "./dialogs";
+import { HISTORY_STATES, parkingText, type Changes, type ParkingChanges, type PlanHistory, type SchedulePattern, type ServiceHistory, type Vehicle, type VehicleCrew } from "./api";
+import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog, SubscriptionSetupDialog } from "./dialogs";
 
-type Open = null | "car" | "parking" | "pattern" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
+type Open = null | "setup" | "car" | "parking" | "pattern" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
 
 function SubHeading({ children, actions }: { children: string; actions?: React.ReactNode }) {
   return (
@@ -165,14 +165,15 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           : <div className="flex aspect-[4/3] w-40 items-center justify-center rounded-lg border border-dashed text-muted-foreground"><Car aria-hidden /></div>}
         <DetailList columns={3} items={[
           { label: "Society", value: v.society },
-          { label: "Parking", value: `${v.parking_basement}-${v.parking_number}` },
+          { label: "Parking", value: parkingText(v) },
+          { label: "Zone", value: v.zone ?? "None" },
           { label: "Category", value: v.category },
         ]} />
       </div>
 
       {live && (
       <section className="border-t pt-5">
-        <SubHeading actions={sub ? <>{statusActions}<Button size="sm" variant="outline" onClick={() => setOpen("settings")}><Settings2 aria-hidden /> Schedule settings</Button><Button size="sm" variant="outline" onClick={() => setOpen("pattern")}><CalendarDays aria-hidden /> Schedule pattern</Button></> : undefined}>
+        <SubHeading actions={sub ? <>{statusActions}<Button size="sm" variant="outline" onClick={() => setOpen("settings")}><Settings2 aria-hidden /> Schedule settings</Button><Button size="sm" variant="outline" onClick={() => setOpen("pattern")}><CalendarDays aria-hidden /> Schedule pattern</Button></> : live ? <Button size="sm" onClick={() => setOpen("setup")}><Settings2 aria-hidden /> Set up subscription</Button> : undefined}>
           Subscription
         </SubHeading>
         {!sub ? (
@@ -183,7 +184,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
             { label: "Plan", value: <>{sub.plan_name || <span className="text-muted-foreground">No plan set</span>}<span className="text-muted-foreground"> · {inr(sub.price_rupees)}/month</span></> },
             { label: "First service date", value: sub.first_service_date ? showDate(sub.first_service_date) : "Not set" },
             { label: "Service cutoff", value: sub.cutoff_time },
-            { label: "Interior care day", value: sub.interior_day ?? "None" },
+            { label: "Interior care day", value: sub.interior_day === "Custom" && sub.interior_day_notes ? `Custom: ${sub.interior_day_notes}` : sub.interior_day ?? "None" },
             { label: "Schedule pattern", value: patternText(pattern.data) },
             { label: "Plan change", value: sub.pending_from ? `Starts ${showDate(sub.pending_from)}` : "None pending" },
           ]} />
@@ -361,6 +362,7 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
         )}
       </section>
 
+      {open === "setup" && !sub && <SubscriptionSetupDialog v={v} customerId={customerId} onClose={close} />}
       {open === "car" && <CarDialog v={v} customerId={customerId} onClose={close} />}
       {open === "settings" && sub && <SettingsDialog sub={sub} customerId={customerId} onClose={close} />}
       {open === "pattern" && sub && <PatternDialog sub={sub} registration={v.registration} customerId={customerId} onClose={close} />}

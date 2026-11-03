@@ -22,6 +22,7 @@ from app.directory.models import (
     SystemSetting,
     VehicleCatalogueEntry,
     WorkingSlot,
+    Zone,
 )
 from app.directory.seed import add_default_slots
 from app.identity.models import Login
@@ -355,6 +356,59 @@ def update_service(db: Session, admin_id, name: str, body) -> DirectoryService:
     apply(db, admin_id, "service", row, body.model_dump(exclude_none=True))
     db.commit()
     return row
+
+
+# ---- zones -----------------------------------------------------------------------
+
+def zone_out(db: Session, z: Zone) -> dict:
+    count = db.scalar(select(func.count(Vehicle.id)).where(
+        Vehicle.zone_id == z.id, Vehicle.active.is_(True))) or 0
+    return {"id": z.id, "society_id": z.society_id, "name": z.name, "active": z.active,
+            "vehicles": count}
+
+
+def _zone_name_free(db: Session, society_id: uuid.UUID, name: str,
+                    except_id: uuid.UUID | None = None) -> None:
+    query = select(Zone.id).where(
+        Zone.society_id == society_id, func.lower(Zone.name) == name.lower())
+    if except_id:
+        query = query.where(Zone.id != except_id)
+    if db.scalar(query) is not None:
+        raise _duplicate("zone")
+
+
+def create_zone(db: Session, admin_id, society_id: uuid.UUID, body) -> Zone:
+    _get(db, Society, society_id, "society")
+    name = " ".join(body.name.split())
+    if not name:
+        raise invalid("name", "Enter the zone name.")
+    _zone_name_free(db, society_id, name)
+    zone = Zone(society_id=society_id, name=name, active=True)
+    db.add(zone)
+    db.flush()
+    audit(db, admin_id, "zone", zone.id, "create", {"name": name, "society_id": str(society_id)})
+    db.commit()
+    return zone
+
+
+def rename_zone(db: Session, admin_id, zone_id: uuid.UUID, body) -> Zone:
+    zone = _get(db, Zone, zone_id, "zone")
+    name = " ".join(body.name.split())
+    if not name:
+        raise invalid("name", "Enter the zone name.")
+    _zone_name_free(db, zone.society_id, name, zone.id)
+    if apply(db, admin_id, "zone", zone, {"name": name}):
+        db.commit()
+    return zone
+
+
+def set_zone_active(db: Session, admin_id, zone_id: uuid.UUID, active: bool) -> Zone:
+    """A deactivated zone is no longer offered in Add Vehicle. Vehicles already
+    in it keep it."""
+    zone = _get(db, Zone, zone_id, "zone")
+    if apply(db, admin_id, "zone", zone, {"active": active}):
+        db.commit()
+    return zone
 
 
 # ---- working slots ---------------------------------------------------------------

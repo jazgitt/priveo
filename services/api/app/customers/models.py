@@ -7,6 +7,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.platform.db import Base, UtcDateTime, utcnow
 
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+# An interior day that is not one weekday: the customer's cars take turns.
+INTERIOR_DAY_CUSTOM = "Custom"
+INTERIOR_DAYS = (*WEEKDAYS, INTERIOR_DAY_CUSTOM)
 
 
 class Customer(Base):
@@ -15,11 +18,16 @@ class Customer(Base):
     __tablename__ = "customers"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    login_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("logins.id"), unique=True)
+    # Empty for a customer loaded without an email: no sign-in until the
+    # owner settles the login logic for those customers.
+    login_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"), unique=True)
     first_name: Mapped[str] = mapped_column(String(80))
     last_name: Mapped[str] = mapped_column(String(80), default="")
-    # Lower case. An email belongs to one customer only (ADM-CUS-03).
-    email: Mapped[str] = mapped_column(String(254), unique=True)
+    # Lower case. An email belongs to one customer only (ADM-CUS-03). Empty
+    # for a customer loaded from a sheet that had none.
+    email: Mapped[str | None] = mapped_column(String(254), unique=True)
+    # Other names the customer is known by (a partner, a relative). Stored only.
+    alternate_names: Mapped[str | None] = mapped_column(Text)
     email_verified_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     # A contact number. It is not checked for duplicates (ADM-CUS-03).
     mobile: Mapped[str] = mapped_column(String(10))
@@ -52,13 +60,15 @@ class Vehicle(Base):
     rc_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     # Upper case, no spaces. Empty only for migrated vehicles whose number
     # was missing or incomplete; the admin fills it in.
-    registration: Mapped[str | None] = mapped_column(String(12), unique=True)
+    registration: Mapped[str | None] = mapped_column(String(20), unique=True)
     make: Mapped[str] = mapped_column(String(60), default="")
     model: Mapped[str] = mapped_column(String(80))
     variant: Mapped[str] = mapped_column(String(80), default="")
     category: Mapped[str] = mapped_column(String(40), default="")
     parking_basement: Mapped[str] = mapped_column(String(20), default="")
-    parking_number: Mapped[str] = mapped_column(String(20), default="")
+    parking_number: Mapped[str] = mapped_column(String(60), default="")
+    # The zone of the society the vehicle is parked in (set in Add Vehicle).
+    zone_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("zones.id"), index=True)
     # What the source said, when it did not fit the fields above.
     notes: Mapped[str] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -104,7 +114,10 @@ class Subscription(Base):
     # The 30-day billing cycle counts from this date.
     first_service_date: Mapped[date] = mapped_column(Date)
     cutoff_time: Mapped[time | None] = mapped_column(Time)
+    # A weekday, or "Custom" when the customer's cars take turns (see notes).
     interior_day: Mapped[str | None] = mapped_column(String(9))
+    # With "Custom": whose car's turn it is, as the owner gave it.
+    interior_day_notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
