@@ -92,6 +92,14 @@ def main_chain_from_repo(repo_dir: str) -> dict:
     return migrations.chain_from_texts([_show(repo_dir, "origin/main", n) for n in names if n.endswith(".py")])
 
 
+def pr_migration_texts(repo_dir: str, number: int) -> list[str]:
+    """Text of the migration files a fetched PR adds relative to main."""
+    ref = f"refs/nightly/pr-{number}"
+    added = _run(["git", "diff", "--name-only", "--diff-filter=A", f"origin/main...{ref}", "--", MIGRATION_DIR],
+                 cwd=repo_dir).split()
+    return [_show(repo_dir, ref, p) for p in added if p.endswith(".py")]
+
+
 def pr_migrations_from_repo(repo_dir: str, pr: dict) -> dict:
     """Fetch the PR head and read the migrations it adds relative to main."""
     ref = f"refs/nightly/pr-{pr['number']}"
