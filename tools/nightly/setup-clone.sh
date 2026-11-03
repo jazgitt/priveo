@@ -18,7 +18,7 @@ git fetch -q origin main && git checkout -q -B main origin/main && git reset -q 
 mkdir -p logs
 [ -f nightly.env ] || printf '# Read as data by the pipeline. NIGHTLY_ENABLED must be true for a real run.\nNIGHTLY_ENABLED=false\n' > nightly.env
 if [ ! -x services/api/.venv/bin/python ]; then
-  python3 -m venv services/api/.venv
+  "${NIGHTLY_PYTHON:-python3.12}" -m venv services/api/.venv
   services/api/.venv/bin/pip install -q -e "services/api[dev]"
 fi
 (cd apps/web && npm ci --silent && npx playwright install chromium)
