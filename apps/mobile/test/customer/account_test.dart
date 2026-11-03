@@ -63,7 +63,7 @@ class FakeAccount implements AccountRepository {
   }
 
   @override
-  Future<void> changePassword({
+  Future<void> changeMpin({
     required String current,
     required String next,
   }) async {}

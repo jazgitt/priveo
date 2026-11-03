@@ -20,6 +20,9 @@ import '../features/feature_flags.dart';
 import '../features/feature_keys.dart';
 import '../ui/theme.dart';
 
+/// The screen a customer must complete before anything else.
+const setMpinPath = '/customer/set-mpin';
+
 /// Redirect rule. The splash screen decides its own exit. After that:
 /// no session means login, and a session means the shell for its role.
 ///
@@ -31,6 +34,11 @@ String? redirectFor(String location, Session? session,
   if (location == '/splash') return null;
   if (session == null) return location == '/login' ? null : '/login';
   final home = session.role.homePath;
+  // A customer with the MPIN the admin gave sees nothing until they change it.
+  if (session.mustChangeMpin) {
+    return location == setMpinPath ? null : setMpinPath;
+  }
+  if (location == setMpinPath) return home;
   if (isOff != null && location != home && isOff(location)) return home;
   // The role's own pages sit under its home path. Support and alerts are
   // `/customer/support`, `/crew/ratings` and `/admin/alerts`.

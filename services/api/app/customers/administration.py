@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.billing.models import Payment, PaymentEvent
 from app.changes.cycle import renewal_date
 from app.customers import plan_changes
+from app.customers.logins import ensure_login, give_default_mpin, mobile_in_use, mobile_taken
 from app.customers.models import (
     INTERIOR_DAY_CUSTOM,
     INTERIOR_DAYS,
@@ -71,7 +72,8 @@ class VehicleCreate(Input):
 class CustomerCreate(Input):
     first_name: str
     last_name: str
-    # Empty: the customer has no sign-in until an email is added.
+    # Optional: a contact, not a login. The customer signs in with the mobile
+    # number and the MPIN, which starts as its last 6 digits.
     email: str | None = None
     mobile: str
     flat: str = Field(default="", max_length=40)
@@ -398,7 +400,8 @@ def detail(db, c, store):
         "address_line2": c.address_line2,
         "society_id": str(c.society_id),
         "email_verified": c.email_verified_at is not None,
-        "password_set": login is not None and login.password_hash is not None,
+        "mpin_changed": login is not None and not login.must_change_mpin,
+        "has_login": login is not None,
         "onboarding_confirmed": c.onboarding_confirmed_at is not None,
         "imported_history": imported_history(db, c.id),
         "vehicles": [
@@ -546,8 +549,8 @@ def list_customers(
         vehicles[v.customer_id].append(
             {"id": str(v.id), "registration": show_registration(v.registration), "status": status}
         )
-    password_set = dict(db.execute(
-        select(Login.id, Login.password_hash.is_not(None))
+    mpin_changed = dict(db.execute(
+        select(Login.id, Login.must_change_mpin.is_(False))
         .where(Login.id.in_([c.login_id for c in found if c.login_id]))
     ).all()) if ids else {}
     return [
@@ -558,7 +561,7 @@ def list_customers(
             "mobile": c.mobile,
             "flat": c.flat,
             "email_verified": c.email_verified_at is not None,
-            "password_set": bool(password_set.get(c.login_id)),
+            "mpin_changed": bool(mpin_changed.get(c.login_id)),
             "onboarding_confirmed": c.onboarding_confirmed_at is not None,
             "vehicles": vehicles[c.id],
         }
@@ -585,21 +588,15 @@ def create_customer(
     db: Session = Depends(get_db),
     store: ObjectStore = Depends(get_object_store),
 ):
+    first, last, mobile = valid_person(body.first_name, body.last_name, body.mobile)
     email = valid_email(body.email) if body.email and body.email.strip() else None
     if email is not None:
         existing = db.scalar(select(Customer).where(Customer.email == email))
         if existing:
             return {**detail(db, existing, store), "existing": True}
-        if db.scalar(select(Login.id).where(Login.login_id == email)):
-            raise ApiError("email_in_use", "This email is already in use.", 409)
-    first, last, mobile = valid_person(body.first_name, body.last_name, body.mobile)
-    login = None
-    if email is not None:
-        login = Login(role="customer", login_id=email, display_name=f"{first} {last}")
-        db.add(login)
-        db.flush()
+    if mobile_taken(db, mobile):
+        raise mobile_in_use(mobile)
     c = Customer(
-        login_id=login.id if login else None,
         first_name=first,
         last_name=last,
         email=email,
@@ -609,6 +606,8 @@ def create_customer(
     )
     db.add(c)
     db.flush()
+    # The sign-in is the mobile number and the MPIN (the last 6 digits of the number).
+    ensure_login(db, c)
     add_vehicle(db, c, body.vehicle, user.id, user.id)
     audit(db, user.id, "customer", c.id, "create", {"email": email})
     db.commit()
@@ -624,7 +623,12 @@ def edit_customer(
     store: ObjectStore = Depends(get_object_store),
 ):
     c = get_customer(db, customer_id)
-    c.first_name, c.last_name, c.mobile = valid_person(body.first_name, body.last_name, body.mobile)
+    first, last, mobile = valid_person(body.first_name, body.last_name, body.mobile)
+    if mobile != c.mobile:
+        if mobile_taken(db, mobile, except_id=c.id):
+            raise mobile_in_use(mobile)
+        change_mobile(db, c, mobile)
+    c.first_name, c.last_name = first, last
     c.flat = body.flat
     c.address_line1 = body.address_line1.strip()
     c.address_line2 = body.address_line2.strip()
@@ -769,12 +773,30 @@ def session_device(
     db.commit()
 
 
-def reset_login(db, c, by, reason):
-    login = db.get(Login, c.login_id) if c.login_id else None
-    if login is not None:
-        login.password_hash = None
-        login.password_changed_at = utcnow()
-        login.failed_attempts, login.blocked_until = 0, None
+def change_mobile(db, c, mobile):
+    """The mobile number is the sign-in ID, so a new one signs the customer out
+    everywhere. While the customer still has the MPIN the admin gave, that MPIN
+    follows the new number."""
+    c.mobile = mobile
+    if c.login_id is None:
+        return
+    login = db.get(Login, c.login_id)
+    login.login_id = mobile
+    if login.must_change_mpin:
+        give_default_mpin(login, mobile)
+    db.execute(
+        update(AuthSession)
+        .where(AuthSession.login_id == c.login_id, AuthSession.ended_at.is_(None))
+        .values(ended_at=utcnow(), ended_reason="mobile_changed")
+    )
+
+
+def reset_mpin(db, c, by, reason):
+    """Back to the first MPIN (the last 6 digits of the mobile number): the
+    customer is signed out everywhere and must choose a new MPIN at the next
+    sign-in. A customer without a sign-in gets one."""
+    login = ensure_login(db, c)
+    give_default_mpin(login, c.mobile)
     db.execute(
         update(AuthSession)
         .where(AuthSession.login_id == c.login_id, AuthSession.ended_at.is_(None))
@@ -784,11 +806,6 @@ def reset_login(db, c, by, reason):
         update(EmailCode)
         .where(EmailCode.login_id == c.login_id, EmailCode.ended_at.is_(None))
         .values(ended_at=utcnow(), ended_reason=reason)
-    )
-    db.execute(
-        update(EmailChange)
-        .where(EmailChange.customer_id == c.id, EmailChange.ended_at.is_(None))
-        .values(ended_at=utcnow())
     )
     audit(db, by, "customer", c.id, reason, {})
 
@@ -804,33 +821,31 @@ def correct_email(
     email = valid_email(body.email)
     if email == c.email:
         return {"welcome_sent": False}
-    if db.scalar(select(Login.id).where(Login.login_id == email)):
+    if db.scalar(select(Customer.id).where(Customer.email == email, Customer.id != c.id)):
         raise ApiError("email_in_use", "This email is already in use.", 409)
     old = c.email
-    reset_login(db, c, user.id, "email_corrected")
+    # The email is a contact, not the sign-in, so the customer stays signed in.
     c.email = email
     c.email_verified_at = None
-    if c.login_id is None:
-        # A customer loaded without an email gets a sign-in with the first email.
-        login = Login(role="customer", login_id=email,
-                      display_name=f"{c.first_name} {c.last_name}".strip())
-        db.add(login)
-        db.flush()
-        c.login_id = login.id
-    else:
-        db.get(Login, c.login_id).login_id = email
+    db.execute(
+        update(EmailChange)
+        .where(EmailChange.customer_id == c.id, EmailChange.ended_at.is_(None))
+        .values(ended_at=utcnow())
+    )
     audit(db, user.id, "customer", c.id, "email", {"email": [old, email]})
     db.commit()
     return {"welcome_sent": send_welcome(db, c)}
 
 
-@admin.post("/customers/{customer_id}/reset-password")
-def reset_password(
+@admin.post("/customers/{customer_id}/reset-mpin")
+def reset_mpin_route(
     customer_id: uuid.UUID,
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    reset_login(db, get_customer(db, customer_id), user.id, "password_reset")
+    """Gives the customer the first MPIN again (the last 6 digits of the mobile
+    number). They must choose a new one at the next sign-in."""
+    reset_mpin(db, get_customer(db, customer_id), user.id, "mpin_reset")
     db.commit()
     return {"reset": True}
 

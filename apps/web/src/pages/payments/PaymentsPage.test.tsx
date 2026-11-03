@@ -21,7 +21,7 @@ const pay = (over: Record<string, unknown> = {}) => ({
   society: "Lake View", vehicle: "Swift KA01", initiated_at: null, ...over,
 });
 const customerDetail = { id: "c1", first_name: "Asha", last_name: "Rao", email: "a@x.com", mobile: "9876543210", flat: "B-12",
-  email_verified: true, password_set: true, onboarding_confirmed: true,
+  email_verified: true, mpin_changed: true, onboarding_confirmed: true,
   vehicles: [{ id: "v9", society: "Lake View", registration: "KA01AB1234", make: "Maruti", model: "Swift", variant: "", category: "",
     parking_basement: "B1", parking_number: "1", photo_url: null, subscription: null, payments: [] }] };
 

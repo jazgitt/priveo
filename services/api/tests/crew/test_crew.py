@@ -26,7 +26,7 @@ def create(client, society, **over):
 
 
 def sign_in(client, mobile, password):
-    return client.post("/v1/auth/login", json={"login_id": mobile, "password": password})
+    return client.post("/v1/auth/login", json={"login_id": mobile, "password": password, "role": "crew"})
 
 
 def test_password_format():

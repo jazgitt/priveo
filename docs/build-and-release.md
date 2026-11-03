@@ -7,20 +7,21 @@
 | What | Command (from the repo root) |
 |---|---|
 | API: install | `cd services/api && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"` |
-| API: set up the database | Put `DATABASE_URL`, `TOKEN_SECRET`, `ADMIN_PASSWORD` and, for the demo logins, `SEED_DEMO_LOGINS=true` with `MOCK_CUSTOMER_PASSWORD` and `MOCK_CREW_PASSWORD` in `services/api/.env`. To try a customer's first sign-in, add `MOCK_EMAIL_CODE` (any 6 digits). Then `.venv/Scripts/python -m alembic upgrade head && .venv/Scripts/python scripts/seed.py` |
+| API: set up the database | Put `DATABASE_URL`, `TOKEN_SECRET`, `ADMIN_PASSWORD` and, for the demo logins, `SEED_DEMO_LOGINS=true` with `MOCK_CUSTOMER_PASSWORD` and `MOCK_CREW_PASSWORD` in `services/api/.env`. `MOCK_CUSTOMER_PASSWORD` is the demo customer's MPIN, so it must be 6 digits (`123456` on the test site; production never seeds demo logins). The demo customer's login ID is `9000000001` and it is seeded without the forced MPIN change, so the smoke test and the app flows sign in at once. To try Forgot MPIN, add `MOCK_EMAIL_CODE` (any 6 digits). Then `.venv/Scripts/python -m alembic upgrade head && .venv/Scripts/python scripts/seed.py` |
 | API: run | `.venv/Scripts/python -m uvicorn app.main:app --port 8000` (reads `.env`) |
 | API: add a migration | Change the models, then `.venv/Scripts/python -m alembic revision -m "what changed"` and write the steps by hand |
+| API: move the existing customers to mobile number and MPIN sign-in (one time) | `.venv/Scripts/python scripts/convert_customer_logins.py` is a trial run that saves nothing and prints the database host first. Add `--apply` to save. Every customer gets the mobile number as login ID and the first MPIN (the last 6 digits), must change it at the next sign-in, and is signed out. Old passwords stop working. A mobile number shared by two customers, or not 10 digits, is skipped and counted, never guessed. Safe to run again. The report holds counts only. Run it on `test` and `production` only when the owner says so |
 | API: load the existing customers (one time) | `.venv/Scripts/python scripts/import_customers.py "../../seed/<file>.xlsx"` is a trial run that saves nothing. Add `--apply` to save. Needs `DATABASE_URL`. The spreadsheet holds real customer data and stays in `/seed`, which is git-ignored |
 | API: lint and test | `.venv/Scripts/python -m ruff check . && .venv/Scripts/python -m pytest -q`. The tests use an in-memory database and need no setup. Set `TEST_DATABASE_URL` to run them on PostgreSQL; that database is emptied |
 | API: isolated PostgreSQL tests | `.venv/Scripts/python scripts/test_postgres.py`. Uses its own temporary cluster, never `DATABASE_URL`. Set `POSTGRES_BIN` if PostgreSQL is not installed at `C:/Program Files/PostgreSQL/17/bin` |
 | API: export the contract | `.venv/Scripts/python scripts/export_openapi.py` (writes `packages/api-contract/openapi.json`) |
-| API: smoke test a running API | `SMOKE_CUSTOMER_PASSWORD=... SMOKE_CREW_PASSWORD=... SMOKE_ADMIN_PASSWORD=... python scripts/smoke_test.py <url>` |
+| API: smoke test a running API | `SMOKE_CUSTOMER_PASSWORD=<6 digits> SMOKE_CREW_PASSWORD=... SMOKE_ADMIN_PASSWORD=... python scripts/smoke_test.py <url>` |
 | App: get packages | `cd apps/mobile && flutter pub get` |
 | App: theme from tokens | `dart run tool/gen_theme.dart` (after changing `docs/brand/tokens.json`) |
 | App: API client from the contract | `dart run tool/gen_api.dart` (after `packages/api-contract/openapi.json` changes) |
 | App: translations | `flutter gen-l10n` (after changing `lib/l10n/app_en.arb`; new slice fragment keys must be merged into that file first) |
 | App: analyze and test | `flutter analyze && flutter test` |
-| App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD`, `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
+| App: test against a live API | `flutter test test/live_api_test.dart --dart-define=LIVE_API_URL=<url> --dart-define=LIVE_PASSWORD=<mock password>`. When the three mock passwords differ, pass `LIVE_CUSTOMER_PASSWORD` (6 digits, the demo customer's MPIN), `LIVE_CREW_PASSWORD` and `LIVE_ADMIN_PASSWORD` instead |
 | App: sign in as each role on a phone or emulator | `flutter test integration_test --dart-define=API_BASE_URL=<url> --dart-define=LIVE_CUSTOMER_PASSWORD=... --dart-define=LIVE_CREW_PASSWORD=... --dart-define=LIVE_ADMIN_PASSWORD=...` |
 | App: run (dev) | `flutter run -t lib/main_test.dart --dart-define=API_BASE_URL=<url>` |
 | App: build and copy to the phone's Downloads | `powershell -ExecutionPolicy Bypass -File apps\mobile\tool\push_apk.ps1` (the phone plugged in by USB; uses the test API unless `-ApiUrl <url>` is given). For phones that block installs over USB. Then install `priveo-test.apk` from the Files app |
@@ -117,7 +118,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 | `VERCEL_TOKEN` | secret | A token for the Vercel team |
 | `MIGRATION_DATABASE_URL` | secret | That environment's Supabase direct or session address (port 5432). The deploy migrates and seeds with it. The runtime `DATABASE_URL` (pooler, port 6543) lives only in the Vercel project |
 | `ADMIN_PASSWORD` | secret | The admin `priveopapa` password for that environment. The deploy seeds it and the smoke test signs in with it |
-| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD` | secret | `test` only: the demo customer and crew passwords. Production has none |
+| `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD` | secret | `test` only: the demo customer's MPIN (6 digits) and the crew password. Production has none |
 
 **Repository secrets:**
 
@@ -141,7 +142,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
    - `CRON_SECRET`: a random value, or the scheduled jobs answer 503.
    - Production only: `BLOB_ACCESS` = `private`.
    - `PUBLIC_BASE_URL`: that API's address.
-   - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters at first sign-in and after "Forgot password" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*` or `SEED_DEMO_LOGINS`. `EMAIL_REDIRECT_TO` is allowed in prod: it sends every email to that one address, so use it only while no real customers exist.
+   - Test only: `MOCK_EMAIL_CODE` (6 digits), the code every customer enters after "Forgot MPIN" while email is not connected. Production instead needs `RESEND_API_KEY` and `EMAIL_FROM`, and must have no `MOCK_*` or `SEED_DEMO_LOGINS`. `EMAIL_REDIRECT_TO` is allowed in prod: it sends every email to that one address, so use it only while no real customers exist.
 5. **GitHub:** create the Environments `test` and `production` and add their variables and secrets (section 3). Set `API_URL` to an address that needs no Vercel sign-in: the project's production domain is public under the default protection, but per-deployment URLs are not.
 6. **First deploy:** run `api-deploy` from the Actions tab with environment `test`, then, after checking test, `production` (or push a `v*` tag).
 
@@ -187,7 +188,7 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `main` until it is merged. Their gaps and stubs are in `docs/overnight-build-report.md`. The list below is from before that branch.
 
 - iOS (0b): macOS job, fastlane `match`, TestFlight.
-- Sending the customer's code by email (Resend). The first sign-in, set password and forgot password are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. The Resend sender is built and the key has been provided (25 Oct 2026). What is left is verifying the sending domain at Resend and setting `RESEND_API_KEY` and the from-address in the environment.
+- Sending the customer's code by email (Resend). Forgot MPIN and the email change are built, and on `dev` the code is the fixed `MOCK_EMAIL_CODE`. The Resend sender is built and the key has been provided (25 Oct 2026). What is left is verifying the sending domain at Resend and setting `RESEND_API_KEY` and the from-address in the environment.
 - The rest of Phase 1 sign-in: the web portal's cookie sign-in, and the admin screens that reset a password or sign someone out.
 - The links to the Terms and the Privacy Policy on the sign-in screen.
 - In the onboarding review (`ONB-25`): the vehicle photo (`ONB-22`, needs uploads) and the plan name (needs the plans). The review has one step for each vehicle, holding its parking, service preferences and plan together. **Derived:** the requirement lists these as separate steps and does not say how several vehicles are handled.

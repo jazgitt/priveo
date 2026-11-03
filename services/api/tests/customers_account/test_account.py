@@ -1,4 +1,4 @@
-"""The customer's profile, email change, password, vehicle edits and uploads
+"""The customer's profile, email change, MPIN, vehicle edits and uploads
 (ACC-01, ACC-06, ACC-08, VEH-01, VEH-03, VEH-04, ONB-22, ISS-02, ISS-04)."""
 import pytest
 
@@ -38,9 +38,14 @@ def test_profile_read_and_edit(client, me):
     assert "email" in p, p
     assert p["email"] == "customer@priveo.test" and p["pending_email"] is None
     assert len(p["initials"]) == 2
+    mobile = p["mobile"]
     r = client.patch("/v1/customer/profile", headers=me, json={
+        "first_name": "Asha", "last_name": "Rao", "mobile": mobile})
+    assert r.status_code == 200 and r.json()["mobile"] == mobile
+    # The mobile number is the sign-in ID: only Priveo changes it.
+    moved = client.patch("/v1/customer/profile", headers=me, json={
         "first_name": "Asha", "last_name": "Rao", "mobile": "9876543210"})
-    assert r.status_code == 200 and r.json()["mobile"] == "9876543210"
+    assert moved.status_code == 422 and "mobile" in moved.json()["fields"]
     bad = client.patch("/v1/customer/profile", headers=me, json={
         "first_name": "A1", "last_name": "", "mobile": "12"})
     assert bad.status_code == 422
@@ -96,9 +101,11 @@ def test_email_change_needs_the_code_and_keeps_the_old_email_until_then(client, 
     assert wrong.status_code == 400
     ok = client.post("/v1/customer/profile/email/verify", headers=me, json={"code": code})
     assert ok.status_code == 200 and ok.json()["email"] == "new.mail@example.com"
-    r = client.post("/v1/auth/login", json={
-        "login_id": "new.mail@example.com", "password": "pw-customer1"})
-    assert r.status_code == 200
+    # The email is a contact only: the sign-in is still the mobile number.
+    assert client.post("/v1/auth/login", json={
+        "login_id": "new.mail@example.com", "password": "483920",
+        "role": "customer"}).status_code == 401
+    assert client.get("/v1/customer/profile", headers=me).status_code == 200
 
 
 def test_email_change_rejects_a_bad_or_used_email(client, me):
@@ -109,19 +116,21 @@ def test_email_change_rejects_a_bad_or_used_email(client, me):
     assert r.status_code == 409 and r.json()["code"] == "email_in_use"
 
 
-def test_change_password(client, me):
-    wrong = client.post("/v1/customer/password", headers=me, json={
-        "current_password": "nope", "new_password": "fresh-pass-9"})
+def test_change_mpin(client, me):
+    wrong = client.post("/v1/customer/mpin", headers=me, json={
+        "current_mpin": "000000", "new_mpin": "615243"})
     assert wrong.status_code == 422
-    weak = client.post("/v1/customer/password", headers=me, json={
-        "current_password": "pw-customer1", "new_password": "short"})
-    assert weak.status_code == 422
-    ok = client.post("/v1/customer/password", headers=me, json={
-        "current_password": "pw-customer1", "new_password": "fresh-pass-9"})
+    weak = client.post("/v1/customer/mpin", headers=me, json={
+        "current_mpin": "483920", "new_mpin": "short"})
+    assert weak.status_code == 422 and weak.json()["code"] == "weak_mpin"
+    ok = client.post("/v1/customer/mpin", headers=me, json={
+        "current_mpin": "483920", "new_mpin": "615243"})
     assert ok.status_code == 204
+    # This phone stays signed in; other phones are signed out.
     assert client.get("/v1/customer/profile", headers=me).status_code == 200
     assert client.post("/v1/auth/login", json={
-        "login_id": "customer@priveo.test", "password": "fresh-pass-9"}).status_code == 200
+        "login_id": "9000000001", "password": "615243",
+        "role": "customer"}).status_code == 200
 
 
 def test_vehicle_photo_upload_becomes_the_vehicle_photo(client, me):

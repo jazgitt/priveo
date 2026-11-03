@@ -27,13 +27,13 @@ void main() {
     final input = jsonDecode('{"email":"wire-value","expires_in_seconds":1}') as Map<String, dynamic>;
     expect(wire.AccountEmailCodeSent.fromJson(input).toJson(), equals(input));
   });
-  test('AccountPasswordChange preserves populated wire fields', () {
-    final input = jsonDecode('{"current_password":"wire-value","new_password":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.AccountPasswordChange.fromJson(input).toJson(), equals(input));
+  test('AccountMpinChange preserves populated wire fields', () {
+    final input = jsonDecode('{"current_mpin":"wire-value","new_mpin":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.AccountMpinChange.fromJson(input).toJson(), equals(input));
   });
-  test('AccountPasswordChange preserves nullable wire fields', () {
-    final input = jsonDecode('{"current_password":"wire-value","new_password":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.AccountPasswordChange.fromJson(input).toJson(), equals(input));
+  test('AccountMpinChange preserves nullable wire fields', () {
+    final input = jsonDecode('{"current_mpin":"wire-value","new_mpin":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.AccountMpinChange.fromJson(input).toJson(), equals(input));
   });
   test('AccountProfileEdit preserves populated wire fields', () {
     final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","mobile":"wire-value"}') as Map<String, dynamic>;
@@ -48,7 +48,7 @@ void main() {
     expect(wire.AccountProfileOut.fromJson(input).toJson(), equals(input));
   });
   test('AccountProfileOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":"wire-value","mobile":"wire-value","society":"wire-value","flat":"wire-value","initials":"wire-value","member_since":null,"pending_email":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":null,"mobile":"wire-value","society":"wire-value","flat":"wire-value","initials":"wire-value","member_since":null,"pending_email":null}') as Map<String, dynamic>;
     expect(wire.AccountProfileOut.fromJson(input).toJson(), equals(input));
   });
   test('AccountUploadRequest preserves populated wire fields', () {
@@ -436,11 +436,11 @@ void main() {
     expect(wire.CitationOut.fromJson(input).toJson(), equals(input));
   });
   test('CodeRequest preserves populated wire fields', () {
-    final input = jsonDecode('{"email":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mobile":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CodeRequest.fromJson(input).toJson(), equals(input));
   });
   test('CodeRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"email":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mobile":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CodeRequest.fromJson(input).toJson(), equals(input));
   });
   test('CodeSent preserves populated wire fields', () {
@@ -452,11 +452,11 @@ void main() {
     expect(wire.CodeSent.fromJson(input).toJson(), equals(input));
   });
   test('CodeVerified preserves populated wire fields', () {
-    final input = jsonDecode('{"password_token":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mpin_token":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CodeVerified.fromJson(input).toJson(), equals(input));
   });
   test('CodeVerified preserves nullable wire fields', () {
-    final input = jsonDecode('{"password_token":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mpin_token":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CodeVerified.fromJson(input).toJson(), equals(input));
   });
   test('ComplaintCreate preserves populated wire fields', () {
@@ -1308,19 +1308,19 @@ void main() {
     expect(wire.JobOutcomeOut.fromJson(input).toJson(), equals(input));
   });
   test('LoginRequest preserves populated wire fields', () {
-    final input = jsonDecode('{"login_id":"wire-value","password":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"login_id":"wire-value","password":"wire-value","role":"wire-value"}') as Map<String, dynamic>;
     expect(wire.LoginRequest.fromJson(input).toJson(), equals(input));
   });
   test('LoginRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"login_id":"wire-value","password":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"login_id":"wire-value","password":"wire-value","role":null}') as Map<String, dynamic>;
     expect(wire.LoginRequest.fromJson(input).toJson(), equals(input));
   });
   test('LoginResult preserves populated wire fields', () {
-    final input = jsonDecode('{"role":"wire-value","display_name":"wire-value","access_token":"wire-value","refresh_token":"wire-value","expires_in":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"role":"wire-value","display_name":"wire-value","access_token":"wire-value","refresh_token":"wire-value","expires_in":1,"must_change_mpin":true}') as Map<String, dynamic>;
     expect(wire.LoginResult.fromJson(input).toJson(), equals(input));
   });
   test('LoginResult preserves nullable wire fields', () {
-    final input = jsonDecode('{"role":"wire-value","display_name":"wire-value","access_token":"wire-value","refresh_token":"wire-value","expires_in":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"role":"wire-value","display_name":"wire-value","access_token":"wire-value","refresh_token":"wire-value","expires_in":1,"must_change_mpin":false}') as Map<String, dynamic>;
     expect(wire.LoginResult.fromJson(input).toJson(), equals(input));
   });
   test('ManagerSchedule preserves populated wire fields', () {
@@ -1835,13 +1835,13 @@ void main() {
     final input = jsonDecode('{"device_name":"wire-value","platform":"wire-value","app_version":"wire-value"}') as Map<String, dynamic>;
     expect(wire.SessionDevice.fromJson(input).toJson(), equals(input));
   });
-  test('SetPasswordRequest preserves populated wire fields', () {
-    final input = jsonDecode('{"password_token":"wire-value","password":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.SetPasswordRequest.fromJson(input).toJson(), equals(input));
+  test('SetMpinRequest preserves populated wire fields', () {
+    final input = jsonDecode('{"mpin_token":"wire-value","mpin":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.SetMpinRequest.fromJson(input).toJson(), equals(input));
   });
-  test('SetPasswordRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"password_token":"wire-value","password":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.SetPasswordRequest.fromJson(input).toJson(), equals(input));
+  test('SetMpinRequest preserves nullable wire fields', () {
+    final input = jsonDecode('{"mpin_token":"wire-value","mpin":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.SetMpinRequest.fromJson(input).toJson(), equals(input));
   });
   test('SkipIn preserves populated wire fields', () {
     final input = jsonDecode('{"date":"2026-10-20"}') as Map<String, dynamic>;
@@ -1882,22 +1882,6 @@ void main() {
   test('StandaloneIn preserves nullable wire fields', () {
     final input = jsonDecode('{"service":"Deep Spa","addon":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","finish_by":"wire-value","contact_mobile":"wire-value","notes":"wire-value"}') as Map<String, dynamic>;
     expect(wire.StandaloneIn.fromJson(input).toJson(), equals(input));
-  });
-  test('StartRequest preserves populated wire fields', () {
-    final input = jsonDecode('{"login_id":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.StartRequest.fromJson(input).toJson(), equals(input));
-  });
-  test('StartRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"login_id":"wire-value"}') as Map<String, dynamic>;
-    expect(wire.StartRequest.fromJson(input).toJson(), equals(input));
-  });
-  test('StartResult preserves populated wire fields', () {
-    final input = jsonDecode('{"next":"wire-value","resend_in_seconds":1}') as Map<String, dynamic>;
-    expect(wire.StartResult.fromJson(input).toJson(), equals(input));
-  });
-  test('StartResult preserves nullable wire fields', () {
-    final input = jsonDecode('{"next":"wire-value","resend_in_seconds":1}') as Map<String, dynamic>;
-    expect(wire.StartResult.fromJson(input).toJson(), equals(input));
   });
   test('StatusChange preserves populated wire fields', () {
     final input = jsonDecode('{"status":"wire-value","note":"wire-value"}') as Map<String, dynamic>;
@@ -2196,11 +2180,11 @@ void main() {
     expect(wire.VehicleSummary.fromJson(input).toJson(), equals(input));
   });
   test('VerifyCodeRequest preserves populated wire fields', () {
-    final input = jsonDecode('{"email":"wire-value","code":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mobile":"wire-value","code":"wire-value"}') as Map<String, dynamic>;
     expect(wire.VerifyCodeRequest.fromJson(input).toJson(), equals(input));
   });
   test('VerifyCodeRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"email":"wire-value","code":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"mobile":"wire-value","code":"wire-value"}') as Map<String, dynamic>;
     expect(wire.VerifyCodeRequest.fromJson(input).toJson(), equals(input));
   });
   test('VisitChecklistItem preserves populated wire fields', () {

@@ -86,7 +86,7 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="First name">{(p) => <Input {...p} value={shown.first_name} onChange={set("first_name")} />}</Field>
         <Field label="Last name">{(p) => <Input {...p} value={shown.last_name} onChange={set("last_name")} />}</Field>
-        <Field label="Mobile" hint="10 digits" error={shown.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
+        <Field label="Mobile" hint="10 digits. It is the sign-in ID, so a new number signs the customer out everywhere." error={shown.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
           {(p) => <Input {...p} inputMode="numeric" value={shown.mobile} onChange={set("mobile")} />}
         </Field>
         <Field label="Flat" optional>{(p) => <Input {...p} value={shown.flat} onChange={set("flat")} />}</Field>
@@ -122,8 +122,8 @@ function EmailForm({ c, onClose }: { c: Customer; onClose: () => void }) {
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={c.email ? "Update email" : "Add email"} danger={Boolean(c.email)}
                 description={c.email
-                  ? "The customer's password is cleared and they are signed out everywhere. A new welcome email goes to the new address; they verify it and set a new password (ADM-CUS-19)."
-                  : "This customer was loaded without an email. Adding one gives them a sign-in and sends a welcome email; they verify it and set a password."}
+                  ? "The email is a contact, not the sign-in, so the customer stays signed in. A welcome email goes to the new address (ADM-CUS-19)."
+                  : "This customer has no email. Adding one gives Priveo a contact and a way to send the MPIN reset code. A welcome email goes to it."}
                 submitLabel={c.email ? "Update email" : "Add email"} busy={save.isPending} disabled={!ok}
                 onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}/email`, method: "PATCH", body: { email: email.trim() } })}>
       <Field label={c.email ? "New email" : "Email"} hint={c.email ? `Now ${c.email}` : "No email yet."}>

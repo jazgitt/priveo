@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import 'account/account_screen.dart';
+import 'account/profile_screens.dart' show ChangeMpinScreen;
 import 'calendar/calendar_screen.dart';
 import 'history/history_screen.dart';
 import 'notifications/notifications_screen.dart';
@@ -14,6 +15,11 @@ export 'calendar/calendar_screen.dart' show CalendarScreen;
 /// The tabs use [CalendarScreen] and [AccountScreen] directly. The screens
 /// also push each other with the Navigator, so they work without these.
 final List<GoRoute> routes = [
+  // The first screen after signing in with the MPIN the admin gave.
+  GoRoute(
+    path: 'set-mpin',
+    builder: (_, _) => const ChangeMpinScreen(forced: true),
+  ),
   GoRoute(
     path: 'visit/:id',
     builder: (_, state) =>

@@ -791,6 +791,7 @@ void main() {
 
   test('routes list the slice pages', () {
     expect(customer.routes.map((r) => r.path), [
+      'set-mpin',
       'visit/:id',
       'history',
       'vehicles',

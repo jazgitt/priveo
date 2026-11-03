@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
@@ -16,9 +17,9 @@ void openEditProfile(BuildContext context) => Navigator.of(
   context,
 ).push(MaterialPageRoute<void>(builder: (_) => const EditProfileScreen()));
 
-void openChangePassword(BuildContext context) => Navigator.of(
+void openChangeMpin(BuildContext context) => Navigator.of(
   context,
-).push(MaterialPageRoute<void>(builder: (_) => const ChangePasswordScreen()));
+).push(MaterialPageRoute<void>(builder: (_) => const ChangeMpinScreen()));
 
 String _failureText(Object e) =>
     e is ApiFailure && e.message != null ? e.message! : AccountStrings.uploadFailed;
@@ -318,18 +319,22 @@ class _ChangeEmailScreenState extends ConsumerState<ChangeEmailScreen> {
   }
 }
 
-/// Change password. The other devices are signed out by the API.
-class ChangePasswordScreen extends ConsumerStatefulWidget {
-  const ChangePasswordScreen({super.key});
+/// Change MPIN. The other devices are signed out by the API. With [forced] it
+/// is the first screen after signing in with the MPIN the admin gave: there is
+/// no way back, and Home opens once the MPIN is changed.
+class ChangeMpinScreen extends ConsumerStatefulWidget {
+  const ChangeMpinScreen({super.key, this.forced = false});
+
+  final bool forced;
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() =>
-      _ChangePasswordScreenState();
+  ConsumerState<ChangeMpinScreen> createState() => _ChangeMpinScreenState();
 }
 
-class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
+class _ChangeMpinScreenState extends ConsumerState<ChangeMpinScreen> {
   final _current = TextEditingController();
   final _next = TextEditingController();
+  final _confirm = TextEditingController();
   bool _busy = false;
   String? _error;
 
@@ -337,15 +342,18 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   void dispose() {
     _current.dispose();
     _next.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    final pw = _next.text;
-    if (pw.length < 8 ||
-        !RegExp(r'[A-Za-z]').hasMatch(pw) ||
-        !RegExp(r'\d').hasMatch(pw)) {
-      setState(() => _error = AccountStrings.passwordRule);
+    final mpin = _next.text;
+    if (!RegExp(r'^\d{6}$').hasMatch(mpin)) {
+      setState(() => _error = AccountStrings.mpinRule);
+      return;
+    }
+    if (mpin != _confirm.text) {
+      setState(() => _error = AccountStrings.mpinsDiffer);
       return;
     }
     setState(() {
@@ -356,11 +364,16 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     try {
       await ref
           .read(accountRepositoryProvider)
-          .changePassword(current: _current.text, next: pw);
+          .changeMpin(current: _current.text, next: mpin);
       messenger.showSnackBar(
-        const SnackBar(content: Text(AccountStrings.passwordChanged)),
+        const SnackBar(content: Text(AccountStrings.mpinChanged)),
       );
-      if (mounted) Navigator.of(context).pop();
+      if (widget.forced) {
+        // The router opens Home once the session says the MPIN is changed.
+        await ref.read(authControllerProvider.notifier).mpinChanged();
+      } else if (mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -371,30 +384,39 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     }
   }
 
+  Widget _field(String label, TextEditingController c, {String? helper}) =>
+      TextField(
+        controller: c,
+        obscureText: true,
+        enabled: !_busy,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(6),
+        ],
+        decoration: InputDecoration(labelText: label, helperText: helper),
+      );
+
   @override
   Widget build(BuildContext context) => CustPage(
-    title: AccountStrings.changePassword,
+    title: widget.forced
+        ? AccountStrings.chooseMpin
+        : AccountStrings.changeMpin,
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        TextField(
-          controller: _current,
-          obscureText: true,
-          enabled: !_busy,
-          decoration: const InputDecoration(
-            labelText: AccountStrings.currentPassword,
-          ),
+        if (widget.forced) ...[
+          const Text(AccountStrings.chooseMpinIntro),
+          const SizedBox(height: 16),
+        ],
+        _field(
+          widget.forced ? AccountStrings.firstMpin : AccountStrings.currentMpin,
+          _current,
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: _next,
-          obscureText: true,
-          enabled: !_busy,
-          decoration: const InputDecoration(
-            labelText: AccountStrings.newPassword,
-            helperText: AccountStrings.passwordRule,
-          ),
-        ),
+        _field(AccountStrings.newMpin, _next, helper: AccountStrings.mpinRule),
+        const SizedBox(height: 16),
+        _field(AccountStrings.confirmMpin, _confirm),
         _ErrorLine(_error),
         const SizedBox(height: 20),
         PrimaryButton(

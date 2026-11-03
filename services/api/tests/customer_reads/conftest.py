@@ -22,6 +22,7 @@ from app.identity.seed import seed_logins
 from app.identity.service import hash_password
 from app.main import create_app
 from app.platform.db import get_db
+from tests.people import mobile_for, sign_in_customer
 from tests.test_api import auth
 
 PASSWORD = "carwash2026"
@@ -30,13 +31,13 @@ PASSWORD = "carwash2026"
 def add_customer(db, email: str, vehicles: list[tuple[str, str, bool]], society="DLF Meadows"):
     """Adds a customer. Each vehicle is (registration, model, subscribed).
     Returns the vehicle IDs as strings."""
-    login = Login(role="customer", login_id=email, display_name="Asha",
+    login = Login(role="customer", login_id=mobile_for(email), display_name="Asha",
                   password_hash=hash_password(PASSWORD))
     soc = db.query(Society).filter_by(name=society).first() or Society(name=society)
     db.add_all([login, soc])
     db.flush()
     customer = Customer(login_id=login.id, first_name="Asha", last_name="Rao", email=email,
-                        mobile="9000000001", society_id=soc.id, flat="A-101",
+                        mobile=mobile_for(email), society_id=soc.id, flat="A-101",
                         onboarding_confirmed_at=None)
     db.add(customer)
     db.flush()
@@ -81,7 +82,7 @@ def api(settings, engine, repo):
 @pytest.fixture
 def headers_for(api):
     def _headers(email: str):
-        r = api.post("/v1/auth/login", json={"login_id": email, "password": PASSWORD})
+        r = sign_in_customer(api, email, PASSWORD)
         assert r.status_code == 200, r.text
         return auth(r.json()["access_token"])
 

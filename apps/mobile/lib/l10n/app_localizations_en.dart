@@ -18,7 +18,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginTitle => 'Sign in';
 
   @override
-  String get loginIdLabel => 'Email, mobile or user ID';
+  String get loginIdLabel => 'Mobile number or user ID';
+
+  @override
+  String get signInAs => 'Sign in as';
+
+  @override
+  String get roleCustomer => 'Customer';
+
+  @override
+  String get roleCrew => 'Crew';
+
+  @override
+  String get mobileInvalid => 'Enter a 10-digit mobile number.';
 
   @override
   String get passwordLabel => 'Password';
@@ -39,10 +51,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueButton => 'Continue';
 
   @override
-  String get enterId => 'Enter your email, mobile number or user ID.';
+  String get enterId => 'Enter your mobile number or user ID.';
 
   @override
   String get enterPassword => 'Enter your password.';
+
+  @override
+  String get mpinLabel => 'MPIN';
+
+  @override
+  String get showMpin => 'Show MPIN';
+
+  @override
+  String get hideMpin => 'Hide MPIN';
+
+  @override
+  String get enterMpin => 'Enter your MPIN.';
 
   @override
   String get termsNotice =>
@@ -52,18 +76,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeId => 'Change';
 
   @override
-  String get changeEmail => 'Change email';
-
-  @override
-  String get forgotPassword => 'Forgot password?';
+  String get forgotMpin => 'Forgot MPIN?';
 
   @override
   String get codeTitle => 'Enter the code';
 
   @override
-  String codeSentTo(String email) {
-    return 'We sent a 6-digit code to $email. It works for 30 minutes.';
-  }
+  String get codeSentToEmailOnFile =>
+      'We sent a 6-digit code to the email saved for this number. It works for 30 minutes.';
 
   @override
   String get codeLabel => '6-digit code';
@@ -83,23 +103,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resendCode => 'Resend code';
 
   @override
-  String get newPasswordTitle => 'Set a password';
+  String get newMpinTitle => 'Set a new MPIN';
 
   @override
-  String get passwordRule =>
-      'Use at least 8 characters, with a letter and a number.';
+  String get mpinRule => 'Use exactly 6 digits.';
 
   @override
-  String get newPasswordLabel => 'New password';
+  String get newMpinLabel => 'New MPIN';
 
   @override
-  String get confirmPasswordLabel => 'Confirm password';
+  String get confirmMpinLabel => 'Confirm MPIN';
 
   @override
-  String get passwordsDiffer => 'The two passwords do not match.';
+  String get mpinsDiffer => 'The two MPINs do not match.';
 
   @override
-  String get savePassword => 'Save and continue';
+  String get saveMpin => 'Save and continue';
 
   @override
   String get networkError =>

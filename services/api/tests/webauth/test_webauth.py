@@ -140,7 +140,7 @@ def test_portal_use_keeps_the_session_alive(web, db):
 
 def test_the_idle_limit_is_for_the_portal_only(client, db):
     r = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"]})
+        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"], "role": "admin"})
     token = r.json()["access_token"]
     _age_sessions(db, timedelta(hours=2))
     # The admin's phone keeps its 24-hour limit (ADM-ACC-13).
@@ -157,7 +157,7 @@ def test_crew_and_customers_cannot_sign_in_to_the_portal(web):
 
 def test_bearer_tokens_still_work_without_csrf(web, client):
     token = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"]}).json()["access_token"]
+        "login_id": LOGIN_IDS["admin"], "password": PASSWORDS["admin"], "role": "admin"}).json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     plain = TestClient(client.app)  # no cookies at all
     assert plain.get(ADMIN_HOME, headers=headers).status_code == 200
@@ -167,7 +167,7 @@ def test_bearer_tokens_still_work_without_csrf(web, client):
 
 def test_a_crew_token_is_refused_on_admin_routes(web, client):
     crew = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["crew"], "password": PASSWORDS["crew"]}).json()["access_token"]
+        "login_id": LOGIN_IDS["crew"], "password": PASSWORDS["crew"], "role": "crew"}).json()["access_token"]
     r = web.get(ADMIN_HOME, headers={"Authorization": f"Bearer {crew}"})
     assert r.status_code == 403
     r = web.get(ME, headers={"Authorization": f"Bearer {crew}"})
@@ -176,7 +176,7 @@ def test_a_crew_token_is_refused_on_admin_routes(web, client):
 
 def test_a_crew_token_in_the_cookie_is_refused_too(web, client):
     crew = client.post("/v1/auth/login", json={
-        "login_id": LOGIN_IDS["crew"], "password": PASSWORDS["crew"]}).json()["access_token"]
+        "login_id": LOGIN_IDS["crew"], "password": PASSWORDS["crew"], "role": "crew"}).json()["access_token"]
     web.cookies.set("priveo_session", crew)
     assert web.get(ADMIN_HOME).status_code == 403
 

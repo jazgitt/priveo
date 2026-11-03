@@ -22,7 +22,8 @@ def run_suite(call, data, password, admin_password, selected=None):
         return response
 
     def login(login_id, secret, role):
-        body = request("/v1/auth/login", body={"login_id": login_id, "password": secret})
+        body = request("/v1/auth/login",
+                       body={"login_id": login_id, "password": secret, "role": role})
         assert body["role"] == role, f"Wrong role for {login_id}"
         return body["access_token"]
 
@@ -31,9 +32,11 @@ def run_suite(call, data, password, admin_password, selected=None):
         raise AssertionError("Manifest contains none of the requested scenarios.")
     for row in scenarios:
         if row.get("first_sign_in"):
-            # No password yet: the first step must ask for the emailed code.
-            body = request("/v1/auth/start", body={"login_id": row["customer_login"]})
-            assert body["next"] == "code", row["id"]
+            # Never signed in: the default MPIN (last 6 digits) works but must be changed.
+            body = request("/v1/auth/login", body={
+                "login_id": row["customer_login"], "password": row["customer_login"][-6:],
+                "role": "customer"})
+            assert body["must_change_mpin"] is True, row["id"]
             results.append({"scenario": row["id"], "status": "passed"})
             continue
         token = login(row["customer_login"], password, "customer")

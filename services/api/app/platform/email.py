@@ -22,13 +22,13 @@ log = logging.getLogger("priveo.email")
 @dataclass(frozen=True)
 class SentEmail:
     to: str
-    purpose: str  # "sign_in_code" | "password_reset_code" | "welcome"
+    purpose: str  # "mpin_reset_code" | "email_change_code" | "welcome"
     code: str | None = None
 
 
 class EmailSender(Protocol):
     def send_code(self, to: str, code: str, purpose: str) -> None:
-        """Emails a 6-digit code (AUTH-03, AUTH-16)."""
+        """Emails a 6-digit code (AUTH-05, AUTH-16)."""
         ...
 
     def send_welcome(self, to: str, first_name: str) -> None:
@@ -66,17 +66,17 @@ _SIGN_OFF = "The Priveo team"
 
 
 def code_message(code: str, purpose: str) -> tuple[str, str, str]:
-    """(subject, text, html) for a verification or password reset code
-    (AUTH-03, AUTH-05, AUTH-16). The code is valid for 30 minutes."""
-    if purpose == "password_reset_code":
-        subject = "Your Priveo password reset code"
-        lead = "Use this code to set a new password for your Priveo account."
+    """(subject, text, html) for an MPIN reset code or an email change code
+    (AUTH-05, AUTH-16). The code is valid for 30 minutes."""
+    if purpose == "mpin_reset_code":
+        subject = "Your Priveo MPIN reset code"
+        lead = "Use this code to set a new MPIN for your Priveo account."
     elif purpose == "email_change_code":
         subject = "Confirm your new Priveo email"
         lead = "Use this code to confirm this email address for your Priveo account."
     else:
         subject = "Your Priveo verification code"
-        lead = "Use this code to verify your email and sign in to Priveo."
+        lead = "Use this code to verify your email for Priveo."
     tail = ("The code is valid for 30 minutes. If you did not ask for it, "
             "you can ignore this email.")
     text = f"{lead}\n\nYour code: {code}\n\n{tail}\n\n{_SIGN_OFF}\n"
@@ -88,12 +88,13 @@ def code_message(code: str, purpose: str) -> tuple[str, str, str]:
 
 def welcome_message(first_name: str) -> tuple[str, str, str]:
     """(subject, text, html) for the welcome email (ADM-CUS-04). It carries no
-    code and no password."""
+    code and no MPIN."""
     name = first_name.strip() or "there"
     subject = "Welcome to Priveo"
     lines = [f"Hello {name},", "Your Priveo account is ready.",
-             "Open the Priveo app and sign in with this email address. "
-             "We will send you a code to verify it, and you then set your password.",
+             "Open the Priveo app and sign in with your mobile number. "
+             "Your first MPIN is the last 6 digits of that number. "
+             "You will be asked to choose your own MPIN right away.",
              _SIGN_OFF]
     text = "\n\n".join(lines) + "\n"
     body = "".join(f"<p>{html.escape(line)}</p>" for line in lines)

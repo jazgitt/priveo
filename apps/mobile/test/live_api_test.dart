@@ -14,12 +14,18 @@ import 'package:priveo/features/auth/data/auth_repository.dart';
 const _url = String.fromEnvironment('LIVE_API_URL');
 const _password = String.fromEnvironment('LIVE_PASSWORD');
 const _passwords = {
-  'customer@priveo.test':
+  '9000000001':
       String.fromEnvironment('LIVE_CUSTOMER_PASSWORD', defaultValue: _password),
   '9000000002':
       String.fromEnvironment('LIVE_CREW_PASSWORD', defaultValue: _password),
   'priveopapa':
       String.fromEnvironment('LIVE_ADMIN_PASSWORD', defaultValue: _password),
+};
+
+const _roles = {
+  '9000000001': 'customer',
+  '9000000002': 'crew',
+  'priveopapa': 'admin',
 };
 
 void main() {
@@ -34,21 +40,21 @@ void main() {
     final auth = ApiAuthRepository(api);
 
     Future<Session> signIn(String id) async {
-      final s = await auth.login(id, _passwords[id]!);
+      final s = await auth.login(id, _passwords[id]!, _roles[id]!);
       token = s.accessToken;
       return s;
     }
 
     test('wrong password gives the API message', () async {
       await expectLater(
-        auth.login('priveopapa', 'definitely-wrong'),
+        auth.login('priveopapa', 'definitely-wrong', 'admin'),
         throwsA(isA<ApiFailure>().having(
             (e) => e.message, 'message', 'The ID or password is not correct.')),
       );
     });
 
     test('customer', () async {
-      expect((await signIn('customer@priveo.test')).role, Role.customer);
+      expect((await signIn('9000000001')).role, Role.customer);
       final h = await api.customerHome();
       expect(h.quickActions, hasLength(4));
     });
@@ -64,7 +70,7 @@ void main() {
     });
 
     test('a role cannot read another role home', () async {
-      await signIn('customer@priveo.test');
+      await signIn('9000000001');
       await expectLater(
         api.adminHome(),
         throwsA(isA<ApiFailure>().having((e) => e.statusCode, 'status', 403)),

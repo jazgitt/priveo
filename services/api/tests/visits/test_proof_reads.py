@@ -43,8 +43,9 @@ def client(settings, engine, store, monkeypatch) -> TestClient:
     return TestClient(app)
 
 
-def _login(client, login_id):
-    r = client.post("/v1/auth/login", json={"login_id": login_id, "password": PASSWORD})
+def _login(client, login_id, role="crew"):
+    r = client.post("/v1/auth/login", json={
+        "login_id": login_id, "password": PASSWORD, "role": role})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
@@ -56,10 +57,10 @@ def crew_headers(client, make_crew):
 
 @pytest.fixture
 def owner_headers(client, db):
-    login = db.query(Login).filter_by(login_id="owner@priveo.test").one()
+    login = db.query(Login).filter_by(login_id="9123456789", role="customer").one()
     login.password_hash = hash_password(PASSWORD)
     db.commit()
-    return _login(client, "owner@priveo.test")
+    return _login(client, "9123456789", "customer")
 
 
 def finish_job(client, headers, jid):
@@ -176,10 +177,10 @@ def test_another_customers_visit_proof_is_not_readable(
         client, make_crew, crew_headers, new_visit, db):
     ravi = make_crew("9000000010", "Ravi")
     visit, _ = new_visit(assigned=ravi)
-    db.add(Login(role="customer", login_id="other@priveo.test", display_name="Other",
+    db.add(Login(role="customer", login_id="9000000099", display_name="Other",
                  password_hash=hash_password(PASSWORD)))
     db.commit()
-    headers = _login(client, "other@priveo.test")
+    headers = _login(client, "9000000099", "customer")
     # The login has no customer record, so it reads as not set up.
     assert client.get(f"/v1/customer/visits/{visit.id}", headers=headers).status_code == 404
 
@@ -190,7 +191,7 @@ def test_vehicle_photo_shows_on_the_crew_card_and_customer_vehicle(
     _, (job,) = new_visit(assigned=ravi)
     headers = crew_headers(ravi)
     vehicle = world.vehicles[0]
-    owner = db.query(Login).filter_by(login_id="owner@priveo.test").one()
+    owner = db.query(Login).filter_by(login_id="9123456789", role="customer").one()
     key = f"vehicle/{vehicle.id}/photo1"
     db.add(MediaUpload(owner_login_id=owner.id, purpose="proof", kind="photo",
                        content_type="image/jpeg", declared_size_bytes=4, object_key=key,

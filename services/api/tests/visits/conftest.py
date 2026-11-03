@@ -35,7 +35,7 @@ def world(db: Session) -> World:
     society = Society(name="Green Meadows")
     db.add(society)
     db.flush()
-    owner = Login(role="customer", login_id="owner@priveo.test", display_name="Secret Name")
+    owner = Login(role="customer", login_id="9123456789", display_name="Secret Name")
     db.add(owner)
     db.flush()
     customer = Customer(login_id=owner.id, first_name="Secret", last_name="Name",
@@ -99,7 +99,8 @@ def signin(crew_client: TestClient, db: Session):
     def go(member: SchedulingCrew) -> dict[str, str]:
         login = db.get(Login, member.login_id)
         r = crew_client.post("/v1/auth/login",
-                             json={"login_id": login.login_id, "password": PASSWORD})
+                             json={"login_id": login.login_id, "password": PASSWORD,
+                                  "role": login.role})
         assert r.status_code == 200, r.text
         return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

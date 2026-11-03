@@ -553,7 +553,7 @@ class CrewService:
                 )
             mate_sc = self._member_to_pair(body.paired_member_id, society.id)
         # A mobile number is one login only (ADM-CRW-06, CRW-ACC-10).
-        if self._db.scalar(select(Login.id).where(Login.login_id == mobile)) is not None:
+        if self._db.scalar(select(Login.id).where(Login.login_id == mobile, Login.role == "crew")) is not None:
             raise ApiError(
                 "mobile_in_use",
                 "This mobile number already belongs to a login.",
@@ -609,7 +609,7 @@ class CrewService:
                 raise _problem(
                     "The mobile number must have 10 digits.", mobile="Use a 10-digit mobile number."
                 )
-            if self._db.scalar(select(Login.id).where(Login.login_id == mobile)) is not None:
+            if self._db.scalar(select(Login.id).where(Login.login_id == mobile, Login.role == "crew")) is not None:
                 raise ApiError(
                     "mobile_in_use",
                     "This mobile number already belongs to a login.",

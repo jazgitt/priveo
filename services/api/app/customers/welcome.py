@@ -13,7 +13,7 @@ log = logging.getLogger("priveo.email")
 def send_welcome(db: Session, customer: Customer, *, settings: Settings | None = None,
                  sender: EmailSender | None = None) -> bool:
     """Emails the customer that the account is ready. It holds no code and no
-    password. A failure never blocks creating the customer: it returns False
+    MPIN. A failure never blocks creating the customer: it returns False
     and the admin can try again."""
     if not customer.email:
         return False

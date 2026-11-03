@@ -100,11 +100,12 @@ def test_numbers_count_up_and_newest_is_first(client, customer):
 
 def test_a_customer_sees_only_their_own_complaints(client, customer, db):
     c = raise_complaint(client, customer).json()
-    db.add(Login(role="customer", login_id="nobody@example.com", display_name="Nobody",
+    db.add(Login(role="customer", login_id="9000000201", display_name="Nobody",
                  password_hash=hash_password("pw-nobody1")))
     db.commit()
     other = auth(client.post("/v1/auth/login", json={
-        "login_id": "nobody@example.com", "password": "pw-nobody1"}).json()["access_token"])
+        "login_id": "9000000201", "password": "pw-nobody1",
+        "role": "customer"}).json()["access_token"])
     # No customer record behind that login.
     assert client.get("/v1/customer/complaints", headers=other).status_code == 404
     assert client.get(f"/v1/customer/complaints/{c['id']}", headers=other).status_code == 404

@@ -24,10 +24,14 @@ def bearer_token(authorization: str | None) -> str | None:
     return authorization[7:].strip()
 
 
-def require_role(role: str):
+def require_role(role: str, *, allow_mpin_change: bool = False):
     """The signed-in person, when they hold `role`. A bearer token (the mobile
     app) or the portal's session cookie both work. A request that changes data
-    and comes by cookie must also carry the matching CSRF header."""
+    and comes by cookie must also carry the matching CSRF header.
+
+    A customer who still has the MPIN the admin gave can use nothing until
+    they choose their own: every customer endpoint refuses them, except the
+    one that changes the MPIN (`allow_mpin_change=True`)."""
 
     def dependency(
         request: Request,
@@ -47,6 +51,8 @@ def require_role(role: str):
             check_csrf(settings, request, user.session_id)
         if user.role != role:
             raise ApiError("forbidden", "You cannot open this.", 403)
+        if user.must_change_mpin and role == "customer" and not allow_mpin_change:
+            raise ApiError("mpin_change_required", "Choose a new MPIN to continue.", 403)
         return user
 
     return dependency

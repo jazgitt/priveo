@@ -14,6 +14,7 @@ def sign_in(client, role, password=None):
     return client.post("/v1/auth/login", json={
         "login_id": LOGIN_IDS[role],
         "password": PASSWORDS[role] if password is None else password,
+        "role": role,
     })
 
 
@@ -58,8 +59,8 @@ def test_login_and_home(client, role):
     assert r.status_code == 200
 
 
-def test_login_id_decides_the_role():
-    assert role_for("someone@example.com") == "customer"
+def test_role_for_reads_the_shape_of_the_id():
+    # Only the web portal uses this, to refuse IDs that are not an admin's.
     assert role_for("9000000002") == "crew"
     assert role_for("priveopapa") == "admin"
     assert role_for("900000000") == "admin"  # nine digits is not a mobile number
@@ -67,7 +68,7 @@ def test_login_id_decides_the_role():
 
 def test_login_id_ignores_case_and_spaces(client):
     r = client.post("/v1/auth/login", json={
-        "login_id": "  PriveoPapa ", "password": PASSWORDS["admin"]})
+        "login_id": "  PriveoPapa ", "password": PASSWORDS["admin"], "role": "admin"})
     assert r.status_code == 200
 
 
@@ -80,7 +81,7 @@ def test_wrong_password_returns_envelope(client):
 
 
 def test_unknown_login_looks_like_a_wrong_password(client):
-    r = client.post("/v1/auth/login", json={"login_id": "nobody", "password": "x"})
+    r = client.post("/v1/auth/login", json={"login_id": "nobody", "password": "x", "role": "admin"})
     assert r.status_code == 401 and r.json()["code"] == "invalid_credentials"
 
 

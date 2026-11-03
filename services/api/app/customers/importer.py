@@ -18,9 +18,9 @@ from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.customers.logins import ensure_login, mobile_taken
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
 from app.directory.models import Society
-from app.identity.models import Login
 from app.platform.clock import today_ist
 
 PLACEHOLDER_SOCIETY = "To be confirmed"
@@ -194,22 +194,20 @@ class _Importer:
             if not name or mobile is None:
                 self.error(sheet, ref, "the name or the 10-digit phone number is missing")
                 return None
-            if self.db.scalar(select(Login).where(Login.login_id == email)) is not None:
-                self.error(sheet, ref, "the email already belongs to another login")
+            if mobile_taken(self.db, mobile):
+                self.error(sheet, ref, "the phone number already belongs to another customer")
                 return None
             first, last = split_name(name)
             if not last:
                 self.warn(sheet, ref, "the name is one word, so the last name is empty")
-            # No password yet: the customer sets one at first sign-in (AUTH-03).
-            login = Login(role="customer", login_id=email, display_name=name)
-            self.db.add(login)
-            self.db.flush()
             customer = Customer(
-                login_id=login.id, first_name=first, last_name=last, email=email,
+                first_name=first, last_name=last, email=email,
                 mobile=mobile, society_id=self._society(row).id,
                 flat=_text(row.get("flat no.")), source="migration")
             self.db.add(customer)
             self.db.flush()
+            # The sign-in is the mobile number and the first MPIN (its last 6 digits).
+            ensure_login(self.db, customer)
             self.report.customers_created += 1
         self.customers[email] = customer
         return customer

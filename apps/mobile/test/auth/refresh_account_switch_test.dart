@@ -16,7 +16,7 @@ class _Repository extends FakeAuthRepository {
   @override
   Future<Session> refresh(String refreshToken) => pending.future;
   @override
-  Future<Session> login(String loginId, String password) async => b;
+  Future<Session> login(String loginId, String password, String role) async => b;
 }
 
 void main() {
@@ -33,7 +33,7 @@ void main() {
       await container.read(authControllerProvider.future);
       final controller = container.read(authControllerProvider.notifier);
       final refreshing = controller.refreshTokens();
-      await controller.login('b', 'password');
+      await controller.login('b', 'password', 'crew');
       if (fail) {
         repo.pending.completeError(StateError('Old refresh expired'));
       } else {

@@ -63,10 +63,11 @@ def test_load_maps_the_sheet(db, society, tmp_path):
     assert report.plans_created == 4
 
     asha = db.scalar(select(Customer).where(Customer.first_name == "Asha"))
-    assert (asha.email, asha.login_id, asha.mobile, asha.flat) == (
-        None, None, "9000000101", "D-27 001")
+    assert (asha.email, asha.mobile, asha.flat) == (None, "9000000101", "D-27 001")
+    login = db.get(Login, asha.login_id)
+    assert (login.role, login.login_id, login.must_change_mpin) == ("customer", "9000000101", True)
     assert asha.society_id == society.id and asha.source == "migration"
-    assert db.scalar(select(func.count()).select_from(Login)) == 0
+    assert db.scalar(select(func.count()).select_from(Login)) == 3
     rakesh = db.scalar(select(Customer).where(Customer.last_name == "Khandelwal"))
     assert rakesh.alternate_names == "Utsav"
 

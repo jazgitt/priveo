@@ -93,7 +93,7 @@ def create(client, directory, admin):
 def test_onboard_without_import_and_duplicate_email_opens_existing(client, directory, db):
     admin = auth(login(client, "admin")["access_token"])
     c, body = create(client, directory, admin)
-    assert c["welcome_sent"] and not c["password_set"] and not c["onboarding_confirmed"]
+    assert c["welcome_sent"] and not c["mpin_changed"] and not c["onboarding_confirmed"]
     v = c["vehicles"][0]
     assert v["subscription"]["status"] == "Activating" and v["payments"][0]["status"] == "Due"
     assert v["photo_url"] and v["society"] == "Second society"
@@ -103,7 +103,7 @@ def test_onboard_without_import_and_duplicate_email_opens_existing(client, direc
     listed = client.get("/v1/admin/customers?q=asha%20rao", headers=admin)
     assert listed.status_code == 200
     row = next(r for r in listed.json() if r["id"] == c["id"])
-    assert row["flat"] == "A-12" and not row["password_set"] and not row["email_verified"]
+    assert row["flat"] == "A-12" and not row["mpin_changed"] and not row["email_verified"]
     assert row["vehicles"] == [{"id": v["id"], "registration": v["registration"],
                                 "status": "Activating"}]
 
@@ -141,25 +141,88 @@ def test_customer_cannot_use_an_admins_upload(client, directory):
     assert client.post("/v1/admin/customers", headers=customer, json={}).status_code == 403
 
 
-def test_email_correction_invalidates_sessions_and_pending_codes(client, directory, db):
+def test_email_correction_changes_only_the_contact(client, directory, db):
     admin = auth(login(client, "admin")["access_token"])
     old = login(client, "customer")
     c = db.scalar(select(Customer).where(Customer.email == "customer@priveo.test"))
     r = client.patch(
         f"/v1/admin/customers/{c.id}/email", headers=admin, json={"email": "corrected@example.com"}
     )
-    assert r.status_code == 200 and r.json()["welcome_sent"]
-    assert client.get("/v1/customer/home", headers=auth(old["access_token"])).status_code == 401
-    assert (
-        client.post("/v1/auth/start", json={"login_id": "corrected@example.com"}).status_code == 200
-    )
-    assert (
-        client.post(
-            "/v1/auth/login", json={"login_id": "corrected@example.com", "password": "pw-customer1"}
-        ).status_code
-        == 401
-    )
+    assert r.status_code == 200
+    shown = client.get(f"/v1/admin/customers/{c.id}", headers=admin)
+    assert shown.json()["email"] == "corrected@example.com"
+    # The email is a contact only: the sign-in and the phone stay as they were.
+    assert client.get("/v1/customer/home", headers=auth(old["access_token"])).status_code == 200
+    assert client.post("/v1/auth/login", json={
+        "login_id": c.mobile, "password": "483920", "role": "customer"}).status_code == 200
+    assert client.post("/v1/auth/login", json={
+        "login_id": "corrected@example.com", "password": "483920",
+        "role": "customer"}).status_code == 401
 
+
+def test_a_new_customer_gets_a_mobile_login_with_the_default_mpin(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    c, body = create(client, directory, admin)
+    assert c["has_login"] is True and c["mpin_changed"] is False
+    first = client.post("/v1/auth/login", json={
+        "login_id": body["mobile"], "password": body["mobile"][-6:], "role": "customer"})
+    assert first.status_code == 200 and first.json()["must_change_mpin"] is True
+
+
+def test_a_customer_can_be_created_without_an_email(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    body = {"first_name": "No", "last_name": "Mail", "mobile": "9876500001",
+            "vehicle": vehicle_body(directory, upload(client, admin))}
+    r = client.post("/v1/admin/customers", headers=admin, json=body)
+    assert r.status_code == 201, r.text
+    assert r.json()["email"] is None and r.json()["has_login"] is True
+    signed = client.post("/v1/auth/login", json={
+        "login_id": "9876500001", "password": "500001", "role": "customer"})
+    assert signed.status_code == 200
+
+
+def test_a_mobile_number_belongs_to_one_customer(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    c, body = create(client, directory, admin)
+    again = {**body, "email": "other@example.com", "first_name": "Other"}
+    r = client.post("/v1/admin/customers", headers=admin, json=again)
+    assert r.status_code == 409 and r.json()["code"] == "mobile_in_use"
+    # Editing another customer to this number is refused the same way.
+    other = db.scalar(select(Customer).where(Customer.email == "customer@priveo.test"))
+    edit = client.patch(f"/v1/admin/customers/{other.id}", headers=admin, json={
+        "first_name": "Cus", "last_name": "Tomer", "mobile": body["mobile"], "flat": "A1",
+        "address_line1": "", "address_line2": ""})
+    assert edit.status_code == 409 and edit.json()["code"] == "mobile_in_use"
+
+
+def test_changing_the_mobile_moves_the_sign_in_and_signs_out(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    c, body = create(client, directory, admin)
+    edit = client.patch(f"/v1/admin/customers/{c['id']}", headers=admin, json={
+        "first_name": "Asha", "last_name": "Rao", "mobile": "9876500009", "flat": "A-12",
+        "address_line1": "", "address_line2": ""})
+    assert edit.status_code == 200, edit.text
+    assert client.post("/v1/auth/login", json={
+        "login_id": body["mobile"], "password": body["mobile"][-6:],
+        "role": "customer"}).status_code == 401
+    assert client.post("/v1/auth/login", json={
+        "login_id": "9876500009", "password": "500009", "role": "customer"}).status_code == 200
+
+
+def test_the_admin_resets_the_mpin_to_the_default(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    c = db.scalar(select(Customer).where(Customer.email == "customer@priveo.test"))
+    old = login(client, "customer")
+    r = client.post(f"/v1/admin/customers/{c.id}/reset-mpin", headers=admin)
+    assert r.status_code == 200, r.text
+    assert client.get("/v1/customer/home", headers=auth(old["access_token"])).status_code == 401
+    assert client.post("/v1/auth/login", json={
+        "login_id": c.mobile, "password": "483920", "role": "customer"}).status_code == 401
+    again = client.post("/v1/auth/login", json={
+        "login_id": c.mobile, "password": c.mobile[-6:], "role": "customer"})
+    assert again.status_code == 200 and again.json()["must_change_mpin"] is True
+    assert client.post(f"/v1/admin/customers/{c.id}/reset-password", headers=admin
+                       ).status_code in (404, 405)
 
 def test_plan_change_waits_for_renewal_and_society_is_immutable(client, directory, db):
     from app.notifications.models import Notification

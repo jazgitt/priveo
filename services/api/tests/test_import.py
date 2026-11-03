@@ -17,6 +17,7 @@ from app.customers.importer import (
 from app.customers.models import AddonRequest, Customer, Subscription, Vehicle
 from app.directory.models import Society
 from app.identity.models import Login
+from app.identity.service import _password_matches
 
 MASTER = ["Sl. No.", "Customer Name", "Phone Number", "Car Model", "Car Number", "Flat No.",
           "Parking Number", "Customer cutoff time", "Start Date", "Interior Preferred day",
@@ -108,9 +109,10 @@ def test_the_load(db, tmp_path):
     assert asha.source == "migration"
     assert db.get(Society, asha.society_id).name == PLACEHOLDER_SOCIETY
 
-    # The login exists but has no password until the first sign-in.
+    # The sign-in is the mobile number, with the last 6 digits as the first MPIN.
     login = db.get(Login, asha.login_id)
-    assert (login.role, login.login_id, login.password_hash) == ("customer", ASHA, None)
+    assert (login.role, login.login_id, login.must_change_mpin) == ("customer", "9000000101", True)
+    assert _password_matches(login.password_hash, "000101")
 
     cars = {v.source_ref: v for v in db.scalars(select(Vehicle))}
     assert cars["master:1"].registration == "DL13CM0019"
@@ -190,7 +192,7 @@ def test_a_migrated_customer_cannot_sign_in_before_setting_a_password(client, en
     from sqlalchemy.orm import Session
     with Session(engine) as session:
         import_workbook(session, _workbook(tmp_path, ROWS), apply=True)
-    r = client.post("/v1/auth/login", json={"login_id": ASHA, "password": ""})
+    r = client.post("/v1/auth/login", json={"login_id": ASHA, "password": "", "role": "customer"})
     assert r.status_code == 401 and r.json()["code"] == "invalid_credentials"
 
 

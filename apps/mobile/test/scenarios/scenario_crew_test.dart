@@ -28,7 +28,7 @@ void main() {
   Future<void> member(WidgetTester tester) async {
     await openApp(
       tester,
-      await signInApi(tester, crew('R01', 1), scenarioPassword),
+      await signInApi(tester, crew('R01', 1), scenarioPassword, role: 'crew'),
     );
     await untilFound(tester, find.text('TS30TT0001'));
   }
@@ -64,7 +64,7 @@ void main() {
     testWidgets('R02 has an empty day [CRW-SCH-06]', (tester) async {
       await openApp(
         tester,
-        await signInApi(tester, crew('R02', 0), scenarioPassword),
+        await signInApi(tester, crew('R02', 0), scenarioPassword, role: 'crew'),
       );
       await untilFound(tester, find.text('No jobs for this day.'));
       await letTimersFinish(tester);

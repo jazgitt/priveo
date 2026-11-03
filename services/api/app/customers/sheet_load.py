@@ -1,9 +1,10 @@
 """One-time load of the customers on the owner's "Monthly Customer" sheet (3 Nov 2026).
 
 The sheet has one row for each vehicle and no email, so a customer is loaded
-without an email and without a sign-in (the login logic for them is still to
-be decided). It sets up the four plans, creates the zones the sheet names, and
-links each subscription to the plan with the same price.
+without an email. Their sign-in is the mobile number and a first MPIN (the
+last 6 digits of the number), which they must change at the first sign-in.
+It sets up the four plans, creates the zones the sheet names, and links each
+subscription to the plan with the same price.
 
 It can run again: a vehicle is matched by its serial number (`sheet:<no>`) and
 what is already loaded is left as it is.
@@ -20,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.customers.importer import _compact, _rows, _text, date_of, mobile_of, parking_of, split_name, time_of
+from app.customers.logins import ensure_login, mobile_taken
 from app.customers.models import (
     INTERIOR_DAY_CUSTOM,
     WEEKDAYS,
@@ -126,7 +128,7 @@ class _Load:
             self.zones[key] = zone
         return self.zones[key]
 
-    def customer(self, row: dict, ref: str, name: str, mobile: str) -> Customer:
+    def customer(self, row: dict, ref: str, name: str, mobile: str) -> Customer | None:
         key = (name.lower(), mobile)
         alternate = " ".join(_text(row.get("alternate customer names")).split())
         flat = _text(row.get("flat no."))
@@ -139,6 +141,10 @@ class _Load:
                 func.lower(Customer.first_name) == first.lower(),
                 func.lower(Customer.last_name) == last.lower()))
             if customer is None:
+                if mobile_taken(self.db, mobile):
+                    # A mobile number is one customer's sign-in ID: not guessed.
+                    self.error(ref, "the phone number already belongs to another customer")
+                    return None
                 if not last:
                     self.warn(ref, "the name is one word, so the last name is empty")
                 customer = Customer(
@@ -147,6 +153,8 @@ class _Load:
                     alternate_names=alternate or None, source=SOURCE)
                 self.db.add(customer)
                 self.db.flush()
+                # The sign-in is the mobile number and the first MPIN (its last 6 digits).
+                ensure_login(self.db, customer)
                 self.report.customers_created += 1
             else:
                 self.report.customers_kept += 1
@@ -173,6 +181,8 @@ class _Load:
             self.report.vehicles_kept += 1
             return None
         customer = self.customer(row, ref, name, mobile)
+        if customer is None:
+            return None
 
         notes = []
         # Stored as given: no spaces, upper case, no format check.

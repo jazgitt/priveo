@@ -88,55 +88,13 @@
         }
       }
     },
-    "/v1/auth/start": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Start",
-        "description": "Says what to ask for next: the password, or the code just emailed.",
-        "operationId": "start_v1_auth_start_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StartRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StartResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/auth/code": {
       "post": {
         "tags": [
           "auth"
         ],
         "summary": "Send Code",
-        "description": "Emails a customer a new code: \"resend\" and \"forgot password\".",
+        "description": "Emails a customer a code to the email on file: \"resend\" and \"forgot MPIN\".",
         "operationId": "send_code_v1_auth_code_post",
         "requestBody": {
           "content": {
@@ -213,19 +171,19 @@
         }
       }
     },
-    "/v1/auth/password": {
+    "/v1/auth/mpin": {
       "post": {
         "tags": [
           "auth"
         ],
-        "summary": "Set Password",
-        "description": "Sets the password after a correct code and signs the customer in.",
-        "operationId": "set_password_v1_auth_password_post",
+        "summary": "Set Mpin",
+        "description": "Sets a new MPIN after a correct code and signs the customer in.",
+        "operationId": "set_mpin_v1_auth_mpin_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetPasswordRequest"
+                "$ref": "#/components/schemas/SetMpinRequest"
               }
             }
           },
@@ -711,14 +669,15 @@
         }
       }
     },
-    "/v1/customer/password": {
+    "/v1/customer/mpin": {
       "post": {
         "tags": [
           "customer",
           "customer"
         ],
-        "summary": "Change Password",
-        "operationId": "change_password_v1_customer_password_post",
+        "summary": "Change Mpin",
+        "description": "Changes the MPIN. It works while the customer still has the MPIN the\nadmin gave; every other customer endpoint refuses until it is changed.",
+        "operationId": "change_mpin_v1_customer_mpin_post",
         "parameters": [
           {
             "name": "authorization",
@@ -742,7 +701,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AccountPasswordChange"
+                "$ref": "#/components/schemas/AccountMpinChange"
               }
             }
           }
@@ -1967,13 +1926,14 @@
         }
       }
     },
-    "/v1/admin/customers/{customer_id}/reset-password": {
+    "/v1/admin/customers/{customer_id}/reset-mpin": {
       "post": {
         "tags": [
           "customer-administration"
         ],
-        "summary": "Reset Password",
-        "operationId": "reset_password_v1_admin_customers__customer_id__reset_password_post",
+        "summary": "Reset Mpin Route",
+        "description": "Gives the customer the first MPIN again (the last 6 digits of the mobile\nnumber). They must choose a new one at the next sign-in.",
+        "operationId": "reset_mpin_route_v1_admin_customers__customer_id__reset_mpin_post",
         "parameters": [
           {
             "name": "customer_id",
@@ -19027,23 +18987,23 @@
         ],
         "title": "AccountEmailCodeSent"
       },
-      "AccountPasswordChange": {
+      "AccountMpinChange": {
         "properties": {
-          "current_password": {
+          "current_mpin": {
             "type": "string",
-            "title": "Current Password"
+            "title": "Current Mpin"
           },
-          "new_password": {
+          "new_mpin": {
             "type": "string",
-            "title": "New Password"
+            "title": "New Mpin"
           }
         },
         "type": "object",
         "required": [
-          "current_password",
-          "new_password"
+          "current_mpin",
+          "new_mpin"
         ],
-        "title": "AccountPasswordChange"
+        "title": "AccountMpinChange"
       },
       "AccountProfileEdit": {
         "properties": {
@@ -19079,7 +19039,14 @@
             "title": "Last Name"
           },
           "email": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "mobile": {
@@ -19126,7 +19093,6 @@
         "required": [
           "first_name",
           "last_name",
-          "email",
           "mobile",
           "society",
           "flat",
@@ -21835,14 +21801,14 @@
       },
       "CodeRequest": {
         "properties": {
-          "email": {
+          "mobile": {
             "type": "string",
-            "title": "Email"
+            "title": "Mobile"
           }
         },
         "type": "object",
         "required": [
-          "email"
+          "mobile"
         ],
         "title": "CodeRequest"
       },
@@ -21861,14 +21827,14 @@
       },
       "CodeVerified": {
         "properties": {
-          "password_token": {
+          "mpin_token": {
             "type": "string",
-            "title": "Password Token"
+            "title": "Mpin Token"
           }
         },
         "type": "object",
         "required": [
-          "password_token"
+          "mpin_token"
         ],
         "title": "CodeVerified"
       },
@@ -26307,6 +26273,17 @@
           "password": {
             "type": "string",
             "title": "Password"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
           }
         },
         "type": "object",
@@ -26337,6 +26314,11 @@
           "expires_in": {
             "type": "integer",
             "title": "Expires In"
+          },
+          "must_change_mpin": {
+            "type": "boolean",
+            "title": "Must Change Mpin",
+            "default": false
           }
         },
         "type": "object",
@@ -28666,23 +28648,23 @@
         ],
         "title": "SessionDevice"
       },
-      "SetPasswordRequest": {
+      "SetMpinRequest": {
         "properties": {
-          "password_token": {
+          "mpin_token": {
             "type": "string",
-            "title": "Password Token"
+            "title": "Mpin Token"
           },
-          "password": {
+          "mpin": {
             "type": "string",
-            "title": "Password"
+            "title": "Mpin"
           }
         },
         "type": "object",
         "required": [
-          "password_token",
-          "password"
+          "mpin_token",
+          "mpin"
         ],
-        "title": "SetPasswordRequest"
+        "title": "SetMpinRequest"
       },
       "SkipIn": {
         "properties": {
@@ -28849,37 +28831,6 @@
         ],
         "title": "StandaloneIn",
         "description": "Owner decision: an owned no-subscription vehicle uses the Spa rules."
-      },
-      "StartRequest": {
-        "properties": {
-          "login_id": {
-            "type": "string",
-            "title": "Login Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "login_id"
-        ],
-        "title": "StartRequest"
-      },
-      "StartResult": {
-        "properties": {
-          "next": {
-            "type": "string",
-            "title": "Next"
-          },
-          "resend_in_seconds": {
-            "type": "integer",
-            "title": "Resend In Seconds"
-          }
-        },
-        "type": "object",
-        "required": [
-          "next",
-          "resend_in_seconds"
-        ],
-        "title": "StartResult"
       },
       "StatusChange": {
         "properties": {
@@ -30829,9 +30780,9 @@
       },
       "VerifyCodeRequest": {
         "properties": {
-          "email": {
+          "mobile": {
             "type": "string",
-            "title": "Email"
+            "title": "Mobile"
           },
           "code": {
             "type": "string",
@@ -30840,7 +30791,7 @@
         },
         "type": "object",
         "required": [
-          "email",
+          "mobile",
           "code"
         ],
         "title": "VerifyCodeRequest"

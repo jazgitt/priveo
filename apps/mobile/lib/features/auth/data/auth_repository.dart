@@ -3,19 +3,19 @@ import '../../../core/auth/session.dart';
 import '../../../core/network/api_failure.dart';
 
 abstract class AuthRepository {
-  /// What to ask for next: the password, or the code just emailed (AUTH-03).
-  Future<StartResult> start(String loginId);
+  /// Emails a customer a code to the email on file ("Forgot MPIN", AUTH-16).
+  /// Returns the seconds until the next resend.
+  Future<int> sendCode(String mobile);
 
-  /// Emails a customer a new code. Returns the seconds until the next resend.
-  Future<int> sendCode(String email);
+  /// Returns the one-time token that lets the customer set a new MPIN.
+  Future<String> verifyCode(String mobile, String code);
 
-  /// Returns the one-time token that lets the customer set a password.
-  Future<String> verifyCode(String email, String code);
+  /// Sets the MPIN after a correct code and signs the customer in.
+  Future<Session> setMpin(String mpinToken, String mpin);
 
-  /// Sets the password after a correct code and signs the customer in.
-  Future<Session> setPassword(String passwordToken, String password);
-
-  Future<Session> login(String loginId, String password);
+  /// [role] is 'customer', 'crew' or 'admin': a customer and a crew member can
+  /// have the same mobile number, so the sign-in says which one it is.
+  Future<Session> login(String loginId, String password, String role);
   Future<Session> refresh(String refreshToken);
   Future<void> logout();
 
@@ -29,27 +29,28 @@ class ApiAuthRepository implements AuthRepository {
   final PriveoApi _api;
 
   @override
-  Future<StartResult> start(String loginId) =>
-      _api.start(StartRequest(loginId: loginId));
+  Future<int> sendCode(String mobile) async =>
+      (await _api.sendCode(CodeRequest(mobile: mobile))).resendInSeconds;
 
   @override
-  Future<int> sendCode(String email) async =>
-      (await _api.sendCode(CodeRequest(email: email))).resendInSeconds;
+  Future<String> verifyCode(String mobile, String code) async =>
+      (await _api.verifyCode(
+        VerifyCodeRequest(mobile: mobile, code: code),
+      )).mpinToken;
 
   @override
-  Future<String> verifyCode(String email, String code) async =>
-      (await _api.verifyCode(VerifyCodeRequest(email: email, code: code)))
-          .passwordToken;
+  Future<Session> setMpin(String mpinToken, String mpin) async =>
+      Session.fromLogin(
+        await _api.setMpin(SetMpinRequest(mpinToken: mpinToken, mpin: mpin)),
+      );
 
   @override
-  Future<Session> setPassword(String passwordToken, String password) async =>
-      Session.fromLogin(await _api.setPassword(SetPasswordRequest(
-          passwordToken: passwordToken, password: password)));
-
-  @override
-  Future<Session> login(String loginId, String password) async =>
-      Session.fromLogin(await _api
-          .login(LoginRequest(loginId: loginId, password: password)));
+  Future<Session> login(String loginId, String password, String role) async =>
+      Session.fromLogin(
+        await _api.login(
+          LoginRequest(loginId: loginId, password: password, role: role),
+        ),
+      );
 
   @override
   Future<Session> refresh(String refreshToken) async => Session.fromLogin(

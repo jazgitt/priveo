@@ -17,7 +17,7 @@ import { Switch } from "@/ui/switch";
 import { CUSTOM_DAY, interiorDays, newVehicle, PARKING_NUMBER_MAX, parkingOk, parkingText, times, uploadCustomerAsset, type VehicleInput } from "./api";
 import { useCatalogue, usePlans, useSocietyList, useZones } from "./dialogs";
 
-const LABELS = { first_name: "First name", last_name: "Last name", email: "Email", mobile: "Mobile number", flat: "Flat" } as const;
+const LABELS = { first_name: "First name", last_name: "Last name", mobile: "Mobile number", email: "Email", flat: "Flat" } as const;
 
 /** Create a customer with their first vehicle (ADM-CUS-01), or add a vehicle (ADM-CUS-05). */
 export function VehicleWizard({ customerId, onClose, onSaved }: {
@@ -76,7 +76,6 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
     onSuccess: (r) => onSaved(customerId ?? r.id),
   });
 
-  // The email is optional: without one the customer has no sign-in yet.
   const emailOk = !person.email.trim() || /^\S+@\S+\.\S+$/.test(person.email.trim());
   const mobileOk = /^\d{10}$/.test(person.mobile);
   const valid = stage === "Customer" ? Boolean(person.first_name.trim() && person.last_name.trim() && emailOk && mobileOk)
@@ -121,11 +120,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
                              value={person[key]} onChange={(e) => setPerson((x) => ({ ...x, [key]: e.target.value }))} />}
             </Field>
           ))}
-          <p className="text-xs text-muted-foreground sm:col-span-2">
-            {person.email.trim()
-              ? "A welcome email goes to this address. It holds no code or password."
-              : "No email: the customer has no sign-in yet. Add an email later from the customer's page."}
-          </p>
+          <p className="text-xs text-muted-foreground sm:col-span-2">The customer signs in with the mobile number. Their first MPIN is its last 6 digits, and they choose their own at the first sign-in. If you give an email, a welcome email goes to it.</p>
         </div>
       )}
 
@@ -247,7 +242,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           <DetailList columns={2} items={[
             ...(!customerId ? [
               { label: "Customer", value: `${person.first_name} ${person.last_name}` },
-              { label: "Email", value: person.email.trim() || "None (no sign-in yet)" },
+              { label: "Email", value: person.email.trim() || "None" },
               { label: "Mobile", value: person.mobile },
               { label: "Flat", value: person.flat },
             ] : []),

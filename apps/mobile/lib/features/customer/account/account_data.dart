@@ -109,10 +109,7 @@ abstract class AccountRepository {
   /// Sends a code to [email]. The old email stays until [verifyEmail].
   Future<void> startEmailChange(String email);
   Future<ProfileDto> verifyEmail(String code);
-  Future<void> changePassword({
-    required String current,
-    required String next,
-  });
+  Future<void> changeMpin({required String current, required String next});
   Future<VehicleAccountDto> vehicleAccount(String vehicleId);
   Future<VehicleAccountDto> editParking(
     String vehicleId, {
@@ -178,14 +175,14 @@ class DioAccountRepository implements AccountRepository {
   );
 
   @override
-  Future<void> changePassword({
+  Future<void> changeMpin({
     required String current,
     required String next,
   }) async {
     try {
       await _dio.post<void>(
-        '/v1/customer/password',
-        data: {'current_password': current, 'new_password': next},
+        '/v1/customer/mpin',
+        data: {'current_mpin': current, 'new_mpin': next},
       );
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);

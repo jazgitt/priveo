@@ -48,6 +48,21 @@ void main() {
       expect(redirectFor('/crew/profile', crewSession), isNull);
       expect(redirectFor('/customer/vehicles', crewSession), '/crew');
     });
+    test('a customer with the first MPIN sees only the choose-MPIN page', () {
+      final first = Session(
+          role: Role.customer,
+          displayName: 'Aarav',
+          accessToken: 'a',
+          refreshToken: 'r',
+          mustChangeMpin: true);
+      expect(redirectFor('/customer', first), '/customer/set-mpin');
+      expect(redirectFor('/customer/vehicles', first), '/customer/set-mpin');
+      expect(redirectFor('/customer/set-mpin', first), isNull);
+      // Once the MPIN is changed the page is no longer open.
+      expect(redirectFor('/customer/set-mpin', first.withMpinChanged()),
+          '/customer');
+      expect(first.withMpinChanged().mustChangeMpin, isFalse);
+    });
     test('the splash is never redirected', () {
       expect(redirectFor('/splash', null), isNull);
     });

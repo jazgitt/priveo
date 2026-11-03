@@ -1,5 +1,5 @@
 """The customer's own account: profile (ACC-01, ACC-06), email change
-(ACC-08), password change, vehicle parking and photo (VEH-01, VEH-04), and
+(ACC-08), MPIN change, vehicle parking and photo (VEH-01, VEH-04), and
 the uploads a customer makes (vehicle photo, complaint photos, RC document).
 """
 import re
@@ -17,12 +17,12 @@ from app.customers.service import _NAME
 from app.directory.models import Society
 from app.identity import tokens
 from app.identity.models import AuthSession, Login
+from app.identity.mpin import mpin_problem
 from app.identity.service import (
     User,
     _password_matches,
     hash_password,
     normalise,
-    password_problem,
 )
 from app.media import service as media
 from app.media.models import STATUS_CONFIRMED, MediaUpload
@@ -41,6 +41,8 @@ from app.platform.errors import ApiError
 
 router = APIRouter(tags=["customer"])
 customer_only = require_role("customer")
+# The one customer endpoint that works while the MPIN is still the one the admin gave.
+customer_mpin_change = require_role("customer", allow_mpin_change=True)
 
 CHANGE_CODE_LIFETIME = timedelta(minutes=30)  # same as AUTH-05
 MAX_WRONG_CHANGE_CODES = 5
@@ -50,7 +52,8 @@ _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 class AccountProfileOut(BaseModel):
     first_name: str
     last_name: str
-    email: str
+    # A contact, not the sign-in. Optional.
+    email: str | None = None
     mobile: str
     society: str
     flat: str
@@ -79,9 +82,9 @@ class AccountEmailCodeSent(BaseModel):
     expires_in_seconds: int
 
 
-class AccountPasswordChange(BaseModel):
-    current_password: str
-    new_password: str
+class AccountMpinChange(BaseModel):
+    current_mpin: str
+    new_mpin: str
 
 
 class AccountVehicleEdit(BaseModel):
@@ -164,11 +167,12 @@ class AccountService:
             errors["first_name"] = "Enter your first name, using letters only."
         if not _NAME.fullmatch(last):
             errors["last_name"] = "Enter your last name, using letters only."
-        if mobile != c.mobile and not re.fullmatch(r"\d{10}", mobile):
-            errors["mobile"] = "Enter a 10-digit mobile number."
+        if mobile != c.mobile:
+            # The mobile number is the sign-in ID: only Priveo changes it.
+            errors["mobile"] = "Ask Priveo to change your mobile number."
         if errors:
             raise ApiError("validation_failed", "Please check the details.", 422, errors)
-        c.first_name, c.last_name, c.mobile = first, last, mobile
+        c.first_name, c.last_name = first, last
         self.db.get(Login, c.login_id).display_name = f"{first} {last}"
         self.db.commit()
         return self.profile(login_id)
@@ -181,8 +185,7 @@ class AccountService:
         if not _EMAIL.fullmatch(new) or len(new) > 254:
             raise ApiError("validation_failed", "Enter a valid email.", 422,
                            {"email": "Enter a valid email."})
-        taken = self.db.scalar(select(Login.id).where(Login.login_id == new)) is not None
-        taken = taken or self.db.scalar(
+        taken = self.db.scalar(
             select(Customer.id).where(Customer.email == new, Customer.id != c.id)) is not None
         if new == c.email or taken:
             raise ApiError("email_in_use", "This email is already in use.", 409,
@@ -222,35 +225,43 @@ class AccountService:
             self.db.commit()
             raise error
         # Someone may have taken the email since the code was sent.
-        if self.db.scalar(select(Login.id).where(Login.login_id == row.new_email)) is not None:
+        if self.db.scalar(select(Customer.id).where(
+                Customer.email == row.new_email, Customer.id != c.id)) is not None:
             row.ended_at = utcnow()
             self.db.commit()
             raise ApiError("email_in_use", "This email is already in use.", 409)
         row.ended_at = utcnow()
         c.email = row.new_email
         c.email_verified_at = utcnow()
-        self.db.get(Login, c.login_id).login_id = row.new_email
         self.db.commit()
         return self.profile(login_id)
 
-    # --- Password ---
+    # --- MPIN ---
 
-    def change_password(self, user: User, body: AccountPasswordChange) -> None:
+    def change_mpin(self, user: User, body: AccountMpinChange) -> None:
+        """Also the first thing a customer does: the MPIN the admin gave has to
+        be replaced before anything else works."""
         login = self.db.get(Login, user.id)
-        if not _password_matches(login.password_hash, body.current_password):
-            raise ApiError("invalid_credentials", "The current password is not correct.", 422,
-                           {"current_password": "The current password is not correct."})
-        problem = password_problem(body.new_password)
+        customer = self.customer(user.id)
+        if not _password_matches(login.password_hash, body.current_mpin):
+            raise ApiError("invalid_credentials", "The current MPIN is not correct.", 422,
+                           {"current_mpin": "The current MPIN is not correct."})
+        problem = mpin_problem(body.new_mpin, customer.mobile)
+        if body.new_mpin == body.current_mpin and problem is None:
+            problem = "Choose an MPIN that is different from the current one."
         if problem:
-            raise ApiError("weak_password", problem, 422, {"new_password": problem})
+            raise ApiError("weak_mpin", problem, 422, {"new_mpin": problem})
         now = utcnow()
-        login.password_hash = hash_password(body.new_password)
+        login.password_hash = hash_password(body.new_mpin)
         login.password_changed_at = now
+        login.must_change_mpin = False
+        if customer.terms_accepted_at is None:
+            customer.terms_accepted_at = now  # AUTH-04
         # Other devices sign out. This one stays signed in.
         self.db.execute(update(AuthSession).where(
             AuthSession.login_id == login.id, AuthSession.ended_at.is_(None),
             AuthSession.id != user.session_id).values(
-                ended_at=now, ended_reason="password_changed"))
+                ended_at=now, ended_reason="mpin_changed"))
         self.db.commit()
 
     # --- Vehicles ---
@@ -382,10 +393,12 @@ def verify_email_change(body: AccountEmailCode, user: User = Depends(customer_on
     return svc.verify_email_change(user.id, body.code)
 
 
-@router.post("/password", status_code=204)
-def change_password(body: AccountPasswordChange, user: User = Depends(customer_only),
-                    svc: AccountService = Depends(get_account_service)):
-    svc.change_password(user, body)
+@router.post("/mpin", status_code=204)
+def change_mpin(body: AccountMpinChange, user: User = Depends(customer_mpin_change),
+                svc: AccountService = Depends(get_account_service)):
+    """Changes the MPIN. It works while the customer still has the MPIN the
+    admin gave; every other customer endpoint refuses until it is changed."""
+    svc.change_mpin(user, body)
 
 
 @router.patch("/vehicles/{vehicle_id}", response_model=AccountVehicleOut)
