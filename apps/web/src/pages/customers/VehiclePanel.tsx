@@ -313,9 +313,12 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
               <ul className="m-0 flex list-none flex-col divide-y rounded-lg border p-0">
                 {history.data.items.map((i) => (
                   <li key={i.visit_id} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm">
-                    <span>
+                    <span className={i.source === "imported" ? "italic" : undefined}>
                       <span className="font-medium">{showDate(i.date)}</span>{" "}
                       <span className="text-muted-foreground">{i.planned.map(serviceName).join(" + ")}</span>
+                      {i.source === "imported" && i.state === "Cancelled" && (
+                        <span className="text-muted-foreground">Skipped{i.reason ? `: ${i.reason}` : ""}</span>
+                      )}
                       {i.missed.map((m) => (
                         <span key={m.service} className="block text-xs text-muted-foreground">
                           {serviceName(m.service)} not done{m.reason ? `: ${m.reason}` : ""}{m.note ? `, ${m.note}` : ""}

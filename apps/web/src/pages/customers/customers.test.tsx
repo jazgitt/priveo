@@ -793,3 +793,21 @@ it("shows the zone and the parking slot together on the vehicle", async () => {
   detail([{ ...car(), zone_id: "z1", zone: "Zone 2" }]);
   expect(await screen.findByText("Zone 2 · B1-17")).toBeInTheDocument();
 });
+
+it("shows days from before the app in italics, with the skip reason, and app visits as normal text", async () => {
+  const counts = { Scheduled: 0, Completed: 2, "Partially Completed": 0, "Not Completed": 0, Rescheduled: 0, Cancelled: 1 };
+  const items = [
+    { visit_id: "a", date: "2026-11-03", state: "Completed", planned: ["Cleaning-External"], delivered: ["Cleaning-External"],
+      missed: [], original_date: null, revised_date: null, source: "live", reason: "" },
+    { visit_id: "legacy-b", date: "2026-10-30", state: "Cancelled", planned: [], delivered: [], missed: [],
+      original_date: null, revised_date: null, source: "imported", reason: "Rain" },
+    { visit_id: "legacy-c", date: "2026-10-29", state: "Completed", planned: ["Cleaning-External", "Cleaning-Internal"],
+      delivered: ["Cleaning-External", "Cleaning-Internal"], missed: [], original_date: null, revised_date: null, source: "imported", reason: "" },
+  ];
+  detail([car()], (path) => (path.includes("/v1/admin/vehicles/v1/service-history") ? reply({ counts, total: 3, items }) : undefined));
+  expect(await screen.findByText("Skipped: Rain")).toBeInTheDocument();
+  expect(screen.getByText("Skipped: Rain").parentElement).toHaveClass("italic");
+  expect(screen.getByText("Exterior + Interior").parentElement).toHaveClass("italic");
+  expect(screen.getByText("Exterior").parentElement).not.toHaveClass("italic");
+  expect(screen.queryByText(/imported/i)).not.toBeInTheDocument();
+});

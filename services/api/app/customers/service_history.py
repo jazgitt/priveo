@@ -9,13 +9,15 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customers.models import Vehicle
+from app.customers.models import LegacyServiceRecord, Vehicle
 from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling.models import Job, Schedule, Visit
 from app.scheduling.outcomes import OUTCOMES, visit_outcomes
+
+LEGACY_SERVICES = {"Exterior": ["Cleaning-External"], "Exterior + Interior": ["Cleaning-External", "Cleaning-Internal"]}
 
 admin = APIRouter(prefix="/v1/admin", tags=["customer-administration"])
 
@@ -52,9 +54,26 @@ def service_history(
                 .where(Job.source_job_id.in_(list(missed_ids)))):
             visit_id = missed_ids[source]
             revised[visit_id] = min(day, revised.get(visit_id, day))
-    shown = [(v, s) for v, s in rows if state is None or outcomes[v.id].outcome == state]
+    # Days from before the app (loaded once from the owner's sheet). A skipped day is Cancelled.
+    legacy = db.scalars(select(LegacyServiceRecord).where(LegacyServiceRecord.vehicle_id == vehicle_id)).all()
+    legacy_state = {r.id: "Completed" if r.outcome == "Completed" else "Cancelled" for r in legacy}
+    for r in legacy:
+        counts[legacy_state[r.id]] += 1
+    merged = [(v.date, "live", (v, s)) for v, s in rows if state is None or outcomes[v.id].outcome == state]
+    merged += [(r.service_date, "legacy", r) for r in legacy if state is None or legacy_state[r.id] == state]
+    merged.sort(key=lambda m: m[0], reverse=True)
     items = []
-    for v, schedule_status in shown[offset:offset + limit]:
+    for _day, kind, entry in merged[offset:offset + limit]:
+        if kind == "legacy":
+            done = LEGACY_SERVICES.get(entry.services, [])
+            items.append({
+                "visit_id": f"legacy-{entry.id}", "date": entry.service_date.isoformat(),
+                "state": legacy_state[entry.id], "planned": done, "delivered": done, "missed": [],
+                "original_date": None, "revised_date": None, "schedule_status": None,
+                "source": "imported", "reason": entry.skip_reason,
+            })
+            continue
+        v, schedule_status = entry
         o = outcomes[v.id]
         items.append({
             "visit_id": str(v.id), "date": v.date.isoformat(), "state": o.outcome,
@@ -64,5 +83,6 @@ def service_history(
             "original_date": v.date.isoformat() if v.id in revised else None,
             "revised_date": revised[v.id].isoformat() if v.id in revised else None,
             "schedule_status": schedule_status,
+            "source": "live", "reason": "",
         })
-    return {"counts": counts, "total": len(shown), "items": items}
+    return {"counts": counts, "total": len(merged), "items": items}

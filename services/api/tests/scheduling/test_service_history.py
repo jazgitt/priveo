@@ -107,3 +107,32 @@ def test_admin_only_unknown_vehicle_and_no_customer_details(world, api, admin):
     assert api.get(url, headers=crew).status_code == 403
     text = api.get(url, headers=admin).text
     assert "Asha" not in text and "9876543210" not in text
+
+
+def test_days_from_before_the_app_join_the_history_and_a_skip_is_cancelled(world, api, admin):
+    from datetime import date
+
+    from app.customers.models import LegacyServiceRecord
+
+    vehicle, *_ = setup(world, api, admin)
+    world.db.add_all([
+        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 9),
+                            services="Exterior + Interior", outcome="Completed"),
+        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 10),
+                            services="Exterior", outcome="Completed"),
+        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 11),
+                            services="", outcome="Skipped", skip_reason="Rain"),
+    ])
+    world.db.commit()
+    body = history(api, admin, vehicle)
+    assert body["total"] == 10 and body["counts"]["Completed"] == 2 and body["counts"]["Cancelled"] == 1
+    old = by_date(body)
+    assert old["2026-10-09"]["source"] == "imported" and old["2026-10-09"]["state"] == "Completed"
+    assert old["2026-10-09"]["planned"] == ["Cleaning-External", "Cleaning-Internal"]
+    assert old["2026-10-11"]["state"] == "Cancelled" and old["2026-10-11"]["reason"] == "Rain"
+    assert old["2026-10-11"]["planned"] == []
+    assert all(i["source"] == "live" for i in body["items"] if i["date"] >= SUNDAY.isoformat())
+    dates = [i["date"] for i in body["items"]]
+    assert dates == sorted(dates, reverse=True)
+    only = history(api, admin, vehicle, state="Cancelled")
+    assert only["total"] == 1 and only["items"][0]["reason"] == "Rain"

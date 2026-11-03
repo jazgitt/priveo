@@ -70,6 +70,8 @@ export interface HistoryItem {
   visit_id: string; date: string; state: (typeof HISTORY_STATES)[number]; planned: string[]; delivered: string[];
   missed: { service: string; reason: string; note: string; rescheduled: boolean }[];
   original_date: string | null; revised_date: string | null;
+  /** "imported" for a day from before the app (shown in italics); "live" for a visit done through the app. */
+  source?: "live" | "imported"; reason?: string;
 }
 export interface ServiceHistory { counts: Record<(typeof HISTORY_STATES)[number], number>; total: number; items: HistoryItem[] }
 export interface Changes { skips: { id: string; start_date: string }[]; pauses: { id: string; start_date: string; end_date: string }[] }
