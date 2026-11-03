@@ -174,16 +174,16 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
 
       {stage === "Parking" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Zone" optional className="sm:col-span-2" hint={(zones.data ?? []).length === 0 ? "No zones yet. Add them under Site Setup." : undefined}>
+            {(p) => <SelectBox {...p} value={vehicle.zone_id ?? NONE} onChange={(z) => set("zone_id", z === NONE ? null : z)}
+                               choices={[{ value: NONE, label: "No zone" }, ...(zones.data ?? []).map((z) => ({ value: z.id, label: z.name }))]} />}
+          </Field>
           <Field label="Basement">
             {(p) => <SelectBox {...p} value={vehicle.parking_basement} onChange={(b) => set("parking_basement", b)}
                                choices={(society?.parking_basements ?? []).map((b) => ({ value: b, label: b }))} />}
           </Field>
           <Field label="Parking number" error={vehicle.parking_number && !/^\d{1,5}$/.test(vehicle.parking_number) ? "Up to 5 digits." : undefined}>
             {(p) => <Input {...p} inputMode="numeric" value={vehicle.parking_number} onChange={(e) => set("parking_number", e.target.value)} />}
-          </Field>
-          <Field label="Zone" optional hint={(zones.data ?? []).length === 0 ? "No zones yet. Add them under Site Setup." : undefined}>
-            {(p) => <SelectBox {...p} value={vehicle.zone_id ?? NONE} onChange={(z) => set("zone_id", z === NONE ? null : z)}
-                               choices={[{ value: NONE, label: "No zone" }, ...(zones.data ?? []).map((z) => ({ value: z.id, label: z.name }))]} />}
           </Field>
         </div>
       )}
