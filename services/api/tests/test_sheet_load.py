@@ -155,3 +155,22 @@ def test_the_deploy_seed_does_not_re_add_the_renamed_starter_plan(db, society, t
     seed_defaults(db, starter_data=True)
     db.commit()
     assert sorted(db.scalars(select(Plan.name))) == before
+
+
+def test_reuse_plans_by_price_keeps_existing_names(db, society, tmp_path):
+    for code, name, price in (("PLN-0001", "Monthly Care -699", 699),
+                              ("PLN-0002", "Monthly Subscription-999", 999),
+                              ("PLN-0003", "Monthly Subscription-1299", 1299)):
+        db.add(Plan(code=code, name=name, monthly_price_rupees=price, includes_interior=True))
+    db.commit()
+    report = load_monthly_customers(db, _sheet(tmp_path), apply=True, reuse_plans_by_price=True)
+    assert report.plans_created == 1 and report.plans_renamed == 0
+    names = set(db.scalars(select(Plan.name)))
+    assert names == {"Monthly Care -699", "Monthly Subscription-999",
+                     "Monthly Subscription-1299", "Special 1K"}
+    # Every subscription points at the plan with its own price.
+    for sub in db.scalars(select(Subscription)):
+        plan = db.get(Plan, sub.plan_id)
+        assert plan is not None and plan.monthly_price_rupees == sub.monthly_price_rupees
+    again = load_monthly_customers(db, _sheet(tmp_path), apply=True, reuse_plans_by_price=True)
+    assert again.plans_created == 0 and again.vehicles_created == 0
