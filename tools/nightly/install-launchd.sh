@@ -3,7 +3,7 @@
 #   install-launchd.sh            install and load
 #   install-launchd.sh --remove   unload and delete
 # Jobs: in.priveo.nightly at 02:00 local time (IST on the owner's Mac); in.priveo.nightly-watchdog at 06:30
-# (only when tools/nightly/watchdog.py exists). The wake at 01:55 needs sudo and is NOT done here:
+# . The wake at 01:55 needs sudo and is NOT done here:
 #   sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00
 set -euo pipefail
 HOME_DIR="${NIGHTLY_HOME:-$HOME/priveo-nightly}"
@@ -48,6 +48,4 @@ fi
 
 mkdir -p "$AGENTS" "$HOME_DIR/logs"
 install_one in.priveo.nightly 2 0 "$HOME_DIR/tools/nightly/run-nightly.sh"
-if [ -f "$HOME_DIR/tools/nightly/watchdog.py" ]; then
-  install_one in.priveo.nightly-watchdog 6 30 /usr/bin/env python3 "$HOME_DIR/tools/nightly/watchdog.py"
-fi
+install_one in.priveo.nightly-watchdog 6 30 /usr/bin/env python3 "$HOME_DIR/tools/nightly/watchdog.py"
