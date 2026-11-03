@@ -208,10 +208,7 @@ class VehicleDetail(VehicleSummary):
     category: str
     parking_basement: str
     parking_number: str
-    # With the zone in front when the vehicle has one, for example "Zone 3 · B2-14".
     parking: str
-    # The vehicle's zone, shown beside the parking (read only for the customer).
-    zone: str = ""
     # Uploaded or Not uploaded (VEH-03). Derived: there is no admin check yet.
     rc_status: str = "Not uploaded"
     monthly_price_rupees: int | None

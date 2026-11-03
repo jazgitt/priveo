@@ -261,7 +261,6 @@ class AccountVehicleOut {
     required this.id,
     required this.parkingBasement,
     required this.parkingNumber,
-    this.zone,
     required this.photoUrl,
     required this.rcStatus,
   });
@@ -269,7 +268,6 @@ class AccountVehicleOut {
   final String id;
   final String parkingBasement;
   final String parkingNumber;
-  final String? zone;
   final String? photoUrl;
   final String rcStatus;
 
@@ -277,7 +275,6 @@ class AccountVehicleOut {
         id: j['id'] as String,
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
-        zone: j['zone'] == null ? null : j['zone'] as String,
         photoUrl: j['photo_url'] == null ? null : j['photo_url'] as String,
         rcStatus: j['rc_status'] as String,
       );
@@ -286,7 +283,6 @@ class AccountVehicleOut {
         'id': id,
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
-        'zone': zone,
         'photo_url': photoUrl,
         'rc_status': rcStatus,
       };
@@ -6074,7 +6070,6 @@ class OnboardingVehicle {
     this.parkingBasements,
     required this.parkingBasement,
     required this.parkingNumber,
-    this.zone,
     required this.hasSubscription,
     required this.planName,
     required this.monthlyPriceRupees,
@@ -6093,7 +6088,6 @@ class OnboardingVehicle {
   final List<String>? parkingBasements;
   final String parkingBasement;
   final String parkingNumber;
-  final String? zone;
   final bool hasSubscription;
   final String? planName;
   final int? monthlyPriceRupees;
@@ -6112,7 +6106,6 @@ class OnboardingVehicle {
         parkingBasements: j['parking_basements'] == null ? null : [for (final x in j['parking_basements'] as List) x as String],
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
-        zone: j['zone'] == null ? null : j['zone'] as String,
         hasSubscription: j['has_subscription'] as bool,
         planName: j['plan_name'] == null ? null : j['plan_name'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
@@ -6132,7 +6125,6 @@ class OnboardingVehicle {
         'parking_basements': parkingBasements == null ? null : [for (final x in parkingBasements!) x],
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
-        'zone': zone,
         'has_subscription': hasSubscription,
         'plan_name': planName,
         'monthly_price_rupees': monthlyPriceRupees,
@@ -6286,21 +6278,21 @@ class Outcome {
 
 class ParkingChangeIn {
   const ParkingChangeIn({
-    required this.basement,
+    this.basement,
     required this.number,
     required this.fromDate,
     required this.toDate,
     this.note,
   });
 
-  final String basement;
+  final String? basement;
   final String number;
   final DateTime fromDate;
   final DateTime? toDate;
   final String? note;
 
   factory ParkingChangeIn.fromJson(Map<String, dynamic> j) => ParkingChangeIn(
-        basement: j['basement'] as String,
+        basement: j['basement'] == null ? null : j['basement'] as String,
         number: j['number'] as String,
         fromDate: DateTime.parse(j['from_date'] as String),
         toDate: j['to_date'] == null ? null : DateTime.parse(j['to_date'] as String),
@@ -8535,7 +8527,6 @@ class VehicleDetail {
     required this.parkingBasement,
     required this.parkingNumber,
     required this.parking,
-    this.zone,
     this.rcStatus,
     required this.monthlyPriceRupees,
     required this.cutoffTime,
@@ -8555,7 +8546,6 @@ class VehicleDetail {
   final String parkingBasement;
   final String parkingNumber;
   final String parking;
-  final String? zone;
   final String? rcStatus;
   final int? monthlyPriceRupees;
   final String? cutoffTime;
@@ -8575,7 +8565,6 @@ class VehicleDetail {
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
         parking: j['parking'] as String,
-        zone: j['zone'] == null ? null : j['zone'] as String,
         rcStatus: j['rc_status'] == null ? null : j['rc_status'] as String,
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
@@ -8596,7 +8585,6 @@ class VehicleDetail {
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
         'parking': parking,
-        'zone': zone,
         'rc_status': rcStatus,
         'monthly_price_rupees': monthlyPriceRupees,
         'cutoff_time': cutoffTime,

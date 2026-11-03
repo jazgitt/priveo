@@ -494,6 +494,29 @@ it("sends a permanent parking change without an end date", async () => {
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/parking-changes", "POST")).toMatchObject({ to_date: null, number: "5" }));
 });
 
+it("takes free text for a parking change, and no basement when the vehicle has a zone (ADM-CUS-27)", async () => {
+  detail([{ ...car(), zone_id: "z1", zone: "Zone 3" }]);
+  await userEvent.click(await screen.findByRole("button", { name: "Change parking" }));
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.click(dialog.getByRole("combobox", { name: "Basement" }));
+  await userEvent.click(await screen.findByRole("option", { name: "No basement" }));
+  await userEvent.type(dialog.getByLabelText("Parking number"), "Under D25");
+  await userEvent.click(dialog.getByRole("combobox", { name: "Applies" }));
+  await userEvent.click(await screen.findByRole("option", { name: "Permanently, from a date" }));
+  fireEvent.change(dialog.getByLabelText("First day"), { target: { value: "2026-11-10" } });
+  await userEvent.click(dialog.getByRole("button", { name: "Save change" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/parking-changes", "POST")).toMatchObject({
+    basement: "", number: "Under D25", to_date: null }));
+});
+
+it("needs a basement for a parking change when the vehicle has no zone", async () => {
+  detail([car()]);
+  await userEvent.click(await screen.findByRole("button", { name: "Change parking" }));
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.click(dialog.getByRole("combobox", { name: "Basement" }));
+  expect(screen.queryByRole("option", { name: "No basement" })).not.toBeInTheDocument();
+});
+
 it("shows the plan history and cancels a scheduled change (ADM-SUB-08)", async () => {
   detail([car()], (path) => (path.endsWith("/plan-history")
     ? reply({ current_plan: "Premium", current_price_rupees: 999, changes: [

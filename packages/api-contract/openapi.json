@@ -19242,11 +19242,6 @@
             "type": "string",
             "title": "Parking Number"
           },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
-          },
           "photo_url": {
             "anyOf": [
               {
@@ -27144,11 +27139,6 @@
             "type": "string",
             "title": "Parking Number"
           },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
-          },
           "has_subscription": {
             "type": "boolean",
             "title": "Has Subscription"
@@ -27416,11 +27406,12 @@
         "properties": {
           "basement": {
             "type": "string",
-            "title": "Basement"
+            "title": "Basement",
+            "default": ""
           },
           "number": {
             "type": "string",
-            "maxLength": 20,
+            "maxLength": 80,
             "minLength": 1,
             "title": "Number"
           },
@@ -27451,7 +27442,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "basement",
           "number",
           "from_date"
         ],
@@ -30446,11 +30436,6 @@
           "parking": {
             "type": "string",
             "title": "Parking"
-          },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
           },
           "rc_status": {
             "type": "string",

@@ -33,7 +33,6 @@ from app.customer_reads.schemas import (
     VisitRatingGiven,
 )
 from app.customers.models import Customer, Subscription, Vehicle
-from app.customers.parking_rules import with_zone, zone_names
 from app.customers.service import show_registration, show_time
 from app.directory import lookup
 from app.directory.models import Society
@@ -274,14 +273,11 @@ class CustomerReads:
             if str(v.id) == vehicle_id:
                 society = self._db.get(Society, v.society_id or customer.society_id).name
                 photo = vehicle_photo_urls(self._db, self._store, [v.id]).get(v.id)
-                zone_name = zone_names(self._db, [v]).get(v.id, "")
                 return VehicleDetail(
                     **self._summary(v, s, society, photo).model_dump(),
                     make=v.make, variant=v.variant, category=v.category,
                     parking_basement=v.parking_basement, parking_number=v.parking_number,
-                    zone=zone_name,
-                    parking=with_zone(zone_name,
-                                      "-".join(p for p in (v.parking_basement, v.parking_number) if p)),
+                    parking="-".join(p for p in (v.parking_basement, v.parking_number) if p),
                     parking_basements=lookup.society_basements(self._db, v.society_id or customer.society_id),
                     rc_status=("Verified" if v.rc_verified else "Uploaded"
                                if v.rc_upload_id or has_confirmed(self._db, f"rc/{v.id}")

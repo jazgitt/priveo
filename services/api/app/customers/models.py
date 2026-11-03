@@ -87,7 +87,7 @@ class VehicleParkingChange(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
     basement: Mapped[str] = mapped_column(String(20))
-    number: Mapped[str] = mapped_column(String(20))
+    number: Mapped[str] = mapped_column(String(60))
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     note: Mapped[str] = mapped_column(String(160), default="", server_default="")

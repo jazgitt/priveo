@@ -1,5 +1,7 @@
 # ruff: noqa: F811
-"""The customer sees the vehicle's zone beside the parking, read only."""
+"""The zone is internal to the admin and the crew: the customer never sees it,
+neither in the vehicle, the home, the edit reply nor the onboarding review."""
+import json
 import uuid
 
 from app.customers.models import Customer, Vehicle
@@ -7,7 +9,7 @@ from app.directory.models import Zone
 from tests.customers_account.test_account import me, store, vehicle_id  # noqa: F401
 
 
-def test_customer_sees_the_zone_with_the_parking(client, me, db):
+def test_customer_never_sees_the_zone(client, me, db):
     vid = vehicle_id(client, me)
     vehicle = db.get(Vehicle, uuid.UUID(vid))
     society_id = vehicle.society_id or db.get(Customer, vehicle.customer_id).society_id
@@ -16,12 +18,17 @@ def test_customer_sees_the_zone_with_the_parking(client, me, db):
     db.flush()
     vehicle.zone_id = zone.id
     db.commit()
+
     detail = client.get(f"/v1/customer/vehicles/{vid}", headers=me).json()
-    assert detail["zone"] == "Zone 7" and detail["parking"].startswith("Zone 7 · ")
     home = client.get("/v1/customer/home", headers=me).json()
-    assert home["vehicles"][0]["parking"].startswith("Zone 7 · ")
     edited = client.patch(f"/v1/customer/vehicles/{vid}", headers=me,
                           json={"parking_number": "Under D25"})
-    assert edited.status_code == 200 and edited.json()["zone"] == "Zone 7"
     onboarding = client.get("/v1/customer/onboarding", headers=me).json()
-    assert onboarding["vehicles"][0]["zone"] == "Zone 7"
+
+    assert edited.status_code == 200
+    assert "zone" not in detail and "zone" not in edited.json()
+    assert "zone" not in onboarding["vehicles"][0]
+    # The parking is the slot alone.
+    assert detail["parking"] == f'{vehicle.parking_basement}-{vehicle.parking_number}'.strip("-")
+    for reply in (detail, home, edited.json(), onboarding):
+        assert "Zone 7" not in json.dumps(reply)
