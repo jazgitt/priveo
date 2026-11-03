@@ -666,3 +666,44 @@ it("sets up the subscription of a vehicle that has none", async () => {
     plan_id: "p1", cutoff_time: "09:00", first_payment_status: "Due",
     interior_day: "Custom", interior_day_notes: "Odd weeks" }));
 });
+
+it("lets the admin pick a zone when adding a vehicle to an existing customer", async () => {
+  const zones = [{ id: "z1", name: "Zone 2", active: true }, { id: "z2", name: "Zone 5", active: true }];
+  detail([car()], (path, o) => path.includes("/societies/s1/zones") ? reply(zones)
+    : path === "/v1/admin/customers/c1/vehicles" && o?.method === "POST" ? reply({ id: "v2" }, 201) : undefined);
+  await userEvent.click((await screen.findAllByRole("button", { name: "Add vehicle" }))[0]);
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Make", "Tata"); await choose("Model", "Nexon"); await choose("Variant", "Pure");
+  await userEvent.type(screen.getByLabelText("Registration"), "hr01zz9999");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Basement", "B2"); await userEvent.type(screen.getByLabelText("Parking number"), "17");
+  await choose("Zone", "Zone 5");
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("switch", { name: "Create a subscription" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(screen.getByText("Zone 5")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(sentTo("/v1/admin/customers/c1/vehicles", "POST")).toHaveLength(1));
+  expect(bodyOf("/v1/admin/customers/c1/vehicles", "POST")).toMatchObject({ zone_id: "z2", registration: "HR01ZZ9999" });
+}, 30000);
+
+it("edits the zone of a vehicle, including clearing it", async () => {
+  const zones = [{ id: "z1", name: "Zone 2", active: true }, { id: "z2", name: "Zone 5", active: true }];
+  detail([{ ...car(), zone_id: "z1", zone: "Zone 2" }], (path) => path.includes("/societies/s1/zones") ? reply(zones) : undefined);
+  await userEvent.click(await screen.findByRole("button", { name: "Edit car and parking" }));
+  const dialog = screen.getByRole("dialog");
+  await choose("Zone", "Zone 5");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ zone_id: "z2" }));
+});
+
+it("clears the zone of a vehicle", async () => {
+  const zones = [{ id: "z1", name: "Zone 2", active: true }];
+  detail([{ ...car(), zone_id: "z1", zone: "Zone 2" }], (path) => path.includes("/societies/s1/zones") ? reply(zones) : undefined);
+  await userEvent.click(await screen.findByRole("button", { name: "Edit car and parking" }));
+  const dialog = screen.getByRole("dialog");
+  await choose("Zone", "No zone");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Save car details" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1", "PATCH")).toEqual({ clear_zone: true }));
+});
