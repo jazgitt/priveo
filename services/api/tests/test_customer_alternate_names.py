@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.customers.models import Customer
 from app.directory.models import DirectoryAudit
 from app.identity.models import Login
+from app.identity.service import _password_matches
 from tests.test_api import auth, login
 from tests.test_customer_administration import directory, upload, vehicle_body  # noqa: F401
 
@@ -25,15 +26,18 @@ def _create(client, directory, admin, registration="HR01ZZ1234", **person):
     return client.post("/v1/admin/customers", headers=admin, json=body)
 
 
-def test_create_customer_without_an_email_has_no_sign_in(client, directory, db):
+def test_create_customer_without_an_email_still_signs_in_with_the_mobile(client, directory, db):
     admin = _admin(client)
     made = _create(client, directory, admin)
     assert made.status_code == 201, made.text
     out = made.json()
     assert out["email"] is None and out["welcome_sent"] is False
     customer = db.get(Customer, uuid.UUID(out["id"]))
-    assert customer.login_id is None
-    assert db.scalar(select(Login).where(Login.display_name == "Asha Rao")) is None
+    # The email is only a contact: the sign-in is the mobile number and the first MPIN.
+    login = db.get(Login, customer.login_id)
+    assert (login.role, login.login_id, login.must_change_mpin) == (
+        "customer", customer.mobile, True)
+    assert _password_matches(login.password_hash, customer.mobile[-6:])
     blank = _create(client, directory, admin, registration="HR01ZZ5678", email="  ",
                    mobile="9876543301")
     assert blank.status_code == 201 and blank.json()["email"] is None
