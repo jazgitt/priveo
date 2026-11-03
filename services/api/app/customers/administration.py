@@ -70,7 +70,8 @@ class VehicleCreate(Input):
 class CustomerCreate(Input):
     first_name: str
     last_name: str
-    email: str
+    # Empty: the customer has no sign-in until an email is added.
+    email: str | None = None
     mobile: str
     flat: str = Field(default="", max_length=40)
     vehicle: VehicleCreate
@@ -84,6 +85,8 @@ class CustomerEdit(Input):
     address_line1: str = Field(default="", max_length=120)
     address_line2: str = Field(default="", max_length=120)
     society_id: uuid.UUID | None = None
+    # Other names the customer is known by. Empty clears; not sent leaves it as it is.
+    alternate_names: str | None = Field(default=None, max_length=500)
 
 
 class SubscriptionSetup(Input):
@@ -390,6 +393,7 @@ def detail(db, c, store):
         "email": c.email,
         "mobile": c.mobile,
         "flat": c.flat,
+        "alternate_names": c.alternate_names,
         "address_line1": c.address_line1,
         "address_line2": c.address_line2,
         "society_id": str(c.society_id),
@@ -434,6 +438,7 @@ def _matching(q: str, society_id: uuid.UUID | None):
     query = (
         select(Customer.id)
         .outerjoin(Vehicle, Vehicle.customer_id == Customer.id)
+        .outerjoin(Zone, Zone.id == Vehicle.zone_id)
         .outerjoin(Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id))
     )
     if q:
@@ -446,6 +451,9 @@ def _matching(q: str, society_id: uuid.UUID | None):
                 Customer.mobile.ilike(text),
                 Vehicle.registration.ilike(text.replace(" ", "")),
                 Society.name.ilike(text),
+                Customer.alternate_names.ilike(text),
+                Vehicle.parking_number.ilike(text),
+                Zone.name.ilike(text),
             )
         )
     if society_id:
@@ -577,18 +585,21 @@ def create_customer(
     db: Session = Depends(get_db),
     store: ObjectStore = Depends(get_object_store),
 ):
-    email = valid_email(body.email)
-    existing = db.scalar(select(Customer).where(Customer.email == email))
-    if existing:
-        return {**detail(db, existing, store), "existing": True}
-    if db.scalar(select(Login.id).where(Login.login_id == email)):
-        raise ApiError("email_in_use", "This email is already in use.", 409)
+    email = valid_email(body.email) if body.email and body.email.strip() else None
+    if email is not None:
+        existing = db.scalar(select(Customer).where(Customer.email == email))
+        if existing:
+            return {**detail(db, existing, store), "existing": True}
+        if db.scalar(select(Login.id).where(Login.login_id == email)):
+            raise ApiError("email_in_use", "This email is already in use.", 409)
     first, last, mobile = valid_person(body.first_name, body.last_name, body.mobile)
-    login = Login(role="customer", login_id=email, display_name=f"{first} {last}")
-    db.add(login)
-    db.flush()
+    login = None
+    if email is not None:
+        login = Login(role="customer", login_id=email, display_name=f"{first} {last}")
+        db.add(login)
+        db.flush()
     c = Customer(
-        login_id=login.id,
+        login_id=login.id if login else None,
         first_name=first,
         last_name=last,
         email=email,
@@ -617,6 +628,8 @@ def edit_customer(
     c.flat = body.flat
     c.address_line1 = body.address_line1.strip()
     c.address_line2 = body.address_line2.strip()
+    if body.alternate_names is not None:
+        c.alternate_names = " ".join(body.alternate_names.split()) or None
     if body.society_id is not None and body.society_id != c.society_id:
         society = db.get(Society, body.society_id)
         if society is None or not society.active:
@@ -624,7 +637,9 @@ def edit_customer(
         c.society_id = society.id
     if c.login_id:
         db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
-    audit(db, user.id, "customer", c.id, "update", body.model_dump(mode="json"))
+    # Alternate names are not written to the audit log (owner, 3 Nov 2026).
+    audit(db, user.id, "customer", c.id, "update",
+          body.model_dump(mode="json", exclude={"alternate_names"}))
     db.commit()
     return detail(db, c, store)
 

@@ -23460,7 +23460,14 @@
             "title": "Last Name"
           },
           "email": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "mobile": {
@@ -23482,7 +23489,6 @@
         "required": [
           "first_name",
           "last_name",
-          "email",
           "mobile",
           "vehicle"
         ],
@@ -23531,6 +23537,18 @@
               }
             ],
             "title": "Society Id"
+          },
+          "alternate_names": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternate Names"
           }
         },
         "additionalProperties": false,
