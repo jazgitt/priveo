@@ -3364,7 +3364,7 @@ class CustomerCreate {
 
   final String firstName;
   final String lastName;
-  final String email;
+  final String? email;
   final String mobile;
   final String? flat;
   final VehicleCreate vehicle;
@@ -3372,7 +3372,7 @@ class CustomerCreate {
   factory CustomerCreate.fromJson(Map<String, dynamic> j) => CustomerCreate(
         firstName: j['first_name'] as String,
         lastName: j['last_name'] as String,
-        email: j['email'] as String,
+        email: j['email'] == null ? null : j['email'] as String,
         mobile: j['mobile'] as String,
         flat: j['flat'] == null ? null : j['flat'] as String,
         vehicle: VehicleCreate.fromJson(j['vehicle'] as Map<String, dynamic>),
@@ -3397,6 +3397,7 @@ class CustomerEdit {
     this.addressLine1,
     this.addressLine2,
     required this.societyId,
+    required this.alternateNames,
   });
 
   final String firstName;
@@ -3406,6 +3407,7 @@ class CustomerEdit {
   final String? addressLine1;
   final String? addressLine2;
   final String? societyId;
+  final String? alternateNames;
 
   factory CustomerEdit.fromJson(Map<String, dynamic> j) => CustomerEdit(
         firstName: j['first_name'] as String,
@@ -3415,6 +3417,7 @@ class CustomerEdit {
         addressLine1: j['address_line1'] == null ? null : j['address_line1'] as String,
         addressLine2: j['address_line2'] == null ? null : j['address_line2'] as String,
         societyId: j['society_id'] == null ? null : j['society_id'] as String,
+        alternateNames: j['alternate_names'] == null ? null : j['alternate_names'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -3425,6 +3428,7 @@ class CustomerEdit {
         'address_line1': addressLine1,
         'address_line2': addressLine2,
         'society_id': societyId,
+        'alternate_names': alternateNames,
       };
 }
 

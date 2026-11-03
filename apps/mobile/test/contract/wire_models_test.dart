@@ -800,15 +800,15 @@ void main() {
     expect(wire.CustomerCreate.fromJson(input).toJson(), equals(input));
   });
   test('CustomerCreate preserves nullable wire fields', () {
-    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":"wire-value","mobile":"wire-value","flat":"wire-value","vehicle":{"society_id":"11111111-1111-1111-1111-111111111111","catalogue_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone_id":null,"plan_id":null,"cutoff_time":null,"interior_day":null,"interior_day_notes":null,"photo_upload_id":null,"rc_upload_id":null,"first_payment_status":"Due"}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":null,"mobile":"wire-value","flat":"wire-value","vehicle":{"society_id":"11111111-1111-1111-1111-111111111111","catalogue_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone_id":null,"plan_id":null,"cutoff_time":null,"interior_day":null,"interior_day_notes":null,"photo_upload_id":null,"rc_upload_id":null,"first_payment_status":"Due"}}') as Map<String, dynamic>;
     expect(wire.CustomerCreate.fromJson(input).toJson(), equals(input));
   });
   test('CustomerEdit preserves populated wire fields', () {
-    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","mobile":"wire-value","flat":"wire-value","address_line1":"wire-value","address_line2":"wire-value","society_id":"11111111-1111-1111-1111-111111111111"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","mobile":"wire-value","flat":"wire-value","address_line1":"wire-value","address_line2":"wire-value","society_id":"11111111-1111-1111-1111-111111111111","alternate_names":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CustomerEdit.fromJson(input).toJson(), equals(input));
   });
   test('CustomerEdit preserves nullable wire fields', () {
-    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","mobile":"wire-value","flat":"wire-value","address_line1":"wire-value","address_line2":"wire-value","society_id":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","mobile":"wire-value","flat":"wire-value","address_line1":"wire-value","address_line2":"wire-value","society_id":null,"alternate_names":null}') as Map<String, dynamic>;
     expect(wire.CustomerEdit.fromJson(input).toJson(), equals(input));
   });
   test('CustomerHome preserves populated wire fields', () {
