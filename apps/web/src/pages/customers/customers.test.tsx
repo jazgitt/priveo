@@ -162,7 +162,8 @@ it.each([true, false])("creates a customer with subscription=%s and a photo", as
 it("shows prices with the rupee sign and the subscription in a grid", async () => {
   detail([car()]);
   expect(await screen.findByText(/₹999\/month/)).toBeInTheDocument();
-  expect(screen.getByText("₹999")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Payments/ }));
+  expect(await screen.findByText("₹999")).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/Â|â‚¹/);
 });
 
@@ -618,7 +619,8 @@ it("shows a vehicle's service history by state, with reasons and moved dates (AD
       ? reply({ counts, total: 1, items: [items[1]] })
       : reply({ counts, total: 15, items });
   });
-  expect(await screen.findByText("Service history")).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("tab", { name: /Service history/ }));
+  expect(await screen.findByRole("heading", { name: "Service history" })).toBeInTheDocument();
   expect(await screen.findByText("Exterior + Interior")).toBeInTheDocument();
   expect(screen.getByText(/Interior not done: Car is locked, Keys with guard/)).toBeInTheDocument();
   expect(screen.getByText(/Moved from .* to /)).toBeInTheDocument();
@@ -635,6 +637,7 @@ it("shows a vehicle's service history by state, with reasons and moved dates (AD
 
 it("says so when a state has no services", async () => {
   detail([car()]);
+  await userEvent.click(await screen.findByRole("tab", { name: /Service history/ }));
   expect(await screen.findByText("No services yet.")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Cancelled 0" }));
   expect(await screen.findByText("No Cancelled services.")).toBeInTheDocument();
@@ -805,9 +808,26 @@ it("shows days from before the app in italics, with the skip reason, and app vis
       delivered: ["Cleaning-External", "Cleaning-Internal"], missed: [], original_date: null, revised_date: null, source: "imported", reason: "" },
   ];
   detail([car()], (path) => (path.includes("/v1/admin/vehicles/v1/service-history") ? reply({ counts, total: 3, items }) : undefined));
+  await userEvent.click(await screen.findByRole("tab", { name: /Service history/ }));
   expect(await screen.findByText("Skipped: Rain")).toBeInTheDocument();
   expect(screen.getByText("Skipped: Rain").parentElement).toHaveClass("italic");
   expect(screen.getByText("Exterior + Interior").parentElement).toHaveClass("italic");
   expect(screen.getByText("Exterior").parentElement).not.toHaveClass("italic");
   expect(screen.queryByText(/imported/i)).not.toBeInTheDocument();
+});
+
+it("splits each vehicle into Vehicle details, Service history and Payments tabs", async () => {
+  detail([car()]);
+  expect(await screen.findByRole("tab", { name: "Vehicle details" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("button", { name: "Schedule settings" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Payments" })).not.toBeInTheDocument();
+  for (const t of within(screen.getByRole("tablist", { name: "HR01ZZ1234 sections" })).getAllByRole("tab")) expect(t).toHaveClass("h-10");
+  screen.getByRole("tab", { name: "Vehicle details" }).focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByRole("tab", { name: /Service history/ })).toHaveFocus();
+  await userEvent.click(screen.getByRole("tab", { name: /Payments/ }));
+  expect(await screen.findByRole("heading", { name: "Payments" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Schedule settings" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Service history/ }));
+  expect(await screen.findByRole("heading", { name: "Service history" })).toBeInTheDocument();
 });
