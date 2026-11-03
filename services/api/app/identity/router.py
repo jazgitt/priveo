@@ -135,9 +135,12 @@ def end_customer_sessions(
     """Signs a customer out on every phone (AUTH-17, ADM-CUS-21)."""
     from app.customers.models import Customer
 
-    login_id = db.scalar(select(Customer.login_id).where(Customer.id == customer_id))
-    if login_id is None:
+    found = db.execute(select(Customer.login_id).where(Customer.id == customer_id)).first()
+    if found is None:
         raise ApiError("not_found", "Customer not found.", 404)
+    login_id = found[0]
+    if login_id is None:  # No sign-in, so no sessions to end.
+        return CustomerSessionsEnded(ended=0)
     ended = auth.end_customer_sessions(login_id, "admin_logout", actor_id=user.id,
                                        customer_id=customer_id)
     return CustomerSessionsEnded(ended=ended)

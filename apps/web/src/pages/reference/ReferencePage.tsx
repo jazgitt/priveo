@@ -9,9 +9,11 @@ import { PlansTab } from "./PlansTab";
 import { ServicesTab } from "./ServicesTab";
 import { SocietiesTab } from "./SocietiesTab";
 import { VehiclesTab } from "./VehiclesTab";
+import { ZonesTab } from "./ZonesTab";
 
 const TABS = [
   { id: "societies", label: "Societies", view: SocietiesTab },
+  { id: "zones", label: "Zones", view: ZonesTab },
   { id: "plans", label: "Plans", view: PlansTab },
   { id: "vehicles", label: "Vehicle catalogue", view: VehiclesTab },
   { id: "services", label: "Services", view: ServicesTab },
@@ -20,7 +22,7 @@ const TABS = [
   { id: "addons", label: "Add-on catalogue", view: AddonsTab },
 ] as const;
 
-/** Site Setup (all sites): societies, plans, vehicles, services, checklists, reasons, add-ons. */
+/** Site Setup (all sites): societies, zones, plans, vehicles, services, checklists, reasons, add-ons. */
 export function ReferencePage() {
   const [tab, setTab] = useState<string>(TABS[0].id);
   const View = (TABS.find((t) => t.id === tab) ?? TABS[0]).view;

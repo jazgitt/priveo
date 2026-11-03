@@ -36,7 +36,7 @@ const COLUMNS: DataColumn<CustomerRow>[] = [
     cell: (c) => (
       <div className="min-w-0">
         <span className="block truncate tabular-nums">{c.mobile}</span>
-        <span className="block truncate text-xs text-muted-foreground" title={c.email}>{c.email}</span>
+        <span className="block truncate text-xs text-muted-foreground" title={c.email ?? undefined}>{c.email ?? "No email"}</span>
       </div>
     ),
   },
@@ -80,7 +80,7 @@ function CustomerTile({ c }: { c: CustomerRow }) {
       </div>
       <div className="min-w-0 text-sm">
         <span className="block truncate tabular-nums">{c.mobile}</span>
-        <span className="block truncate text-xs text-muted-foreground">{c.email}</span>
+        <span className="block truncate text-xs text-muted-foreground">{c.email ?? "No email"}</span>
       </div>
       <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {(c.vehicles?.length ?? 0) === 0 && <li className="text-sm text-muted-foreground">No vehicle</li>}

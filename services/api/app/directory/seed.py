@@ -77,7 +77,10 @@ def seed_defaults(db: Session, starter_data: bool = True) -> dict[str, int]:
             row.value = configured
 
     if starter_data:
-        if db.scalar(select(Plan).where(Plan.name == defaults.PLAN["name"])) is None:
+        # The admin may have renamed the starter plan (Premium Care became Premium),
+        # so it is found by its code as well as its name and never added twice.
+        if db.scalar(select(Plan).where(
+                (Plan.name == defaults.PLAN["name"]) | (Plan.code == "PLN-0001"))) is None:
             db.add(Plan(code="PLN-0001", **defaults.PLAN))
             added["plans"] += 1
 

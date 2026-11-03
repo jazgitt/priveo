@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../components";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
+import { SiteContext } from "../../site/SiteContext";
 import { AuditPage } from "../audit/AuditPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { ReferencePage } from "./ReferencePage";
@@ -77,6 +78,39 @@ describe("reference data", () => {
     expect(await within(dialog).findByText("This society already exists.")).toBeInTheDocument();
     const post = calls("/societies").find((c) => c[1]?.method === "POST")!;
     expect(JSON.parse(post[1].body)).toMatchObject({ name: "Lake View", parking_basements: ["B1", "B2"] });
+  });
+
+  it("adds, renames and deactivates a zone of the chosen society", async () => {
+    const zone = { id: "z1", society_id: "s1", name: "Zone 1", active: true, vehicles: 14 };
+    handlers["GET /v1/admin/directory/societies/s1/zones"] = () => json(200, [zone]);
+    handlers["POST /v1/admin/directory/societies/s1/zones"] = () => json(201, { ...zone, id: "z2", name: "Zone 2" });
+    handlers["PATCH /v1/admin/directory/zones/z1"] = () => json(200, { ...zone, name: "Zone A" });
+    handlers["POST /v1/admin/directory/zones/z1/deactivate"] = () => json(200, { ...zone, active: false });
+    const site = { id: "s1", name: "Lake View", sites: [{ id: "s1", name: "Lake View" }], select: () => {} };
+    renderUi(<SiteContext.Provider value={site}><ReferencePage /></SiteContext.Provider>);
+    await userEvent.click(screen.getByRole("tab", { name: "Zones" }));
+    expect(await screen.findByText("Zone 1")).toBeInTheDocument();
+    expect(screen.getByText("14")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a zone" }));
+    let dialog = screen.getByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("Zone name"), "Zone 2");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls("/societies/s1/zones").some((c) => c[1]?.method === "POST")).toBe(true));
+    const post = calls("/societies/s1/zones").find((c) => c[1]?.method === "POST")!;
+    expect(JSON.parse(post[1].body)).toEqual({ name: "Zone 2" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Zone 1" }));
+    dialog = await screen.findByRole("dialog");
+    await userEvent.clear(within(dialog).getByLabelText("Zone name"));
+    await userEvent.type(within(dialog).getByLabelText("Zone name"), "Zone A");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls("/zones/z1").some((c) => c[1]?.method === "PATCH")).toBe(true));
+    expect(JSON.parse(calls("/zones/z1").find((c) => c[1]?.method === "PATCH")![1].body)).toEqual({ name: "Zone A" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Deactivate Zone 1" }));
+    await confirmWith("Deactivate");
+    await waitFor(() => expect(calls("/zones/z1/deactivate")).toHaveLength(1));
   });
 
   it("reorders reasons by sending every id", async () => {

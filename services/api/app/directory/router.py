@@ -15,6 +15,7 @@ from app.directory.models import (
     Plan,
     Society,
     VehicleCatalogueEntry,
+    Zone,
 )
 from app.identity.service import User
 from app.platform.db import get_db
@@ -67,6 +68,38 @@ def deactivate_society(society_id: uuid.UUID, user: AdminUser, db: Db):
 @admin.post("/societies/{society_id}/reactivate", response_model=s.DirectorySocietyOut)
 def reactivate_society(society_id: uuid.UUID, user: AdminUser, db: Db):
     return service.society_out(db, service.set_society_active(db, user.id, society_id, True))
+
+
+# ---- zones -----------------------------------------------------------------------
+
+
+@admin.get("/societies/{society_id}/zones", response_model=list[s.DirectoryZoneOut])
+def list_zones(society_id: uuid.UUID, user: AdminUser, db: Db, include_inactive: bool = True):
+    service._get(db, Society, society_id, "society")
+    rows = db.scalars(_only_active(
+        select(Zone).where(Zone.society_id == society_id).order_by(Zone.name),
+        Zone, include_inactive))
+    return [service.zone_out(db, r) for r in rows]
+
+
+@admin.post("/societies/{society_id}/zones", response_model=s.DirectoryZoneOut, status_code=201)
+def create_zone(society_id: uuid.UUID, body: s.DirectoryZoneCreate, user: AdminUser, db: Db):
+    return service.zone_out(db, service.create_zone(db, user.id, society_id, body))
+
+
+@admin.patch("/zones/{zone_id}", response_model=s.DirectoryZoneOut)
+def rename_zone(zone_id: uuid.UUID, body: s.DirectoryZoneUpdate, user: AdminUser, db: Db):
+    return service.zone_out(db, service.rename_zone(db, user.id, zone_id, body))
+
+
+@admin.post("/zones/{zone_id}/deactivate", response_model=s.DirectoryZoneOut)
+def deactivate_zone(zone_id: uuid.UUID, user: AdminUser, db: Db):
+    return service.zone_out(db, service.set_zone_active(db, user.id, zone_id, False))
+
+
+@admin.post("/zones/{zone_id}/reactivate", response_model=s.DirectoryZoneOut)
+def reactivate_zone(zone_id: uuid.UUID, user: AdminUser, db: Db):
+    return service.zone_out(db, service.set_zone_active(db, user.id, zone_id, True))
 
 
 # ---- working slots ---------------------------------------------------------------

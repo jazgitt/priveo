@@ -12,8 +12,8 @@ import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
 import {
-  times, uploadCustomerAsset, weekdays,
-  type Catalogue, type Customer, type Plan, type PlanChangeQuote, type SchedulePattern, type Society, type Subscription, type Vehicle,
+  CUSTOM_DAY, interiorDays, times, uploadCustomerAsset, weekdays,
+  type Catalogue, type Customer, type Plan, type PlanChangeQuote, type SchedulePattern, type Society, type Subscription, type Vehicle, type ZoneChoice,
 } from "./api";
 
 type Call = { path: string; method?: string; body?: unknown };
@@ -30,8 +30,20 @@ function useCustomerSave(customerId: string, success: string, onDone: () => void
 export const usePlans = () => useQuery({ queryKey: ["customer-plans"], queryFn: () => api<Plan[]>("/v1/admin/directory/plans") });
 export const useCatalogue = () => useQuery({ queryKey: ["customer-catalogue"], queryFn: () => api<Catalogue[]>("/v1/admin/directory/vehicle-catalogue") });
 export const useSocietyList = () => useQuery({ queryKey: ["customer-societies"], queryFn: () => api<Society[]>("/v1/admin/directory/societies") });
+/** The zones of a society that can be chosen now (active ones). */
+export const useZones = (societyId: string | undefined) => useQuery({
+  queryKey: ["customer-zones", societyId], enabled: Boolean(societyId),
+  queryFn: () => api<ZoneChoice[]>(`/v1/admin/directory/societies/${societyId}/zones?include_inactive=false`),
+});
 
 const timeChoices = times.map((t) => ({ value: t, label: t }));
+
+/** No zone, the active zones, and the vehicle's own zone even if it was deactivated since. */
+function zoneChoices(zones: ZoneChoice[] | undefined, v: Vehicle) {
+  const list = (zones ?? []).map((z) => ({ value: z.id, label: z.name }));
+  if (v.zone_id && !list.some((z) => z.value === v.zone_id)) list.push({ value: v.zone_id, label: v.zone ?? "Current zone" });
+  return [{ value: NONE, label: "No zone" }, ...list];
+}
 
 // ---- customer ------------------------------------------------------------
 
@@ -100,15 +112,17 @@ export function EmailDialog({ customer: c, open, onClose }: { customer: Customer
 }
 
 function EmailForm({ c, onClose }: { c: Customer; onClose: () => void }) {
-  const [email, setEmail] = useState(c.email);
-  const save = useCustomerSave(c.id, "Email updated. A new welcome email is on its way.", onClose);
-  const ok = /^\S+@\S+\.\S+$/.test(email) && email.trim().toLowerCase() !== c.email.toLowerCase();
+  const [email, setEmail] = useState(c.email ?? "");
+  const save = useCustomerSave(c.id, "Email saved. A welcome email is on its way.", onClose);
+  const ok = /^\S+@\S+\.\S+$/.test(email) && email.trim().toLowerCase() !== (c.email ?? "").toLowerCase();
   return (
-    <FormDialog open onOpenChange={(o) => !o && onClose()} title="Update email" danger
-                description="The customer's password is cleared and they are signed out everywhere. A new welcome email goes to the new address; they verify it and set a new password (ADM-CUS-19)."
-                submitLabel="Update email" busy={save.isPending} disabled={!ok}
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={c.email ? "Update email" : "Add email"} danger={Boolean(c.email)}
+                description={c.email
+                  ? "The customer's password is cleared and they are signed out everywhere. A new welcome email goes to the new address; they verify it and set a new password (ADM-CUS-19)."
+                  : "This customer was loaded without an email. Adding one gives them a sign-in and sends a welcome email; they verify it and set a password."}
+                submitLabel={c.email ? "Update email" : "Add email"} busy={save.isPending} disabled={!ok}
                 onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}/email`, method: "PATCH", body: { email: email.trim() } })}>
-      <Field label="New email" hint={`Now ${c.email}`}>
+      <Field label={c.email ? "New email" : "Email"} hint={c.email ? `Now ${c.email}` : "No email yet."}>
         {(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
       </Field>
     </FormDialog>
@@ -125,6 +139,8 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
   const [catalogueId, setCatalogueId] = useState(NONE);
   const [basement, setBasement] = useState(v.parking_basement);
   const [parking, setParking] = useState(v.parking_number);
+  const [zoneId, setZoneId] = useState(v.zone_id ?? NONE);
+  const zones = useZones(v.society_id);
   const [uploading, setUploading] = useState(false);
   const save = useCustomerSave(customerId, "Car details saved.", onClose);
   const instant = useCustomerSave(customerId, "Saved.", () => {});
@@ -140,12 +156,19 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
       // The toast from the save says what went wrong.
     } finally { setUploading(false); }
   };
-  const valid = reg.trim() !== "" && basement && /^\d{1,5}$/.test(parking);
+  // A car loaded from a sheet may have a registration or parking the form would not accept:
+  // only what the admin changes is checked and sent.
+  const regChanged = reg !== v.registration.replaceAll(" ", "");
+  const parkingChanged = basement !== v.parking_basement || parking !== v.parking_number;
+  const zoneChanged = zoneId !== (v.zone_id ?? NONE);
+  const valid = reg.trim() !== "" && (!parkingChanged || (basement && /^\d{1,5}$/.test(parking)));
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Edit car and parking, ${v.registration}`} size="lg"
                 submitLabel="Save car details" busy={save.isPending} disabled={!valid}
                 onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}`, method: "PATCH", body: {
-                  registration: reg, parking_basement: basement, parking_number: parking,
+                  ...(regChanged ? { registration: reg } : {}),
+                  ...(parkingChanged ? { parking_basement: basement, parking_number: parking } : {}),
+                  ...(zoneChanged ? (zoneId === NONE ? { clear_zone: true } : { zone_id: zoneId }) : {}),
                   ...(catalogueId !== NONE ? { catalogue_id: catalogueId } : {}),
                 } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -168,8 +191,11 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
                          choices={[...new Set([...basements, v.parking_basement].filter(Boolean))].map((b) => ({ value: b, label: b }))} />
             : <Input {...p} value={basement} onChange={(e) => setBasement(e.target.value)} />}
         </Field>
-        <Field label="Parking number" error={parking && !/^\d{1,5}$/.test(parking) ? "Up to 5 digits." : undefined}>
+        <Field label="Parking number" error={parkingChanged && parking && !/^\d{1,5}$/.test(parking) ? "Up to 5 digits." : undefined}>
           {(p) => <Input {...p} inputMode="numeric" value={parking} onChange={(e) => setParking(e.target.value)} />}
+        </Field>
+        <Field label="Zone" hint={v.zone_id && !(zones.data ?? []).some((z) => z.id === v.zone_id) ? `Now ${v.zone} (no longer offered)` : undefined}>
+          {(p) => <SelectBox {...p} value={zoneId} onChange={setZoneId} choices={zoneChoices(zones.data, v)} />}
         </Field>
       </div>
       <div className="rounded-lg border bg-muted/40 p-4">
@@ -182,12 +208,63 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
   );
 }
 
+/** Starts the subscription of a vehicle that has none, for example one loaded from a sheet. */
+export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle; customerId: string; onClose: () => void }) {
+  const plans = usePlans();
+  const [planId, setPlanId] = useState("");
+  const [cutoff, setCutoff] = useState("09:00");
+  const [interior, setInterior] = useState("");
+  const [notes, setNotes] = useState("");
+  const [starts, setStarts] = useState("");
+  const [payment, setPayment] = useState("Due");
+  const save = useCustomerSave(customerId, "Subscription set up. It starts as Activating.", onClose);
+  const plan = plans.data?.find((p) => p.id === planId);
+  const needsInterior = Boolean(plan?.includes_interior);
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Set up subscription, ${v.registration}`}
+                description="The subscription starts as Activating, with the first plan payment, like a vehicle added with a plan."
+                submitLabel="Set up subscription" busy={save.isPending} disabled={!planId || (needsInterior && !interior)}
+                onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}/subscription`, method: "POST", body: {
+                  plan_id: planId, cutoff_time: cutoff, first_payment_status: payment,
+                  ...(needsInterior ? { interior_day: interior } : {}),
+                  ...(needsInterior && interior === CUSTOM_DAY && notes.trim() ? { interior_day_notes: notes.trim() } : {}),
+                  ...(starts ? { first_service_date: starts } : {}),
+                } })}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Plan" className="sm:col-span-2">
+          {(p) => <SelectBox {...p} value={planId} onChange={(id) => { setPlanId(id); setInterior(""); }} placeholder="Choose a plan"
+                             choices={(plans.data ?? []).filter((x) => x.active).map((x) => ({ value: x.id, label: `${x.name} · ${inr(x.monthly_price_rupees)}/month` }))} />}
+        </Field>
+        <Field label="Service cutoff" hint="Visits finish by this time.">
+          {(p) => <SelectBox {...p} value={cutoff} onChange={setCutoff} choices={timeChoices} />}
+        </Field>
+        <Field label="Interior care day" hint={plan && !needsInterior ? "The plan does not include interior care." : undefined}>
+          {(p) => <SelectBox {...p} value={interior} disabled={!needsInterior} onChange={setInterior} choices={interiorDays.map((d) => ({ value: d, label: d }))} />}
+        </Field>
+        {needsInterior && interior === CUSTOM_DAY && (
+          <Field label="Interior day notes" optional className="sm:col-span-2" hint="Whose car's turn it is.">
+            {(p) => <Textarea {...p} rows={2} maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} />}
+          </Field>
+        )}
+        <Field label="First service date" optional hint="Empty means today.">
+          {(p) => <Input {...p} type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />}
+        </Field>
+        <Field label="First payment status">
+          {(p) => <SelectBox {...p} value={payment} onChange={setPayment}
+                             choices={["Due", "Over due", "Initiated", "Received"].map((s) => ({ value: s, label: s }))} />}
+        </Field>
+      </div>
+    </FormDialog>
+  );
+}
+
 /** Cutoff, interior care day and plan at next renewal (ADM-CUS-09, ADM-CUS-15). */
 export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription; customerId: string; onClose: () => void }) {
   const plans = usePlans();
   const [planId, setPlanId] = useState(NONE);
   const [cutoff, setCutoff] = useState(sub.cutoff_time || "09:00");
   const [interior, setInterior] = useState(sub.interior_day ?? "");
+  const [interiorNotes, setInteriorNotes] = useState(sub.interior_day_notes ?? "");
   const [starts, setStarts] = useState("");
   const [charge, setCharge] = useState("none");
   const [amount, setAmount] = useState("");
@@ -214,6 +291,7 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
                 onSubmit={() => save.mutate({ path: `/v1/admin/subscriptions/${sub.id}`, method: "PATCH", body: {
                   cutoff_time: cutoff,
                   ...(needsInterior && interior ? { interior_day: interior } : {}),
+                  ...(needsInterior && interior === CUSTOM_DAY ? { interior_day_notes: interiorNotes.trim() } : {}),
                   ...(planId !== NONE ? { plan_id: planId, ...(starts ? { effective_from: starts } : {}) } : {}),
                   ...(mode !== "none" ? { charge: mode, ...(mode === "custom" ? { charge_rupees: customAmount } : {}) } : {}),
                 } })}>
@@ -223,11 +301,16 @@ export function SettingsDialog({ sub, customerId, onClose }: { sub: Subscription
         </Field>
         {needsInterior ? (
           <Field label="Interior care day">
-            {(p) => <SelectBox {...p} value={interior} onChange={setInterior} choices={weekdays.map((d) => ({ value: d, label: d }))} />}
+            {(p) => <SelectBox {...p} value={interior} onChange={setInterior} choices={interiorDays.map((d) => ({ value: d, label: d }))} />}
           </Field>
         ) : (
           <Field label="Interior care day" hint="The plan does not include interior care.">
             {(p) => <Input {...p} disabled value="Not in this plan" />}
+          </Field>
+        )}
+        {needsInterior && interior === CUSTOM_DAY && (
+          <Field label="Interior day notes" className="sm:col-span-2" hint="Whose car's turn it is, for a customer whose cars take turns.">
+            {(p) => <Textarea {...p} rows={2} maxLength={500} value={interiorNotes} onChange={(e) => setInteriorNotes(e.target.value)} />}
           </Field>
         )}
         <Field label="New plan" className="sm:col-span-2"

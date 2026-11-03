@@ -50,7 +50,7 @@ class NotificationService:
         self._db = db
         self._push = push
 
-    def notify(self, login_id: uuid.UUID, event: str, title: str, body: str = "",
+    def notify(self, login_id: uuid.UUID | None, event: str, title: str, body: str = "",
                visit_id: str | None = None, *, ref_type: str | None = None,
                ref_id: str | None = None, dedupe_key: str | None = None
                ) -> Notification | None:
@@ -61,6 +61,8 @@ class NotificationService:
         (NOTIF-03), or the same `dedupe_key` was sent before."""
         if event not in EVENTS:
             raise ValueError(f"Unknown notification event: {event}")
+        if login_id is None:  # A customer with no sign-in has no inbox or phone.
+            return None
         if switchable(event) and not self.enabled(login_id, event):
             return None
         if dedupe_key is not None:

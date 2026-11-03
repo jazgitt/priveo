@@ -4820,6 +4820,70 @@ class DirectoryVehicleUpdate {
       };
 }
 
+class DirectoryZoneCreate {
+  const DirectoryZoneCreate({
+    required this.name,
+  });
+
+  final String name;
+
+  factory DirectoryZoneCreate.fromJson(Map<String, dynamic> j) => DirectoryZoneCreate(
+        name: j['name'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+      };
+}
+
+class DirectoryZoneOut {
+  const DirectoryZoneOut({
+    required this.id,
+    required this.societyId,
+    required this.name,
+    required this.active,
+    required this.vehicles,
+  });
+
+  final String id;
+  final String societyId;
+  final String name;
+  final bool active;
+  final int vehicles;
+
+  factory DirectoryZoneOut.fromJson(Map<String, dynamic> j) => DirectoryZoneOut(
+        id: j['id'] as String,
+        societyId: j['society_id'] as String,
+        name: j['name'] as String,
+        active: j['active'] as bool,
+        vehicles: j['vehicles'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'society_id': societyId,
+        'name': name,
+        'active': active,
+        'vehicles': vehicles,
+      };
+}
+
+class DirectoryZoneUpdate {
+  const DirectoryZoneUpdate({
+    required this.name,
+  });
+
+  final String name;
+
+  factory DirectoryZoneUpdate.fromJson(Map<String, dynamic> j) => DirectoryZoneUpdate(
+        name: j['name'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+      };
+}
+
 class EmailCorrection {
   const EmailCorrection({
     required this.email,
@@ -7456,6 +7520,7 @@ class SubscriptionEdit {
     required this.chargeRupees,
     required this.cutoffTime,
     required this.interiorDay,
+    required this.interiorDayNotes,
   });
 
   final String? planId;
@@ -7464,6 +7529,7 @@ class SubscriptionEdit {
   final int? chargeRupees;
   final String? cutoffTime;
   final String? interiorDay;
+  final String? interiorDayNotes;
 
   factory SubscriptionEdit.fromJson(Map<String, dynamic> j) => SubscriptionEdit(
         planId: j['plan_id'] == null ? null : j['plan_id'] as String,
@@ -7472,6 +7538,7 @@ class SubscriptionEdit {
         chargeRupees: j['charge_rupees'] == null ? null : j['charge_rupees'] as int,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7481,6 +7548,7 @@ class SubscriptionEdit {
         'charge_rupees': chargeRupees,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
+        'interior_day_notes': interiorDayNotes,
       };
 }
 
@@ -7573,6 +7641,42 @@ class SubscriptionRowOut {
         'renewal_date': renewalDate == null ? null : _date(renewalDate!),
         'payment_status': paymentStatus,
         'payment_due': paymentDue,
+      };
+}
+
+class SubscriptionSetup {
+  const SubscriptionSetup({
+    required this.planId,
+    required this.cutoffTime,
+    required this.interiorDay,
+    required this.interiorDayNotes,
+    required this.firstServiceDate,
+    this.firstPaymentStatus,
+  });
+
+  final String planId;
+  final String cutoffTime;
+  final String? interiorDay;
+  final String? interiorDayNotes;
+  final DateTime? firstServiceDate;
+  final String? firstPaymentStatus;
+
+  factory SubscriptionSetup.fromJson(Map<String, dynamic> j) => SubscriptionSetup(
+        planId: j['plan_id'] as String,
+        cutoffTime: j['cutoff_time'] as String,
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
+        firstServiceDate: j['first_service_date'] == null ? null : DateTime.parse(j['first_service_date'] as String),
+        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'plan_id': planId,
+        'cutoff_time': cutoffTime,
+        'interior_day': interiorDay,
+        'interior_day_notes': interiorDayNotes,
+        'first_service_date': firstServiceDate == null ? null : _date(firstServiceDate!),
+        'first_payment_status': firstPaymentStatus,
       };
 }
 
@@ -8363,9 +8467,11 @@ class VehicleCreate {
     required this.registration,
     required this.parkingBasement,
     required this.parkingNumber,
+    required this.zoneId,
     required this.planId,
     required this.cutoffTime,
     required this.interiorDay,
+    required this.interiorDayNotes,
     required this.photoUploadId,
     required this.rcUploadId,
     this.firstPaymentStatus,
@@ -8376,9 +8482,11 @@ class VehicleCreate {
   final String registration;
   final String parkingBasement;
   final String parkingNumber;
+  final String? zoneId;
   final String? planId;
   final String? cutoffTime;
   final String? interiorDay;
+  final String? interiorDayNotes;
   final String? photoUploadId;
   final String? rcUploadId;
   final String? firstPaymentStatus;
@@ -8389,9 +8497,11 @@ class VehicleCreate {
         registration: j['registration'] as String,
         parkingBasement: j['parking_basement'] as String,
         parkingNumber: j['parking_number'] as String,
+        zoneId: j['zone_id'] == null ? null : j['zone_id'] as String,
         planId: j['plan_id'] == null ? null : j['plan_id'] as String,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
+        interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
         photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
         firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
@@ -8403,9 +8513,11 @@ class VehicleCreate {
         'registration': registration,
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
+        'zone_id': zoneId,
         'plan_id': planId,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
+        'interior_day_notes': interiorDayNotes,
         'photo_upload_id': photoUploadId,
         'rc_upload_id': rcUploadId,
         'first_payment_status': firstPaymentStatus,
@@ -8530,6 +8642,8 @@ class VehicleEdit {
     required this.catalogueId,
     required this.parkingBasement,
     required this.parkingNumber,
+    required this.zoneId,
+    this.clearZone,
     required this.photoUploadId,
     required this.rcUploadId,
     required this.rcVerified,
@@ -8540,6 +8654,8 @@ class VehicleEdit {
   final String? catalogueId;
   final String? parkingBasement;
   final String? parkingNumber;
+  final String? zoneId;
+  final bool? clearZone;
   final String? photoUploadId;
   final String? rcUploadId;
   final bool? rcVerified;
@@ -8550,6 +8666,8 @@ class VehicleEdit {
         catalogueId: j['catalogue_id'] == null ? null : j['catalogue_id'] as String,
         parkingBasement: j['parking_basement'] == null ? null : j['parking_basement'] as String,
         parkingNumber: j['parking_number'] == null ? null : j['parking_number'] as String,
+        zoneId: j['zone_id'] == null ? null : j['zone_id'] as String,
+        clearZone: j['clear_zone'] == null ? null : j['clear_zone'] as bool,
         photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
         rcVerified: j['rc_verified'] == null ? null : j['rc_verified'] as bool,
@@ -8561,6 +8679,8 @@ class VehicleEdit {
         'catalogue_id': catalogueId,
         'parking_basement': parkingBasement,
         'parking_number': parkingNumber,
+        'zone_id': zoneId,
+        'clear_zone': clearZone,
         'photo_upload_id': photoUploadId,
         'rc_upload_id': rcUploadId,
         'rc_verified': rcVerified,

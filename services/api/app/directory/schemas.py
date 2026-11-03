@@ -303,3 +303,22 @@ class DirectoryAuditOut(BaseModel):
     entity_id: str
     action: str
     detail: dict
+
+
+# ---- zones -----------------------------------------------------------------------
+
+class DirectoryZoneCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class DirectoryZoneUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class DirectoryZoneOut(BaseModel):
+    id: uuid.UUID
+    society_id: uuid.UUID
+    name: str
+    active: bool
+    # Active vehicles parked in the zone.
+    vehicles: int

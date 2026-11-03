@@ -15,6 +15,8 @@ def send_welcome(db: Session, customer: Customer, *, settings: Settings | None =
     """Emails the customer that the account is ready. It holds no code and no
     password. A failure never blocks creating the customer: it returns False
     and the admin can try again."""
+    if not customer.email:
+        return False
     sender = sender or get_email_sender(settings or get_settings())
     try:
         sender.send_welcome(customer.email, customer.first_name)
