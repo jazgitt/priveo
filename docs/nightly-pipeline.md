@@ -1,8 +1,15 @@
 # Nightly pipeline (backlog B-70)
 
-**Status:** 04-Nov-26. Design and runbook only. Step 1 of the B-70 plan. No script exists yet. Nothing in this file is switched on.
+**Status:** 04-Nov-26, updated the same evening for the build. Steps 2 to 8, 10 and 11 of the B-70 plan are built for the **test path only**. The scripts live in `tools/nightly/`.
 
-**Source:** the planning review of 04-Nov-26 (backlog item B-70). Owner decisions are not yet recorded for any open question in section 9. Where a section depends on one, it works with either answer.
+**Source:** the planning review of 04-Nov-26 (backlog item B-70), and the owner's message of 04-Nov-26 that approved the test-path scope.
+
+**Owner decisions of 04-Nov-26 (Owner):**
+- Build the test path only. Step 9 (production release) and step 12 (`NIGHTLY_AUTO_PROD`) are **not built**. The pipeline has no code path that deploys to production, touches the production database or creates a tag. Production stays manual (`docs/build-and-release.md`).
+- Create the labels `nightly`, `no-nightly`, `hold`, `needs-human`. Turn on branch protection on `main` with one aggregator check, after that check has run green on `main`. Install the `launchd` job on the owner's Mac, running from a dedicated clone `~/priveo-nightly`.
+- Every run must leave a log trace of everything tested locally and on test (section 8.6).
+
+**Everything else below that answers an open question is Derived**, from the recommended answers in section 9. It is not an owner decision.
 
 ## 1. Purpose
 
@@ -22,13 +29,15 @@ Every stage is a hard gate. If a stage fails, the run stops, later stages do not
 | 3 | Local checks | Run `tools/dev/check-local.sh` with the PostgreSQL stage and the browser tests. | A check fails and stage 4 cannot fix it. |
 | 4 | Fix and rerun | Apply the fix loop (section 4). | The limits are used up and the combined branch is still red. |
 | 5 | Push and CI | Push the branch. Wait for the required checks (`api-ci`, `web-ci`, `mobile-ci`, `web-e2e`, through the aggregator in section 6). | CI is red or times out. |
-| 6 | Merge to `main` | Merge. The method depends on question 6: a merge commit of the combined branch, or each PR in turn. | The merge is refused. |
-| 7 | Test deploy and smoke test | Wait for the test deploy. Run the smoke test against test. If red, revert the merge on `main`. | Deploy or smoke test fails. |
-| 8 | Production approval gate | Create the release (tag timing is question 9). Wait for the reviewer approval, with a deadline. The owner approves from the phone. | No approval before the deadline, or the owner rejects. |
-| 9 | Production deploy | Deploy. Run the production smoke test. On failure, roll back to the previous Vercel deployment. | The smoke test fails (after the rollback). |
-| 10 | Morning report | Write the report (section 8.4) and send the notification (question 11). | Never stops the run. It always runs, including after a failure. |
+| 6 | Merge to `main` | Open one pull request `nightly/DATE` to `main`, wait for the required check, and merge it with a merge commit (Derived: combined, one merge per night). The included pull requests are marked merged by GitHub because their head commits are now in `main`. | The merge is refused. |
+| 7 | Test deploy and smoke test | Find the `api-deploy` run for the merge commit and wait for it. Read the result of its smoke test step. Check `/v1/public/health` on test. If red, revert the merge on `main` (which deploys test again) and check that deploy. | Deploy or smoke test fails. |
+| 8 | Production approval gate | **Not built (tonight's scope).** Production stays manual. | Not applicable. |
+| 9 | Production deploy | **Not built (tonight's scope).** There is no code path to production. | Not applicable. |
+| 10 | Morning report | Write the report (section 8.4), post it on each merged pull request, and send the notification (question 11). | Never stops the run. It always runs, including after a failure. |
 
-A night with only mobile-app changes follows the same stages up to stage 7. It does not deploy the API to production, and the app-store release stays manual (question 10).
+The run ends after stage 7 (test deployed and smoke tested) and stage 10. The stage numbers stay as in the plan so that stages 8 and 9 can be added later without renumbering.
+
+A night with only mobile-app changes follows the same stages up to stage 7. There is no `api-deploy` run for it, and the report says so. The app-store release stays manual (question 10).
 
 ## 3. Which pull requests are eligible
 
@@ -55,10 +64,11 @@ The labels must be created in the repository before the first run (settings chec
 
 ## 4. Fix loop limits
 
-- At most 2 fix attempts per night.
+- At most 2 fix attempts per night (Derived).
 - Mechanical fixes only: lint autofixes and regenerated files (theme, localization, API client, OpenAPI contract). These are the outputs CLAUDE.md says CI fails on when stale.
 - A failure that persists after the attempts is traced by running each pull request alone on a clean branch. The pull request that fails alone is dropped, labelled `needs-human` and commented on. The night continues without it.
-- Code fixes by Claude are off by default (question 4). If the owner turns them on: they go only to the pull request branch, never to `main` or the combined branch, and they never edit tests. The model and budget are question 5.
+- Code fixes by Claude are **not built** (question 4, Derived: mechanical fixes only). If the owner turns them on later, they must go only to the pull request branch, never to `main` or the combined branch, and never edit tests. The model and budget are question 5.
+- The mechanical fixes are: `ruff check --fix`, `npm run lint -- --fix`, `dart run tool/gen_theme.dart`, `flutter gen-l10n`, `dart run tool/gen_api.dart`, and `scripts/export_openapi.py`. A fix is committed on the combined branch as `nightly: regenerate files`.
 - A pull request that fails alone and also fails on `main` points to a broken `main`. The run stops at stage 0 on the next night instead of dropping pull requests one by one.
 
 ## 5. Safety features
@@ -67,12 +77,13 @@ The labels must be created in the repository before the first run (settings chec
 |---|---|
 | Lock | A lock file in the nightly clone. A second run exits at once. A lock older than 6 hours is reported as stale and is not removed automatically. |
 | Kill switch | Any one of these stops the run at stage 0 and between stages: a file `KILL` in the nightly clone, `NIGHTLY_ENABLED` not equal to `true`, or the `launchd` job unloaded with `launchctl`. |
-| Dry-run | `--dry-run` runs stages 0 to 3 and prints what stages 5 to 9 would do. It pushes nothing, merges nothing and deploys nothing. The first week of real use is dry-run only. |
+| Dry-run | `--dry-run` runs stages 0 to 3 and prints what stages 5 to 7 would do. It pushes nothing, merges nothing, labels nothing and deploys nothing. The planning review asked for a week of dry-runs first. The owner chose to let the first real run happen on the night of 04-Nov-26. |
+| No production path | The scripts never start a production deploy, never push a tag and never read a production variable. `tools/nightly/tests/test_no_production.py` fails if any script mentions the production environment, a tag push or the production project. |
 | Head commit record | The run records the head commit of every selected pull request. If a head moves during the night, that pull request is dropped, so what was tested is what merges. |
-| Rollback | A failed test smoke test reverts the merge on `main`. A failed production smoke test rolls production back to the previous Vercel deployment. Production has no automatic rollback today, so this is new work (step 10). |
-| Watchdog | A second, separate `launchd` job runs in the morning. If no report exists for the night, it sends the notification "no nightly run". |
+| Rollback | A failed test deploy or smoke test reverts the merge on `main` (a revert of the merge commit), which deploys test again. The revert is exercised on test by `tools/nightly/rollback.py` (a drill). Production rollback is not built. |
+| Watchdog | A second, separate `launchd` job runs at 06:30. If no real run left a report in the last 24 hours, it sends the notification "no nightly run" and opens a GitHub issue. |
 | Migration safety | Exactly one Alembic head. Each new migration must be safe to run while the previous API version is still serving (forward-safe). Step 5 builds these checks. |
-| Production limits | No unattended production migration before question 14 is confirmed. `NIGHTLY_AUTO_PROD` (step 12) is a later opt-in, for releases with no migrations only. It may never be built. |
+| Production limits | Production is outside the pipeline. `NIGHTLY_AUTO_PROD` (step 12) is not built and may never be. |
 
 ### The run-in-its-own-clone rule
 
@@ -80,12 +91,12 @@ The nightly runs in its own clone, for example `~/priveo-nightly`, never in the 
 
 ## 6. Settings checklist
 
-None of this has been done. Each item needs the owner. Tick them off in the pull request that does the work.
+Items ticked were done on 04-Nov-26 with the owner's approval. The rest still need the owner.
 
 ### Repository
 
-- [ ] Create the labels `nightly`, `no-nightly`, `hold`, `needs-human`.
-- [ ] Turn on branch protection for `main` (question 7). Today `main` has no protection. The repository is public, so this is available.
+- [x] Create the labels `nightly`, `no-nightly`, `hold`, `needs-human` (Owner approved, done 04-Nov-26).
+- [x] Turn on branch protection for `main` (question 7). Owner approved 04-Nov-26; see section 12 for the exact settings. Today `main` has no protection. The repository is public, so this is available.
 - [ ] Add one always-running aggregator job and make it the only required check (question 8). Reason: `api-ci`, `web-ci`, `mobile-ci` and `web-e2e` use path filters, so a pull request that touches only one area never starts the others, and a required check that never starts blocks the merge. The aggregator runs every time, reads the results of the checks that did run, and passes when none failed. Step 7 builds it.
 - [ ] Decide whether the owner can still push to `main` in an emergency (hotfix path, question 13).
 - [ ] Allow the nightly's token to merge. Use a token with the least rights needed for pull requests, contents and labels. Keep it in the Mac keychain, never in the repository.
@@ -103,12 +114,12 @@ None of this has been done. Each item needs the owner. Tick them off in the pull
 
 ### The Mac
 
-- [ ] Create `~/priveo-nightly` as a separate clone.
+- [x] Create `~/priveo-nightly` as a separate clone (`tools/nightly/setup-clone.sh`).
 - [ ] Install the tools stage 0 checks for, including a local PostgreSQL install.
-- [ ] Add a `launchd` job for about 02:00 IST (question 2).
-- [ ] Add a wake schedule for 01:55 (`pmset repeat wakeorpoweron`). The Mac must be on power and not shut down.
-- [ ] Add the morning watchdog job.
-- [ ] Set `NIGHTLY_ENABLED=false` at first. Switch it to `true` only after the dry-run week.
+- [x] Add a `launchd` job for about 02:00 IST (`tools/nightly/install-launchd.sh`).
+- [ ] Add a wake schedule for 01:55. This needs `sudo`, so the pipeline does not do it: `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00`. The Mac must be on power and not shut down.
+- [x] Add the morning watchdog job (installed by the same script).
+- [x] `NIGHTLY_ENABLED` lives in `~/priveo-nightly/nightly.env`. The owner chose to have it `true` for the first night.
 
 ### Stale note to confirm
 
@@ -139,13 +150,14 @@ Until step 9 and step 10 are merged and tested on test, the pipeline stops after
 
 ## 8. Runbook
 
-The scripts do not exist yet. The commands below are the intended interface. Each step that adds a script must update this section to match what was built.
+The scripts are in `tools/nightly/`. Each step that changes a script must update this section.
 
 ### 8.1 Start
 
 - Normal: `launchd` starts the run at about 02:00 IST. Nothing to do.
-- By hand, dry-run: in `~/priveo-nightly`, run the orchestrator with `--dry-run`. Do this first, and for the first week.
-- By hand, real: set `NIGHTLY_ENABLED=true` and run it without `--dry-run`. Not before the dry-run week and the owner's go-ahead.
+- By hand, dry-run: `~/priveo-nightly/tools/nightly/run-nightly.sh --dry-run`. It builds the combined branch locally and runs the local checks, and changes nothing on GitHub. Add `--skip-checks` to skip the long local checks.
+- By hand, real: `~/priveo-nightly/tools/nightly/run-nightly.sh` (needs `NIGHTLY_ENABLED=true` in `~/priveo-nightly/nightly.env`).
+- First-time setup: `tools/nightly/setup-clone.sh` (creates the clone, the virtualenv and the installs), then `tools/nightly/install-launchd.sh`.
 
 ### 8.2 Stop and disable
 
@@ -154,9 +166,9 @@ The scripts do not exist yet. The commands below are the intended interface. Eac
 - Disable: set `NIGHTLY_ENABLED=false`, or unload the `launchd` job. Unload the watchdog job too, or it will report a missed night.
 - Skip one pull request: add `hold` or `no-nightly` to it.
 
-### 8.3 Approve or reject production
+### 8.3 Production
 
-The production release waits for the reviewer in the GitHub Environment `production`. Approve or reject from the GitHub mobile app. If nobody acts before the deadline, the run ends at stage 8 and the release is not deployed. The merge to `main` and the test deploy stay in place. Start the release by hand later with the existing tag or dispatch.
+Not part of the pipeline. After a green night, check test, then release by hand as in `docs/build-and-release.md` (tag and approve). The report says "Production: untouched (manual)".
 
 ### 8.4 Read the morning report
 
@@ -168,7 +180,7 @@ The report lists, in this order:
 4. Fix attempts used (of 2) and what changed.
 5. Check timings per stage.
 6. Test deploy and smoke result.
-7. Production state: waiting for approval, deployed, rolled back, or not started.
+7. Production: always "untouched (manual)" in this version.
 8. Links to the log file and the GitHub runs.
 
 The log file sits in the nightly clone. The report also goes to the channel chosen in question 11.
@@ -192,26 +204,30 @@ If a migration ran and the release was rolled back, the old API now runs on the 
 
 A hotfix during the day still uses the manual tag and dispatch. The nightly skips its run if a deploy happened in the last 2 hours (question 13).
 
+### 8.6 The log trace
+
+See section 11 for the files. After a night: open `~/priveo-nightly/logs/<date>/report.md` first; `manifest.json` has the machine-readable record; `events.jsonl` lists every command with times and exit codes; `commands/` holds the full output.
+
 ## 9. Open questions for the owner
 
-None of these has an answer from the owner. The recommended answers are the planning review's suggestions, not decisions. The backlog lists 14 questions, although the task that asked for this file counted 13.
+The owner answered only the scope items listed at the top of this file. For the rest, the build used the recommended answer and marks it **Derived**. Questions 3, 9, 12 and 14 do not apply to a pipeline without production. Question 9 (tagging) is not done at all. The backlog lists 14 questions, although the task that asked for this file counted 13.
 
 | # | Question | Status | Works with either answer? |
 |---|---|---|---|
-| 1 | Opt-in `nightly` label? | Open, recommended answer: yes | Yes. If no, drop the `nightly` condition in section 3. |
-| 2 | Run at 02:00 IST on the Mac, and is the Mac always on then? | Open, recommended answer: yes, with a wake schedule | Time is a `launchd` setting. If the Mac is not always on, the watchdog reports the missed night. |
-| 3 | Does production keep the approval for the first 10 releases? | Open, recommended answer: yes | Yes. The approval stays until step 12 exists, and step 12 may never be built. |
-| 4 | May Claude fix code overnight? | Open, recommended answer: mechanical fixes only at first | Yes. Section 4 describes both. |
-| 5 | Model and budget for the fixer, if on? | Open, recommended answer: local or OpenRouter Gemma first, 2 attempts a night | Only matters if question 4 is yes. |
-| 6 | One combined PR per night as a merge commit, or one by one? | Open, recommended answer: combined | Stages 2 and 6 name both. Step 3 and step 7 pick one. |
-| 7 | Turn on branch protection for `main` now? | Open, recommended answer: yes | Stage 5 and 6 need the required check to be useful, but the pipeline runs without protection. |
-| 8 | Which checks are required, given path filters? | Open, recommended answer: one aggregator job | Without it, the required list must be reduced to checks that always run. |
-| 9 | Tag on test success, or only when production is approved? | Open, recommended answer: tag on test success | Step 9 builds one of the two. Stage 8 is the same either way. |
-| 10 | Mobile-only PRs: merge but no API deploy, with the app-store release manual? | Open, recommended answer: yes | The current iOS and Android release paths are already manual or separate. |
-| 11 | Notification channel? | Open, recommended answer: Mac notification plus a GitHub issue until the Resend domain is verified | Step 11 decides. The report file exists whatever is chosen. |
-| 12 | No production deploys Friday to Sunday nights, and festival or billing days? | Open, recommended answer: yes | A calendar check in stage 0. The list of days is data, not code. |
-| 13 | Hotfix path: keep the manual tag and dispatch, and skip the night if a deploy ran in the last 2 hours? | Open, recommended answer: yes | The manual path is unchanged either way. |
-| 14 | Is Supabase point-in-time recovery or a backup on for production before any unattended migration? | Open, recommended answer: confirm before the first run | No. This is a precondition. Without it, a night with a migration must stop at stage 8 and wait for the owner. |
+| 1 | Opt-in `nightly` label? | Derived, recommended answer used: yes | Yes. If no, drop the `nightly` condition in section 3. |
+| 2 | Run at 02:00 IST on the Mac, and is the Mac always on then? | Derived, recommended answer used: yes, with a wake schedule | Time is a `launchd` setting. If the Mac is not always on, the watchdog reports the missed night. |
+| 3 | Does production keep the approval for the first 10 releases? | Derived, recommended answer used: yes | Yes. The approval stays until step 12 exists, and step 12 may never be built. |
+| 4 | May Claude fix code overnight? | Derived, recommended answer used: mechanical fixes only at first | Yes. Section 4 describes both. |
+| 5 | Model and budget for the fixer, if on? | Derived, recommended answer used: local or OpenRouter Gemma first, 2 attempts a night | Only matters if question 4 is yes. |
+| 6 | One combined PR per night as a merge commit, or one by one? | Derived, recommended answer used: combined | Stages 2 and 6 name both. Step 3 and step 7 pick one. |
+| 7 | Turn on branch protection for `main` now? | Derived, recommended answer used: yes | Stage 5 and 6 need the required check to be useful, but the pipeline runs without protection. |
+| 8 | Which checks are required, given path filters? | Derived, recommended answer used: one aggregator job | Without it, the required list must be reduced to checks that always run. |
+| 9 | Tag on test success, or only when production is approved? | Derived, recommended answer used: tag on test success | Step 9 builds one of the two. Stage 8 is the same either way. |
+| 10 | Mobile-only PRs: merge but no API deploy, with the app-store release manual? | Derived, recommended answer used: yes | The current iOS and Android release paths are already manual or separate. |
+| 11 | Notification channel? | Derived, recommended answer used: Mac notification plus a GitHub issue until the Resend domain is verified | Step 11 decides. The report file exists whatever is chosen. |
+| 12 | No production deploys Friday to Sunday nights, and festival or billing days? | Derived, recommended answer used: yes | A calendar check in stage 0. The list of days is data, not code. |
+| 13 | Hotfix path: keep the manual tag and dispatch, and skip the night if a deploy ran in the last 2 hours? | Derived, recommended answer used: yes | The manual path is unchanged either way. |
+| 14 | Is Supabase point-in-time recovery or a backup on for production before any unattended migration? | Derived, recommended answer used: confirm before the first run | No. This is a precondition. Without it, a night with a migration must stop at stage 8 and wait for the owner. |
 
 ## 10. Risks to watch
 
@@ -220,3 +236,38 @@ None of these has an answer from the owner. The recommended answers are the plan
 - A forward-unsafe migration can break a rollback. Step 5 is the guard.
 - Untested change to CI: the aggregator job and branch protection change how every pull request is merged, not only nightly ones. Turn them on in a quiet period.
 - Per-night spend on a fixer model, if question 4 is yes. Follow the model spend order the owner set: local models first.
+
+## 11. Evidence trace (Owner requirement)
+
+Every run, dry or real, writes a trace to `~/priveo-nightly/logs/<folder>/`. The folder is the date (`YYYY-MM-DD`) for a real run and `YYYY-MM-DD-dryrun-HHMM` for a dry run. A second real run on the same date gets `-2`.
+
+| File | Content |
+|---|---|
+| `events.jsonl` | One JSON line per event: stage start, stage end (with pass or fail), each command with its start time, end time, exit code and the log file holding its output. |
+| `commands/NN-name.log` | The full output of each command. |
+| `manifest.json` | Machine-readable record: mode, result, the pull requests taken (number, head commit, title), the pull requests dropped with reasons, the local checks that ran (each stage line from `check-local.sh`, including the PostgreSQL run and the browser tests), the CI run links, the merge commit, the test deploy run link and the smoke test result. |
+| `report.md` | The morning report (section 8.4), the same text that is posted on each merged pull request and in the GitHub issue. |
+
+The trace holds no secrets: commands are logged as written, and no script puts a password or a database address on a command line. Home folder paths are shortened to `~` in anything posted to GitHub.
+
+## 12. What was set up
+
+### Branch protection on `main`
+
+Set through the GitHub API, after the `ci-gate` check had run green on `main`:
+
+- Required status check: `ci-gate` only. Not strict (a branch need not be up to date).
+- No required reviews.
+- `enforce_admins` off, so an admin can still merge by hand, or push in an emergency.
+- Force pushes and deletion of `main` off.
+
+`ci-gate` (`.github/workflows/ci-gate.yml`) runs on every pull request, including docs-only and path-filtered ones. It waits for the other checks that started for the same commit, and passes when none failed. A pull request opened before `ci-gate` existed has no such check: an admin merges it with the bypass, or pushes an empty commit to start the check.
+
+To undo: Settings, Branches, delete the rule, or `gh api -X DELETE repos/jazgitt/priveo/branches/main/protection`.
+
+### launchd
+
+- `in.priveo.nightly`: starts `~/priveo-nightly/tools/nightly/run-nightly.sh` at 02:00 local time (IST on this Mac).
+- `in.priveo.nightly-watchdog`: starts `watchdog.py` at 06:30.
+- Plists are in `~/Library/LaunchAgents/`. Stop with `launchctl bootout gui/$(id -u)/in.priveo.nightly`.
+- Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate` so the Mac does not sleep during it.
