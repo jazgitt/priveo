@@ -10,11 +10,13 @@ from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
 from app.mani.config import get_mani_settings
-from app.mani.retention import delete_old_conversations
+from app.mani.retention import delete_old_conversations, sweep_actions
 
 
 def _mani_retention(db: Session, now: datetime, _settings) -> dict:
-    return {"deleted": delete_old_conversations(db, now, get_mani_settings().conversation_retention_days)}
+    settings = get_mani_settings()
+    return {"deleted": delete_old_conversations(db, now, settings.conversation_retention_days),
+            **sweep_actions(db, now, settings.audit_retention_days)}
 
 
 def register(app: FastAPI) -> None:

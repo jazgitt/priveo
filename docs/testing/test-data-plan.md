@@ -154,6 +154,50 @@ services/api/.venv/Scripts/python.exe tools/test-data/api_smoke.py --base-url ht
 
 This exercises real HTTP login/role reads, vehicles/calendar/visits/payments, Crew views, Admin reports/scheduling boards and customer ownership. Logins create sessions, and normal GET reconciliation can update billing data; refresh afterwards for a baseline. **It is not a browser or phone UI E2E suite.** The unit/integration fixture tests also exercise the distinct Admin Web cookie login.
 
+## Two-society seed for Mani Bond (local PostgreSQL)
+
+`services/api/scripts/seed_two_societies.py` adds two synthetic societies, **TEST S1** and **TEST S2**, to a *local* development PostgreSQL database and removes them again. It is separate from the 40 families above and does not touch them. Use it to try Mani Bond (Walk) against a busy, realistic day. It needs a database already migrated with Alembic (it never creates application tables) and the single Admin `priveopapa`.
+
+```bash
+cd services/api
+export LOCAL_SEED_DATABASE_URL=postgresql+psycopg://$(whoami)@localhost/priveo_mani   # or pass --database-url
+export LOCAL_SEED_PASSWORD='choose-a-local-password'    # used for the seeded logins; never committed
+.venv/bin/python scripts/seed_two_societies.py init-marker --confirm-local-dev-database   # once per database
+.venv/bin/python scripts/seed_two_societies.py add                # about 2 minutes (the planner runs 4 times)
+.venv/bin/python scripts/seed_two_societies.py add --force-reload # remove, then add again
+.venv/bin/python scripts/seed_two_societies.py add --as-of 2026-11-02 --no-schedule --customers 5 8
+.venv/bin/python scripts/seed_two_societies.py status             # rows per table that belong to the seed
+.venv/bin/python scripts/seed_two_societies.py counts             # row count of every table, for before/after checks
+.venv/bin/python scripts/seed_two_societies.py remove
+```
+
+**Guards.** The target is only the URL given with `--database-url` or `LOCAL_SEED_DATABASE_URL`, never `DATABASE_URL`. It must be PostgreSQL on `localhost`, `127.0.0.1`, `::1` or a unix socket. `ENVIRONMENT=test` or `prod` is refused. `add`, `remove` and `status` refuse a database that has no marker; only `init-marker` writes it, after a confirm flag, on a migrated database with exactly one Admin. The tool keeps its own tables (`two_society_seed_control`, `two_society_seed_manifest`, `two_society_seed_before`); they are not part of the application schema and no migration is needed.
+
+**What `add` creates** (all dates relative to `--as-of`, default today in IST):
+
+| Item | S1 | S2 |
+|---|---|---|
+| Customers | 40 | 100 |
+| Vehicles (half the customers have 4 or 5, half 1 or 2) | 120 | 300 |
+| Plans (shared by both societies, price includes GST) | Basic 999, Premium 1299, Luxe 1999 | same |
+| Add-ons (shared) | Deep Spa 5999, Chauffeur on demand 1999, KB Overhaul 9999, Paintjob 7999 | same |
+| Crew | 7: 1 Manager, 4 Members, 2 Trainees | 18: 2 Managers, 11 Members, 5 Trainees |
+| Hours | Mon to Sat 05:00 to 11:00; 3 Members also 17:00 to 19:00; Sunday off | same |
+| Subscriptions | all Active | 293 Active, 7 Inactive (4 customers, payments Over due more than 7 days) |
+| Overdue payments | 4 customers, 2 to 6 days | 4 Inactive owners plus 6 more, 2 to 6 days |
+
+Basic is a daily external clean Monday to Saturday. Premium adds one internal clean a week and Luxe two, set with a weekly schedule pattern. The vehicles of one customer have different plans and different cycle start dates. There are also Due, Initiated and Received plan payments with invoices, skips and pauses, add-on bookings (Requested and Completed), and complaints. Logins: all crew, and the first five customers of each society, have the local password; other customers sign in by emailed code. Emails use `priveo.test`; names start with `TEST`.
+
+**Walk situations.** The real scheduler plans tomorrow (then frozen) and the six days after it (Draft). In each society the most loaded Member is then marked Sick tomorrow, so that Member's jobs are still assigned, and one job on tomorrow's frozen schedule is Completed (it cannot be moved). Many jobs stay unplaced; see the capacity note.
+
+**What `remove` deletes.** Every row in the manifest, plus every row that references one through a foreign key (found from the metadata), including rows made by hand on the seeded customers, vehicles or crew and the scheduler's audit rows. It never deletes the Admin, other societies, other customers, services, settings, or any plan or add-on this tool did not create. The one add-on it edits, an existing "Deep Spa", gets its old price and duration back. The seeded plans and add-ons are removed unless something else still uses them. `add` refuses to run twice; a plan or add-on with the same name that the tool did not create stops it (a failed `add` cleans up after itself).
+
+**Things to know.**
+- *Capacity.* Trainees add no capacity, and the cleaning slot is 05:00 to 11:00, so the evening hours only help Deep Spa jobs. S1 has 5 Members and Managers for about 120 jobs a day at 20 minutes (1,800 crew minutes against about 2,400 needed). S2 has 13 for about 300 (4,680 against about 6,000). Expect roughly a third of the jobs unplaced. This is a good test of "needs scheduling" and of the capacity outlook; add crew if you want a calmer day.
+- *Add-on length.* The service set is fixed at Cleaning-External, Cleaning-Internal and Deep Spa, and the scheduler takes a job's length from the service. All four add-ons therefore map to Deep Spa and are planned as 120-minute jobs. The catalogue shows 120, 120, 240 and 360 minutes, but KB Overhaul and Paintjob are not planned that long.
+- *Today has no jobs.* The planner starts tomorrow, so Mani's "operations today" is empty; ask about tomorrow or run the planner for today in the portal.
+- *Test environment.* Not supported yet. It would need: a hosted target allow-list instead of the localhost rule (test only, never prod), the session pooler URL, a confirm flag, the marker created on the test database, and a decision on how a reset affects the shared test data.
+
 ## E2E implementation order
 
 1. **Fixture foundation (implemented):** catalogue, deterministic IDs, full/partial reset, manifest, isolated launcher, reset/integrity tests and API smoke runner. Verify all scenario families are readable through the application's real routes.
