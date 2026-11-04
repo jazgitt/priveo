@@ -46,7 +46,8 @@ def test_q01_active_subscriptions(eval_world):
 
 def test_q03_inactive(eval_world):
     exp = eval_world["expected"]["q03"]
-    assert exp.value == {"events": 0, "inactive_now": 4}
+    # The four Inactive subscriptions went Inactive through the daily job, so each has an event.
+    assert exp.value == {"events": 4, "inactive_now": 4}
 
 
 def test_q05_q06_complaints_and_ratings(eval_world):

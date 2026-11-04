@@ -246,7 +246,14 @@ def test_seed_shows_all_six_payment_statuses(prepared):
         seeded = db.scalars(select(Subscription.id).join(Vehicle, Vehicle.id == Subscription.vehicle_id)
                             .where(Vehicle.source_ref.like("seed2:%"))).all()
         assert seeded and set(seeded) <= set(current)  # one current-cycle payment each
-        # Earlier cycles are all Paid.
+        # No past payment is invented: a vehicle has one payment, or two when its first
+        # cycle ended unpaid.
+        per_sub = {}
         for p in payments:
-            if p.kind == "Plan" and p.cycle_start < current[p.subscription_id].cycle_start:
-                assert p.status == "Paid"
+            if p.kind == "Plan":
+                per_sub.setdefault(p.subscription_id, []).append(p)
+        assert all(len(rows) <= 2 for rows in per_sub.values())
+        for rows in per_sub.values():
+            if len(rows) == 2:
+                first = min(rows, key=lambda r: r.cycle_start)
+                assert first.status == "Open" and first.due_date < AS_OF
