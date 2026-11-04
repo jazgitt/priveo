@@ -2,6 +2,7 @@
 invoices; the admin's confirmation (PAY-, SUB-, ADM-PAY-, ADM-SUB-)."""
 import uuid
 
+import pytest
 from sqlalchemy import select
 
 from app.billing.models import MoneyAlert, Payment, PaymentEvent
@@ -279,12 +280,33 @@ def test_the_daily_job_creates_the_next_payment_and_follows_a_pause(money):
     assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-10-31"
     # A pause of three days moves the renewal date, and the Due payment with it.
     m.clock.now = at(24, 9)
-    m.client.post(f"{vehicle(m)}/pauses",
-                  json={"from_date": "2026-10-27", "to_date": "2026-10-29"},
-                  headers=m.customer)
+    r = m.client.post(f"{vehicle(m)}/pauses",
+                      json={"from_date": "2026-10-27", "to_date": "2026-10-29"},
+                      headers=m.customer)
+    assert r.status_code == 201, r.text  # a 401 here once looked like "the pause did not move the date"
     generate_due_payments(at(26, 6), m.db)
     m.db.expire_all()
     assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-11-03"
+
+
+@pytest.fixture
+def stalled(monkeypatch):
+    """Sign-ins made while this fixture is active get tokens that read 16 minutes old as soon as
+    they are issued, as if the machine had stalled for 16 minutes right after signing in."""
+    import datetime as dt
+
+    from app.identity import tokens
+
+    real = tokens.utcnow
+    monkeypatch.setattr(tokens, "utcnow", lambda: real() - dt.timedelta(minutes=16))
+
+
+def test_a_sign_in_survives_a_stalled_machine(stalled, money):
+    """The nightly dry run of 04-Nov-26 slept 15 minutes inside a test: the 15 minute token expired
+    and the pause request got a 401. Tests now sign in with a long-lived token."""
+    m = money
+    r = m.client.get(f"{vehicle(m)}/payments", headers=m.customer)
+    assert r.status_code == 200, r.text
 
 
 def test_invoice_number_and_the_customers_copy(money):
