@@ -10,6 +10,7 @@ import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { inr, showDate } from "@/components/format";
 import { Button } from "@/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
 import { HISTORY_STATES, parkingText, type Changes, type ParkingChanges, type PlanHistory, type SchedulePattern, type ServiceHistory, type Vehicle, type VehicleCrew } from "./api";
 import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog, SubscriptionSetupDialog } from "./dialogs";
@@ -38,9 +39,10 @@ function patternText(p: SchedulePattern | undefined): string {
   return `Cycle: ${p.exterior_count} Exterior-only and ${p.combined_count} Exterior + Interior days in ${p.cycle_days}`;
 }
 
-/** One vehicle: car, subscription, skips and pauses, and payments. Each change opens its own dialog. */
+/** One vehicle in three tabs: details (car, subscription, skips and pauses, crew, parking), service history, and payments. Each change opens its own dialog. */
 export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string }) {
   const [open, setOpen] = useState<Open>(null);
+  const [tab, setTab] = useState<"details" | "history" | "payments">("details");
   const confirm = useConfirm();
   const close = () => setOpen(null);
   const sub = v.subscription;
@@ -159,6 +161,20 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
       className={live ? undefined : "opacity-80"}
       bodyClassName="flex flex-col gap-6"
     >
+      <Tabs value={tab} onValueChange={(t) => setTab(t as typeof tab)}>
+        <TabsList variant="line" aria-label={`${v.registration} sections`} className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="details" className="h-10 flex-none px-3">Vehicle details</TabsTrigger>
+          <TabsTrigger value="history" className="h-10 flex-none px-3">
+            Service history
+            {history.data && <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{Object.values(history.data.counts).reduce((x, y) => x + y, 0)}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="h-10 flex-none px-3">
+            Payments
+            <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{v.payments.length}</span>
+          </TabsTrigger>
+        </TabsList>
+
+      <TabsContent value="details" className="mt-4 flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-[10rem_minmax(0,1fr)]">
         {v.photo_url
           ? <img src={v.photo_url} alt={v.registration} className="aspect-[4/3] w-40 rounded-lg border object-cover" />
@@ -290,7 +306,10 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
         </section>
       )}
 
-      <section className="border-t pt-5">
+      </TabsContent>
+
+      <TabsContent value="history" className="mt-4">
+      <section>
         <SubHeading>Service history</SubHeading>
         {history.error && <ErrorState message={errorMessage(history.error)} />}
         {history.data && (
@@ -339,8 +358,10 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           </>
         )}
       </section>
+      </TabsContent>
 
-      <section className="border-t pt-5">
+      <TabsContent value="payments" className="mt-4">
+      <section>
         <SubHeading actions={<Button size="sm" variant="link" asChild><Link to="/payments">Manage payments</Link></Button>}>Payments</SubHeading>
         {v.payments.length === 0 ? <p className="text-sm text-muted-foreground">No payments yet.</p> : (
           <table className="w-full text-sm">
@@ -363,6 +384,8 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
           </table>
         )}
       </section>
+      </TabsContent>
+      </Tabs>
 
       {open === "setup" && !sub && <SubscriptionSetupDialog v={v} customerId={customerId} onClose={close} />}
       {open === "car" && <CarDialog v={v} customerId={customerId} onClose={close} />}
