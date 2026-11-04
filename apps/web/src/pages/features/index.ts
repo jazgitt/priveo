@@ -10,6 +10,6 @@ export const routes: RouteObject[] = [
 
 export const nav: NavItem = {
   path: "/features",
-  label: "Features",
+  label: "Feature Plugs",
   about: "Switch app features on or off for customers and crew.",
 };
