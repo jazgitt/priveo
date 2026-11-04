@@ -91,3 +91,26 @@ def test_auto_inactive_runs_in_the_daily_job_with_its_alert(money):
     assert m.subscription().status == "Inactive"
     assert [a.kind for a in m.db.scalars(select(MoneyAlert))] == ["auto_inactive"]
     assert run(m, datetime(2026, 11, 7, 2, 0, tzinfo=IST))["inactivated"] == 0
+
+
+def test_the_job_passes_the_payment_day_and_leaves_the_clock_real(money):
+    from datetime import date
+
+    from app.billing import service as billing_service
+
+    m = money  # first cycle 1-Oct-26 to 30-Oct-26
+    now = datetime(2026, 10, 31, 2, 0, tzinfo=IST)
+    seen = {}
+    real = billing_service.BillingService.generate_due_payments
+
+    def spy(self, at, today=None):
+        seen["clock"], seen["today"] = self._now(), today
+        return real(self, at, today)
+
+    billing_service.BillingService.generate_due_payments = spy
+    try:
+        run(m, now)
+    finally:
+        billing_service.BillingService.generate_due_payments = real
+    assert seen["clock"] == now  # timestamps stay real
+    assert seen["today"] == date(2026, 10, 31)

@@ -30,7 +30,7 @@ can vary within the scheduled hour. Planning still respects its admin settings.
 `CRON_SECRET` is environment configuration, never committed. Without it every
 call is refused."""
 import hmac
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, Header
@@ -38,7 +38,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings, get_money_settings
-from app.changes.rules import PAYMENT_DAY_START_HOUR, Clock, get_now, today_of
+from app.changes.rules import Clock, get_now, payment_day_of, today_of
 from app.notifications import emit
 from app.platform.db import get_db
 from app.platform.errors import ApiError
@@ -75,23 +75,16 @@ def _freeze_due(db: Session, now: datetime, settings: MoneySettings) -> dict:
     return {"frozen": len(service.freeze_due(db, now))}
 
 
-def _payment_clock(now: datetime) -> datetime:
-    """The moment the payment jobs use: the payment day changes at 2:00 IST
-    (PAY-19), so the services see the time two hours earlier and work out the
-    right day. At 02:00 IST on 5 Nov they see 5 Nov 00:00, at 01:59 4 Nov 23:59."""
-    return now - timedelta(hours=PAYMENT_DAY_START_HOUR)
-
-
 def _payments_generate(db: Session, now: datetime, settings: MoneySettings) -> dict:
     from app.billing.service import generate_due_payments
 
-    return {"created": generate_due_payments(_payment_clock(now), db, settings)}
+    return {"created": generate_due_payments(now, db, settings, today=payment_day_of(now))}
 
 
 def _payments_overdue(db: Session, now: datetime, settings: MoneySettings) -> dict:
     from app.billing.service import mark_overdue_and_inactive
 
-    report = mark_overdue_and_inactive(_payment_clock(now), db, settings)
+    report = mark_overdue_and_inactive(now, db, settings, today=payment_day_of(now))
     return {"marked_overdue": report.marked_overdue, "inactivated": len(report.inactivated)}
 
 

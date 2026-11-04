@@ -92,8 +92,10 @@ class BillingService:
         rows = self._db.scalars(select(Invoice).where(Invoice.payment_id.in_(payment_ids)))
         return {i.payment_id: i for i in rows}
 
+    _day_override: date | None = None  # set while a job runs on the payment day (2:00 IST)
+
     def _today(self) -> date:
-        return today_of(self._now())
+        return self._day_override or today_of(self._now())
 
     def _view(self, p: Payment) -> PaymentStatusView:
         return display_status(p, self._today())
@@ -896,12 +898,14 @@ class BillingService:
 
     # --- the jobs (EventBridge, later) ---------------------------------------
 
-    def generate_due_payments(self, now: datetime) -> int:
+    def generate_due_payments(self, now: datetime, today: date | None = None) -> int:
         """Applies plan changes that start today, then makes the payment of each
         Active subscription's current cycle if it is not there yet: on the day after a
         cycle ends, the next cycle's payment appears (ADM-PAY-06, PAY-14). Returns how
-        many were created."""
-        today = today_of(now)
+        many were created. `today` is the payment day (2:00 IST rollover, PAY-19);
+        without it the calendar day of `now` is used."""
+        today = today or today_of(now)
+        self._day_override = today
         for pending in self._db.scalars(
             select(Subscription).where(
                 Subscription.pending_plan_id.is_not(None), Subscription.pending_from <= today
@@ -928,9 +932,10 @@ class BillingService:
         self._db.commit()
         return created
 
-    def mark_overdue(self, now: datetime) -> OverdueReport:
+    def mark_overdue(self, now: datetime, today: date | None = None) -> OverdueReport:
         report = OverdueReport()
-        today = today_of(now)
+        today = today or today_of(now)
+        self._day_override = today
         due = self._db.scalars(
             select(Payment).where(
                 Payment.status == "Open",
@@ -1022,7 +1027,8 @@ def add_on_service_completed(db: Session, payment_id: uuid.UUID | None) -> None:
 
 
 def mark_overdue_and_inactive(
-    now: datetime, db: Session | None = None, settings: MoneySettings | None = None
+    now: datetime, db: Session | None = None, settings: MoneySettings | None = None,
+    today: date | None = None,
 ) -> OverdueReport:
     """The daily job (ADM-PAY-06, ADM-SUB-03, SUB-11). A Due payment past its
     date becomes Over due. A plan payment Over due for 7 days makes its
@@ -1032,26 +1038,27 @@ def mark_overdue_and_inactive(
 
     settings = settings or get_money_settings()
     if db is not None:
-        return BillingService(db, lambda: now, settings).mark_overdue(now)
+        return BillingService(db, lambda: now, settings).mark_overdue(now, today)
     from app.platform.db import get_engine
 
     with Session(get_engine(), expire_on_commit=False) as session:
-        return BillingService(session, lambda: now, settings).mark_overdue(now)
+        return BillingService(session, lambda: now, settings).mark_overdue(now, today)
 
 
 def generate_due_payments(
-    now: datetime, db: Session | None = None, settings: MoneySettings | None = None
+    now: datetime, db: Session | None = None, settings: MoneySettings | None = None,
+    today: date | None = None,
 ) -> int:
     """The daily job that creates next cycle's Due payments (billing.generate_due)."""
     from app.billing.config import get_money_settings
 
     settings = settings or get_money_settings()
     if db is not None:
-        return BillingService(db, lambda: now, settings).generate_due_payments(now)
+        return BillingService(db, lambda: now, settings).generate_due_payments(now, today)
     from app.platform.db import get_engine
 
     with Session(get_engine(), expire_on_commit=False) as session:
-        return BillingService(session, lambda: now, settings).generate_due_payments(now)
+        return BillingService(session, lambda: now, settings).generate_due_payments(now, today)
 
 
 def ensure_current_cycle_payments(db: Session, subs: list[Subscription]) -> int:
