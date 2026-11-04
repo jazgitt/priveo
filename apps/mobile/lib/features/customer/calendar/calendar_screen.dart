@@ -112,7 +112,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ? null
         : ref.watch(calendarSubscriptionProvider(vehicleId)).value;
     final coveredFrom = sub?.startDate == null ? null : _dateOnly(sub!.startDate!);
-    final coveredTo = sub == null ? null : _dateOnly(sub.endDate);
+    final coveredTo = sub == null ? null : _dateOnly(sub.coveredUntil);
     final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);
     return month.when(
       skipLoadingOnReload: true,
@@ -141,10 +141,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             if (v.id == dayVisits.first.vehicleId) cutoff = v.cutoffTime;
           }
         }
-        final renewal = data.renewals
-            .where((r) => _dateOnly(r.date) == _selected)
-            .firstOrNull
-            ?.date;
+        // Shown only from 7 days before the cycle end (device date), as for
+        // the days left on the plan card.
+        final showRenewal =
+            coveredTo == null || coveredTo.difference(_today).inDays <= 7;
+        final renewal = !showRenewal
+            ? null
+            : data.renewals
+                .where((r) => _dateOnly(r.date) == _selected)
+                .firstOrNull
+                ?.date;
         return RefreshIndicator(
           onRefresh: () => refreshAll(ref, () => ref.read(calendarMonthProvider(key).future)),
           child: ListView(

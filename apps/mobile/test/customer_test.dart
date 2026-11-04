@@ -58,7 +58,8 @@ void main() {
       expect(find.text('MH 12 AB 1234'), findsOneWidget);
       // Society and parking slot share one line, comma separated.
       expect(find.text('Green Meadows, B2-14'), findsOneWidget);
-      expect(find.text('Expires on 06-Nov-26'), findsOneWidget);
+      expect(find.textContaining('Expires on'), findsNothing);
+      expect(find.text('Due · Due in 3 days'), findsOneWidget);
       // Home shows the plan name only, not the price.
       expect(find.text('Daily Premium'), findsOneWidget);
       expect(find.textContaining('₹1,299'), findsNothing);

@@ -259,10 +259,6 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           ]} />
           {withSubscription && (
             <>
-              <Field label="First payment status" className="max-w-xs">
-                {(p) => <SelectBox {...p} value={vehicle.first_payment_status} onChange={(s) => set("first_payment_status", s)}
-                                   choices={["Due", "Over due", "Initiated", "Received"].map((s) => ({ value: s, label: s }))} />}
-              </Field>
               <p className="text-xs text-muted-foreground">The subscription starts as Activating. You set the first service date when you activate it.</p>
             </>
           )}

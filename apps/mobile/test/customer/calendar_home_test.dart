@@ -340,6 +340,45 @@ void main() {
       expect(find.text('Your plan renews on 13-Nov-26.'), findsOneWidget);
     });
 
+    for (final c in const [
+      (8, 20, 10, false),
+      (7, 19, 10, true),
+      (0, 12, 10, true),
+    ]) {
+      testWidgets('the renewal line with ${c.$1} days to the cycle end is '
+          '${c.$4 ? 'shown' : 'hidden'}', (tester) async {
+        // Today is 10-Nov-26; a 30-day cycle starting c.$2 Oct ends c.$1 days on.
+        final money = FakeMoneyRepository()
+          ..sub = SubscriptionDto(
+            vehicleId: 'v1',
+            planName: 'Premium Care',
+            vehicle: 'Hyundai Creta',
+            registration: 'HR 26 DK 8337',
+            society: 'DLF Meadows',
+            status: 'Active',
+            monthlyPriceRupees: 1299,
+            paymentMethod: 'UPI',
+            cutoffTime: '07:00',
+            interiorDay: 'Friday',
+            startDate: DateTime(2026, 10, 1),
+            cycleStart: DateTime(2026, 10, c.$2),
+            cycleDays: 30,
+            latestPayment: null,
+            canPayNext: false,
+          );
+        await pumpWith(
+          tester,
+          calendar(),
+          reads: _Reads([visit(13, status: 'Paused', canChange: false, source: 'visit')]),
+          money: money,
+        );
+        await tester.tap(find.bySemanticsLabel('13-Nov-26'));
+        await tester.pumpAndSettle();
+        expect(find.text('Your plan renews on 13-Nov-26.'),
+            c.$4 ? findsOneWidget : findsNothing);
+      });
+    }
+
     test('markers: upcoming interior and spa days are outlined shapes', () {
       DayMarker? m(List<String> s, {String status = 'Scheduled'}) =>
           dayMarkerFor([

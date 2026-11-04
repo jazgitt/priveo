@@ -20,6 +20,7 @@ from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.billing.service import ensure_current_cycle_payments
 from app.customers.importer import _compact, _rows, _text, date_of, mobile_of, parking_of, split_name, time_of
 from app.customers.logins import ensure_login, mobile_taken
 from app.customers.models import (
@@ -100,6 +101,8 @@ class _Load:
     def __init__(self, db: Session, society: Society, report: SheetReport):
         self.db, self.society, self.report = db, society, report
         self.customers: dict[tuple[str, str], Customer] = {}
+        # Subscriptions made by this run: each gets its current cycle's payment.
+        self.new_subs: list[Subscription] = []
         self.zones: dict[str, Zone] = {}
         self.plan_by_price: dict[int, Plan] = {}
         for plan in db.scalars(select(Plan).where(Plan.active.is_(True))
@@ -252,10 +255,12 @@ class _Load:
             else:
                 self.warn(ref, "the interior day is not a weekday, left empty")
                 day = None
-        self.db.add(Subscription(
+        sub = Subscription(
             vehicle_id=vehicle.id, plan_id=plan.id if plan else None,
             monthly_price_rupees=int(price), status="Active", first_service_date=start,
-            cutoff_time=cutoff, interior_day=day, interior_day_notes=day_notes))
+            cutoff_time=cutoff, interior_day=day, interior_day_notes=day_notes)
+        self.db.add(sub)
+        self.new_subs.append(sub)
         self.report.subscriptions_created += 1
 
 
@@ -288,6 +293,7 @@ def load_monthly_customers(db: Session, path: Path | str, *, society_name: str |
         run = _Load(db, society, report)
         for row in _rows(workbook[SHEET]):
             run.row(row)
+        ensure_current_cycle_payments(db, run.new_subs)
         if apply:
             db.commit()
         else:

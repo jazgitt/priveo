@@ -146,7 +146,9 @@ class World:
                 cycle_start: date | None = None, overdue_since: date | None = None,
                 received_at: datetime | None = None, sub: Subscription | None = None) -> Payment:
         row = Payment(customer_id=customer.id, subscription_id=sub.id if sub else None, kind=kind,
-                      description=f"{kind} payment", amount_rupees=rupees, status=status, due_date=due,
+                      description=f"{kind} payment", amount_rupees=rupees,
+                      status={"Paid": "Paid", "Initiated": "Initiated"}.get(status, "Open"),
+                      due_date=due,
                       cycle_start=cycle_start,
                       cycle_end=cycle_start + timedelta(days=29) if cycle_start else None,
                       overdue_since=overdue_since, received_at=received_at)
@@ -261,25 +263,27 @@ def build_company(db: Session) -> World:
 
     # Money.
     plan_cycle = date(2026, 10, 15)
-    w.payment(asha, "Due", 1299, cycle_start=plan_cycle, sub=s1)
-    w.payment(bela, "Over due", 1299, cycle_start=plan_cycle, overdue_since=date(2026, 10, 25), sub=s2)
-    w.payment(chen, "Received", 1299, cycle_start=plan_cycle, received_at=utc(2026, 10, 10, 5), sub=s3)
-    w.payment(dev, "Over due", 999, cycle_start=plan_cycle, overdue_since=date(2026, 10, 20), sub=s4)
-    w.payment(asha, "Over due", 1299, cycle_start=date(2026, 9, 15), overdue_since=date(2026, 10, 22),
-              sub=s1)
-    w.payment(bela, "Received", 500, cycle_start=date(2026, 9, 1), sub=s2,
+    w.payment(asha, "Due", 1299, due=date(2026, 10, 31), cycle_start=plan_cycle, sub=s1)
+    w.payment(bela, "Over due", 1299, due=date(2026, 10, 24), cycle_start=plan_cycle,
+              overdue_since=date(2026, 10, 25), sub=s2)
+    w.payment(chen, "Paid", 1299, cycle_start=plan_cycle, received_at=utc(2026, 10, 10, 5), sub=s3)
+    w.payment(dev, "Over due", 999, due=date(2026, 10, 19), cycle_start=plan_cycle,
+              overdue_since=date(2026, 10, 20), sub=s4)
+    w.payment(asha, "Over due", 1299, due=date(2026, 10, 21), cycle_start=date(2026, 9, 15),
+              overdue_since=date(2026, 10, 22), sub=s1)
+    w.payment(bela, "Paid", 500, cycle_start=date(2026, 9, 1), sub=s2,
               received_at=utc(2026, 10, 25, 20, 0))  # 01:30 on Monday 26-Oct India time
-    w.payment(chen, "Received", 250, cycle_start=date(2026, 8, 16), received_at=utc(2026, 10, 18, 19, 0),
+    w.payment(chen, "Paid", 250, cycle_start=date(2026, 8, 16), received_at=utc(2026, 10, 18, 19, 0),
               sub=s3)  # 00:30 on Monday 19-Oct India time
-    w.payment(asha, "Received", 400, cycle_start=date(2026, 8, 1), received_at=utc(2026, 10, 14, 5), sub=s1)
+    w.payment(asha, "Paid", 400, cycle_start=date(2026, 8, 1), received_at=utc(2026, 10, 14, 5), sub=s1)
     # Add-ons: each completed add-on payment carries the booking it paid for.
-    ao_received_early = w.payment(asha, "Received", 1500, "Add-on", date(2026, 10, 5),
+    ao_received_early = w.payment(asha, "Paid", 1500, "Add-on", date(2026, 10, 5),
                                   received_at=utc(2026, 10, 8, 5))
-    ao_received = w.payment(bela, "Received", 1000, "Add-on", date(2026, 10, 12),
+    ao_received = w.payment(bela, "Paid", 1000, "Add-on", date(2026, 10, 12),
                             received_at=utc(2026, 10, 20, 5))
     ao_over = w.payment(chen, "Over due", 900, "Add-on", date(2026, 10, 28), overdue_since=date(2026, 10, 28))
     w.payment(dev, "Due", 800, "Add-on", TODAY)
-    ao_sept = w.payment(dev, "Received", 700, "Add-on", date(2026, 9, 20), received_at=utc(2026, 9, 28, 5))
+    ao_sept = w.payment(dev, "Paid", 700, "Add-on", date(2026, 9, 20), received_at=utc(2026, 9, 28, 5))
     w.booking(asha, "Completed", date(2026, 10, 5), payment=ao_received_early)
     w.booking(bela, "Completed", date(2026, 10, 12), payment=ao_received)
     w.booking(chen, "Completed", date(2026, 10, 28), payment=ao_over)

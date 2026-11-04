@@ -19,6 +19,7 @@ from app.addons.schemas import (
 from app.billing.config import MoneySettings
 from app.billing.models import Payment
 from app.billing.service import BillingService, customer_name, vehicle_label
+from app.billing.status import display_status
 from app.changes.access import owned_vehicle, parse_id
 from app.changes.cycle import paused_days
 from app.changes.rules import Clock, is_open, require_open, today_of
@@ -109,7 +110,7 @@ class AddonService:
         if b.payment_id is None:
             return None
         p = self._db.get(Payment, b.payment_id)
-        return p.status if p and p.voided_at is None else None
+        return display_status(p, today_of(self._now())).status if p and p.voided_at is None else None
 
     def _out(self, b: AddonBooking) -> AddonOut:
         assignment = self._db.execute(
@@ -312,7 +313,7 @@ class AddonService:
     def _sync_due_date(self, b: AddonBooking) -> None:
         """The add-on payment is due on the scheduled service date."""
         p = self._db.get(Payment, b.payment_id) if b.payment_id else None
-        if p is not None and p.status == "Due" and p.voided_at is None:
+        if p is not None and p.status == "Open" and p.overdue_since is None and p.voided_at is None:
             p.due_date = b.proposed_date
 
     def _frozen(self, b: AddonBooking, day: date | None = None) -> bool:

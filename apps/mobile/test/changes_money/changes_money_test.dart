@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/ui/theme.dart';
+import 'package:priveo/core/ui/widgets.dart' show ChipTone;
 import 'package:priveo/features/customer/home/vehicle_header.dart';
 import 'package:priveo/features/changes_money/data/money_models.dart';
 import 'package:priveo/features/changes_money/money_widgets.dart';
@@ -33,10 +34,17 @@ void main() {
       expect(Uri.parse(instructions.upiUri).queryParameters['pa'], 'merchant@upi');
     });
     test('payment status labels follow PAY-09', () {
-      expect(paymentStatusLabel(payment('a')), 'Due by 07-Nov-26');
-      expect(paymentStatusLabel(payment('a', status: 'Over due')), 'Over due');
-      expect(paymentStatusLabel(payment('a', status: 'Initiated')), 'Initiated');
-      expect(paymentStatusLabel(payment('a', status: 'Received')), 'Received');
+      for (final st in const [
+        'Not Due', 'Due', 'Due today', 'Over due', 'Initiated', 'Paid'
+      ]) {
+        expect(paymentStatusLabel(payment('a', status: st)), st);
+      }
+      expect(paymentTone('Paid'), ChipTone.ok);
+      expect(paymentTone('Over due'), ChipTone.warn);
+      expect(payment('a', status: 'Initiated').canMarkPaid, isFalse);
+      expect(payment('a', status: 'Not Due').canMarkPaid, isTrue);
+      expect(payment('a', status: 'Not Due').needsPayment, isFalse);
+      expect(payment('a', status: 'Due today').needsPayment, isTrue);
     });
 
     test('finish-by times are in 30-minute steps', () {
@@ -212,7 +220,7 @@ void main() {
     testWidgets('the pause screen says the plan limit (PAUSE-08)', (tester) async {
       final repo = FakeMoneyRepository()..planEndsOn = d(25);
       await openAt(tester, pausePath(vehicle), money: repo);
-      expect(find.text('You can pause only up to the end of your current plan, 25-Oct-26.'),
+      expect(find.text('You can pause only up to the end of your current billing cycle, 25-Oct-26.'),
           findsOneWidget);
     });
 
@@ -221,7 +229,7 @@ void main() {
       await openAt(tester, pausePath(vehicle), money: repo);
       await tester.tap(find.textContaining('From'));
       await tester.pumpAndSettle();
-      expect(find.text('Your plan ends tomorrow or earlier, so there is nothing left to pause.'),
+      expect(find.text('Your billing cycle ends tomorrow or earlier, so there is nothing left to pause.'),
           findsOneWidget);
       expect(find.byType(DatePickerDialog), findsNothing);
     });
@@ -253,8 +261,12 @@ void main() {
       expect(find.text('26 days left'), findsOneWidget);
       expect(find.text('Monthly amount: ₹1,299'), findsOneWidget);
       expect(find.text('Payment method: UPI'), findsOneWidget);
-      expect(find.text('Received'), findsOneWidget);
+      expect(find.text('Paid'), findsWidgets);
       expect(find.text('Renew subscription'), findsOneWidget);
+      // SUB-01: no end date unless the payment is Over due.
+      expect(find.textContaining('Expires on'), findsNothing);
+      expect(find.textContaining('Billing cycle ended'), findsNothing);
+      expect(find.textContaining('becomes Inactive'), findsNothing);
     });
 
     testWidgets('pay for next month opens the UPI screen', (tester) async {
@@ -290,8 +302,10 @@ void main() {
 
     testWidgets('billing history lists newest first with an invoice', (tester) async {
       await openAt(tester, billingPath(vehicle));
-      expect(find.text('Due by 07-Nov-26'), findsOneWidget);
-      expect(find.text('Received'), findsOneWidget);
+      expect(find.text('Due'), findsOneWidget);
+      expect(find.text('Due in 3 days'), findsOneWidget);
+      expect(find.text('Your last payment failed'), findsOneWidget);
+      expect(find.text('Paid'), findsOneWidget);
       await tester.tap(find.text('Invoice'));
       await tester.pumpAndSettle();
       expect(find.text('PRV102643210001'), findsOneWidget);
@@ -300,6 +314,23 @@ void main() {
   });
 
   group('pay by UPI', () {
+    testWidgets('an Initiated payment keeps the button in that state (PAY-17)',
+        (tester) async {
+      final repo = FakeMoneyRepository()..detailStatus = 'Initiated';
+      await openAt(tester, payPath('p1'), money: repo);
+      expect(find.text("I've paid"), findsNothing);
+      expect(find.text('Initiated'), findsWidgets);
+      expect(repo.calls, isEmpty);
+    });
+
+    testWidgets('a Not Due payment can be paid any time (SUB-09)', (tester) async {
+      final repo = FakeMoneyRepository()..detailStatus = 'Not Due';
+      await openAt(tester, payPath('p1'), money: repo);
+      await tester.tap(find.text("I've paid"));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['paid p1']);
+    });
+
     testWidgets("I've paid submits and shows Initiated (PAY-06, PAY-07)", (tester) async {
       final repo = FakeMoneyRepository();
       await openAt(tester, payPath('p1'), money: repo);
@@ -411,15 +442,29 @@ void main() {
   });
 
   group('admin quick actions', () {
-    testWidgets('confirm a payment', (tester) async {
+    testWidgets('approve a payment', (tester) async {
       final admin = FakeAdminPaymentsRepository();
       await openAt(tester, '/admin/payments', admin: admin);
       expect(find.text('Meera Rao, A-101'), findsOneWidget);
       expect(find.text('₹1,299'), findsOneWidget);
-      await tester.tap(find.text('Confirm'));
+      await tester.tap(find.text('Approve'));
       await tester.pumpAndSettle();
       expect(admin.calls, ['confirm pay-1']);
       expect(find.text('Nothing to confirm.'), findsOneWidget);
+    });
+
+    testWidgets('the status filter lists payments of that status', (tester) async {
+      final admin = FakeAdminPaymentsRepository();
+      await openAt(tester, '/admin/payments', admin: admin);
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Paid'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Paid'));
+      await tester.pumpAndSettle();
+      expect(find.text('Meera Rao, A-101'), findsNothing);
+      expect(find.text('Nothing to confirm.'), findsOneWidget);
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'All'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'All'));
+      await tester.pumpAndSettle();
+      expect(find.text('Meera Rao, A-101'), findsOneWidget);
     });
 
     testWidgets('reject sends the payment back', (tester) async {

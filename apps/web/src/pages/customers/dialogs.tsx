@@ -223,7 +223,6 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
   const [interior, setInterior] = useState("");
   const [notes, setNotes] = useState("");
   const [starts, setStarts] = useState("");
-  const [payment, setPayment] = useState("Due");
   const save = useCustomerSave(customerId, "Subscription set up. It starts as Activating.", onClose);
   const plan = plans.data?.find((p) => p.id === planId);
   const needsInterior = Boolean(plan?.includes_interior);
@@ -232,7 +231,7 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
                 description="The subscription starts as Activating, with the first plan payment, like a vehicle added with a plan."
                 submitLabel="Set up subscription" busy={save.isPending} disabled={!planId || (needsInterior && !interior)}
                 onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}/subscription`, method: "POST", body: {
-                  plan_id: planId, cutoff_time: cutoff, first_payment_status: payment,
+                  plan_id: planId, cutoff_time: cutoff,
                   ...(needsInterior ? { interior_day: interior } : {}),
                   ...(needsInterior && interior === CUSTOM_DAY && notes.trim() ? { interior_day_notes: notes.trim() } : {}),
                   ...(starts ? { first_service_date: starts } : {}),
@@ -255,10 +254,6 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
         )}
         <Field label="First service date" optional hint="Empty means today.">
           {(p) => <Input {...p} type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />}
-        </Field>
-        <Field label="First payment status">
-          {(p) => <SelectBox {...p} value={payment} onChange={setPayment}
-                             choices={["Due", "Over due", "Initiated", "Received"].map((s) => ({ value: s, label: s }))} />}
         </Field>
       </div>
     </FormDialog>

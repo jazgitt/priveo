@@ -83,8 +83,8 @@ export function DashboardPage() {
             ))}
           </Rows>
         </Tile>
-        <Tile title="Payments to confirm" to="/payments" count={initiated.data?.length ?? 0} icon={CreditCard}
-              loading={initiated.isLoading} error={initiated.isError} empty="No payment is waiting for confirmation.">
+        <Tile title="Payments to approve" to="/payments" count={initiated.data?.length ?? 0} icon={CreditCard}
+              loading={initiated.isLoading} error={initiated.isError} empty="No payment is waiting for approval.">
           <Rows>
             {(initiated.data ?? []).slice(0, 5).map((p) => (
               <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">

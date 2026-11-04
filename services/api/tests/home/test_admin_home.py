@@ -34,7 +34,7 @@ def test_home_counts_alerts_payments_complaints_and_unscheduled_jobs(
         db.add(pay)
         db.add(Payment(customer_id=world.customer.id, vehicle_id=world.vehicles[1].id,
                        kind="Plan", description="Due one", amount_rupees=1299,
-                       status="Due", due_date=date(2026, 10, 20)))
+                       status="Open", due_date=date(2026, 10, 20)))
         db.flush()
         pay_id = str(pay.id)
         db.add(MoneyAlert(kind="payment_initiated", message="Paid", payment_id=pay.id))

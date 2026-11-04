@@ -8,10 +8,20 @@ class PaymentOut(BaseModel):
     kind: str  # Plan | Add-on
     description: str
     amount_rupees: int
-    # Due | Over due | Initiated | Received (PAY-09). The app only displays it.
+    # Not Due | Due | Due today | Over due | Initiated | Paid (PAY-09, PAY-14).
+    # The backend works it out; the app only displays it.
     status: str
+    # Due date minus today in India: negative once over due.
+    days_to_due: int = 0
+    # "Due in 3 days", "2 days over due", "Waiting for Priveo to confirm", "Payment
+    # received"; empty for Not Due.
+    status_message: str = ""
+    # True after the admin rejected the last attempt and the customer has not marked it
+    # paid again (PAY-17): the app adds "Your last payment failed".
+    last_payment_failed: bool = False
     due_date: dt.date
     cycle_start: dt.date | None = None
+    # The cycle's last day, counted (the same day as due_date for a plan payment).
     cycle_end: dt.date | None = None
     vehicle_id: str | None = None
     received_on: dt.date | None = None
@@ -57,14 +67,26 @@ class SubscriptionView(BaseModel):
     # The first day the subscription covers (its first service date).
     start_date: dt.date
     cycle_start: dt.date
-    renewal_date: dt.date
-    # The last day the plan covers; later than the cycle end once a renewal
-    # payment has been confirmed (SUB-02).
-    expires_on: dt.date
+    # The end date is hidden unless the payment is Over due (SUB-01): renewal_date,
+    # expires_on, days_left, cycle_end and inactive_by are null otherwise.
+    renewal_date: dt.date | None = None
+    expires_on: dt.date | None = None
     cycle_days: int
-    days_left: int
+    days_left: int | None = None
+    # Only when Over due: the cycle's last day, and the day by which the payment must
+    # be cleared or the subscription goes Inactive (cycle_end + 7 days).
+    cycle_end: dt.date | None = None
+    inactive_by: dt.date | None = None
+    # The payment the card is about: the oldest unpaid cycle that is past its end
+    # date, else the current cycle. Null only before the cycle's payment is made.
+    payment_id: str | None = None
+    payment_status: str = "Not Due"
+    days_to_due: int = 0
+    status_message: str = ""
+    last_payment_failed: bool = False
     latest_payment: PaymentOut | None
-    # From one week before the renewal date (SUB-09).
+    # The customer can pay now: an Active subscription whose payment is not
+    # Initiated or Paid (SUB-09).
     can_pay_next: bool
 
 
@@ -102,8 +124,11 @@ class AdminPaymentIn(BaseModel):
     kind: str = "Plan"
     description: str = ""
     amount_rupees: int
-    due_date: dt.date
+    # Add-on only (the service date). A plan payment is due on its cycle's last day.
+    due_date: dt.date | None = None
+    # Plan only: the first day of the cycle, also a past one. Default: the current cycle.
     cycle_start: dt.date | None = None
+    # Not Due | Due | Due today | Over due (all mean Open) | Initiated | Paid.
     status: str = "Due"
 
 
@@ -138,7 +163,7 @@ class SubscriptionRowOut(BaseModel):
     first_service_date: dt.date | None
     # The end of the current billing cycle.
     renewal_date: dt.date | None
-    # The status of the latest plan payment, and whether it is waiting (Due or Over due).
+    # The status of the latest plan payment, and whether it is waiting (Due, Due today or Over due).
     payment_status: str | None = None
     payment_due: bool = False
 

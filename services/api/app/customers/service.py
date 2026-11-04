@@ -159,7 +159,7 @@ class CustomerService:
         return plan.includes_interior if plan else subscription.interior_day is not None
 
     def home(self, login_id: uuid.UUID) -> CustomerHome:
-        from app.changes.cycle import plan_expires_on
+        from app.billing.card import card_state
         from app.platform.clock import today_ist
 
         customer = self._customer(login_id)
@@ -169,6 +169,8 @@ class CustomerService:
         for vehicle, sub in owned:
             plan = self._plan(sub)
             parking = "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p)
+            # The end date is shown only when the payment is Over due (SUB-01).
+            card = card_state(self._db, sub, today_ist()) if sub else None
             cards.append(
                 VehicleCard(
                     id=str(vehicle.id),
@@ -182,7 +184,12 @@ class CustomerService:
                     subscription_status=sub.status if sub else None,
                     monthly_price_rupees=sub.monthly_price_rupees if sub else None,
                     plan_name=plan.name if plan else None,
-                    expires_on=plan_expires_on(self._db, sub, today_ist()) if sub else None,
+                    expires_on=card.last_day if card and card.overdue else None,
+                    cycle_end=card.last_day if card and card.overdue else None,
+                    inactive_by=card.inactive_by if card else None,
+                    payment_status=card.view.status if card else None,
+                    status_message=card.view.message if card else "",
+                    last_payment_failed=card.view.last_payment_failed if card else False,
                     cutoff_time=show_time(sub.cutoff_time) if sub else None,
                     interior_day=sub.interior_day if sub else None,
                     # Filled in once visits are scheduled.

@@ -73,6 +73,9 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 PaymentStatusChip(d.payment),
               ],
             ),
+            PaymentStatusNote(
+                message: d.payment.statusMessage,
+                lastPaymentFailed: d.payment.lastPaymentFailed),
             const SizedBox(height: 16),
             const SectionLabel(MoneyStrings.payMethod),
             const SizedBox(height: 8),
@@ -122,7 +125,12 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             const SizedBox(height: 8),
             _QrBox(uri: d.instructions.upiUri),
             const SizedBox(height: 24),
-            if (d.payment.status == 'Due' || d.payment.status == 'Over due')
+            // Pay any time (SUB-09). Once Initiated the button stays in that
+            // state and cannot start a second one (PAY-17); Paid has none.
+            if (d.payment.status == 'Initiated')
+              const PrimaryButton(
+                  label: MoneyStrings.statusInitiated, onPressed: null)
+            else if (d.payment.canMarkPaid)
               PrimaryButton(
                   label: MoneyStrings.ivePaid, busy: _busy, onPressed: _paid),
           ],

@@ -47,7 +47,7 @@ def cancel_scheduled(db: Session, sub: Subscription) -> None:
 def void_charge(db: Session, change: PlanChange) -> None:
     """A cancelled change is not charged. A payment already Received is left for a refund outside the app."""
     pay = db.get(Payment, change.payment_id) if change.payment_id else None
-    if pay is not None and pay.status != "Received" and pay.voided_at is None:
+    if pay is not None and pay.status != "Paid" and pay.voided_at is None:
         pay.voided_at = utcnow()
 
 
@@ -77,7 +77,7 @@ def charge(db: Session, sub: Subscription, plan: Plan, change: PlanChange, start
     pay = Payment(
         customer_id=vehicle.customer_id, vehicle_id=sub.vehicle_id, subscription_id=sub.id,
         kind="Adjust", description=f"Plan change to {plan.name}: {q['days']} days from {starts:%d-%b-%y}"[:120],
-        amount_rupees=amount, status="Due", due_date=starts)
+        amount_rupees=amount, status="Open", due_date=starts)
     db.add(pay)
     db.flush()
     db.add(PaymentEvent(payment_id=pay.id, from_status=None, to_status="Due", by_login_id=change.created_by,

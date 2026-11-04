@@ -164,7 +164,7 @@ def test_admin_sets_up_the_subscription_of_a_vehicle_that_has_none(client, direc
     car = db.scalar(select(Vehicle).where(Vehicle.customer_id == customer.id))
     url = f"/v1/admin/vehicles/{car.id}/subscription"
     body = {"plan_id": str(plan.id), "cutoff_time": "09:00", "interior_day": "Sunday",
-            "first_service_date": "2026-11-01", "first_payment_status": "Due"}
+            "first_service_date": "2026-11-01"}
 
     assert client.post(url, headers=admin, json={**body, "cutoff_time": "09:10"}).status_code == 422
     assert client.post(url, headers=admin, json={**body, "interior_day": None}).status_code == 422
@@ -173,8 +173,8 @@ def test_admin_sets_up_the_subscription_of_a_vehicle_that_has_none(client, direc
     sub = made.json()["subscription"]
     assert sub["status"] == "Activating" and sub["price_rupees"] == plan.monthly_price_rupees
     assert sub["interior_day"] == "Sunday" and sub["first_service_date"] == "2026-11-01"
-    assert made.json()["payments"][0]["status"] == "Due"
-    assert made.json()["payments"][0]["due_date"] == "2026-11-01"
+    assert made.json()["payments"][0]["status"] == "Not Due"
+    assert made.json()["payments"][0]["due_date"] == "2026-11-30"  # the cycle's last day
 
     again = client.post(url, headers=admin, json=body)
     assert again.status_code == 409 and again.json()["code"] == "subscription_exists"

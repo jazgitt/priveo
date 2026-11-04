@@ -95,7 +95,7 @@ def test_onboard_without_import_and_duplicate_email_opens_existing(client, direc
     c, body = create(client, directory, admin)
     assert c["welcome_sent"] and not c["mpin_changed"] and not c["onboarding_confirmed"]
     v = c["vehicles"][0]
-    assert v["subscription"]["status"] == "Activating" and v["payments"][0]["status"] == "Due"
+    assert v["subscription"]["status"] == "Activating" and v["payments"][0]["status"] == "Not Due"
     assert v["photo_url"] and v["society"] == "Second society"
     repeat = client.post("/v1/admin/customers", headers=admin, json=body).json()
     assert repeat["existing"] and repeat["id"] == c["id"]
@@ -111,13 +111,14 @@ def test_onboard_without_import_and_duplicate_email_opens_existing(client, direc
 def test_customer_adds_vehicle_in_another_society_and_cannot_confirm_payment(client, directory, db):
     customer = auth(login(client, "customer")["access_token"])
     body = vehicle_body(directory, upload(client, customer, admin=False))
-    rejected = client.post(
-        "/v1/customer/vehicles", headers=customer, json={**body, "first_payment_status": "Received"}
+    # An old client still sends the status; it is ignored, never stored (PAY-14).
+    r = client.post(
+        "/v1/customer/vehicles", headers=customer, json={**body, "first_payment_status": "Paid"}
     )
-    assert rejected.status_code == 422
-    r = client.post("/v1/customer/vehicles", headers=customer, json=body)
     assert r.status_code == 201, r.text
     v = r.json()
+    paid = db.get(Payment, uuid.UUID(v["payment_id"]))
+    assert paid.status == "Open" and paid.received_at is None and paid.confirmed_by is None
     read = client.get(f"/v1/customer/vehicles/{v['id']}", headers=customer).json()
     assert read["society"] == "Second society" and read["photo_url"]
     home = client.get("/v1/customer/home", headers=customer).json()
@@ -270,9 +271,9 @@ def test_activation_anchors_first_payment_and_pending_plan_applies_at_renewal(
     )
     assert activated.status_code == 200, activated.text
     first = db.scalar(select(Payment).where(Payment.subscription_id == sub.id))
-    assert first.cycle_start == start and first.due_date == start
+    assert first.cycle_start == start and first.due_date == start + timedelta(days=29)
     assert first.cycle_end == start + timedelta(days=30)
-    first.status = "Received"
+    first.status = "Paid"
     next_plan = Plan(name="Exterior renewal", monthly_price_rupees=699, includes_interior=False)
     db.add(next_plan)
     db.commit()
@@ -288,13 +289,16 @@ def test_activation_anchors_first_payment_and_pending_plan_applies_at_renewal(
     BillingService(db, lambda: before, MoneySettings()).generate_due_payments(before)
     db.refresh(sub)
     assert sub.monthly_price_rupees == 999
+    # The next cycle's payment is made on its first day, at the new plan's price.
+    assert db.scalar(select(Payment).where(
+        Payment.subscription_id == sub.id, Payment.cycle_start == renewal)) is None
+    effective = datetime.combine(renewal, datetime.min.time(), tzinfo=UTC)
+    BillingService(db, lambda: effective, MoneySettings()).generate_due_payments(effective)
+    db.refresh(sub)
     due = db.scalar(
         select(Payment).where(Payment.subscription_id == sub.id, Payment.cycle_start == renewal)
     )
     assert due.amount_rupees == 699
-    effective = datetime.combine(renewal, datetime.min.time(), tzinfo=UTC)
-    BillingService(db, lambda: effective, MoneySettings()).generate_due_payments(effective)
-    db.refresh(sub)
     assert sub.plan_id == next_plan.id and sub.monthly_price_rupees == 699
     assert sub.pending_plan_id is None and sub.interior_day is None
 
@@ -417,3 +421,57 @@ def test_customer_list_filters_by_scope(client, directory, db):
     assert spa_customer["id"] not in ids("scope=with_subscription")
     assert ids("scope=addons_only") == {spa_customer["id"]}
     assert client.get("/v1/admin/customers?scope=bad", headers=admin).status_code == 422
+
+
+def _sub_url(db, client, admin, directory, mobile, reg):
+    car = vehicle_body(directory, upload(client, admin))
+    car.update(plan_id=None, cutoff_time=None, interior_day=None, registration=reg)
+    r = client.post("/v1/admin/customers", headers=admin, json={
+        "first_name": "Cy", "last_name": "Cle", "mobile": mobile, "vehicle": car})
+    assert r.status_code == 201, r.text
+    return f"/v1/admin/vehicles/{r.json()['vehicles'][0]['id']}/subscription"
+
+
+def test_status_comes_from_the_cycle_dates_not_from_the_request(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    plan = directory[1]
+    today = today_ist()
+    cases = [(0, "Not Due"), (25, "Due"), (31, "Over due")]
+    for i, (days_ago, expected) in enumerate(cases):
+        url = _sub_url(db, client, admin, directory, f"98765432{20 + i}", f"HR01ZZ{5000 + i}")
+        body = {"plan_id": str(plan.id), "cutoff_time": "09:00", "interior_day": "Monday",
+                "first_service_date": str(today - timedelta(days=days_ago)),
+                # An old client may still send this; it must not change the result.
+                "first_payment_status": "Paid"}
+        made = client.post(url, headers=admin, json=body)
+        assert made.status_code == 201, made.text
+        assert [p["status"] for p in made.json()["payments"]] == [expected]
+        stored = db.get(Payment, uuid.UUID(made.json()["payment_id"]))
+        assert stored.status == "Open" and stored.received_at is None
+
+
+def test_a_future_first_service_date_is_not_due(client, directory, db):
+    admin = auth(login(client, "admin")["access_token"])
+    url = _sub_url(db, client, admin, directory, "9876543230", "HR01ZZ6000")
+    body = {"plan_id": str(directory[1].id), "cutoff_time": "09:00", "interior_day": "Monday",
+            "first_service_date": str(today_ist() + timedelta(days=10))}
+    made = client.post(url, headers=admin, json=body)
+    assert made.status_code == 201, made.text
+    assert made.json()["payments"][0]["status"] == "Not Due"
+
+
+def test_new_customer_with_first_service_today_is_not_due_and_ignores_old_field(
+    client, directory, db
+):
+    admin = auth(login(client, "admin")["access_token"])
+    body = {
+        "first_name": "Old", "last_name": "Client", "mobile": "9876543240",
+        "vehicle": {**vehicle_body(directory, upload(client, admin)),
+                    "first_payment_status": "Paid"},
+    }
+    r = client.post("/v1/admin/customers", headers=admin, json=body)
+    assert r.status_code == 201, r.text
+    vehicle = r.json()["vehicles"][0]
+    assert vehicle["payments"][0]["status"] == "Not Due"
+    row = db.scalar(select(Payment).where(Payment.vehicle_id == uuid.UUID(vehicle["id"])))
+    assert row.status == "Open" and row.cycle_start == today_ist()

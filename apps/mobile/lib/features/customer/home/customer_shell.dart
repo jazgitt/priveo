@@ -17,7 +17,7 @@ import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../changes_money/routes.dart' as money;
-import '../../changes_money/money_widgets.dart' show showMessage;
+import '../../changes_money/money_widgets.dart' show paymentStatusText, showMessage;
 import '../../changes_money/strings.dart';
 import '../../common/push/push_registration.dart';
 import '../../common/signout_button.dart';
@@ -634,13 +634,34 @@ class _VehicleCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                // The date the plan expires; it moves on once a renewal is paid.
-                if (vehicle.expiresOn != null) ...[
+                // HOME-02, SUB-01: the payment status message; the cycle end
+                // date and the Inactive warning only when Over due.
+                if ((vehicle.paymentStatus ?? '').isNotEmpty &&
+                    vehicle.paymentStatus != 'Not Due') ...[
                   const SizedBox(height: 4),
                   line(
-                    Symbols.event_rounded,
-                    'Expires on ${formatDate(vehicle.expiresOn!)}',
+                    Symbols.payments_rounded,
+                    [
+                      paymentStatusText(vehicle.paymentStatus!),
+                      if ((vehicle.statusMessage ?? '').isNotEmpty)
+                        vehicle.statusMessage!,
+                    ].join(' · '),
                   ),
+                  if (vehicle.lastPaymentFailed == true)
+                    line(Symbols.error_rounded, MoneyStrings.lastPaymentFailed),
+                ],
+                if (vehicle.paymentStatus == 'Over due') ...[
+                  if (vehicle.cycleEnd != null)
+                    line(
+                      Symbols.event_rounded,
+                      MoneyStrings.cycleEnded(formatDate(vehicle.cycleEnd!)),
+                    ),
+                  if (vehicle.inactiveBy != null)
+                    line(
+                      Symbols.warning_rounded,
+                      MoneyStrings.inactiveWarning(
+                          formatDate(vehicle.inactiveBy!)),
+                    ),
                 ],
                 const SizedBox(height: 8),
                 // Society and parking slot on one line, comma separated.

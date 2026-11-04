@@ -130,11 +130,11 @@ describe("dashboard", () => {
     renderAt("/");
     expect(await screen.findByText("MH12AB1234")).toBeInTheDocument();
     expect(screen.getByText("12-Oct-26")).toBeInTheDocument();
-    expect(screen.getByText("No payment is waiting for confirmation.")).toBeInTheDocument();
+    expect(screen.getByText("No payment is waiting for approval.")).toBeInTheDocument();
     expect(await screen.findByText("#C-0001")).toBeInTheDocument();
     expect(screen.getByLabelText("Unread alerts count")).toHaveTextContent("2");
     expect(screen.getByLabelText("Needs scheduling count")).toHaveTextContent("1");
-    expect(screen.getByLabelText("Payments to confirm count")).toHaveTextContent("0");
+    expect(screen.getByLabelText("Payments to approve count")).toHaveTextContent("0");
     expect(screen.getByLabelText("Complaints overdue count")).toHaveTextContent("1");
   });
 });

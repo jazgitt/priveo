@@ -2212,6 +2212,24 @@ abstract class AppLocalizations {
   /// **'Plan'**
   String get money_noPlanName;
 
+  /// No description provided for @money_statusNotDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Due'**
+  String get money_statusNotDue;
+
+  /// No description provided for @money_statusDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get money_statusDue;
+
+  /// No description provided for @money_statusDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get money_statusDueToday;
+
   /// No description provided for @money_statusOverdue.
   ///
   /// In en, this message translates to:
@@ -2224,11 +2242,35 @@ abstract class AppLocalizations {
   /// **'Initiated'**
   String get money_statusInitiated;
 
-  /// No description provided for @money_statusReceived.
+  /// No description provided for @money_statusPaid.
   ///
   /// In en, this message translates to:
-  /// **'Received'**
-  String get money_statusReceived;
+  /// **'Paid'**
+  String get money_statusPaid;
+
+  /// No description provided for @money_lastPaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your last payment failed'**
+  String get money_lastPaymentFailed;
+
+  /// No description provided for @money_paymentInitiated.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment initiated. Waiting for Priveo to confirm.'**
+  String get money_paymentInitiated;
+
+  /// No description provided for @money_inactiveWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Your subscription becomes Inactive if this is not paid by {date}.'**
+  String money_inactiveWarning(String date);
+
+  /// No description provided for @money_cycleEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing cycle ended on {date}'**
+  String money_cycleEnded(String date);
 
   /// No description provided for @money_payTitle.
   ///
@@ -2410,11 +2452,17 @@ abstract class AppLocalizations {
   /// **'Nothing to confirm.'**
   String get money_adminNoPayments;
 
-  /// No description provided for @money_adminConfirm.
+  /// No description provided for @money_adminApprove.
   ///
   /// In en, this message translates to:
-  /// **'Confirm'**
-  String get money_adminConfirm;
+  /// **'Approve'**
+  String get money_adminApprove;
+
+  /// No description provided for @money_adminAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get money_adminAll;
 
   /// No description provided for @money_adminReject.
   ///
@@ -2422,11 +2470,11 @@ abstract class AppLocalizations {
   /// **'Reject'**
   String get money_adminReject;
 
-  /// No description provided for @money_adminConfirmed.
+  /// No description provided for @money_adminApproved.
   ///
   /// In en, this message translates to:
-  /// **'Payment confirmed.'**
-  String get money_adminConfirmed;
+  /// **'Payment approved.'**
+  String get money_adminApproved;
 
   /// No description provided for @money_adminRejected.
   ///
@@ -2467,20 +2515,14 @@ abstract class AppLocalizations {
   /// No description provided for @money_pauseDone.
   ///
   /// In en, this message translates to:
-  /// **'Paused {from} to {to}. Plan now renews {renewal}.'**
-  String money_pauseDone(String from, String to, String renewal);
+  /// **'Paused {from} to {to}.'**
+  String money_pauseDone(String from, String to);
 
   /// No description provided for @money_pausePeriod.
   ///
   /// In en, this message translates to:
   /// **'{from} to {to}'**
   String money_pausePeriod(String from, String to);
-
-  /// No description provided for @money_statusDue.
-  ///
-  /// In en, this message translates to:
-  /// **'Due by {date}'**
-  String money_statusDue(String date);
 
   /// No description provided for @money_submittedBody.
   ///
