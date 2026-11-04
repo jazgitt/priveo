@@ -17745,8 +17745,26 @@
           "directory"
         ],
         "summary": "List Audit",
+        "description": "The audit trail, newest first. With `society_id` that society's changes are\nlisted together with those that belong to no society (they apply to all sites;\ntheir `society_id` is null). Left out, every change is listed (ADM-SET-09).",
         "operationId": "list_audit_v1_admin_directory_audit_get",
         "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
           {
             "name": "entity",
             "in": "query",
@@ -17820,10 +17838,21 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 1000,
+              "maximum": 200,
               "minimum": 1,
-              "default": 100,
+              "default": 50,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           },
           {
@@ -17849,11 +17878,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DirectoryAuditOut"
-                  },
-                  "title": "Response List Audit V1 Admin Directory Audit Get"
+                  "$ref": "#/components/schemas/DirectoryAuditPage"
                 }
               }
             }
@@ -24269,6 +24294,18 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Detail"
+          },
+          "society_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Society Id"
           }
         },
         "type": "object",
@@ -24282,6 +24319,38 @@
           "detail"
         ],
         "title": "DirectoryAuditOut"
+      },
+      "DirectoryAuditPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DirectoryAuditOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "DirectoryAuditPage",
+        "description": "One page of the audit trail, newest first, with the count of all matches."
       },
       "DirectoryChecklistItemCreate": {
         "properties": {

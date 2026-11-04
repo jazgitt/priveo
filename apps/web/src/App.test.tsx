@@ -92,6 +92,11 @@ describe("portal shell", () => {
     expect(within(nav).getByText("All sites")).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Site Working slots" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Site Setup" })).toBeInTheDocument();
+    // Audit trail follows the Site selector: it sits under "This site", not under "All sites".
+    const links = (title: string) => Array.from(within(nav).getByText(title).parentElement!.querySelectorAll("a")).map((a) => a.textContent);
+    expect(links("This site")).toContain("Audit trail");
+    expect(links("All sites")).not.toContain("Audit trail");
+    expect(within(nav).queryByRole("link", { name: "Audit" })).toBeNull();
     localStorage.removeItem("priveo.site");
   });
 

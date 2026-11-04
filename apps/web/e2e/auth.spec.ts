@@ -17,7 +17,7 @@ test.describe("Admin sign-in", () => {
   test("admin signs in, sees every area and signs out [ADM-ACC-01, ADM-ACC-06]", async ({ page }) => {
     await signInAsAdmin(page);
     const nav = page.getByRole("navigation", { name: "Admin areas" });
-    for (const area of ["Dashboard", "Customers", "Payments", "Complaints", "Schedule", "Settings", "Audit"]) {
+    for (const area of ["Dashboard", "Customers", "Payments", "Complaints", "Schedule", "Settings", "Audit trail"]) {
       await expect(nav.getByRole("link", { name: area, exact: true })).toBeVisible();
     }
     await page.getByRole("button", { name: "Sign out" }).click();

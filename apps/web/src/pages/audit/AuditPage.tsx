@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
@@ -7,6 +7,8 @@ import { DataTable, Pager } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
 import { showDateTime } from "@/components/format";
+import { useSite } from "@/site/SiteContext";
+import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
@@ -18,12 +20,12 @@ export interface AuditEntry {
   entity_id: string;
   action: string;
   detail: Record<string, unknown>;
+  /** The site the change belongs to; null when it applies to all sites. */
+  society_id?: string | null;
 }
 
 const ENTITIES = ["society", "plan", "vehicle", "slot", "service", "checklist", "reason",
   "setting", "addon", "zone", "customer", "subscription", "cutoff_request", "schedule_change", "operations", "schedule", "payment", "crew", "job"];
-/** The most events the page ever loads. Older ones are not shown. */
-export const MAX_EVENTS = 1000;
 export const PAGE_SIZE = 50;
 
 function show(v: unknown): string {
@@ -51,26 +53,42 @@ export function Diff({ detail }: { detail: Record<string, unknown> }) {
   );
 }
 
+/** One page of the audit trail, as the API sends it. */
+export interface AuditPageData {
+  items: AuditEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /**
- * What changed in the reference data and settings, newest first. The last 1000
- * events are loaded once and paged here. The page does not reload by itself:
- * the admin presses Refresh to see newer events.
+ * What changed in the chosen site, newest first, 50 events a page. The server pages
+ * and counts. The page does not reload by itself: the admin presses Refresh to see
+ * newer events. Changes that belong to no site (settings, plans, logins) are not here.
  */
 export function AuditPage() {
+  const site = useSite();
+  const qc = useQueryClient();
   const [entity, setEntity] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [actor, setActor] = useState("");
   const [page, setPage] = useState(0);
+  const [lastSite, setLastSite] = useState(site.id);
+  // A new site starts again from the first page.
+  if (lastSite !== site.id) { setLastSite(site.id); setPage(0); }
   const q = new URLSearchParams();
+  q.set("society_id", site.id);
   if (entity) q.set("entity", entity);
-  q.set("limit", String(MAX_EVENTS));
+  q.set("limit", String(PAGE_SIZE));
+  q.set("offset", String(page * PAGE_SIZE));
   if (from) q.set("date_from", from);
   if (to) q.set("date_to", to);
   if (actor) q.set("actor_id", actor);
   const list = useQuery({
-    queryKey: ["admin-audit", entity, from, to, actor],
-    queryFn: () => api<AuditEntry[]>(`/v1/admin/directory/audit?${q.toString()}`),
+    queryKey: ["admin-audit", site.id, entity, from, to, actor, page],
+    queryFn: () => api<AuditPageData>(`/v1/admin/directory/audit?${q.toString()}`),
+    enabled: !!site.id,
     // Never reload on its own: not on a timer (the app polls every 30 s by default), not on focus, not on reconnect.
     staleTime: Infinity,
     refetchInterval: false,
@@ -78,26 +96,29 @@ export function AuditPage() {
     refetchOnReconnect: false,
     refetchOnMount: false,
   });
-  const all = list.data;
-  const shown = all?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const change = (set: (v: string) => void) => (v: string) => { set(v); setPage(0); };
+  const refresh = () => {
+    // Pages read earlier are out of date too: forget them, then load the first page again.
+    qc.removeQueries({ queryKey: ["admin-audit"], type: "inactive" });
+    if (page === 0) void list.refetch(); else setPage(0);
+  };
 
   return (
     <>
-      <PageHeader title="Audit" description="Who changed what, newest first."
+      <PageHeader title="Audit trail" site={site.name || undefined} description="Who changed what at this site, and the changes that apply to all sites, newest first."
                   actions={(
-                    <Button variant="outline" disabled={list.isFetching} onClick={() => { setPage(0); void list.refetch(); }}>
+                    <Button variant="outline" disabled={list.isFetching} onClick={refresh}>
                       <RefreshCw className={list.isFetching ? "animate-spin" : undefined} aria-hidden /> Refresh
                     </Button>
                   )} />
       <p role="note" className="mb-4 text-sm text-muted-foreground">
-        This list does not update by itself. Press Refresh to load the latest events. It shows the last {MAX_EVENTS} events{all && all.length >= MAX_EVENTS ? " (older ones are not loaded)" : ""}.
+        This list does not update by itself. Press Refresh to load the latest events. It shows the changes made to this site and the changes marked All sites, such as settings, plans and sign-in events, which apply to every site.
         {list.dataUpdatedAt > 0 && <> Loaded at {new Date(list.dataUpdatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.</>}
       </p>
-      {list.isError && <div className="mb-4"><ErrorState message="Could not load the audit." onRetry={() => void list.refetch()} /></div>}
+      {list.isError && <div className="mb-4"><ErrorState message="Could not load the audit trail." onRetry={() => void list.refetch()} /></div>}
       <DataTable
-        rows={shown}
-        loading={list.isLoading}
+        rows={list.data?.items}
+        loading={!!site.id && list.isLoading}
         rowKey={(a) => a.id}
         toolbar={(
           <div className="flex flex-wrap items-end gap-3">
@@ -110,16 +131,19 @@ export function AuditPage() {
             <Field label="Actor ID" optional className="w-64">{(p) => <Input {...p} value={actor} onChange={(e) => change(setActor)(e.target.value)} />}</Field>
           </div>
         )}
-        empty={<EmptyState title="No changes recorded" />}
+        empty={<EmptyState title="No changes recorded for this site or for all sites" />}
         columns={[
           { key: "at", header: "When", width: "9.5rem", cell: (a) => showDateTime(a.at) },
+          { key: "site", header: "Site", width: "8rem", cell: (a) => a.society_id
+            ? (site.sites.find((s) => s.id === a.society_id)?.name ?? site.name)
+            : <Badge variant="secondary">All sites</Badge> },
           { key: "entity", header: "Entity", width: "9rem", cell: (a) => a.entity.replaceAll("_", " ") },
           { key: "action", header: "Action", width: "8rem", cell: (a) => a.action },
           { key: "by", header: "By", width: "9rem", cell: (a) => a.admin_login_id ?? "system" },
           { key: "detail", header: "Change", wrap: true, cell: (a) => <Diff detail={a.detail} /> },
           { key: "id", header: "Record", width: "8rem", cell: (a) => <span className="text-xs text-muted-foreground" title={a.entity_id}>{a.entity_id.slice(0, 8)}</span> },
         ]}
-        footer={<Pager page={page} size={PAGE_SIZE} count={shown?.length ?? 0} total={all?.length} busy={list.isFetching} onPage={setPage} />}
+        footer={<Pager page={page} size={PAGE_SIZE} count={list.data?.items.length ?? 0} total={list.data?.total} busy={list.isFetching} onPage={setPage} />}
       />
     </>
   );

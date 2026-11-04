@@ -10,6 +10,6 @@ export const routes: RouteObject[] = [
 
 export const nav: NavItem = {
   path: "/audit",
-  label: "Audit",
-  about: "Who changed reference data and settings, and what changed.",
+  label: "Audit trail",
+  about: "Who changed this site's data, and what changed.",
 };

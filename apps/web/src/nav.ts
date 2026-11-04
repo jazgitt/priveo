@@ -24,10 +24,10 @@ export const NAV: NavItem[] = [
   { group: "site", path: "/complaints", label: "Complaints", about: "Complaints and visits that could not be done." },
   { group: "site", path: "/feedback", label: "Feedback", about: "Ratings, feedback and check-ins." },
   { group: "site", path: "/operations", label: "Operations", about: "Skips by operations and daily jobs." },
+  { group: "site", path: "/audit", label: "Audit trail", about: "Who changed this site's data, and what changed." },
   { group: "master", path: "/reference", label: "Site Setup", about: "Societies, base plans, services, checklists and the add-on catalogue." },
   { group: "master", path: "/settings", label: "Settings", about: "Cutoff times, sessions and portal settings." },
   { group: "master", path: "/features", label: "Features", about: "Switch app features on or off for customers and crew." },
-  { group: "master", path: "/audit", label: "Audit", about: "Who changed reference data and settings, and what changed." },
 ];
 
 /**

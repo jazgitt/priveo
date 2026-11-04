@@ -170,18 +170,20 @@ describe("settings", () => {
 
 describe("audit", () => {
   it("filters by entity and shows old and new values", async () => {
-    handlers["GET /v1/admin/directory/audit"] = () => json(200, [{
+    handlers["GET /v1/admin/directory/audit"] = () => json(200, { items: [{
       id: "a1", at: "2026-10-11T10:00:00Z", admin_login_id: "u1", entity: "plan",
       entity_id: "p1", action: "update", detail: { monthly_price_rupees: [1500, 1800] },
-    }]);
-    renderUi(<AuditPage />);
+    }], total: 1, limit: 50, offset: 0 });
+    const site = { id: "s1", name: "Lake View", sites: [{ id: "s1", name: "Lake View" }], select: () => {} };
+    renderUi(<SiteContext.Provider value={site}><AuditPage /></SiteContext.Provider>);
     expect(await screen.findByText("1500")).toBeInTheDocument();
     expect(screen.getByText("1800")).toBeInTheDocument();
     await choose("Entity", "plan");
     await waitFor(() => {
       const last = String(fetchMock.mock.calls.at(-1)![0]);
       expect(last).toContain("entity=plan");
-      expect(last).toContain("limit=1000");
+      expect(last).toContain("limit=50");
+      expect(last).toContain("society_id=s1");
     });
   });
 });

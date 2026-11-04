@@ -932,12 +932,20 @@ void main() {
     expect(wire.DirectoryAddonUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryAuditOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","at":"2026-10-20T07:30:00+00:00","admin_login_id":"11111111-1111-1111-1111-111111111111","entity":"wire-value","entity_id":"wire-value","action":"wire-value","detail":{}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","at":"2026-10-20T07:30:00+00:00","admin_login_id":"11111111-1111-1111-1111-111111111111","entity":"wire-value","entity_id":"wire-value","action":"wire-value","detail":{},"society_id":"11111111-1111-1111-1111-111111111111"}') as Map<String, dynamic>;
     expect(wire.DirectoryAuditOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryAuditOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","at":"2026-10-20T07:30:00+00:00","admin_login_id":null,"entity":"wire-value","entity_id":"wire-value","action":"wire-value","detail":{}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","at":"2026-10-20T07:30:00+00:00","admin_login_id":null,"entity":"wire-value","entity_id":"wire-value","action":"wire-value","detail":{},"society_id":null}') as Map<String, dynamic>;
     expect(wire.DirectoryAuditOut.fromJson(input).toJson(), equals(input));
+  });
+  test('DirectoryAuditPage preserves populated wire fields', () {
+    final input = jsonDecode('{"items":[{"id":"11111111-1111-1111-1111-111111111111","at":"2026-10-20T07:30:00+00:00","admin_login_id":"11111111-1111-1111-1111-111111111111","entity":"wire-value","entity_id":"wire-value","action":"wire-value","detail":{},"society_id":"11111111-1111-1111-1111-111111111111"}],"total":1,"limit":1,"offset":1}') as Map<String, dynamic>;
+    expect(wire.DirectoryAuditPage.fromJson(input).toJson(), equals(input));
+  });
+  test('DirectoryAuditPage preserves nullable wire fields', () {
+    final input = jsonDecode('{"items":[],"total":1,"limit":1,"offset":1}') as Map<String, dynamic>;
+    expect(wire.DirectoryAuditPage.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryChecklistItemCreate preserves populated wire fields', () {
     final input = jsonDecode('{"label":"wire-value"}') as Map<String, dynamic>;

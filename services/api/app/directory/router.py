@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.directory import defaults, lookup, service
@@ -406,32 +406,47 @@ def reactivate_addon(addon_id: uuid.UUID, user: AdminUser, db: Db):
 # ---- audit -----------------------------------------------------------------------
 
 
-@admin.get("/audit", response_model=list[s.DirectoryAuditOut])
+@admin.get("/audit", response_model=s.DirectoryAuditPage)
 def list_audit(
     user: AdminUser,
     db: Db,
+    society_id: uuid.UUID | None = None,
     entity: str | None = None,
     actor_id: uuid.UUID | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ):
+    """The audit trail, newest first. With `society_id` that society's changes are
+    listed together with those that belong to no society (they apply to all sites;
+    their `society_id` is null). Left out, every change is listed (ADM-SET-09)."""
     from app.platform.clock import IST
 
     if date_from and date_to and date_from > date_to:
         raise ApiError("validation_failed", "The last date must follow the first date.", 422)
-    query = select(DirectoryAudit).order_by(DirectoryAudit.at.desc()).limit(limit)
+    where = []
+    if society_id:
+        # The site's own changes and those that apply to all sites (no society).
+        where.append(or_(DirectoryAudit.society_id == society_id, DirectoryAudit.society_id.is_(None)))
     if entity:
-        query = query.where(DirectoryAudit.entity == entity)
+        where.append(DirectoryAudit.entity == entity)
     if actor_id:
-        query = query.where(DirectoryAudit.admin_login_id == actor_id)
+        where.append(DirectoryAudit.admin_login_id == actor_id)
     if date_from:
-        query = query.where(DirectoryAudit.at >= datetime.combine(date_from, time.min, tzinfo=IST))
+        where.append(DirectoryAudit.at >= datetime.combine(date_from, time.min, tzinfo=IST))
     if date_to:
-        query = query.where(
+        where.append(
             DirectoryAudit.at < datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=IST)
         )
-    return list(db.scalars(query))
+    total = db.scalar(select(func.count()).select_from(DirectoryAudit).where(*where)) or 0
+    # The id breaks ties so a page never repeats or skips a row.
+    rows = db.scalars(
+        select(DirectoryAudit).where(*where)
+        .order_by(DirectoryAudit.at.desc(), DirectoryAudit.id.desc())
+        .limit(limit).offset(offset)
+    )
+    return {"items": list(rows), "total": total, "limit": limit, "offset": offset}
 
 
 # ---- reads for the customer app --------------------------------------------------
