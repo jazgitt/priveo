@@ -42,7 +42,7 @@ function SubscriptionTile({ s }: { s: SubscriptionRow }) {
       <p className="m-0 truncate text-sm text-muted-foreground">{s.plan_name ?? NO_PLAN}</p>
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">
         <span>First {showDate(s.first_service_date)}</span>
-        <span>Renews {showDate(s.renewal_date)}</span>
+        {s.renewal_date ? <span>Renews {showDate(s.renewal_date)}</span> : null}
         {s.payment_due && <StatusBadge status={s.payment_status ?? "Due"} />}
       </div>
     </div>
@@ -86,7 +86,7 @@ export function SubscriptionsPage() {
           <StatTile key={st} label={st} value={count((s) => s.status === st)} loading={loading}
                     selected={status === st} onSelect={() => setStatus(status === st ? "" : st)} />
         ))}
-        <StatTile label="Payment due" value={count((s) => Boolean(s.payment_due))} loading={loading} hint="Due or over due"
+        <StatTile label="Payment due" value={count((s) => Boolean(s.payment_due))} loading={loading} hint="Due, due today or over due"
                   selected={dueOnly} onSelect={() => setDueOnly(!dueOnly)} />
       </StatRow>
       {plans.length > 0 && (

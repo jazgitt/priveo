@@ -126,7 +126,7 @@ it("shows imported Spa history without inventing completion or a date", async ()
   fetchMock.mockImplementation(async (path: string, options?: RequestInit) =>
     path === "/v1/admin/customers/c1" ? reply({ ...customer, imported_history: [{
       id: "old1", date: null, service: "Deep Spa", vehicle: "Unmatched vehicle",
-      payment_status: "Received", notes: "Date as given: unclear" }] }) : original(path, options));
+      payment_status: "Paid", notes: "Date as given: unclear" }] }) : original(path, options));
   page("/customers/c1");
   await userEvent.click(await screen.findByRole("tab", { name: "Service history" }));
   expect(await screen.findByText(/Date unknown/)).toBeInTheDocument();
@@ -152,10 +152,9 @@ it.each([true, false])("creates a customer with subscription=%s and a photo", as
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   if (subscribed) await choose("Interior care day", "Monday");
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-  if (subscribed) await choose("First payment status", "Received");
   await userEvent.click(screen.getByRole("button", { name: "Create" }));
   await waitFor(() => expect(created).not.toBeNull());
-  expect(created).toMatchObject({ email: "asha@example.com", vehicle: { photo_upload_id: "u1", registration: "HR01ZZ1234", society_id: "s1", ...(subscribed ? { first_payment_status: "Received", interior_day: "Monday" } : { plan_id: null, cutoff_time: null, interior_day: null }) } });
+  expect(created).toMatchObject({ email: "asha@example.com", vehicle: { photo_upload_id: "u1", registration: "HR01ZZ1234", society_id: "s1", ...(subscribed ? { interior_day: "Monday" } : { plan_id: null, cutoff_time: null, interior_day: null }) } });
   expect(await screen.findByRole("heading", { name: "Asha Rao" })).toBeInTheDocument();
 }, 30000);
 
@@ -686,7 +685,7 @@ it("sets up the subscription of a vehicle that has none", async () => {
   await userEvent.type(within(dialog).getByLabelText(/Interior day notes/), "Odd weeks");
   await userEvent.click(submit);
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/subscription", "POST")).toEqual({
-    plan_id: "p1", cutoff_time: "09:00", first_payment_status: "Due",
+    plan_id: "p1", cutoff_time: "09:00",
     interior_day: "Custom", interior_day_notes: "Odd weeks" }));
 });
 
