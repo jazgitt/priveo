@@ -30,6 +30,11 @@ def settings(monkeypatch):
     monkeypatch.setenv("RESEND_API_KEY", "")
     monkeypatch.setenv("EMAIL_REDIRECT_TO", "")
     monkeypatch.setenv("TOKEN_SECRET", "test-secret-that-is-long-enough-for-hs256")
+    # Tokens are checked against the wall clock, not the tests' fake clocks. With the default of 15
+    # minutes, a machine that sleeps or stalls for 15 minutes in the middle of a test (the nightly
+    # run on a laptop) turns the next request into a 401 and the test fails for no reason in the
+    # code. A test of expiry sets its own value.
+    monkeypatch.setenv("ACCESS_TOKEN_MINUTES", "720")
     get_settings.cache_clear()
     yield get_settings()
     get_settings.cache_clear()
