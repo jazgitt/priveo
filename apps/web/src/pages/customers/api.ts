@@ -8,7 +8,7 @@ export interface Plan { id: string; name: string; monthly_price_rupees: number; 
 export interface VehicleInput {
   society_id: string; catalogue_id: string; registration: string; parking_basement: string;
   parking_number: string; zone_id: string | null; plan_id: string; cutoff_time: string; interior_day: string | null;
-  interior_day_notes: string | null; photo_upload_id: string; first_payment_status: string;
+  interior_day_notes: string | null; photo_upload_id: string;
 }
 export interface Subscription {
   id: string; status: string; plan_id: string; plan_name: string; price_rupees: number;
@@ -78,7 +78,7 @@ export interface Changes { skips: { id: string; start_date: string }[]; pauses: 
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",
   parking_basement: "", parking_number: "", zone_id: null, plan_id: "", cutoff_time: "09:00", interior_day: null,
-  interior_day_notes: null, photo_upload_id: "", first_payment_status: "Not Due" });
+  interior_day_notes: null, photo_upload_id: "" });
 export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 /** "Custom": the customer's cars take turns; the notes say whose turn it is. */
 export const CUSTOM_DAY = "Custom";
