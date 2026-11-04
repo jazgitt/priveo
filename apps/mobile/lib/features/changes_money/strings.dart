@@ -26,11 +26,10 @@ class MoneyStrings {
   static const addonChoose = 'Choose an add-on';
   static const addonChooseAnother = 'Choose a different add-on';
   static String planEndsNote(String date) =>
-      'You can pause only up to the end of your current plan, $date.';
-  static const planEndsNoDays = 'Your plan ends tomorrow or earlier, so there is nothing left to pause.';
+      'You can pause only up to the end of your current billing cycle, $date.';
+  static const planEndsNoDays = 'Your billing cycle ends tomorrow or earlier, so there is nothing left to pause.';
   static const pauseConfirm = 'Confirm pause';
-  static String pauseDone(String from, String to, String renewal) =>
-      'Paused $from to $to. Plan now renews $renewal.';
+  static String pauseDone(String from, String to) => 'Paused $from to $to.';
   static String pausePeriod(String from, String to) => '$from to $to';
   static const endPause = 'End pause';
   static const yourPauses = 'Your pauses';
@@ -42,8 +41,6 @@ class MoneyStrings {
   static const subTitle = 'My subscription';
   static String daysLeft(int n) => n == 1 ? '1 day left' : '$n days left';
   static const cycle = 'Billing cycle';
-  static const expiresOn = 'Expires on';
-  static const expiresOnLong = 'Your plan runs until';
   static const perMonth = 'a month';
   static const whatYouGet = 'What you get';
   static const yourSchedule = 'Your service';
@@ -64,10 +61,19 @@ class MoneyStrings {
   static const noPlanName = 'Plan';
 
   // Payment statuses (PAY-09)
-  static String statusDue(String date) => 'Due by $date';
+  static const statusNotDue = 'Not Due';
+  static const statusDue = 'Due';
+  static const statusDueToday = 'Due today';
   static const statusOverdue = 'Over due';
   static const statusInitiated = 'Initiated';
-  static const statusReceived = 'Received';
+  static const statusPaid = 'Paid';
+  static const lastPaymentFailed = 'Your last payment failed';
+  static const paymentInitiated =
+      'Payment initiated. Waiting for Priveo to confirm.';
+  static String inactiveWarning(String date) =>
+      'Your subscription becomes Inactive if this is not paid by $date.';
+  static String cycleEnded(String date) => 'Billing cycle ended on $date';
+  static const paymentsToPay = 'Payments to make';
 
   // Pay by UPI (PAY-05 to PAY-07)
   static const payTitle = 'Pay by UPI';
@@ -130,9 +136,10 @@ class MoneyStrings {
   // Admin quick actions (ADM-ACC-07)
   static const adminPaymentsTitle = 'Payments to confirm';
   static const adminNoPayments = 'Nothing to confirm.';
-  static const adminConfirm = 'Confirm';
+  static const adminApprove = 'Approve';
+  static const adminAll = 'All';
   static const adminReject = 'Reject';
-  static const adminConfirmed = 'Payment confirmed.';
+  static const adminApproved = 'Payment approved.';
   static const adminRejected = 'Payment sent back.';
   static const adminAlertsTitle = 'Alerts';
   static const adminNoAlerts = 'No alerts.';

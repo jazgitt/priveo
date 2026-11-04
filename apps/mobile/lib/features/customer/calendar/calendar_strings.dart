@@ -27,14 +27,9 @@ class CalStrings {
   static String renews(String date) => 'Your plan renews on $date.';
 
 
-  static String pausePreview(int visits, String? from, String? to) {
-    final base = visits == 1
-        ? '1 visit will be paused.'
-        : '$visits visits will be paused.';
-    return from == null || to == null
-        ? base
-        : '$base Your renewal moves from $from to $to.';
-  }
+  static String pausePreview(int visits) => visits == 1
+      ? '1 visit will be paused.'
+      : '$visits visits will be paused.';
 
   static const skipDate = 'Skip this date';
   static const undoSkip = 'Undo skip';

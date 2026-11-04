@@ -9,7 +9,9 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../../core/util/format.dart';
+import '../../changes_money/money_widgets.dart';
 import '../../changes_money/routes.dart' as money;
+import '../../changes_money/strings.dart';
 import '../../support/routes.dart';
 import '../calendar/calendar_page.dart';
 import '../data/customer_reads_repository.dart';
@@ -145,10 +147,28 @@ class _SubscriptionCard extends ConsumerWidget {
               if (sub != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '${AccountStrings.expires} ${formatDate(sub.endDate)}'
-                  ' · ${formatRupees(sub.monthlyPriceRupees)} '
+                  '${formatRupees(sub.monthlyPriceRupees)} '
                   '${AccountStrings.perMonth}',
                   style: text.bodyMedium,
+                ),
+                // ACC-02: the payment status; the cycle end only when Over due.
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    StatusChip(paymentStatusText(sub.paymentStatus),
+                        tone: paymentTone(sub.paymentStatus)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (sub.statusMessage.isNotEmpty) sub.statusMessage,
+                          if (sub.isOverdue && sub.cycleEnd != null)
+                            MoneyStrings.cycleEnded(formatDate(sub.cycleEnd!)),
+                        ].join(' · '),
+                        style: text.bodySmall?.copyWith(color: b.mute),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
