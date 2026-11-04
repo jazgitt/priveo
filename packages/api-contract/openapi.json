@@ -29185,11 +29185,6 @@
               }
             ],
             "title": "First Service Date"
-          },
-          "first_payment_status": {
-            "type": "string",
-            "title": "First Payment Status",
-            "default": "Due"
           }
         },
         "additionalProperties": false,
@@ -30496,11 +30491,6 @@
               }
             ],
             "title": "Rc Upload Id"
-          },
-          "first_payment_status": {
-            "type": "string",
-            "title": "First Payment Status",
-            "default": "Due"
           }
         },
         "additionalProperties": false,

@@ -2,16 +2,18 @@
 
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app.billing.config import get_money_settings
 from app.billing.models import Payment, PaymentEvent
-from app.billing.status import DISPLAY_STATUSES, display_status, stored_for
+from app.billing.service import BillingService
+from app.billing.status import display_status
 from app.changes.cycle import renewal_date
 from app.customers import plan_changes
 from app.customers.logins import ensure_login, give_default_mpin, mobile_in_use, mobile_taken
@@ -27,7 +29,6 @@ from app.customers.models import (
 from app.customers.parking_rules import basement_ok, clean_number
 from app.customers.service import _NAME, read_cutoff, show_registration
 from app.customers.welcome import send_welcome
-from app.directory import lookup
 from app.directory.models import DirectoryAudit, Plan, Society, VehicleCatalogueEntry, Zone
 from app.identity.models import AuthSession, EmailCode, Login
 from app.identity.service import User, normalise
@@ -50,6 +51,15 @@ customer = APIRouter(prefix="/v1/customer", tags=["customer-administration"])
 class Input(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_retired_fields(cls, data):
+        # Old clients still send the first payment status. It is no longer chosen:
+        # the status always comes from the cycle dates (PAY-14). Ignored, not stored.
+        if isinstance(data, dict) and "first_payment_status" in data:
+            data = {k: v for k, v in data.items() if k != "first_payment_status"}
+        return data
+
 
 class VehicleCreate(Input):
     society_id: uuid.UUID
@@ -67,7 +77,6 @@ class VehicleCreate(Input):
     # The admin may add a vehicle without a photo; the customer route still needs one.
     photo_upload_id: uuid.UUID | None = None
     rc_upload_id: uuid.UUID | None = None
-    first_payment_status: str = "Due"
 
 
 class CustomerCreate(Input):
@@ -100,7 +109,6 @@ class SubscriptionSetup(Input):
     interior_day_notes: str | None = None
     # Empty: today.
     first_service_date: date | None = None
-    first_payment_status: str = "Due"
 
 
 class EmailCorrection(Input):
@@ -227,11 +235,9 @@ def zone_for(db, zone_id, society_id):
 
 
 def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_notes,
-                       first_payment_status, by, first_service_date=None):
+                       by, first_service_date=None):
     """A new subscription (Activating) for a vehicle, with its first plan payment."""
     first = first_service_date or today_ist()
-    cycle_days = lookup.setting(db, "billing.cycle_days")
-    stored = stored_for(first_payment_status)
     sub = Subscription(
         vehicle_id=v.id,
         plan_id=plan.id,
@@ -245,25 +251,11 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
     )
     db.add(sub)
     db.flush()
-    payment = Payment(
-        customer_id=c.id,
-        vehicle_id=v.id,
-        subscription_id=sub.id,
-        kind="Plan",
-        description=f"First month of {plan.name}",
-        amount_rupees=sub.monthly_price_rupees,
-        # Not Due, Due, Due today and Over due all mean Open: the date rule shows which.
-        status=stored,
-        # Due on the cycle's last day (PAY-14); cycle_end is stored as the day after.
-        due_date=first + timedelta(days=cycle_days - 1),
-        cycle_start=first,
-        cycle_end=first + timedelta(days=cycle_days),
-        received_at=utcnow() if stored == "Paid" else None,
-        confirmed_by=by if stored == "Paid" else None,
-        initiated_at=utcnow() if stored == "Initiated" else None,
-    )
-    db.add(payment)
-    db.flush()
+    # The status is never chosen: the payment is stored Open and its displayed
+    # status comes from the cycle dates and today (PAY-14). The cycle starts on
+    # the first service date, so a future start shows Not Due.
+    payment = BillingService(db, utcnow, get_money_settings()).ensure_cycle_payment(sub, v, first)
+    payment.description = f"First month of {plan.name}"
     db.add(
         PaymentEvent(
             payment_id=payment.id,
@@ -298,8 +290,6 @@ def add_vehicle(db, c, body, owner, by=None):
     reg = registration(db, body.registration)
     photo = asset(db, body.photo_upload_id, owner, "vehicle") if body.photo_upload_id else None
     rc = asset(db, body.rc_upload_id, owner, "rc") if body.rc_upload_id else None
-    if body.first_payment_status not in DISPLAY_STATUSES:
-        raise ApiError("validation_failed", "Choose a payment status.", 422)
     v = Vehicle(
         customer_id=c.id,
         society_id=society.id,
@@ -324,7 +314,7 @@ def add_vehicle(db, c, body, owner, by=None):
     sub, payment = start_subscription(
         db, c, v, plan, cutoff=cutoff, interior_day=body.interior_day,
         interior_day_notes=body.interior_day_notes,
-        first_payment_status=body.first_payment_status, by=by)
+        by=by)
     if by:
         audit(db, by, "vehicle", v.id, "create", {"customer_id": str(c.id), "registration": reg})
     return v, sub, payment
@@ -693,13 +683,11 @@ def set_up_subscription(
     if plan.includes_interior and body.interior_day not in INTERIOR_DAYS:
         raise ApiError("validation_failed", "Choose an interior care day.", 422,
                        {"interior_day": "Required."})
-    if body.first_payment_status not in DISPLAY_STATUSES:
-        raise ApiError("validation_failed", "Choose a payment status.", 422)
     c = db.get(Customer, v.customer_id)
     sub, payment = start_subscription(
         db, c, v, plan, cutoff=cutoff, interior_day=body.interior_day,
         interior_day_notes=body.interior_day_notes,
-        first_payment_status=body.first_payment_status, by=user.id,
+        by=user.id,
         first_service_date=body.first_service_date)
     audit(db, user.id, "subscription", sub.id, "create",
           {"vehicle_id": str(v.id), "plan_id": str(plan.id)})
@@ -715,8 +703,6 @@ def customer_add_vehicle(
     db: Session = Depends(get_db),
     store: ObjectStore = Depends(get_object_store),
 ):
-    if stored_for(body.first_payment_status) != "Open":
-        raise ApiError("validation_failed", "The first payment starts unpaid.", 422)
     c = db.scalar(select(Customer).where(Customer.login_id == user.id))
     if c is None:
         raise ApiError("not_found", "Customer not found.", 404)
