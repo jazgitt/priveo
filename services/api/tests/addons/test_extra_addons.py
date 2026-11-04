@@ -88,7 +88,7 @@ def test_once_the_admin_prices_and_activates_it_a_subscriber_can_book_it(money):
         a = r.json()
         assert (a["service"], a["addon_name"], a["price_rupees"]) == (service, name, 299)
         pay = m.db.get(Payment, uuid.UUID(a["payment_id"]))
-        assert (pay.kind, pay.amount_rupees, pay.status) == ("Add-on", 299, "Due")
+        assert (pay.kind, pay.amount_rupees, pay.status) == ("Add-on", 299, "Open")
     # Any job made for these bookings carries the add-on's own service.
     for job in m.db.scalars(select(Job).where(Job.addon_booking_id.is_not(None))):
         assert job.service in EXTRAS.values()

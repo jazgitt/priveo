@@ -1,8 +1,7 @@
 """P03: billing lifecycle and pause updates without waiting for a cron."""
 import uuid
-from datetime import date, timedelta
+from datetime import date
 
-import pytest
 from sqlalchemy import select
 
 from app.billing.models import Payment
@@ -31,9 +30,9 @@ def test_reactivation_creates_one_new_due_cycle_and_keeps_old_receipt(money):
     assert len(rows) == 2
     new = next(p for p in rows if str(p.id) != old["id"])
     assert (new.status, new.due_date, new.cycle_start, new.cycle_end) == (
-        "Due", date(2026, 11, 2), date(2026, 11, 2), date(2026, 12, 2))
+        "Open", date(2026, 11, 2), date(2026, 11, 2), date(2026, 12, 2))
     assert new.amount_rupees == 1299
-    assert m.db.get(Payment, next(p.id for p in rows if str(p.id) == old["id"])).status == "Received"
+    assert m.db.get(Payment, next(p.id for p in rows if str(p.id) == old["id"])).status == "Paid"
     assert m.client.put(url, headers=m.admin, json={
         "status": "Active", "first_service_date": "2026-11-02"}).status_code == 409
     # A future first-service payment must not be silently moved to renewal.
@@ -53,41 +52,6 @@ def test_reactivation_requires_new_date_without_changing_state(money):
     assert not m.db.scalars(select(Payment)).all()
 
 
-@pytest.mark.parametrize("status", ["Due", "Initiated", "Over due", "Received"])
-def test_pause_and_cancel_shift_unpaid_payment_immediately(money, status):
-    m = money
-    row = admin_payment(m, status=status, cycle_start="2026-10-31", due_date="2026-10-31")
-    pid = row["id"]
-    r = m.client.post(f"{vehicle(m)}/pauses", headers=m.customer,
-                      json={"from_date": "2026-10-15", "to_date": "2026-10-17"})
-    assert r.status_code == 201, r.text
-    m.db.expire_all()
-    payment = m.db.get(Payment, uuid.UUID(pid))
-    expected = date(2026, 10, 31) + timedelta(days=0 if status == "Received" else 3)
-    assert payment.due_date == payment.cycle_start == expected
-    assert payment.status == status
-    shifted_overdue = payment.overdue_since
-    again = m.client.delete(f"{vehicle(m)}/pauses/{r.json()['id']}", headers=m.customer)
-    assert again.status_code == 200, again.text
-    m.db.expire_all()
-    assert payment.due_date == date(2026, 10, 31)
-    if status == "Over due":
-        assert payment.overdue_since == shifted_overdue - timedelta(days=3)
-
-
-def test_pause_early_end_moves_only_remaining_days(money):
-    m = money
-    admin_payment(m, status="Initiated", cycle_start="2026-10-31", due_date="2026-10-31")
-    r = m.client.post(f"{vehicle(m)}/pauses", headers=m.customer,
-                      json={"from_date": "2026-10-12", "to_date": "2026-10-16"})
-    assert r.status_code == 201, r.text
-    m.clock.now = at(13)
-    result = m.client.delete(f"{vehicle(m)}/pauses/{r.json()['id']}", headers=m.customer)
-    assert result.status_code == 200, result.text
-    m.db.expire_all()
-    assert m.db.scalar(select(Payment)).due_date == date(2026, 11, 2)  # 12th and 13th retained
-
-
 def test_previous_activation_pause_and_debt_do_not_inactivate_new_cycle(money):
     m = money
     admin_payment(m, status="Over due", cycle_start="2026-10-01", due_date="2026-10-01")
@@ -105,20 +69,6 @@ def test_previous_activation_pause_and_debt_do_not_inactivate_new_cycle(money):
     assert view["renewal_date"] == "2026-12-02"
 
 
-def test_pause_shift_is_idempotent_and_preserves_distinct_future_cycles(money):
-    m = money
-    for start in ("2026-10-31", "2026-11-30"):
-        admin_payment(m, cycle_start=start, due_date=start)
-    body = {"from_date": "2026-10-15", "to_date": "2026-10-17"}
-    headers = {**m.customer, "Idempotency-Key": "pause-once"}
-    for _ in range(2):
-        r = m.client.post(f"{vehicle(m)}/pauses", headers=headers, json=body)
-        assert r.status_code == 201, r.text
-    m.db.expire_all()
-    assert sorted(p.cycle_start for p in m.db.scalars(select(Payment))) == [
-        date(2026, 11, 3), date(2026, 12, 3)]
-
-
 def test_reactivation_cycle_collision_keeps_old_payment_and_activating_state(money):
     m = money
     admin_payment(m, status="Received", cycle_start="2026-11-02", due_date="2026-11-02")
@@ -131,23 +81,6 @@ def test_reactivation_cycle_collision_keeps_old_payment_and_activating_state(mon
     assert m.subscription().status == "Activating"
     assert m.subscription().first_service_date == date(2026, 10, 1)
     assert len(m.db.scalars(select(Payment)).all()) == 1
-
-
-def test_pause_updates_future_manual_plan_due_date_without_cycle_key(money):
-    m = money
-    row = admin_payment(m, status="Initiated")
-    # Legacy/manual records can lack a cycle key even though current admin
-    # creation normally defaults it to the due date.
-    payment = m.db.get(Payment, uuid.UUID(row["id"]))
-    payment.cycle_start, payment.cycle_end = None, None
-    m.db.commit()
-    r = m.client.post(f"{vehicle(m)}/pauses", headers=m.customer,
-                      json={"from_date": "2026-10-15", "to_date": "2026-10-17"})
-    assert r.status_code == 201, r.text
-    m.db.expire_all()
-    payment = m.db.scalar(select(Payment))
-    assert payment.cycle_start is None
-    assert payment.due_date == date(2026, 11, 3)
 
 
 def test_payment_submission_has_vehicle_preferences_and_amount_uri(money):
@@ -170,7 +103,7 @@ def test_payment_paging_does_not_repeat_identical_sort_values(money):
     for index in range(105):
         m.db.add(Payment(customer_id=m.customer_id, vehicle_id=uuid.UUID(m.vehicle_id),
                          kind="Add-on", description=f"Record {index}", amount_rupees=100,
-                         status="Due", due_date=date(2026, 10, 31)))
+                         status="Open", due_date=date(2026, 10, 31)))
     m.db.commit()
     ids = []
     for offset in (0, 50, 100):

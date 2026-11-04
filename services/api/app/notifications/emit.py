@@ -451,7 +451,7 @@ def renewal_reminders(db: Session, today: date) -> int:
         select(Payment, Customer.login_id)
         .join(Customer, Customer.id == Payment.customer_id)
         .join(Subscription, Subscription.id == Payment.subscription_id)
-        .where(Payment.kind == "Plan", Payment.status.in_(("Due", "Over due")),
+        .where(Payment.kind == "Plan", Payment.status == "Open",  # TODO(B2/C)
                Payment.voided_at.is_(None), Subscription.status == "Active")).all()
     sent = 0
     for payment, login_id in rows:

@@ -6,7 +6,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.billing.models import PAYMENT_STATUSES, Payment
+from app.billing.models import Payment
+from app.billing.status import LEGACY_STATUSES as _LEGACY_STATUSES  # TODO(B2/F): interim
+from app.billing.status import legacy_shown_sql as _shown_sql
 from app.customers.models import Customer, Vehicle
 from app.directory.models import Society
 from app.mani.contracts import ToolSpec
@@ -26,7 +28,7 @@ from app.mani.tools._base import (
 
 
 def _status_table(rows) -> dict[str, dict[str, int]]:
-    table = {s: {"payments": 0, "rupees": 0} for s in PAYMENT_STATUSES}
+    table = {s: {"payments": 0, "rupees": 0} for s in _LEGACY_STATUSES}
     for status, n, rupees in rows:
         table[status] = {"payments": n, "rupees": int(rupees)}
     table["total"] = {"payments": sum(v["payments"] for v in table.values()),
@@ -58,14 +60,14 @@ class PaymentsSummary(ReadTool):
 
         def by_status(*where):
             return _status_table(db.execute(
-                select(Payment.status, func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
-                .where(live, *where).group_by(Payment.status)))
+                select(_shown_sql(), func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
+                .where(live, *where).group_by(_shown_sql())))
 
         plan_cycle = by_status(Payment.kind == "Plan", Payment.cycle_start <= today,
                                Payment.cycle_end >= today)
         add_ons = by_status(Payment.kind == "Add-on", Payment.due_date >= today - timedelta(days=29),
                             Payment.due_date <= today)
-        owed = by_status(Payment.status.in_(("Due", "Over due")))
+        owed = by_status(Payment.status == "Open")
 
         # Over due for more than N days: the days count from `overdue_since`, else the day after due.
         since = func.coalesce(Payment.overdue_since, Payment.due_date)
@@ -75,7 +77,8 @@ class PaymentsSummary(ReadTool):
             .join(Customer, Customer.id == Payment.customer_id)
             .outerjoin(Vehicle, Vehicle.id == Payment.vehicle_id)
             .join(Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id))
-            .where(live, Payment.status == "Over due", since < today - timedelta(days=limit_days))
+            .where(live, Payment.status == "Open", Payment.overdue_since.is_not(None),
+                   since < today - timedelta(days=limit_days))
             .order_by(since, Customer.first_name)).all()
         late_rows = [{"customer": full_name(r.first_name, r.last_name), "society": r.name,
                       "kind": r.kind, "rupees": r.amount_rupees, "over_due_since": r.since.isoformat(),
@@ -89,7 +92,7 @@ class PaymentsSummary(ReadTool):
             start, end = ist_range(first, last)
             count, rupees = db.execute(
                 select(func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
-                .where(live, Payment.status == "Received", Payment.received_at >= start,
+                .where(live, Payment.status == "Paid", Payment.received_at >= start,
                        Payment.received_at < end)).one()
             weeks.append({"from_date": first.isoformat(), "to_date": last.isoformat(),
                           "partial_week": back == 0, "payments": count, "rupees": int(rupees)})

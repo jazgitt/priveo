@@ -73,13 +73,13 @@ class AddonsSummary(ReadTool):
             start, end = ist_range(first, month_last_day(first))
             count, rupees = db.execute(
                 select(func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
-                .where(Payment.kind == "Add-on", Payment.status == "Received",
+                .where(Payment.kind == "Add-on", Payment.status == "Paid",
                        Payment.voided_at.is_(None), Payment.received_at >= start,
                        Payment.received_at < end)).one()
             revenue.append({"month": first.strftime("%Y-%m"), "payments": count, "rupees": int(rupees)})
 
         start, end = ist_range(month, month_last_day(month))
-        events = (select(PaymentEvent.payment_id, PaymentEvent.at, Payment.status)
+        events = (select(PaymentEvent.payment_id, PaymentEvent.at, Payment.status, Payment.overdue_since)
                   .join(Payment, Payment.id == PaymentEvent.payment_id)
                   .join(AddonBooking, AddonBooking.payment_id == Payment.id)
                   .where(PaymentEvent.to_status == "Over due", PaymentEvent.note == COMPLETED_NOTE,
@@ -106,8 +106,9 @@ class AddonsSummary(ReadTool):
             "became_over_due_on_completion": {
                 "all_time": len(payments),
                 "in_month": {"month": month.strftime("%Y-%m"), "payments": len(in_month)},
-                "still_over_due_now": sum(1 for r in payments.values() if r.status == "Over due"),
-                "received_since": sum(1 for r in payments.values() if r.status == "Received"),
+                "still_over_due_now": sum(1 for r in payments.values()
+                                          if r.status == "Open" and r.overdue_since is not None),
+                "received_since": sum(1 for r in payments.values() if r.status == "Paid"),
             },
         }
         this_month = revenue[-1]

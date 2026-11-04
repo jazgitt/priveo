@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings
 from app.billing.models import (
-    PAYMENT_STATUSES,
     Invoice,
     MoneyAlert,
     Payment,
@@ -32,6 +31,7 @@ from app.billing.schemas import (
     SubscriptionRowOut,
     SubscriptionView,
 )
+from app.billing.status import LEGACY_STATUSES, legacy_shown, legacy_shown_sql
 from app.changes.access import parse_id
 from app.changes.cycle import cycle_window, paused_days, plan_expires_on, shift_days
 from app.changes.rules import Clock, show_date, today_of
@@ -54,6 +54,16 @@ def vehicle_label(v: Vehicle | None) -> str:
     if v is None:
         return ""
     return f"{v.model} {show_registration(v.registration)}".strip()
+
+
+# TODO(B2): interim shim, see app.billing.status.legacy_shown.
+_LEGACY_STATUSES = LEGACY_STATUSES
+_shown = legacy_shown
+_shown_sql = legacy_shown_sql
+
+
+def _stored(shown: str) -> str:
+    return {"Received": "Paid", "Initiated": "Initiated"}.get(shown, "Open")
 
 
 @dataclass
@@ -95,7 +105,7 @@ class BillingService:
             kind=p.kind,
             description=p.description,
             amount_rupees=p.amount_rupees,
-            status=p.status,
+            status=_shown(p),  # TODO(B2)
             due_date=p.due_date,
             cycle_start=p.cycle_start,
             cycle_end=p.cycle_end,
@@ -170,7 +180,7 @@ class BillingService:
             .where(
                 Payment.subscription_id == sub.id,
                 Payment.kind == "Plan",
-                Payment.status.in_(("Due", "Over due")),
+                Payment.status == "Open",
                 Payment.voided_at.is_(None),
             )
             .order_by(Payment.due_date)
@@ -267,10 +277,10 @@ class BillingService:
     def mark_paid(self, customer: Customer, payment_id: str) -> PaymentDetail:
         """ "I've paid" (PAY-06): the status becomes Initiated and goes to the admin."""
         p = self._own_payment(customer, payment_id)
-        if p.status == "Received":
+        if p.status == "Paid":
             raise ApiError("already_received", "Priveo has received this payment already.", 409)
         if p.status != "Initiated":
-            old = p.status
+            old = _shown(p)
             p.status = "Initiated"
             p.initiated_at = utcnow()
             self._event(p, old, "Initiated", None, "Customer tapped I've paid")
@@ -322,7 +332,7 @@ class BillingService:
                 if sub.pending_plan_id and sub.pending_from and renewal >= sub.pending_from
                 else sub.monthly_price_rupees
             ),
-            status="Due",
+            status="Open",
             due_date=renewal,
             cycle_start=renewal,
             cycle_end=renewal + timedelta(days=self._cycle_days),
@@ -349,7 +359,7 @@ class BillingService:
             kind="Add-on",
             description=description,
             amount_rupees=amount_rupees,
-            status="Due",
+            status="Open",
             due_date=service_date or today_of(self._now()),
         )
         self._db.add(p)
@@ -361,7 +371,7 @@ class BillingService:
         """A cancelled add-on is not charged (ADD-10). A Received payment is
         left for the admin to refund outside the app."""
         p = self._db.get(Payment, payment_id) if payment_id else None
-        if p is not None and p.status != "Received" and p.voided_at is None:
+        if p is not None and p.status != "Paid" and p.voided_at is None:
             p.voided_at = utcnow()
 
     def invoice_for(self, customer: Customer, payment_id: str) -> InvoiceOut:
@@ -457,7 +467,7 @@ class BillingService:
     ) -> list[AdminPaymentOut]:
         q = select(Payment).where(Payment.voided_at.is_(None))
         if status:
-            q = q.where(Payment.status == status)
+            q = q.where(_shown_sql() == status)
         if kind:
             q = q.where(Payment.kind == kind)
         if customer_id:
@@ -487,7 +497,7 @@ class BillingService:
         self, payment_id: str, status: str, admin_id: uuid.UUID, note: str = ""
     ) -> AdminPaymentOut:
         """Any status to any status (ADM-PAY-02, ADM-PAY-07). Audited (ADM-PAY-05)."""
-        if status not in PAYMENT_STATUSES:
+        if status not in _LEGACY_STATUSES:
             raise ApiError(
                 "validation_failed",
                 "Choose Due, Over due, Initiated or Received.",
@@ -495,14 +505,14 @@ class BillingService:
                 {"status": "invalid"},
             )
         p = self._payment(payment_id)
-        if p.status != status:
+        if _shown(p) != status:
             self._apply(p, status, admin_id, note)
             self._db.commit()
         return self._admin_out([p])[0]
 
     def _apply(self, p: Payment, status: str, admin_id: uuid.UUID, note: str) -> None:
-        old, now = p.status, self._now().astimezone(UTC)
-        p.status = status
+        old, now = _shown(p), self._now().astimezone(UTC)
+        p.status = _stored(status)
         if status == "Received":
             p.received_at, p.confirmed_by = now, admin_id
         else:
@@ -530,7 +540,7 @@ class BillingService:
         )
 
     def create_payment(self, body: AdminPaymentIn, admin_id: uuid.UUID) -> AdminPaymentOut:
-        if body.status not in PAYMENT_STATUSES or body.kind not in ("Plan", "Add-on"):
+        if body.status not in _LEGACY_STATUSES or body.kind not in ("Plan", "Add-on"):
             raise ApiError("validation_failed", "Check the status and type.", 422)
         if body.amount_rupees <= 0:
             raise ApiError(
@@ -562,7 +572,7 @@ class BillingService:
             description=body.description
             or ("Plan payment" if body.kind == "Plan" else "Add-on payment"),
             amount_rupees=body.amount_rupees,
-            status="Due",
+            status="Open",
             due_date=body.due_date,
             cycle_start=cycle_start,
             cycle_end=cycle_start + timedelta(days=self._cycle_days) if cycle_start else None,
@@ -578,7 +588,7 @@ class BillingService:
     def issue_invoice(self, payment_id: str, admin_id: uuid.UUID) -> InvoiceOut:
         """ADM-PAY-08, ADM-PAY-09. Only for a Received payment."""
         p = self._payment(payment_id)
-        if p.status != "Received":
+        if p.status != "Paid":
             raise ApiError("not_received", "An invoice is made once the payment is Received.", 409)
         existing = self._db.scalar(select(Invoice).where(Invoice.payment_id == p.id))
         if existing is not None:
@@ -662,7 +672,7 @@ class BillingService:
         page = found[offset: offset + limit]
         latest: dict[uuid.UUID, str] = {}
         for sub_id, pay_status in self._db.execute(
-            select(Payment.subscription_id, Payment.status)
+            select(Payment.subscription_id, _shown_sql())
             .where(Payment.subscription_id.in_([x[0].id for x in page]),
                    Payment.kind == "Plan", Payment.voided_at.is_(None))
             .order_by(Payment.due_date, Payment.created_at)
@@ -687,15 +697,15 @@ class BillingService:
 
     def payments_summary(self, society: str | None = None) -> dict:
         """How many payments, and how many rupees, there are in each status (ADM-PAY-*)."""
-        q = (select(Payment.status, func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
+        q = (select(_shown_sql(), func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
              .where(Payment.voided_at.is_(None)))
         if society:
             q = q.join(Customer, Payment.customer_id == Customer.id).outerjoin(
                 Vehicle, Payment.vehicle_id == Vehicle.id).join(
                 Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id)
             ).where(Society.name == society)
-        by_status = {s: {"count": 0, "rupees": 0} for s in PAYMENT_STATUSES}
-        for status, count, rupees in self._db.execute(q.group_by(Payment.status)):
+        by_status = {s: {"count": 0, "rupees": 0} for s in _LEGACY_STATUSES}
+        for status, count, rupees in self._db.execute(q.group_by(_shown_sql())):
             by_status[status] = {"count": count, "rupees": int(rupees)}
         return {
             "total": sum(v["count"] for v in by_status.values()),
@@ -842,7 +852,7 @@ class BillingService:
                 .where(
                     Payment.subscription_id == sub.id,
                     Payment.kind == "Plan",
-                    Payment.status == "Due",
+                    Payment.status == "Open",
                     Payment.voided_at.is_(None),
                     Payment.cycle_start >= today - timedelta(days=self._cycle_days),
                 )
@@ -870,14 +880,14 @@ class BillingService:
         today = today_of(now)
         due = self._db.scalars(
             select(Payment).where(
-                Payment.status == "Due",
+                Payment.status == "Open",
+                Payment.overdue_since.is_(None),
                 Payment.due_date < today,
                 Payment.kind != "Add-on",
                 Payment.voided_at.is_(None),
             )
         )
         for p in list(due):
-            p.status = "Over due"
             p.overdue_since = p.due_date + timedelta(days=1)
             self._event(p, "Due", "Over due", None, "Due date passed")
             report.marked_overdue += 1
@@ -890,13 +900,13 @@ class BillingService:
             .join(AddonBooking, AddonBooking.payment_id == Payment.id)
             .where(
                 Payment.kind == "Add-on",
-                Payment.status == "Due",
+                Payment.status == "Open",
+                Payment.overdue_since.is_(None),
                 Payment.voided_at.is_(None),
                 AddonBooking.status == "Completed",
             )
         )
         for p in list(finished):
-            p.status = "Over due"
             p.overdue_since = today
             self._event(p, "Due", "Over due", None, "Service completed, payment not received")
             report.marked_overdue += 1
@@ -905,7 +915,8 @@ class BillingService:
         stale = self._db.scalars(
             select(Payment).where(
                 Payment.kind == "Plan",
-                Payment.status == "Over due",
+                Payment.status == "Open",
+                Payment.overdue_since.is_not(None),
                 Payment.voided_at.is_(None),
                 Payment.subscription_id.is_not(None),
                 Payment.overdue_since <= today - timedelta(days=self._inactive_after),
@@ -950,9 +961,8 @@ class BillingService:
 def add_on_service_completed(db: Session, payment_id: uuid.UUID | None) -> None:
     """The add-on's service is Completed: an unpaid payment is Over due now, not on the next daily run."""
     p = db.get(Payment, payment_id) if payment_id else None
-    if p is None or p.kind != "Add-on" or p.status != "Due" or p.voided_at is not None:
+    if p is None or p.kind != "Add-on" or p.status != "Open" or p.overdue_since is not None or p.voided_at is not None:
         return
-    p.status = "Over due"
     p.overdue_since = today_of(utcnow())
     db.add(PaymentEvent(payment_id=p.id, from_status="Due", to_status="Over due", by_login_id=None,
                         note="Service completed, payment not received"))

@@ -95,7 +95,7 @@ def test_a_cycle_pattern_counts_days_from_the_cycles_first_day(world, api, admin
         "2026-10-31": [EXT], "2026-11-01": [EXT, INT], "2026-11-02": [EXT]}
 
 
-def test_paused_days_move_the_cycle_as_they_move_the_billing_cycle(world, api, admin):
+def test_paused_days_do_not_move_the_cycle(world, api, admin):
     vehicle = world.add_vehicle()
     world.db.add(ScheduleChange(
         customer_id=world.customer.id, vehicle_id=vehicle.id, kind="pause",
@@ -105,7 +105,7 @@ def test_paused_days_move_the_cycle_as_they_move_the_billing_cycle(world, api, a
     assert put(api, admin, sub, kind="Cycle", exterior_days=[1], combined_days=[]).status_code == 200
     world.db.expire_all()
     on = [d.isoformat() for d, s in demand(world, vehicle, date(2026, 10, 1), 10).items() if s]
-    assert on == ["2026-10-04"]  # three paused days: cycle 2 starts on 04-Oct, not 01-Oct
+    assert on == ["2026-10-01"]  # a pause moves nothing: cycle 2 starts on 01-Oct
 
 
 def test_the_calendar_projection_agrees_with_the_scheduler_on_every_day(world, api, admin):

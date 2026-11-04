@@ -11,6 +11,7 @@ from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.billing.models import Payment, PaymentEvent
+from app.billing.status import legacy_shown
 from app.changes.cycle import renewal_date
 from app.customers import plan_changes
 from app.customers.logins import ensure_login, give_default_mpin, mobile_in_use, mobile_taken
@@ -249,7 +250,8 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
         kind="Plan",
         description=f"First month of {plan.name}",
         amount_rupees=sub.monthly_price_rupees,
-        status=first_payment_status,
+        # TODO(B2): the API still takes the old names; stored as Open | Initiated | Paid.
+        status={"Received": "Paid", "Initiated": "Initiated"}.get(first_payment_status, "Open"),
         due_date=first,
         cycle_start=first,
         cycle_end=first + timedelta(days=lookup.setting(db, "billing.cycle_days")),
@@ -264,7 +266,7 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
         PaymentEvent(
             payment_id=payment.id,
             from_status=None,
-            to_status=payment.status,
+            to_status=legacy_shown(payment),
             by_login_id=by,
             note="First payment at onboarding",
         )
@@ -376,7 +378,7 @@ def vehicle_out(db, v, store):
         "payments": [
             {
                 "id": str(p.id),
-                "status": p.status,
+                "status": legacy_shown(p),  # TODO(B2)
                 "amount_rupees": p.amount_rupees,
                 "due_date": p.due_date,
             }

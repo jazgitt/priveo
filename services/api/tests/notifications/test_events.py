@@ -315,7 +315,7 @@ def test_reminder_days():
     assert [d for d in range(-10, 8) if emit.reminder_due(d)] == [-7, -1, 1, 3, 5, 7]
 
 
-def _plan_payment(db, world, due: date, status="Due") -> Payment:
+def _plan_payment(db, world, due: date, status="Open") -> Payment:
     vehicle = world.vehicles[0]
     sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
     customer = db.scalar(select(Customer).where(Customer.id == vehicle.customer_id))
@@ -339,7 +339,7 @@ def test_renewal_reminders_follow_the_schedule_and_stop(db, world, customer_logi
     p.status = "Initiated"  # the customer says they paid: the reminders stop
     db.commit()
     assert emit.renewal_reminders(db, due + timedelta(days=3)) == 0
-    p.status = "Over due"  # the admin moves it back: they start again
+    p.status = "Open"  # the admin moves it back: they start again
     db.commit()
     assert emit.renewal_reminders(db, due + timedelta(days=3)) == 1
     assert set(events(db, customer_login.id)) == {"renewal_reminder"}
@@ -399,7 +399,7 @@ def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew,
     r = cron.get("/v1/internal/cron/payments-overdue", headers=headers)
     assert r.json()["result"]["marked_overdue"] == 1
     db.expire_all()
-    assert db.get(Payment, p.id).status == "Over due"
+    assert db.get(Payment, p.id).overdue_since is not None
     # Day 2 after the due date: a reminder (every 2 days from the day before).
     cron.state["now"] = datetime(2026, 11, 11, 10, 0, tzinfo=IST)
     r = cron.get("/v1/internal/cron/renewal-reminders", headers=headers)

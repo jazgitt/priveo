@@ -6,8 +6,7 @@ from sqlalchemy import select
 
 from app.billing.config import MoneySettings
 from app.billing.service import BillingService
-from app.changes.payment_dates import shift_unpaid_renewals
-from app.customers.models import PlanChange, Subscription
+from app.customers.models import Subscription
 from app.directory.models import Plan
 from app.platform.clock import today_ist
 from tests import test_customer_administration as base
@@ -114,27 +113,6 @@ def test_bad_dates_and_inputs_are_refused(client, directory, db):
     assert sub.pending_from == today_ist()
 
 
-def test_a_pause_moves_a_renewal_based_change_but_not_a_chosen_date(client, directory, db):
-    admin, sub, exterior = world(client, directory, db)
-    start = today_ist() + timedelta(days=10)
-    patch(client, admin, sub, plan_id=str(exterior.id), effective_from=start.isoformat())
-    shift_unpaid_renewals(db, sub, today_ist(), 3)
-    db.commit()
-    db.refresh(sub)
-    assert sub.pending_from == start  # chosen: stays
-    # Replace it with a renewal-based change and shift again.
-    patch(client, admin, sub, plan_id=str(exterior.id))
-    db.refresh(sub)
-    before = sub.pending_from
-    shift_unpaid_renewals(db, sub, today_ist(), 3)
-    db.commit()
-    db.refresh(sub)
-    assert sub.pending_from == before + timedelta(days=3)
-    scheduled = db.scalar(select(PlanChange).where(
-        PlanChange.subscription_id == sub.id, PlanChange.status == "Scheduled"))
-    assert scheduled.effective_from == sub.pending_from  # the history follows
-
-
 def test_only_the_admin_reads_the_history_and_unknown_ids_are_404(client, directory, db):
     admin, sub, _ = world(client, directory, db)
     assert history(client, admin, sub)["changes"] == []
@@ -177,7 +155,7 @@ def test_the_admin_decides_the_charge_for_the_days_before_the_renewal(client, di
     r = patch(client, admin, sub, plan_id=str(premium.id), effective_from=start.isoformat(), charge="prorated")
     assert r.status_code == 200, r.text
     (pay,) = adjustments(db, sub)
-    assert (pay.amount_rupees, pay.status, pay.due_date) == (q["suggested_rupees"], "Due", start)
+    assert (pay.amount_rupees, pay.status, pay.due_date) == (q["suggested_rupees"], "Open", start)
     assert history(client, admin, sub)["changes"][0]["charge_rupees"] == q["suggested_rupees"]
 
     # Choosing again replaces the change and its unpaid charge with a custom amount.

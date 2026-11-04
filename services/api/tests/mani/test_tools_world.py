@@ -146,7 +146,9 @@ class World:
                 cycle_start: date | None = None, overdue_since: date | None = None,
                 received_at: datetime | None = None, sub: Subscription | None = None) -> Payment:
         row = Payment(customer_id=customer.id, subscription_id=sub.id if sub else None, kind=kind,
-                      description=f"{kind} payment", amount_rupees=rupees, status=status, due_date=due,
+                      description=f"{kind} payment", amount_rupees=rupees,
+                      status={"Received": "Paid", "Initiated": "Initiated"}.get(status, "Open"),
+                      due_date=due,
                       cycle_start=cycle_start,
                       cycle_end=cycle_start + timedelta(days=29) if cycle_start else None,
                       overdue_since=overdue_since, received_at=received_at)

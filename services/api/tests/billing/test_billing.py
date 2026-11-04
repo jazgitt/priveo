@@ -34,7 +34,7 @@ def test_my_subscription_shows_the_cycle(money):
     assert s["latest_payment"] is None
 
 
-def test_a_confirmed_renewal_moves_the_expiry_date_on_at_once(money):
+def test_a_confirmed_renewal_does_not_move_the_expiry_date(money):
     """Paying the next cycle early: until the admin confirms, the plan expires
     on the end of the current cycle; once Received, on the end of the next."""
     m = money
@@ -46,8 +46,8 @@ def test_a_confirmed_renewal_moves_the_expiry_date_on_at_once(money):
     m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
     m.client.post(f"/v1/admin/payments/{p['id']}/confirm", headers=m.admin)
     s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert s["expires_on"] == "2026-11-29"  # 30 days more.
-    assert s["days_left"] == 50
+    assert s["expires_on"] == "2026-10-30"  # Paying ahead does not extend the plan.
+    assert s["days_left"] == 20
     home = m.client.get("/v1/customer/home", headers=m.customer).json()
     assert [v["expires_on"] for v in home["vehicles"]] == ["2026-11-29"]
 
@@ -163,14 +163,14 @@ def test_over_due_then_inactive_after_seven_days(money):
 
     # On the due date it is still Due.
     mark_overdue_and_inactive(at(20, 23, 59), m.db)
-    assert m.db.get(Payment, uuid.UUID(p["id"])).status == "Due"
+    assert m.db.get(Payment, uuid.UUID(p["id"])).overdue_since is None
 
     # The day after, it is Over due and the subscription is still Active.
     report = mark_overdue_and_inactive(at(21, 1, 0), m.db)
     assert report.marked_overdue == 1 and report.inactivated == []
     assert m.subscription().status == "Active"
     row = m.db.scalar(select(Payment))
-    assert (row.status, row.overdue_since.isoformat()) == ("Over due", "2026-10-21")
+    assert (row.status, row.overdue_since.isoformat()) == ("Open", "2026-10-21")  # shown Over due
 
     # Six days over due: still Active. Seven: Inactive.
     mark_overdue_and_inactive(at(27, 12), m.db)
@@ -199,11 +199,11 @@ def _addon(m, day="2026-10-20"):
 def test_an_add_on_payment_is_due_on_the_service_date_and_stays_due_until_done(money):
     m = money
     booking, row = _addon(m)
-    assert (row.kind, row.status, row.due_date.isoformat()) == ("Add-on", "Due", "2026-10-20")
+    assert (row.kind, row.status, row.due_date.isoformat()) == ("Add-on", "Open", "2026-10-20")
     # Service not done: still Due, even after the service date has passed.
     mark_overdue_and_inactive(at(25, 8), m.db)
     m.db.expire_all()
-    assert m.db.scalar(select(Payment)).status == "Due"
+    assert m.db.scalar(select(Payment)).status == "Open"
 
 
 def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(money):
@@ -214,7 +214,7 @@ def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(m
     report = mark_overdue_and_inactive(at(20, 18), m.db)
     m.db.expire_all()
     row = m.db.scalar(select(Payment))
-    assert report.marked_overdue == 1 and row.status == "Over due"
+    assert report.marked_overdue == 1 and row.overdue_since is not None
     mark_overdue_and_inactive(at(30, 8), m.db)
     assert m.subscription().status == "Active"
 
@@ -286,7 +286,7 @@ def test_the_daily_job_creates_the_next_payment_and_follows_a_pause(money):
     assert r.status_code == 201, r.text  # a 401 here once looked like "the pause did not move the date"
     generate_due_payments(at(26, 6), m.db)
     m.db.expire_all()
-    assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-11-03"
+    assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-10-31"  # a pause moves nothing
 
 
 @pytest.fixture
