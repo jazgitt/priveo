@@ -95,7 +95,7 @@ def test_onboard_without_import_and_duplicate_email_opens_existing(client, direc
     c, body = create(client, directory, admin)
     assert c["welcome_sent"] and not c["mpin_changed"] and not c["onboarding_confirmed"]
     v = c["vehicles"][0]
-    assert v["subscription"]["status"] == "Activating" and v["payments"][0]["status"] == "Due"
+    assert v["subscription"]["status"] == "Activating" and v["payments"][0]["status"] == "Not Due"
     assert v["photo_url"] and v["society"] == "Second society"
     repeat = client.post("/v1/admin/customers", headers=admin, json=body).json()
     assert repeat["existing"] and repeat["id"] == c["id"]
@@ -112,7 +112,7 @@ def test_customer_adds_vehicle_in_another_society_and_cannot_confirm_payment(cli
     customer = auth(login(client, "customer")["access_token"])
     body = vehicle_body(directory, upload(client, customer, admin=False))
     rejected = client.post(
-        "/v1/customer/vehicles", headers=customer, json={**body, "first_payment_status": "Received"}
+        "/v1/customer/vehicles", headers=customer, json={**body, "first_payment_status": "Paid"}
     )
     assert rejected.status_code == 422
     r = client.post("/v1/customer/vehicles", headers=customer, json=body)
@@ -270,9 +270,9 @@ def test_activation_anchors_first_payment_and_pending_plan_applies_at_renewal(
     )
     assert activated.status_code == 200, activated.text
     first = db.scalar(select(Payment).where(Payment.subscription_id == sub.id))
-    assert first.cycle_start == start and first.due_date == start
+    assert first.cycle_start == start and first.due_date == start + timedelta(days=29)
     assert first.cycle_end == start + timedelta(days=30)
-    first.status = "Received"
+    first.status = "Paid"
     next_plan = Plan(name="Exterior renewal", monthly_price_rupees=699, includes_interior=False)
     db.add(next_plan)
     db.commit()
@@ -288,13 +288,16 @@ def test_activation_anchors_first_payment_and_pending_plan_applies_at_renewal(
     BillingService(db, lambda: before, MoneySettings()).generate_due_payments(before)
     db.refresh(sub)
     assert sub.monthly_price_rupees == 999
+    # The next cycle's payment is made on its first day, at the new plan's price.
+    assert db.scalar(select(Payment).where(
+        Payment.subscription_id == sub.id, Payment.cycle_start == renewal)) is None
+    effective = datetime.combine(renewal, datetime.min.time(), tzinfo=UTC)
+    BillingService(db, lambda: effective, MoneySettings()).generate_due_payments(effective)
+    db.refresh(sub)
     due = db.scalar(
         select(Payment).where(Payment.subscription_id == sub.id, Payment.cycle_start == renewal)
     )
     assert due.amount_rupees == 699
-    effective = datetime.combine(renewal, datetime.min.time(), tzinfo=UTC)
-    BillingService(db, lambda: effective, MoneySettings()).generate_due_payments(effective)
-    db.refresh(sub)
     assert sub.plan_id == next_plan.id and sub.monthly_price_rupees == 699
     assert sub.pending_plan_id is None and sub.interior_day is None
 

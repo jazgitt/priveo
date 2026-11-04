@@ -11,6 +11,7 @@ from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.billing.models import Payment, PaymentEvent
+from app.billing.status import DISPLAY_STATUSES, display_status, stored_for
 from app.changes.cycle import renewal_date
 from app.customers import plan_changes
 from app.customers.logins import ensure_login, give_default_mpin, mobile_in_use, mobile_taken
@@ -229,6 +230,8 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
                        first_payment_status, by, first_service_date=None):
     """A new subscription (Activating) for a vehicle, with its first plan payment."""
     first = first_service_date or today_ist()
+    cycle_days = lookup.setting(db, "billing.cycle_days")
+    stored = stored_for(first_payment_status)
     sub = Subscription(
         vehicle_id=v.id,
         plan_id=plan.id,
@@ -249,14 +252,15 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
         kind="Plan",
         description=f"First month of {plan.name}",
         amount_rupees=sub.monthly_price_rupees,
-        status=first_payment_status,
-        due_date=first,
+        # Not Due, Due, Due today and Over due all mean Open: the date rule shows which.
+        status=stored,
+        # Due on the cycle's last day (PAY-14); cycle_end is stored as the day after.
+        due_date=first + timedelta(days=cycle_days - 1),
         cycle_start=first,
-        cycle_end=first + timedelta(days=lookup.setting(db, "billing.cycle_days")),
-        received_at=utcnow() if first_payment_status == "Received" else None,
-        confirmed_by=by if first_payment_status == "Received" else None,
-        overdue_since=today_ist() if first_payment_status == "Over due" else None,
-        initiated_at=utcnow() if first_payment_status == "Initiated" else None,
+        cycle_end=first + timedelta(days=cycle_days),
+        received_at=utcnow() if stored == "Paid" else None,
+        confirmed_by=by if stored == "Paid" else None,
+        initiated_at=utcnow() if stored == "Initiated" else None,
     )
     db.add(payment)
     db.flush()
@@ -264,7 +268,7 @@ def start_subscription(db, c, v, plan, *, cutoff, interior_day, interior_day_not
         PaymentEvent(
             payment_id=payment.id,
             from_status=None,
-            to_status=payment.status,
+            to_status=display_status(payment, today_ist()).status,
             by_login_id=by,
             note="First payment at onboarding",
         )
@@ -294,7 +298,7 @@ def add_vehicle(db, c, body, owner, by=None):
     reg = registration(db, body.registration)
     photo = asset(db, body.photo_upload_id, owner, "vehicle") if body.photo_upload_id else None
     rc = asset(db, body.rc_upload_id, owner, "rc") if body.rc_upload_id else None
-    if body.first_payment_status not in ("Due", "Over due", "Initiated", "Received"):
+    if body.first_payment_status not in DISPLAY_STATUSES:
         raise ApiError("validation_failed", "Choose a payment status.", 422)
     v = Vehicle(
         customer_id=c.id,
@@ -376,7 +380,7 @@ def vehicle_out(db, v, store):
         "payments": [
             {
                 "id": str(p.id),
-                "status": p.status,
+                "status": display_status(p, today_ist()).status,
                 "amount_rupees": p.amount_rupees,
                 "due_date": p.due_date,
             }
@@ -689,7 +693,7 @@ def set_up_subscription(
     if plan.includes_interior and body.interior_day not in INTERIOR_DAYS:
         raise ApiError("validation_failed", "Choose an interior care day.", 422,
                        {"interior_day": "Required."})
-    if body.first_payment_status not in ("Due", "Over due", "Initiated", "Received"):
+    if body.first_payment_status not in DISPLAY_STATUSES:
         raise ApiError("validation_failed", "Choose a payment status.", 422)
     c = db.get(Customer, v.customer_id)
     sub, payment = start_subscription(
@@ -711,8 +715,8 @@ def customer_add_vehicle(
     db: Session = Depends(get_db),
     store: ObjectStore = Depends(get_object_store),
 ):
-    if body.first_payment_status != "Due":
-        raise ApiError("validation_failed", "The first payment starts Due.", 422)
+    if stored_for(body.first_payment_status) != "Open":
+        raise ApiError("validation_failed", "The first payment starts unpaid.", 422)
     c = db.scalar(select(Customer).where(Customer.login_id == user.id))
     if c is None:
         raise ApiError("not_found", "Customer not found.", 404)

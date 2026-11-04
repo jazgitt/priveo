@@ -313,12 +313,13 @@ def test_payments_this_cycle_overdue_and_weeks(company, db):
     plan = d["this_cycle_plan_payments"]
     assert plan["Due"] == {"payments": 1, "rupees": 1299}
     assert plan["Over due"] == {"payments": 2, "rupees": 2298}
-    assert plan["Received"] == {"payments": 1, "rupees": 1299} and plan["Initiated"]["payments"] == 0
+    assert plan["Paid"] == {"payments": 1, "rupees": 1299} and plan["Initiated"]["payments"] == 0
     assert plan["total"] == {"payments": 4, "rupees": 4896}
     add_on = d["add_on_payments_due_last_30_days"]
-    assert (add_on["Due"]["rupees"], add_on["Over due"]["rupees"], add_on["Received"]["rupees"]) == (800, 900, 2500)
-    assert d["outstanding_all_cycles"] == {"due": {"payments": 2, "rupees": 2099},
-                                           "over_due": {"payments": 4, "rupees": 4497}}
+    assert (add_on["Due"]["rupees"], add_on["Over due"]["rupees"], add_on["Paid"]["rupees"]) == (800, 900, 2500)
+    assert d["outstanding_all_cycles"] == {
+        "not_due": {"payments": 0, "rupees": 0}, "due": {"payments": 2, "rupees": 2099},
+        "due_today": {"payments": 0, "rupees": 0}, "over_due": {"payments": 4, "rupees": 4497}}
     late = d["customers_over_due"]
     assert (late["payments"], late["customers"], late["rupees"]) == (2, 2, 2298)
     assert [(x["customer"], x["days_over_due"]) for x in late["list"]["items"]] == [("Dev Nair", 10), ("Asha Rao", 8)]

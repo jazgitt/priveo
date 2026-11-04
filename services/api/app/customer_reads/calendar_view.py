@@ -13,7 +13,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.changes.cycle import extension_days, paused_days
+from app.changes.cycle import paused_days
 from app.changes.models import ScheduleChange
 from app.changes.projection import day_services, renewals_between
 from app.changes.rules import is_open, today_of
@@ -282,7 +282,7 @@ class CalendarView:
                 CalendarRenewal(vehicle_id=vid, date=d)
                 for d in renewals_between(
                     sub.first_service_date,
-                    len(ctx.paused) + extension_days(self._db, vehicle.id),
+                    0,  # a pause or skip does not move the cycle
                     first,
                     last,
                     lookup.setting(self._db, "billing.cycle_days"),

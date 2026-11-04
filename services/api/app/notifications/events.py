@@ -22,7 +22,13 @@ CREW_EVENTS = (
     "crew_queue_changed",     # B-06: the admin reordered or unlocked the queue
 )
 
-EVENTS = CUSTOMER_EVENTS + CREW_EVENTS
+# Always sent, no switch: the result of the customer's own "I've paid" (PAY-08, PAY-17).
+PAYMENT_EVENTS = (
+    "payment_received",  # the admin approved: "Payment received"
+    "payment_failed",    # the admin rejected: "Your last payment failed"
+)
+
+EVENTS = CUSTOMER_EVENTS + PAYMENT_EVENTS + CREW_EVENTS
 
 # What the Settings screen shows for each switch: (name, one line).
 LABELS: dict[str, tuple[str, str]] = {

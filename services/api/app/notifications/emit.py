@@ -429,6 +429,31 @@ def addon_cancelled(db: Session, booking) -> None:
 
 # Payments ---------------------------------------------------------------------
 
+def _payment_login(db: Session, payment) -> uuid.UUID | None:
+    from app.customers.models import Customer
+
+    return db.scalar(select(Customer.login_id).where(Customer.id == payment.customer_id))
+
+
+@_safe
+def payment_received(db: Session, payment, what: str) -> None:
+    """PAY-08, ADM-PAY-03: the admin approved. `what` names the vehicle and the cycle dates."""
+    _service(db).notify(
+        _payment_login(db, payment), "payment_received", "Payment received",
+        f"We have received your payment of Rs {payment.amount_rupees} for {what}.",
+        ref_type="payment", ref_id=str(payment.id), dedupe_key=f"payment_received:{payment.id}")
+
+
+@_safe
+def payment_failed(db: Session, payment, what: str) -> None:
+    """PAY-17: the admin rejected the payment. Every rejection is told."""
+    _service(db).notify(
+        _payment_login(db, payment), "payment_failed", "Your last payment failed",
+        f"We could not confirm your payment for {what}. Please check and mark it paid again.",
+        ref_type="payment", ref_id=str(payment.id),
+        dedupe_key=f"payment_failed:{payment.id}:{payment.rejected_at.isoformat()}")
+
+
 def reminder_due(offset_days: int) -> bool:
     """NOTIF-05. `offset_days` is today minus the renewal date: a reminder one
     week before (-7), one day before (-1), then every 2 days (1, 3, 5, ...)."""
@@ -451,7 +476,7 @@ def renewal_reminders(db: Session, today: date) -> int:
         select(Payment, Customer.login_id)
         .join(Customer, Customer.id == Payment.customer_id)
         .join(Subscription, Subscription.id == Payment.subscription_id)
-        .where(Payment.kind == "Plan", Payment.status.in_(("Due", "Over due")),
+        .where(Payment.kind == "Plan", Payment.status == "Open",
                Payment.voided_at.is_(None), Subscription.status == "Active")).all()
     sent = 0
     for payment, login_id in rows:
