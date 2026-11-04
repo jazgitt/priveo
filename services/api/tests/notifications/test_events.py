@@ -312,7 +312,7 @@ def test_admin_push_goes_to_admin_phones(db, push):
 
 
 def test_reminder_days():
-    assert [d for d in range(-10, 8) if emit.reminder_due(d)] == [-7, -1, 1, 3, 5, 7]
+    assert [d for d in range(-10, 10) if emit.reminder_due(d)] == [-7, -1, 0, 1, 7]
 
 
 def _plan_payment(db, world, due: date, status="Open") -> Payment:
@@ -327,23 +327,77 @@ def _plan_payment(db, world, due: date, status="Open") -> Payment:
     return p
 
 
-def test_renewal_reminders_follow_the_schedule_and_stop(db, world, customer_login, push):
+def _reminder_texts(db, login_id):
+    return [n.body for n in inbox(db, login_id) if n.event == "renewal_reminder"]
+
+
+def test_each_reminder_day_fires_once_and_other_days_do_not(db, world, customer_login, push):
+    due = date(2026, 11, 20)
+    _plan_payment(db, world, due)
+    fired = []
+    for offset in range(-10, 10):
+        n = emit.renewal_reminders(db, due + timedelta(days=offset))
+        assert n == (1 if offset in (-7, -1, 0, 1, 7) else 0), offset
+        if n:
+            fired.append(offset)
+            # Running the job again the same day sends nothing twice.
+            assert emit.renewal_reminders(db, due + timedelta(days=offset)) == 0
+    assert fired == [-7, -1, 0, 1, 7]
+    assert set(events(db, customer_login.id)) == {"renewal_reminder"}
+    assert len(events(db, customer_login.id)) == 5
+    assert inbox(db, customer_login.id)[0].ref_type == "payment"
+
+
+def test_reminder_text_follows_the_day(db, world, customer_login, push):
+    due = date(2026, 11, 20)
+    _plan_payment(db, world, due)
+    for offset in (-7, -1, 0, 1, 7):
+        emit.renewal_reminders(db, due + timedelta(days=offset))
+    texts = _reminder_texts(db, customer_login.id)
+    assert len(texts) == 5
+    assert all(t.startswith("Your plan payment of Rs 999 ") for t in texts)
+    assert [t.split(" Rs 999 ")[1].split(".")[0] for t in texts] == [
+        "is due on 20-Nov-26", "is due on 20-Nov-26", "is due today",
+        "was due on 20-Nov-26", "was due on 20-Nov-26"]
+
+
+@pytest.mark.parametrize("stop", ["Initiated", "Paid"])
+def test_reminders_stop_when_the_payment_is_initiated_or_paid(db, world, customer_login, push, stop):
     due = date(2026, 11, 20)
     p = _plan_payment(db, world, due)
-    assert emit.renewal_reminders(db, due - timedelta(days=8)) == 0
     assert emit.renewal_reminders(db, due - timedelta(days=7)) == 1
-    assert emit.renewal_reminders(db, due - timedelta(days=7)) == 0  # same day again
-    assert emit.renewal_reminders(db, due - timedelta(days=1)) == 1
+    p.status = stop
+    db.commit()
+    for offset in (-1, 0, 1, 7):
+        assert emit.renewal_reminders(db, due + timedelta(days=offset)) == 0
+
+
+def test_reminders_stop_when_the_subscription_is_inactive(db, world, customer_login, push):
+    due = date(2026, 11, 20)
+    p = _plan_payment(db, world, due)
+    sub = db.get(Subscription, p.subscription_id)
+    sub.status = "Inactive"
+    db.commit()
+    assert emit.renewal_reminders(db, due - timedelta(days=7)) == 0
     assert emit.renewal_reminders(db, due) == 0
-    assert emit.renewal_reminders(db, due + timedelta(days=1)) == 1
-    p.status = "Initiated"  # the customer says they paid: the reminders stop
+
+
+def test_a_rejected_payment_resumes_only_the_reminders_still_ahead(db, world, customer_login, push):
+    due = date(2026, 11, 20)
+    p = _plan_payment(db, world, due)
+    assert emit.renewal_reminders(db, due - timedelta(days=7)) == 1
+    p.status = "Initiated"  # the customer marks it paid; the reminders stop
+    db.commit()
+    assert emit.renewal_reminders(db, due - timedelta(days=1)) == 0
+    assert emit.renewal_reminders(db, due) == 0
+    assert emit.renewal_reminders(db, due + timedelta(days=1)) == 0
+    # Rejected on D+3: back to Open. The passed days are not made up, D+7 still goes.
+    p.status = "Open"
+    p.rejected_at = datetime(2026, 11, 23, 12, 0, tzinfo=IST)
     db.commit()
     assert emit.renewal_reminders(db, due + timedelta(days=3)) == 0
-    p.status = "Open"  # the admin moves it back: they start again
-    db.commit()
-    assert emit.renewal_reminders(db, due + timedelta(days=3)) == 1
-    assert set(events(db, customer_login.id)) == {"renewal_reminder"}
-    assert inbox(db, customer_login.id)[0].ref_type == "payment"
+    assert emit.renewal_reminders(db, due + timedelta(days=7)) == 1
+    assert emit.renewal_reminders(db, due + timedelta(days=7)) == 0
 
 
 # Cron ----------------------------------------------------------------------------
@@ -359,7 +413,7 @@ def cron(crew_client):
     return client
 
 
-JOBS = ("freeze-due", "payments-generate", "payments-overdue", "renewal-reminders",
+JOBS = ("freeze-due", "payments-daily", "payments-generate", "payments-overdue", "renewal-reminders",
         "checkin-notify", "complaints-overdue", "automatic-planning")
 
 
@@ -400,7 +454,7 @@ def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew,
     assert r.json()["result"]["marked_overdue"] == 1
     db.expire_all()
     assert db.get(Payment, p.id).overdue_since is not None
-    # Day 2 after the due date: a reminder (every 2 days from the day before).
+    # The day after the due date: a reminder.
     cron.state["now"] = datetime(2026, 11, 11, 10, 0, tzinfo=IST)
     r = cron.get("/v1/internal/cron/renewal-reminders", headers=headers)
     assert r.json()["result"]["sent"] == 1

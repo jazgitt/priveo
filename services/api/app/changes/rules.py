@@ -21,8 +21,17 @@ def show_date(d: date) -> str:
     return d.strftime("%d-%b-%y")
 
 
+PAYMENT_DAY_START_HOUR = 2
+
+
 def today_of(now: datetime) -> date:
     return now.astimezone(clock.IST).date()
+
+
+def payment_day_of(now: datetime) -> date:
+    """The day for payment statuses (PAY-19): it changes at 2:00 IST, so 01:59
+    on 5 Nov is still 4 Nov and 02:00 is 5 Nov."""
+    return (now.astimezone(clock.IST) - timedelta(hours=PAYMENT_DAY_START_HOUR)).date()
 
 
 def cutoff_at(day: date, hour: int = CUTOFF_HOUR) -> datetime:
