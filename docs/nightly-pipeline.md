@@ -66,6 +66,7 @@ The labels must be created in the repository before the first run (settings chec
 
 - At most 2 fix attempts per night (Derived).
 - Mechanical fixes only: lint autofixes and regenerated files (theme, localization, API client, OpenAPI contract). These are the outputs CLAUDE.md says CI fails on when stale.
+- **Flake retry (added 04-Nov-26, Derived).** The dry run of 04-Nov-26 stopped on failures that passed alone (a PostgreSQL test and a slow web test, with the Mac under load). When the combined branch fails local checks and either only one pull request is in it, or every pull request passes alone, the pipeline waits 2 minutes and reruns **only the stages that failed**, once. With one pull request this happens before the fix loop; with several it happens after the solo runs, on a rebuilt combined branch. Both attempts are recorded in `events.jsonl` (`flake_retry_start`, `flake_retry_end`), in `manifest.json` (`flake_retries`) and in the "Flake retry" section of `report.md`. A night counts as green only when every stage has a passing run: the other stages passed in the first run and each failed stage passes in the retry. If the retry fails too, the pipeline behaves as before. A pull request that fails alone is never retried; it is dropped.
 - A failure that persists after the attempts is traced by running each pull request alone on a clean branch. The pull request that fails alone is dropped, labelled `needs-human` and commented on. The night continues without it.
 - Code fixes by Claude are **not built** (question 4, Derived: mechanical fixes only). If the owner turns them on later, they must go only to the pull request branch, never to `main` or the combined branch, and never edit tests. The model and budget are question 5.
 - The mechanical fixes are: `ruff check --fix`, `npm run lint -- --fix`, `dart run tool/gen_theme.dart`, `flutter gen-l10n`, `dart run tool/gen_api.dart`, and `scripts/export_openapi.py`. A fix is committed on the combined branch as `nightly: regenerate files`.
@@ -179,6 +180,7 @@ The report lists, in this order:
 3. The pull requests dropped, each with the reason and a link to the comment.
 4. Fix attempts used (of 2) and what changed.
 5. Check timings per stage.
+   A "Flake retry" section appears when the first local run failed and the failed stages were rerun once (section 4).
 6. Test deploy and smoke result.
 7. Production: always "untouched (manual)" in this version.
 8. Links to the log file and the GitHub runs.
@@ -193,6 +195,7 @@ First read the report and find the stage that stopped the run. Then:
 |---|---|---|
 | 0 Preflight | Unchanged | Fix the cause the report names (tool, red `main`, stale lock). Run again. |
 | 1 to 3 | Unchanged | Look at dropped pull requests, fix, remove `needs-human`, let the next night take them. |
+| 3 or 4, "Flake retry" in the report | Unchanged | The failed stages were rerun once and failed again, so it is probably real. If the retry passed the run would have carried on. Read the two attempts in `commands/`, then follow the row below. |
 | 4 | Unchanged | Read the failing check. Fix by hand on the pull request. The next night retries. |
 | 5 CI | Unchanged | Same as stage 4. The `nightly/DATE` branch can be deleted. |
 | 6 Merge | Maybe partly merged | Check `main` against the head-commit record in the report. If merged one by one, revert what the report lists. |
@@ -270,11 +273,11 @@ To undo: Settings, Branches, delete the rule, or `gh api -X DELETE repos/jazgitt
 - `in.priveo.nightly`: starts `~/priveo-nightly/tools/nightly/run-nightly.sh` at 02:00 local time (IST on this Mac).
 - `in.priveo.nightly-watchdog`: starts `watchdog.py` at 06:30.
 - Plists are in `~/Library/LaunchAgents/`. Stop with `launchctl bootout gui/$(id -u)/in.priveo.nightly`.
-- Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate` so the Mac does not sleep during it.
+- Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate -ims` (no idle, disk or system sleep on AC power) so the Mac does not sleep during it. The dry run of 04-Nov-26 was frozen by macOS "Maintenance Sleep" about every 15 minutes (a 25-minute run took 3 hours, `pmset -g log` shows the sleeps); a sleep jumps the wall clock, which expires the 15-minute access token inside a test and makes web tests time out. The run log now records `slept_seconds` on any command during which the Mac slept 2 minutes or more, and adds a note to the report.
 
 ## 13. Built state (04-Nov-26)
 
-- Code: `tools/nightly/` (PRs #118, #120, #121, #122, #123, #124, #125, #126). Tests: `python3 -m unittest discover -s tools/nightly/tests`. They are not in a CI workflow; run them after changing the scripts.
+- Code: `tools/nightly/` (PRs #118, #120, #121, #122, #123, #124, #125, #126). Tests: `python -m pytest tools/nightly/tests` (or `python3 -m unittest discover -s tools/nightly/tests`). They run in CI as `nightly-ci` (`.github/workflows/nightly-ci.yml`), only for pull requests that touch `tools/nightly/**`; `ci-gate` still passes for other pull requests because it only waits for checks that started.
 - The clone's virtualenv uses `python3.12` (`NIGHTLY_PYTHON` overrides), because the default `python3` has no ortools wheel.
 - Rollback drill on test (PR #127): a harmless file was merged, then `tools/nightly/rollback.py` reverted the merge on `main`. The revert deployed test, the smoke test step passed and `/v1/public/health` showed the run's build number. Net change in the repository: none.
 - `ci-gate` is the only required check on `main`. Admins are not bound by it (`enforce_admins` off).

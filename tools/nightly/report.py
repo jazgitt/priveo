@@ -74,6 +74,12 @@ def build(m: dict, log_dir: Path, shorten_home: bool = True) -> str:
     else:
         add("- none run")
     add("")
+    if m.get("flake_retries"):
+        add("## Flake retry")
+        for r in m["flake_retries"]:
+            add(f"- first run failed: {', '.join(r['stages'])}; after {int(r['pause_seconds'])}s only those "
+                f"stages were rerun: {r['second']}")
+        add("")
     add(f"## Fix attempts used: {len(m['fix_attempts'])} of 2")
     for a in m["fix_attempts"]:
         add(f"- attempt {a['n']}: {a['outcome']}")
