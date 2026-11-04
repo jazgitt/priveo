@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -57,3 +57,32 @@ class NotificationPreference(Base):
     event: Mapped[str] = mapped_column(String(40), primary_key=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class CronJob(Base):
+    """The on/off switch of one scheduled job (ADM-OPS-05). A job with no row
+    uses its default in `app.notifications.cron_log.DEFAULTS`."""
+
+    __tablename__ = "cron_jobs"
+
+    job: Mapped[str] = mapped_column(String(40), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_by_login_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class CronRun(Base):
+    """One call of a scheduled job (ADM-OPS-07)."""
+
+    __tablename__ = "cron_runs"
+    __table_args__ = (Index("cron_runs_job_started", "job", "started_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    job: Mapped[str] = mapped_column(String(40))
+    trigger: Mapped[str] = mapped_column(String(10))  # vercel | manual
+    started_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    status: Mapped[str] = mapped_column(String(10))  # started | success | failed | skipped
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+    result: Mapped[dict | None] = mapped_column(JSON)
+    error: Mapped[str] = mapped_column(String(300), default="")

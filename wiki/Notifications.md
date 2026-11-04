@@ -26,9 +26,9 @@ Push, navigation and live-integration work remain. The 20 October report exclude
 
 ## Scheduled jobs
 
-The current internal cron router registers eight jobs: crew-society-moves, automatic-planning, freeze-due, payments-generate, payments-overdue, renewal-reminders, checkin-notify and complaints-overdue. Calls require `CRON_SECRET`; missing configuration yields a disabled response. The router accepts GET and POST.[^7]
+The current internal cron router registers six jobs: automatic-planning, freeze-due, payments-daily, renewal-reminders, checkin-notify and complaints-overdue; the Mani module adds mani-retention, which is not scheduled. Crew society moves have no job: they apply when crew data or the scheduler is read. Each job has an on/off switch (table `cron_jobs`, admin page Scheduled jobs); a job that is off answers `skipped` and does nothing. Each call is recorded in `cron_runs`. Calls require `CRON_SECRET`; missing configuration yields a disabled response. The router accepts GET and POST.[^7]
 
-The development schedule configuration and cron comments include host-specific timing compromises. The eight-job list and actual host configuration should be checked together before claiming punctual freeze, reminders or escalation. Automatic planning still respects its disabled-by-default setting.[^7]
+The development schedule configuration and cron comments include host-specific timing compromises. The job list and actual host configuration should be checked together before claiming punctual freeze, reminders or escalation. On Vercel Hobby each job runs once a day inside its hour. By default only complaints-overdue and payments-daily are switched on; automatic planning is switched on or off only by its job switch.[^7]
 
 ## See also
 

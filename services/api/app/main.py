@@ -41,6 +41,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    from app.notifications import cron_log
+
+    cron_log.configure_logging()
     app = FastAPI(title="Priveo API", version="0.1.0", docs_url=None, redoc_url=None,
                   lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)

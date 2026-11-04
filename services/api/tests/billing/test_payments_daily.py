@@ -30,11 +30,14 @@ def test_vercel_json_has_the_one_daily_job_and_not_the_old_two():
              for c in json.loads(VERCEL.read_text())["crons"]}
     assert crons["payments-daily"] == "30 20 * * *"  # 2:00 IST
     assert "payments-generate" not in crons and "payments-overdue" not in crons
+    assert "crew-society-moves" not in crons
     assert crons["renewal-reminders"] == "30 4 * * *"  # reminders stay at 10:00 IST
 
 
-def test_the_old_job_names_stay_registered_as_aliases():
-    for name in ("payments-daily", "payments-generate", "payments-overdue", "renewal-reminders"):
+def test_the_old_job_names_are_gone():
+    for name in ("payments-generate", "payments-overdue", "crew-society-moves"):
+        assert name not in cron.JOBS
+    for name in ("payments-daily", "renewal-reminders"):
         assert name in cron.JOBS
 
 

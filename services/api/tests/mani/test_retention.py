@@ -82,6 +82,9 @@ def test_the_cron_route_needs_the_secret(client, db, founder_id, cron_secret):
     db.expire_all()
     assert db.get(ManiConversation, old_id) is not None  # nothing happened
 
+    from app.notifications import cron_log
+    cron_log.set_enabled(db, "mani-retention", True, None)  # registered but off by default
+    db.commit()
     r = client.post(CRON, headers={"Authorization": f"Bearer {cron_secret}"})
     assert r.status_code == 200, r.text
     assert r.json()["job"] == "mani-retention"

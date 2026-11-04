@@ -1410,20 +1410,16 @@ class AuthSupportContact {
 
 class AutomaticPlanningSettings {
   const AutomaticPlanningSettings({
-    this.enabled,
     this.timeIst,
   });
 
-  final bool? enabled;
   final String? timeIst;
 
   factory AutomaticPlanningSettings.fromJson(Map<String, dynamic> j) => AutomaticPlanningSettings(
-        enabled: j['enabled'] == null ? null : j['enabled'] as bool,
         timeIst: j['time_ist'] == null ? null : j['time_ist'] as String,
       );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
         'time_ist': timeIst,
       };
 }
@@ -3373,6 +3369,122 @@ class CrewSocietyStay {
         'effective_from': _date(effectiveFrom),
         'effective_to': effectiveTo == null ? null : _date(effectiveTo!),
         'pending': pending,
+      };
+}
+
+class CronJobOut {
+  const CronJobOut({
+    required this.job,
+    required this.label,
+    required this.purpose,
+    required this.scheduleUtc,
+    required this.scheduleIst,
+    required this.scheduledOnVercel,
+    required this.enabled,
+    required this.status,
+    required this.lastRun,
+    required this.purposeAchieved,
+    required this.purposeAchievedText,
+  });
+
+  final String job;
+  final String label;
+  final String purpose;
+  final String scheduleUtc;
+  final String scheduleIst;
+  final bool scheduledOnVercel;
+  final bool enabled;
+  final String status;
+  final CronRunOut? lastRun;
+  final bool? purposeAchieved;
+  final String purposeAchievedText;
+
+  factory CronJobOut.fromJson(Map<String, dynamic> j) => CronJobOut(
+        job: j['job'] as String,
+        label: j['label'] as String,
+        purpose: j['purpose'] as String,
+        scheduleUtc: j['schedule_utc'] as String,
+        scheduleIst: j['schedule_ist'] as String,
+        scheduledOnVercel: j['scheduled_on_vercel'] as bool,
+        enabled: j['enabled'] as bool,
+        status: j['status'] as String,
+        lastRun: j['last_run'] == null ? null : CronRunOut.fromJson(j['last_run'] as Map<String, dynamic>),
+        purposeAchieved: j['purpose_achieved'] == null ? null : j['purpose_achieved'] as bool,
+        purposeAchievedText: j['purpose_achieved_text'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job': job,
+        'label': label,
+        'purpose': purpose,
+        'schedule_utc': scheduleUtc,
+        'schedule_ist': scheduleIst,
+        'scheduled_on_vercel': scheduledOnVercel,
+        'enabled': enabled,
+        'status': status,
+        'last_run': lastRun?.toJson(),
+        'purpose_achieved': purposeAchieved,
+        'purpose_achieved_text': purposeAchievedText,
+      };
+}
+
+class CronRunOut {
+  const CronRunOut({
+    required this.id,
+    required this.trigger,
+    required this.startedAt,
+    required this.finishedAt,
+    required this.status,
+    required this.durationMs,
+    required this.whatItDid,
+    required this.error,
+  });
+
+  final String id;
+  final String trigger;
+  final String startedAt;
+  final String? finishedAt;
+  final String status;
+  final int? durationMs;
+  final String whatItDid;
+  final String error;
+
+  factory CronRunOut.fromJson(Map<String, dynamic> j) => CronRunOut(
+        id: j['id'] as String,
+        trigger: j['trigger'] as String,
+        startedAt: j['started_at'] as String,
+        finishedAt: j['finished_at'] == null ? null : j['finished_at'] as String,
+        status: j['status'] as String,
+        durationMs: j['duration_ms'] == null ? null : j['duration_ms'] as int,
+        whatItDid: j['what_it_did'] as String,
+        error: j['error'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'trigger': trigger,
+        'started_at': startedAt,
+        'finished_at': finishedAt,
+        'status': status,
+        'duration_ms': durationMs,
+        'what_it_did': whatItDid,
+        'error': error,
+      };
+}
+
+class CronSwitch {
+  const CronSwitch({
+    required this.enabled,
+  });
+
+  final bool enabled;
+
+  factory CronSwitch.fromJson(Map<String, dynamic> j) => CronSwitch(
+        enabled: j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
       };
 }
 

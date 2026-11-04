@@ -284,11 +284,11 @@ void main() {
     expect(wire.AuthSupportContact.fromJson(input).toJson(), equals(input));
   });
   test('AutomaticPlanningSettings preserves populated wire fields', () {
-    final input = jsonDecode('{"enabled":true,"time_ist":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"time_ist":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AutomaticPlanningSettings.fromJson(input).toJson(), equals(input));
   });
   test('AutomaticPlanningSettings preserves nullable wire fields', () {
-    final input = jsonDecode('{"enabled":false,"time_ist":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"time_ist":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AutomaticPlanningSettings.fromJson(input).toJson(), equals(input));
   });
   test('Board preserves populated wire fields', () {
@@ -794,6 +794,30 @@ void main() {
   test('CrewSocietyStay preserves nullable wire fields', () {
     final input = jsonDecode('{"id":"wire-value","society_id":"wire-value","society":"wire-value","effective_from":"2026-10-20","effective_to":null,"pending":false}') as Map<String, dynamic>;
     expect(wire.CrewSocietyStay.fromJson(input).toJson(), equals(input));
+  });
+  test('CronJobOut preserves populated wire fields', () {
+    final input = jsonDecode('{"job":"wire-value","label":"wire-value","purpose":"wire-value","schedule_utc":"wire-value","schedule_ist":"wire-value","scheduled_on_vercel":true,"enabled":true,"status":"wire-value","last_run":{"id":"11111111-1111-1111-1111-111111111111","trigger":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","status":"wire-value","duration_ms":1,"what_it_did":"wire-value","error":"wire-value"},"purpose_achieved":true,"purpose_achieved_text":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CronJobOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CronJobOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"job":"wire-value","label":"wire-value","purpose":"wire-value","schedule_utc":"wire-value","schedule_ist":"wire-value","scheduled_on_vercel":false,"enabled":false,"status":"wire-value","last_run":null,"purpose_achieved":null,"purpose_achieved_text":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CronJobOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CronRunOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","trigger":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","status":"wire-value","duration_ms":1,"what_it_did":"wire-value","error":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CronRunOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CronRunOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","trigger":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":null,"status":"wire-value","duration_ms":null,"what_it_did":"wire-value","error":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CronRunOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CronSwitch preserves populated wire fields', () {
+    final input = jsonDecode('{"enabled":true}') as Map<String, dynamic>;
+    expect(wire.CronSwitch.fromJson(input).toJson(), equals(input));
+  });
+  test('CronSwitch preserves nullable wire fields', () {
+    final input = jsonDecode('{"enabled":false}') as Map<String, dynamic>;
+    expect(wire.CronSwitch.fromJson(input).toJson(), equals(input));
   });
   test('CustomerCreate preserves populated wire fields', () {
     final input = jsonDecode('{"first_name":"wire-value","last_name":"wire-value","email":"wire-value","mobile":"wire-value","flat":"wire-value","vehicle":{"society_id":"11111111-1111-1111-1111-111111111111","catalogue_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone_id":"11111111-1111-1111-1111-111111111111","plan_id":"11111111-1111-1111-1111-111111111111","cutoff_time":"wire-value","interior_day":"wire-value","interior_day_notes":"wire-value","photo_upload_id":"11111111-1111-1111-1111-111111111111","rc_upload_id":"11111111-1111-1111-1111-111111111111"}}') as Map<String, dynamic>;

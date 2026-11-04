@@ -413,7 +413,7 @@ def cron(crew_client):
     return client
 
 
-JOBS = ("freeze-due", "payments-daily", "payments-generate", "payments-overdue", "renewal-reminders",
+JOBS = ("freeze-due", "payments-daily", "renewal-reminders",
         "checkin-notify", "complaints-overdue", "automatic-planning")
 
 
@@ -439,6 +439,10 @@ def test_every_cron_job_runs_and_can_run_again(cron):
 
 def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew, new_visit):
     headers = {"Authorization": "Bearer s3cret"}
+    from app.notifications import cron_log
+    for job in ("freeze-due", "payments-daily", "renewal-reminders"):
+        cron_log.set_enabled(db, job, True, None)
+    db.commit()
     ravi = make_crew("9000000010", "Ravi")
     new_visit(assigned=ravi, status="Draft")
     # Freeze at 8 PM.
@@ -450,7 +454,7 @@ def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew,
     due = date(2026, 11, 10)
     p = _plan_payment(db, world, due)
     cron.state["now"] = datetime(2026, 11, 12, 1, 0, tzinfo=IST)
-    r = cron.get("/v1/internal/cron/payments-overdue", headers=headers)
+    r = cron.get("/v1/internal/cron/payments-daily", headers=headers)
     assert r.json()["result"]["marked_overdue"] == 1
     db.expire_all()
     assert db.get(Payment, p.id).overdue_since is not None
