@@ -5,11 +5,14 @@ import pytest
 from openpyxl import Workbook
 from sqlalchemy import func, select
 
+from app.billing.models import Payment
+from app.billing.status import display_status
 from app.customers.models import Customer, Subscription, Vehicle
 from app.customers.sheet_load import SHEET, load_monthly_customers
 from app.directory.models import Plan, Society, Zone
 from app.directory.seed import seed_defaults
 from app.identity.models import Login
+from app.platform.clock import today_ist
 
 HEAD = ["Sl. No.", "Customer Name", "Alternate customer names", "Phone Number", "Make",
         "Model", "Variant", "Car Number", "Flat No.", "Basement1/2/3", "Parking Number",
@@ -175,3 +178,25 @@ def test_reuse_plans_by_price_keeps_existing_names(db, society, tmp_path):
         assert plan is not None and plan.monthly_price_rupees == sub.monthly_price_rupees
     again = load_monthly_customers(db, _sheet(tmp_path), apply=True, reuse_plans_by_price=True)
     assert again.plans_created == 0 and again.vehicles_created == 0
+
+
+def test_a_loaded_subscription_gets_its_current_cycle_payment_at_once(db, society, tmp_path):
+    load_monthly_customers(db, _sheet(tmp_path), apply=True)
+    subs = list(db.scalars(select(Subscription)))
+    assert len(subs) == 3
+    for sub in subs:
+        pays = list(db.scalars(select(Payment).where(Payment.subscription_id == sub.id)))
+        # Only the current cycle: no past payments are invented (ADM-PAY-15).
+        assert len(pays) == 1
+        p = pays[0]
+        assert p.status == "Open" and p.cycle_start <= today_ist() < p.cycle_end
+        assert (p.cycle_start - sub.first_service_date).days % 30 == 0
+        assert display_status(p, today_ist()).status in {"Not Due", "Due", "Due today", "Over due"}
+    # Running again adds nothing.
+    load_monthly_customers(db, _sheet(tmp_path), apply=True)
+    assert db.scalar(select(func.count()).select_from(Payment)) == 3
+
+
+def test_a_trial_run_makes_no_payments(db, society, tmp_path):
+    load_monthly_customers(db, _sheet(tmp_path), apply=False)
+    assert db.scalar(select(func.count()).select_from(Payment)) == 0

@@ -7663,7 +7663,6 @@ class SubscriptionSetup {
     required this.interiorDay,
     required this.interiorDayNotes,
     required this.firstServiceDate,
-    this.firstPaymentStatus,
   });
 
   final String planId;
@@ -7671,7 +7670,6 @@ class SubscriptionSetup {
   final String? interiorDay;
   final String? interiorDayNotes;
   final DateTime? firstServiceDate;
-  final String? firstPaymentStatus;
 
   factory SubscriptionSetup.fromJson(Map<String, dynamic> j) => SubscriptionSetup(
         planId: j['plan_id'] as String,
@@ -7679,7 +7677,6 @@ class SubscriptionSetup {
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
         firstServiceDate: j['first_service_date'] == null ? null : DateTime.parse(j['first_service_date'] as String),
-        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7688,7 +7685,6 @@ class SubscriptionSetup {
         'interior_day': interiorDay,
         'interior_day_notes': interiorDayNotes,
         'first_service_date': firstServiceDate == null ? null : _date(firstServiceDate!),
-        'first_payment_status': firstPaymentStatus,
       };
 }
 
@@ -8534,7 +8530,6 @@ class VehicleCreate {
     required this.interiorDayNotes,
     required this.photoUploadId,
     required this.rcUploadId,
-    this.firstPaymentStatus,
   });
 
   final String societyId;
@@ -8549,7 +8544,6 @@ class VehicleCreate {
   final String? interiorDayNotes;
   final String? photoUploadId;
   final String? rcUploadId;
-  final String? firstPaymentStatus;
 
   factory VehicleCreate.fromJson(Map<String, dynamic> j) => VehicleCreate(
         societyId: j['society_id'] as String,
@@ -8564,7 +8558,6 @@ class VehicleCreate {
         interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
         photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
-        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -8580,7 +8573,6 @@ class VehicleCreate {
         'interior_day_notes': interiorDayNotes,
         'photo_upload_id': photoUploadId,
         'rc_upload_id': rcUploadId,
-        'first_payment_status': firstPaymentStatus,
       };
 }
 

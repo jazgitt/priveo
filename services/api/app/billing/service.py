@@ -1052,3 +1052,26 @@ def generate_due_payments(
 
     with Session(get_engine(), expire_on_commit=False) as session:
         return BillingService(session, lambda: now, settings).generate_due_payments(now)
+
+
+def ensure_current_cycle_payments(db: Session, subs: list[Subscription]) -> int:
+    """For loaded subscriptions: makes the payment of each one's current cycle if it
+    is not there yet, so the status exists straight away (PAY-14) instead of waiting
+    for the daily job. Past cycles are not invented (ADM-PAY-15). The caller commits.
+    Returns how many were created."""
+    from app.billing.config import get_money_settings
+
+    db.flush()
+    service = BillingService(db, utcnow, get_money_settings())
+    created = 0
+    for sub in subs:
+        vehicle = db.get(Vehicle, sub.vehicle_id)
+        start, _ = cycle_window(
+            sub.first_service_date, shift_days(db, vehicle.id), service._today(),
+            service._cycle_days,
+        )
+        before = db.scalar(select(Payment.id).where(
+            Payment.subscription_id == sub.id, Payment.cycle_start == start))
+        service.ensure_cycle_payment(sub, vehicle, start)
+        created += 0 if before else 1
+    return created

@@ -164,7 +164,7 @@ def test_admin_sets_up_the_subscription_of_a_vehicle_that_has_none(client, direc
     car = db.scalar(select(Vehicle).where(Vehicle.customer_id == customer.id))
     url = f"/v1/admin/vehicles/{car.id}/subscription"
     body = {"plan_id": str(plan.id), "cutoff_time": "09:00", "interior_day": "Sunday",
-            "first_service_date": "2026-11-01", "first_payment_status": "Due"}
+            "first_service_date": "2026-11-01"}
 
     assert client.post(url, headers=admin, json={**body, "cutoff_time": "09:10"}).status_code == 422
     assert client.post(url, headers=admin, json={**body, "interior_day": None}).status_code == 422

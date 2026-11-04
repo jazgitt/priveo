@@ -5,6 +5,7 @@ import pytest
 from openpyxl import Workbook, load_workbook
 from sqlalchemy import func, select
 
+from app.billing.models import Payment
 from app.customers.importer import (
     PLACEHOLDER_SOCIETY,
     addon_date_of,
@@ -217,3 +218,12 @@ def test_the_society_column_names_the_society(db, tmp_path):
     assert [s.name for s in db.scalars(select(Society))] == ["DLF Meadows"]
     assert _count(db, Customer) == 3
     assert import_workbook(db, path, apply=True).societies_set == 0
+
+
+def test_each_loaded_subscription_gets_one_current_cycle_payment(db, tmp_path):
+    import_workbook(db, _workbook(tmp_path, ROWS, ADDON_ROWS), apply=True)
+    subs = list(db.scalars(select(Subscription)))
+    assert subs
+    for sub in subs:
+        pays = list(db.scalars(select(Payment).where(Payment.subscription_id == sub.id)))
+        assert len(pays) == 1 and pays[0].status == "Open" and pays[0].kind == "Plan"
