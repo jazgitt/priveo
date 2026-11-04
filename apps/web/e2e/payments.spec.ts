@@ -7,7 +7,7 @@ test.describe("Payments (scenario A01)", () => {
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
     await page.getByRole("link", { name: "Payments", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payments", exact: true })).toBeVisible();
     await chooseSite(page, /TEST A01/);
   });
 
