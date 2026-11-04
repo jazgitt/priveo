@@ -323,6 +323,9 @@ def test_payments_this_cycle_overdue_and_weeks(company, db):
     late = d["customers_over_due"]
     assert (late["payments"], late["customers"], late["rupees"]) == (2, 2, 2298)
     assert [(x["customer"], x["days_over_due"]) for x in late["list"]["items"]] == [("Dev Nair", 10), ("Asha Rao", 8)]
+    # Each late row carries the display status, days to the due date and the message.
+    assert [(x["status"], x["days_to_due"], x["status_message"]) for x in late["list"]["items"]] == [
+        ("Over due", -11, "11 days over due"), ("Over due", -9, "9 days over due")]
     assert run(db, "payments_summary", over_due_days=1).data["customers_over_due"]["payments"] == 4
 
 

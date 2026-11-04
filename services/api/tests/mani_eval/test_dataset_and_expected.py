@@ -108,19 +108,21 @@ def test_q21_to_q24_money(eval_world):
     rows = sql(eval_world, "select status, sum(amount_rupees) from payments "
                            "where voided_at is null group by status")
     totals = dict(rows)
-    assert q21.value["over_due"] == totals["Over due"] == 7494
-    assert q21.value["received"] <= totals["Received"]
-    # Nine add-on payments are Received at 1,500 each; none is voided.
+    # Stored values are Open, Initiated and Paid; Over due is an Open payment past its date.
+    assert q21.value["over_due"] == 7494 <= totals["Open"]
+    assert q21.value["paid"] <= totals["Paid"]
+    # Nine add-on payments are Paid at 1,500 each; none is voided.
     assert q24.value == {"revenue": 13500}
-    # Every seeded Received payment is stamped today, so last week and the week before are 0.
+    # Every seeded Paid payment is stamped today, so last week and the week before are 0.
     assert q23.value["last_week"] == 0 and q23.value["week_before"] == 0
-    assert q23.value["this_week"] == totals["Received"]
+    assert q23.value["this_week"] == totals["Paid"]
     assert eval_world["expected"]["q35"].cannot_say
 
 
 def test_q22_q37_overdue(eval_world):
-    # C20 and C14 went Over due 35 days ago. C08, C09 and C15 are Over due for 3 days.
-    assert eval_world["expected"]["q22"].value == {"Test C14": 35, "Test C20": 35}
+    # C20 and C14 are Inactive, 10 days past the day after their due date. C08, C09 and C15
+    # are Over due for 3 days.
+    assert eval_world["expected"]["q22"].value == {"Test C14": 10, "Test C20": 10}
     assert eval_world["expected"]["q37"].value == 5
 
 
@@ -140,7 +142,7 @@ def test_q26_to_q28_crew(eval_world):
 def test_q04_q50_q42_and_missing(eval_world):
     expected = eval_world["expected"]
     assert expected["q04"].value["last"] == 0 and expected["q04"].value["before"] == 0
-    # All four completed Deep Spa add-ons (C03, C04 x2, C07) are Received.
+    # All four completed Deep Spa add-ons (C03, C04 x2, C07) are Paid.
     assert expected["q50"].value == {"over_due": 0, "completed": 4, "unpaid": 0}
     assert expected["q42"].cannot_say and expected["q38"].cannot_say
     assert date(2026, 1, 1).isoformat() == "2026-01-01"

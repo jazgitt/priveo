@@ -171,8 +171,8 @@ The same code runs the jobs. Today Vercel cron (`vercel.json`) calls eight route
 
 | Job (route) | Does |
 |---|---|
-| `payments-generate` | Creates each plan payment 7 days before the renewal date, Due by the renewal date |
-| `payments-overdue` | Moves unpaid to Over due, then makes the subscription Inactive after 7 days |
+| `payments-generate` | Creates each Active subscription's payment for the current 30-day cycle, due on the cycle's last day |
+| `payments-overdue` | Stamps unpaid payments past their date as Over due, then makes the subscription Inactive after 7 days |
 | `freeze-due` | Freezes schedules whose cutoff (8 PM the day before) has passed |
 | `automatic-planning` | Runs the automatic planner (coded, default off) |
 | `renewal-reminders` | Sends renewal reminders |
@@ -345,7 +345,7 @@ Phases follow the dependencies: a customer cannot sign in until an admin has cre
 | 3 Scheduling | `scheduling`, solver, capacity, schedule board, freeze and unfreeze, needs-scheduling | A frozen schedule for one society and a week is produced from test data |
 | 4 Crew app | Job cards, performing a service, checklist, offline upload queue, could-not-complete, manager features, `visits` and `media` | A crew member completes a day of jobs with a poor connection |
 | 5 Customer app | Onboarding, home, calendar, service details with proof, vehicles, account, notifications | A customer sees a completed visit with its photos |
-| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions, and the `staging` environment | A payment runs from Due to Received, and an over-due payment makes the subscription Inactive after 7 days |
+| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions, and the `staging` environment | A payment runs from Due to Paid, and an over-due payment makes the subscription Inactive after 7 days |
 | 7 Support and feedback | `support` (complaints, issues, feedback, ratings, check-ins), admin alerts, ratings shown to crew | A complaint goes from a customer to the admin and back |
 | 8 Hardening | Load test of the scheduler, security review, accessibility pass, backup restore test, store submissions | The release checklist is signed off |
 

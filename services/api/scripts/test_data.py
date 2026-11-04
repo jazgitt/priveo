@@ -60,6 +60,25 @@ CATALOGUE = ROOT / "tools/test-data/scenarios.json"
 NAMESPACE = uuid.UUID("79897a5b-9f3a-472c-9a7e-a1bccb235d87")
 MARKER = "priveo-synthetic-test-data-v1"
 
+# The payment states a scenario names are the statuses the customer sees. Only Open, Initiated and
+# Paid are stored; the other four come from the due date, which is the last day of the cycle
+# (PAY-14 to PAY-19). Days left until that date for each, a current cycle of 30 days:
+PAYMENT_STATES = {"Not Due": 15, "Due": 4, "Due today": 0, "Over due": -3, "Initiated": 2}
+
+
+def stored_for(state: str) -> str:
+    return {"Paid": "Paid", "Initiated": "Initiated"}.get(state, "Open")
+
+
+def plan_cycle_start(state: str, day: date, cycle_age: int, inactive: bool = False) -> date:
+    """First day of the plan cycle that gives `state` today. Paid keeps the scenario's
+    cycle age. An Inactive subscription is Over due by 11 days, past the 7-day rule."""
+    if inactive:
+        return day - timedelta(days=40)
+    if state in PAYMENT_STATES:
+        return day + timedelta(days=PAYMENT_STATES[state] - 29)
+    return day - timedelta(days=cycle_age)
+
 
 def identity(scenario: str, key: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE, f"{scenario}:{key}")
@@ -347,19 +366,30 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             )
     db.flush()
     vehicle_ids, payment_ids, visit_ids, schedule_ids, booking_ids = [], [], [], [], []
-    states = config.get("payment_states", ["Received"])
+    states = config.get("payment_states", ["Paid"])
     cycle_age = config.get("cycle_age", 26 if config.get("checkin") else 0)
     subscriptions = []
 
     def payment(vehicle, index, status, *, addon=False, offset=0, void=False):
-        cycle = (
-            day - timedelta(days=35 if vehicle.active is False else 3)
-            if status == "Over due"
-            else day - timedelta(days=cycle_age)
+        cycle = plan_cycle_start(
+            status,
+            day,
+            cycle_age,
+            inactive=vehicle.active is False
+            or (not addon and subscriptions[index].status == "Inactive"),
         )
         if not addon and subscriptions[index].status == "Activating":
             cycle = subscriptions[index].first_service_date
-        payment_day = day + timedelta(days=offset) if addon else cycle
+        payment_day = day + timedelta(days=offset) if addon else cycle + timedelta(days=29)
+        stored = stored_for(status)
+        if addon:  # Over due once the service was done unpaid; the date does not decide it
+            overdue_since = payment_day if status == "Over due" else None
+        else:
+            overdue_since = (
+                payment_day + timedelta(days=1)
+                if stored == "Open" and payment_day < day
+                else None
+            )
         item = Payment(
             id=identity(scenario, f"payment-{'addon' if addon else 'plan'}-{index}"),
             customer_id=customer.id,
@@ -368,14 +398,14 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             kind="Add-on" if addon else "Plan",
             description="Deep Spa" if addon else "TEST plan cycle",
             amount_rupees=1500 if addon else subscriptions[index].monthly_price_rupees,
-            status=status,
+            status=stored,
             due_date=payment_day,
             cycle_start=None if addon else cycle,
             cycle_end=None if addon else cycle + timedelta(days=29),
-            overdue_since=payment_day if status == "Over due" else None,
-            initiated_at=now if status == "Initiated" else None,
-            received_at=now if status == "Received" else None,
-            confirmed_by=admin.id if status == "Received" else None,
+            overdue_since=overdue_since,
+            initiated_at=now if stored == "Initiated" else None,
+            received_at=now if stored == "Paid" else None,
+            confirmed_by=admin.id if stored == "Paid" else None,
             voided_at=now if void else None,
         )
         db.add(item)
@@ -384,14 +414,14 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             PaymentEvent(
                 id=identity(scenario, f"event-{item.id}"),
                 payment_id=item.id,
-                to_status=status,
-                by_login_id=admin.id if status == "Received" else None,
+                to_status=stored,
+                by_login_id=admin.id if stored == "Paid" else None,
                 at=now,
                 note="Synthetic baseline",
             )
         )
         payment_ids.append(str(item.id))
-        if status == "Received":
+        if stored == "Paid":
             tax = included_gst(item.amount_rupees, 18, "CGST_SGST")
             tax["mock_configuration"] = True
             db.add(
@@ -539,6 +569,7 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             inactive = index >= config.get("inactive_from", 999)
             status = "Inactive" if inactive else config.get("subscription_status", "Active")
             state = "Over due" if inactive or status == "Inactive" else states[index % len(states)]
+            assert state == "Paid" or state in PAYMENT_STATES, state
             interior = config.get("interior", True)
             plan = db.get(
                 Plan, identity("shared", "internal-plan" if interior else "external-plan")
@@ -551,9 +582,10 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
                 first_service_date=(
                     day + timedelta(days=1)
                     if status == "Activating"
-                    else day - timedelta(days=95 if status == "Inactive" else 93)
-                    if state == "Over due"
-                    else day - timedelta(days=90 + cycle_age)
+                    else plan_cycle_start(
+                        state, day, cycle_age, inactive=status == "Inactive"
+                    )
+                    - timedelta(days=90)
                 ),
                 status=status,
                 cutoff_time=time(11),
@@ -567,11 +599,6 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             db.flush()
             subscriptions.append(sub)
             pay = payment(vehicle, index, state)
-            if status == "Inactive":
-                pay.cycle_start = day - timedelta(days=35)
-                pay.cycle_end = day - timedelta(days=6)
-                pay.due_date = pay.cycle_start
-                pay.overdue_since = pay.cycle_start
         changes = config.get("changes")
         if changes:
             kind = "pause" if changes == "pause" or (changes == "mixed" and index % 2) else "skip"
@@ -604,7 +631,7 @@ def _seed_scenario(db: Session, config: dict, day: date, password_hash: str) -> 
             pay_state = (
                 states[index]
                 if config.get("standalone")
-                else ("Received" if addon_status in {"Completed", "Scheduled"} else "Due")
+                else ("Paid" if addon_status in {"Completed", "Scheduled"} else "Due")
             )
             pay = payment(
                 vehicle,

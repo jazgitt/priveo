@@ -77,7 +77,15 @@ def test_all_scenarios_are_relationally_valid_and_have_one_admin(fixture_databas
             db.scalars(
                 select(Payment.status).where(Payment.customer_id == identity("C08", "customer"))
             )
-        ) == {"Due", "Initiated", "Received", "Over due"}
+        ) == {"Open", "Initiated", "Paid"}
+        from app.billing.status import display_status
+
+        assert {
+            display_status(payment, DAY).status
+            for payment in db.scalars(
+                select(Payment).where(Payment.customer_id == identity("C08", "customer"))
+            )
+        } == {"Due", "Initiated", "Paid", "Over due"}
         assert (
             db.scalar(
                 select(func.count())
@@ -95,7 +103,7 @@ def test_all_scenarios_are_relationally_valid_and_have_one_admin(fixture_databas
             )
         )
         assert all(
-            payment.status == "Received"
+            payment.status == "Paid"
             for payment in db.scalars(
                 select(Payment).join(Invoice, Invoice.payment_id == Payment.id)
             )

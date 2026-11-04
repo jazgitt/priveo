@@ -14,6 +14,13 @@ ENVIRONMENT must not be test or prod. The database must carry this tool's marker
 `init-marker` writes, on an already migrated database that has the single Admin. Nothing here
 creates application tables; schema comes from the Alembic migrations.
 
+Payment mix. Plan payments follow the 30-day cycle model (one row per cycle, due on the cycle's
+last day). Each vehicle has 1 to 3 earlier cycles Paid and a current cycle taken in turn from
+CURRENT_CYCLE_MIX: Paid, Open with 20, 10, 5, 1 or 0 days left (shown Not Due, Due, Due today),
+or Initiated. A tenth of the customers have a current cycle Open past its date (1 to 6 days, or 9
+to 13 days with the plan Inactive), shown Over due. All six display statuses therefore appear.
+Add-on payments are Open (booking Requested) or Paid (Completed).
+
 What remove deletes. Every row this tool created (listed in `two_society_seed_manifest`) plus
 every row that references one of them through a foreign key, found by walking the metadata,
 including rows made while testing by hand on the seeded customers, vehicles or crew. It never
@@ -256,23 +263,37 @@ def _vehicle_count(i: int) -> int:
     return 4 + (i // 2) % 2 if i % 2 == 0 else 1 + (i // 2) % 2
 
 
-def _plan_payment(db, admin, customer, login, vehicle, sub, status, *, cycle_start, overdue_since,
-                  key, now):
+# The current cycle of an ordinary Active vehicle: (stored status, days to the due date, which is
+# the cycle's last day). Together with the overdue vehicles below, every customer-visible status
+# appears: Not Due (8 or more days left), Due (1 to 7), Due today (0), Over due (negative),
+# Initiated and Paid. Ten rows, used in turn.
+CURRENT_CYCLE_MIX = (
+    ("Paid", 25), ("Paid", 12), ("Paid", 5), ("Open", 20), ("Open", 10),
+    ("Open", 5), ("Open", 1), ("Open", 0), ("Initiated", 2), ("Paid", 15),
+)
+
+
+def _plan_payment(db, admin, customer, login, vehicle, sub, status, *, cycle_start, key, now,
+                  invoice=True):
+    """One plan payment for one cycle; the due date is the cycle's last day. `status` is the
+    stored value (Open, Initiated or Paid); Over due is just an Open payment past its date."""
     cycle_end = cycle_start + timedelta(days=29)
+    today = (now + timedelta(hours=IST_OFFSET_HOURS)).date()
+    past_due = status == "Open" and cycle_end < today
     pay = Payment(
         id=ident(f"payment:{key}"), customer_id=customer.id, vehicle_id=vehicle.id,
         subscription_id=sub.id, kind="Plan", description="TEST plan cycle",
-        amount_rupees=sub.monthly_price_rupees, status=status, due_date=cycle_start,
+        amount_rupees=sub.monthly_price_rupees, status=status, due_date=cycle_end,
         cycle_start=cycle_start, cycle_end=cycle_end,
-        overdue_since=overdue_since if status == "Over due" else None,
+        overdue_since=cycle_end + timedelta(days=1) if past_due else None,
         initiated_at=now if status == "Initiated" else None,
-        received_at=now if status == "Received" else None,
-        confirmed_by=admin.id if status == "Received" else None)
+        received_at=now if status == "Paid" else None,
+        confirmed_by=admin.id if status == "Paid" else None)
     _add(db, pay)
     events = [PaymentEvent(id=ident(f"event:{key}"), payment_id=pay.id, to_status=status,
-                           by_login_id=admin.id if status == "Received" else None, at=now,
+                           by_login_id=admin.id if status == "Paid" else None, at=now,
                            note="Synthetic baseline")]
-    if status == "Received":
+    if status == "Paid" and invoice:
         tax = included_gst(pay.amount_rupees, 18, "CGST_SGST")
         tax["mock_configuration"] = True
         events.append(Invoice(
@@ -364,10 +385,7 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
                 source_ref=f"seed2:{tag}:{n}")
             _add(db, vehicle)
             plan = plans[(i + v) % 3]
-            # Different start dates for the vehicles of one customer.
-            cycle_age = (i * 3 + v * 7) % 28
-            cycle_start = day - timedelta(days=cycle_age)
-            first = cycle_start - timedelta(days=30 * (1 + (i + v) % 3))
+            # The current cycle ends `days_left` days from today (negative: Over due).
             inactive = inactive_left > 0 and v < inactive_left
             overdue_days = None
             if inactive:
@@ -375,15 +393,18 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
             elif i in overdue_small and v == 0:
                 overdue_days = 1 + (i % 6)  # 6 days or fewer: the plan is still Active
             if overdue_days is not None:
-                cycle_start = day - timedelta(days=overdue_days)
-                status, state = ("Inactive" if inactive else "Active"), "Over due"
+                days_left = -overdue_days
+                status, state = ("Inactive" if inactive else "Active"), "Open"
             else:
-                status, state = "Active", ["Received"] * 7 + ["Due", "Initiated", "Received"]
-                state = state[(i + v) % 10]
+                status = "Active"
+                state, days_left = CURRENT_CYCLE_MIX[(i + v) % len(CURRENT_CYCLE_MIX)]
+            cycle_start = day + timedelta(days=days_left - 29)
+            past_cycles = 1 + (i + v) % 3
+            first = cycle_start - timedelta(days=30 * past_cycles)
             sub = Subscription(
                 id=ident(f"{tag}:sub:{i}:{v}"), vehicle_id=vehicle.id, plan_id=plan.id,
                 monthly_price_rupees=plan.monthly_price_rupees, status=status,
-                first_service_date=min(first, cycle_start - timedelta(days=30)),
+                first_service_date=first,
                 cutoff_time=time(11), interior_day=None)
             _add(db, sub)
             interior = []
@@ -394,11 +415,15 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
             _add(db, SchedulePattern(
                 id=ident(f"{tag}:pattern:{i}:{v}"), subscription_id=sub.id, kind="Weekly",
                 exterior_weekdays=list(WEEKDAYS[:6]), interior_weekdays=interior))
+            for back in range(past_cycles, 0, -1):  # earlier cycles were paid
+                _plan_payment(db, admin, customer, login, vehicle, sub, "Paid",
+                              cycle_start=cycle_start - timedelta(days=30 * back),
+                              key=f"{tag}:{i}:{v}:past{back}", now=now - timedelta(days=30 * back),
+                              invoice=False)
             _plan_payment(db, admin, customer, login, vehicle, sub, state,
-                          cycle_start=cycle_start, overdue_since=cycle_start,
-                          key=f"{tag}:{i}:{v}", now=now)
+                          cycle_start=cycle_start, key=f"{tag}:{i}:{v}", now=now)
             counters["vehicles"] += 1
-            counters["overdue"] += state == "Over due"
+            counters["overdue"] += days_left < 0
             counters["inactive"] += status == "Inactive"
             if status == "Active":
                 counters["active"] += 1
@@ -417,14 +442,14 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
                 item = addons[(i // 6) % 4]
                 booking_state = ["Requested", "Completed", "Requested"][(i // 6) % 3]
                 offset = 2 + (i % 4) if booking_state == "Requested" else -(2 + i % 5)
-                pay_state = "Received" if booking_state == "Completed" else "Due"
+                pay_state = "Paid" if booking_state == "Completed" else "Open"
                 due = day + timedelta(days=offset)
                 pay = Payment(
                     id=ident(f"payment:{tag}:addon:{i}"), customer_id=customer.id,
                     vehicle_id=vehicle.id, kind="Add-on", description=item.name,
                     amount_rupees=item.price_rupees, status=pay_state, due_date=due,
-                    received_at=now if pay_state == "Received" else None,
-                    confirmed_by=admin.id if pay_state == "Received" else None)
+                    received_at=now if pay_state == "Paid" else None,
+                    confirmed_by=admin.id if pay_state == "Paid" else None)
                 _add(db, pay)
                 _add(db, AddonBooking(
                     id=ident(f"{tag}:booking:{i}"), customer_id=customer.id,
