@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.billing.models import Payment
-from app.billing.status import DISPLAY_STATUSES, display_status_sql
+from app.billing.status import DISPLAY_STATUSES, display_status, display_status_sql
 from app.customers.models import Customer, Vehicle
 from app.directory.models import Society
 from app.mani.contracts import ToolSpec
@@ -72,21 +72,27 @@ class PaymentsSummary(ReadTool):
         # Over due for more than N days. A plan payment is Over due from the day after its
         # due date; an add-on from the day its service was done unpaid (`overdue_since`).
         candidates = db.execute(
-            select(Payment.kind, Payment.amount_rupees, Payment.due_date, Payment.overdue_since,
-                   Customer.first_name, Customer.last_name, Society.name)
+            select(Payment, Customer.first_name, Customer.last_name, Society.name)
             .join(Customer, Customer.id == Payment.customer_id)
             .outerjoin(Vehicle, Vehicle.id == Payment.vehicle_id)
             .join(Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id))
             .where(live, Payment.status == "Open")).all()
         late = []
         for r in candidates:
-            since = r.overdue_since if r.kind == "Add-on" else r.due_date + timedelta(days=1)
+            p = r.Payment
+            since = p.overdue_since if p.kind == "Add-on" else p.due_date + timedelta(days=1)
             if since is not None and since <= today and since < today - timedelta(days=limit_days):
                 late.append((since, r))
         late.sort(key=lambda x: (x[0], x[1].first_name))
-        late_rows = [{"customer": full_name(r.first_name, r.last_name), "society": r.name,
-                      "kind": r.kind, "rupees": r.amount_rupees, "over_due_since": since.isoformat(),
-                      "days_over_due": (today - since).days} for since, r in late]
+        late_rows = []
+        for since, r in late:
+            view = display_status(r.Payment, today)
+            late_rows.append({
+                "customer": full_name(r.first_name, r.last_name), "society": r.name,
+                "kind": r.Payment.kind, "rupees": r.Payment.amount_rupees,
+                "status": view.status, "days_to_due": view.days_to_due,
+                "status_message": view.message, "over_due_since": since.isoformat(),
+                "days_over_due": (today - since).days})
 
         this_week = week_start(today, starts)
         weeks = []

@@ -47,7 +47,7 @@
 | Sessions | A server-side session record for each sign-in, with device details and last-active time. Short-lived access tokens, with the refresh token tied to the session so it can be ended at once | `ADM-ACC-14`, `ADM-CRW-21`, `ADM-ACC-13`, `CRW-ACC-11`. Inactivity sign-out (60 minutes on web, 24 hours for admin on mobile) is enforced on the server |
 | Authorisation | Role checks on every route: customer, crew (with Manager, Member, Trainee), admin | `CRW-MGR`, `ADM-ACC-02`. A Manager acts only within their own society |
 | Scheduler | Google OR-Tools (CP-SAT) behind an internal module | `ADM-SCH`: maximise crew capacity, keep manual changes on re-run, flag cutoff misses, suggest improvements |
-| Background jobs | AWS EventBridge Scheduler triggering ECS tasks, or an in-process scheduler (APScheduler) on one instance | Monthly Due payments, Over due, 7-day auto-Inactive, renewal reminders, check-in pushes |
+| Background jobs | AWS EventBridge Scheduler triggering ECS tasks, or an in-process scheduler (APScheduler) on one instance | Cycle payments, Over due, 7-day auto-Inactive, renewal reminders, check-in pushes |
 | Invoices | WeasyPrint or ReportLab for the GST invoice PDF, stored in S3 | `ADM-PAY-08`, `ADM-PAY-09`. Seller details come from the seed |
 | Audit | An append-only audit table written in the same transaction as the change | `ADM-SCH-19`, `ADM-PAY-05`, `ADM-CUS-16`, `CRW-MGR` |
 | Secret code | Checked on the server, stored hashed in configuration | `ADM-SCH-18` |

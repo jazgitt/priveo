@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.addons.models import AddonBooking
 from app.billing.models import Payment, SubscriptionEvent
+from app.billing.status import display_status
 from app.changes.models import ScheduleChange
 from app.customers.models import Customer, Subscription, Vehicle
 from app.directory.models import Plan, Society
@@ -445,29 +446,33 @@ def q21_cycle_money(db: Session, today: date) -> Expected:
     live = [p for p in db.scalars(select(Payment)) if p.voided_at is None]
     in_window = [p for p in live if window_start <= p.due_date <= today]
 
-    def total(rows, status):
-        return sum(p.amount_rupees for p in rows if p.status == status)
+    def total(rows, *statuses):
+        return sum(p.amount_rupees for p in rows if display_status(p, today).status in statuses)
 
-    due, received = total(in_window, "Due"), total(in_window, "Received")
+    due = total(in_window, "Not Due", "Due", "Due today")
+    paid = total(in_window, "Paid")
     over = total(live, "Over due")
     initiated = total(in_window, "Initiated")
     return Expected(
         "q21",
-        f"This cycle ({window_start:%d-%b-%y} to {today:%d-%b-%y}): Due {money(due)}, "
-        f"Received {money(received)}, Initiated {money(initiated)}. Over due, all outstanding: "
-        f"{money(over)}.",
-        {"due": due, "over_due": over, "received": received, "initiated": initiated},
-        numbers=(Num("due", due), Num("over due", over), Num("received", received)),
-        notes="Cycle: payments due in the 30 days to today. Over due is every unpaid overdue "
-              "payment, whatever its cycle. Voided payments left out.")
+        f"This cycle ({window_start:%d-%b-%y} to {today:%d-%b-%y}): Due or not yet due "
+        f"{money(due)}, Paid {money(paid)}, Initiated {money(initiated)}. Over due, all "
+        f"outstanding: {money(over)}.",
+        {"due": due, "over_due": over, "paid": paid, "initiated": initiated},
+        numbers=(Num("due", due), Num("over due", over), Num("paid", paid)),
+        notes="Cycle: payments due in the 30 days to today. Due covers Not Due, Due and Due "
+              "today. Over due is every unpaid overdue payment, whatever its cycle. Voided "
+              "payments left out.")
 
 
 def q22_overdue_over_7_days(db: Session, today: date) -> Expected:
     rows = db.execute(
         select(Customer, Payment).join(Payment, Payment.customer_id == Customer.id)
-        .where(Payment.status == "Over due", Payment.voided_at.is_(None))).all()
+        .where(Payment.status == "Open", Payment.voided_at.is_(None))).all()
     names: dict[str, int] = {}
     for customer, payment in rows:
+        if display_status(payment, today).status != "Over due":
+            continue
         days = (today - (payment.overdue_since or payment.due_date)).days
         if days > 7:
             names[full_name(customer)] = max(names.get(full_name(customer), 0), days)
@@ -480,7 +485,7 @@ def q22_overdue_over_7_days(db: Session, today: date) -> Expected:
 
 
 def _received_between(db: Session, first: date, last: date, kind: str | None = None) -> int:
-    return sum(p.amount_rupees for p in db.scalars(select(Payment)) if p.status == "Received"
+    return sum(p.amount_rupees for p in db.scalars(select(Payment)) if p.status == "Paid"
                and p.voided_at is None and p.received_at is not None
                and first <= ist_date(p.received_at) <= last and (kind is None or p.kind == kind))
 
@@ -498,7 +503,7 @@ def q23_collections(db: Session, today: date) -> Expected:
         f"{money(before)}. (This week so far: {money(this_week)}.)",
         {"last_week": last, "week_before": before, "this_week": this_week},
         numbers=(Num("last week", last), Num("week before", before)),
-        notes="Weeks run Monday to Sunday (IST). Collected means Received, by received date.")
+        notes="Weeks run Monday to Sunday (IST). Collected means Paid, by received date.")
 
 
 def q24_addon_revenue(db: Session, today: date) -> Expected:
@@ -506,7 +511,7 @@ def q24_addon_revenue(db: Session, today: date) -> Expected:
     return Expected(
         "q24", f"Add-on revenue received this month ({month_start(today):%B %Y}): {money(revenue)}.",
         {"revenue": revenue}, numbers=(Num("revenue", revenue),),
-        notes="Received add-on payments by received date; prices include GST.")
+        notes="Paid add-on payments by received date; prices include GST.")
 
 
 def q35_last_quarter_revenue(db: Session, today: date) -> Expected:
@@ -573,9 +578,10 @@ def q28_blocked_crew(db: Session, now: datetime) -> Expected:
 # ---- Hindi, mixed and owner-decision questions ----------------------------------------------
 
 
-def q37_overdue_customers(db: Session) -> Expected:
+def q37_overdue_customers(db: Session, today: date) -> Expected:
     customers = {p.customer_id for p in db.scalars(select(Payment).where(
-        Payment.status == "Over due", Payment.voided_at.is_(None)))}
+        Payment.status == "Open", Payment.voided_at.is_(None)))
+        if display_status(p, today).status == "Over due"}
     return Expected(
         "q37", f"{len(customers)} customers have an Over due payment.", len(customers),
         numbers=(Num("customers", len(customers)),),
@@ -618,12 +624,12 @@ def q49_lowest_rated_customers(db: Session) -> Expected:
         names_any=tuple(sorted(names)), extras={"customers": sorted(names)})
 
 
-def q50_deep_spa_over_due_on_completion(db: Session) -> Expected:
+def q50_deep_spa_over_due_on_completion(db: Session, today: date) -> Expected:
     rows = db.execute(
         select(AddonBooking, Payment).join(Payment, AddonBooking.payment_id == Payment.id)
         .where(AddonBooking.service == "Deep Spa", AddonBooking.status == "Completed")).all()
-    over = [b for b, p in rows if p.status == "Over due"]
-    unpaid = [b for b, p in rows if p.status != "Received"]
+    over = [b for b, p in rows if display_status(p, today).status == "Over due"]
+    unpaid = [b for b, p in rows if p.status != "Paid"]
     return Expected(
         "q50",
         f"{len(over)} completed Deep Spa add-ons are Over due ({len(rows)} completed, "
@@ -631,7 +637,7 @@ def q50_deep_spa_over_due_on_completion(db: Session) -> Expected:
         "service completes.",
         {"over_due": len(over), "completed": len(rows), "unpaid": len(unpaid)},
         numbers=(Num("over due", len(over)),),
-        notes="In the seed every completed add-on is already Received, so none is Over due.")
+        notes="In the seed every completed add-on is already Paid, so none is Over due.")
 
 
 # ---- All ------------------------------------------------------------------------------------
@@ -651,8 +657,8 @@ def compute_all(db: Session, now: datetime) -> dict[str, Expected]:
         q23_collections(db, today), q24_addon_revenue(db, today),
         q35_last_quarter_revenue(db, today), q26_crew_counts(db),
         q27_missed_skipped_by_crew(db, today), q28_blocked_crew(db, now),
-        q37_overdue_customers(db), q38_green_meadows(db), q42_jobs_on_1_jan(db),
-        q49_lowest_rated_customers(db), q50_deep_spa_over_due_on_completion(db),
+        q37_overdue_customers(db, today), q38_green_meadows(db), q42_jobs_on_1_jan(db),
+        q49_lowest_rated_customers(db), q50_deep_spa_over_due_on_completion(db, today),
     ]
     out = {r.key: r for r in results}
     # Question 36 is question 15 asked in Hindi: the same figures.
