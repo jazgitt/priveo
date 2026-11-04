@@ -49,6 +49,15 @@ class Report(unittest.TestCase):
                        "Smoke test step: success", "untouched (manual)", "deadbeef"):
             self.assertIn(needle, text)
 
+    def test_flake_retry_is_reported(self):
+        m = self.manifest(flake_retries=[{"stages": ["api: pytest on PostgreSQL"], "pause_seconds": 120,
+                                          "first": "failed", "second": "passed"}])
+        text = report.build(m, Path("/x"))
+        self.assertIn("## Flake retry", text)
+        self.assertIn("api: pytest on PostgreSQL", text)
+        self.assertIn("passed", text)
+        self.assertNotIn("## Flake retry", report.build(self.manifest(), Path("/x")))
+
     def test_home_is_shortened(self):
         text = report.build(self.manifest(), Path.home() / "priveo-nightly/logs/d")
         self.assertNotIn(str(Path.home()), text)

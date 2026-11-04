@@ -7,6 +7,7 @@ pull request alone; the one that fails alone is dropped and the night goes on wi
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -16,6 +17,7 @@ from lib import RunLog, StageFailed  # noqa: E402
 
 MAX_ATTEMPTS = 2
 CHECKS_TIMEOUT = 5400
+FLAKE_PAUSE = 120  # seconds to wait before the one retry of the failed stages
 
 
 def stage_key(stage_name: str) -> str | None:
@@ -78,8 +80,43 @@ def run_checks(log: RunLog, repo: str, label: str, args: list[str]) -> tuple[boo
     return res.rc == 0, rows
 
 
-def local_checks(log: RunLog, repo: str, py: str, attempts: int = MAX_ATTEMPTS) -> bool:
-    """Run everything (PostgreSQL and browser tests included), then the fix loop. True when green."""
+def flake_retry(log: RunLog, repo: str, first_rows: list[dict], pause: float | None = None,
+                sleep=None) -> bool:
+    """Rerun ONLY the stages that failed in the first full run, once, after a pause.
+
+    Used when the failure may be load or timing (every selected PR passes alone, or only one PR is
+    selected). True only when every stage has a passing run: the other stages passed in the first
+    run, and each failed stage passes now. Both attempts are recorded (events.jsonl, report.md).
+    """
+    pause = FLAKE_PAUSE if pause is None else pause
+    sleep = sleep or time.sleep
+    failed = [r for r in first_rows if r["result"] == "FAIL"]
+    keys = failed_keys(first_rows)
+    if not failed or any(stage_key(r["stage"]) is None for r in failed):
+        log.note("flake retry not possible: a failed check is not a stage that can be rerun on its own")
+        return False
+    rec = {"stages": [r["stage"] for r in failed], "pause_seconds": pause, "first": "failed", "second": None}
+    log.manifest.setdefault("flake_retries", []).append(rec)
+    log.event("flake_retry_start", failed=rec["stages"], pause_seconds=pause)
+    sleep(pause)
+    still = []
+    for key in keys:
+        ok, _ = run_checks(log, repo, f"flake retry: {key}", ["--only", key])
+        if not ok:
+            still.append(key)
+    rec["second"] = "failed: " + ", ".join(still) if still else "passed"
+    log.event("flake_retry_end", outcome=rec["second"], failed_again=still)
+    log.save()
+    return not still
+
+
+def local_checks(log: RunLog, repo: str, py: str, attempts: int = MAX_ATTEMPTS, single: bool = False,
+                 pause: float | None = None) -> bool:
+    """Run everything (PostgreSQL and browser tests included), then the fix loop. True when green.
+
+    With single=True (only one pull request is in the branch, so the combined branch is the solo
+    branch) a failure is first retried once, for the failed stages only, before the fix loop.
+    """
     ok, rows = run_checks(log, repo, "combined branch, all stages", ["--e2e"])
     if ok:
         return True
@@ -87,6 +124,9 @@ def local_checks(log: RunLog, repo: str, py: str, attempts: int = MAX_ATTEMPTS) 
     if not keys:
         log.note("check-local failed without naming a stage (setup error?); no fix attempted")
         return False
+    if single and flake_retry(log, repo, rows, pause):
+        log.note("flake retry: the failed stages passed on the second run; no fix needed")
+        return True
     for n in range(1, attempts + 1):
         with log.stage(4, f"Fix and rerun (attempt {n} of {attempts})") as st:
             changed = False

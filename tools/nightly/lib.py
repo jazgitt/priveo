@@ -92,7 +92,7 @@ class RunLog:
         self.manifest: dict = {
             "mode": "dry-run" if dry_run else "real", "started": now_iso(), "finished": None,
             "result": "running", "stages": [], "selected": [], "dropped": [], "merged_prs": [],
-            "local_checks": [], "fix_attempts": [], "ci_checks": [], "merge_commit": None,
+            "local_checks": [], "fix_attempts": [], "flake_retries": [], "ci_checks": [], "merge_commit": None,
             "nightly_pr": None, "deploy": None, "rollback": None, "notes": [],
             "production": "untouched (manual)",
         }

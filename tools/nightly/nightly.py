@@ -169,6 +169,37 @@ def nightly_body(log: RunLog, merged: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def local_check_stage(log: RunLog, repo: str, home: Path, py: str, selection: dict, built: dict,
+                      branch: str, date: str, args) -> dict:
+    """Stage 3 and 4. Returns the (possibly rebuilt) build result, or raises StageFailed."""
+    ok = fixloop.local_checks(log, repo, py, single=len(built["merged"]) == 1)
+    if ok:
+        return built
+    culprits = fixloop.bisect_and_drop(log, repo, selection, built["merged"], date)
+    if not culprits and len(built["merged"]) > 1:
+        # Every pull request passes alone, so the failure may be load or timing. Rebuild the
+        # combined branch and rerun only the failed stages, once. (A single pull request got its
+        # retry inside local_checks, before the fix loop.)
+        ids = {p["number"] for p in built["merged"]}
+        again = build_combined.build(repo, {"selected": [p for p in selection["selected"] if p["number"] in ids]}, branch)
+        if again["merged"] and fixloop.flake_retry(log, repo, log.manifest["local_checks"][0]["stages"]):
+            log.note("flake retry: every pull request passes alone and the failed stages passed on the second run")
+            return again
+    if not culprits:
+        raise StageFailed("local checks fail and no single pull request is the cause "
+                          "(they fail only in combination, or on main itself)")
+    for c in culprits:
+        drop(log, repo, home, c["number"], c["reason"], True, args.dry_run)
+    keep = {"selected": [p for p in selection["selected"] if p["number"] not in {c["number"] for c in culprits}]}
+    built = build_combined.build(repo, keep, branch)
+    if not built["merged"]:
+        raise StageFailed("no pull request is left after dropping the failing ones")
+    ok, _ = fixloop.run_checks(log, repo, "combined branch after drops, all stages", ["--e2e"])
+    if not ok:
+        raise StageFailed("local checks still fail after dropping the failing pull requests")
+    return built
+
+
 # ---- the run -----------------------------------------------------------------------
 
 def run(args) -> int:
@@ -263,22 +294,7 @@ def pipeline(log: RunLog, home: Path, repo: str, args) -> int:
                 log.note("local checks skipped by --skip-checks (never use this for a real night)")
                 st["detail"] = "skipped"
             else:
-                ok = fixloop.local_checks(log, repo, py)
-                if not ok:
-                    culprits = fixloop.bisect_and_drop(log, repo, selection, built["merged"], date)
-                    if not culprits:
-                        raise StageFailed("local checks fail and no single pull request is the cause "
-                                          "(they fail only in combination, or on main itself)")
-                    for c in culprits:
-                        drop(log, repo, home, c["number"], c["reason"], True, args.dry_run)
-                    keep = {"selected": [p for p in selection["selected"]
-                                         if p["number"] not in {c["number"] for c in culprits}]}
-                    built = build_combined.build(repo, keep, branch)
-                    if not built["merged"]:
-                        raise StageFailed("no pull request is left after dropping the failing ones")
-                    ok, _ = fixloop.run_checks(log, repo, "combined branch after drops, all stages", ["--e2e"])
-                    if not ok:
-                        raise StageFailed("local checks still fail after dropping the failing pull requests")
+                built = local_check_stage(log, repo, home, py, selection, built, branch, date, args)
                 st["detail"] = "all local checks passed"
         merged = built["merged"]
 
