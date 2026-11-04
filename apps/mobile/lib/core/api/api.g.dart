@@ -8440,6 +8440,11 @@ class VehicleCard {
     required this.monthlyPriceRupees,
     required this.planName,
     required this.expiresOn,
+    required this.cycleEnd,
+    required this.inactiveBy,
+    required this.paymentStatus,
+    this.statusMessage,
+    this.lastPaymentFailed,
     required this.cutoffTime,
     required this.interiorDay,
     this.variant,
@@ -8457,6 +8462,11 @@ class VehicleCard {
   final int? monthlyPriceRupees;
   final String? planName;
   final DateTime? expiresOn;
+  final DateTime? cycleEnd;
+  final DateTime? inactiveBy;
+  final String? paymentStatus;
+  final String? statusMessage;
+  final bool? lastPaymentFailed;
   final String? cutoffTime;
   final String? interiorDay;
   final String? variant;
@@ -8474,6 +8484,11 @@ class VehicleCard {
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         planName: j['plan_name'] == null ? null : j['plan_name'] as String,
         expiresOn: j['expires_on'] == null ? null : DateTime.parse(j['expires_on'] as String),
+        cycleEnd: j['cycle_end'] == null ? null : DateTime.parse(j['cycle_end'] as String),
+        inactiveBy: j['inactive_by'] == null ? null : DateTime.parse(j['inactive_by'] as String),
+        paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
+        statusMessage: j['status_message'] == null ? null : j['status_message'] as String,
+        lastPaymentFailed: j['last_payment_failed'] == null ? null : j['last_payment_failed'] as bool,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         variant: j['variant'] == null ? null : j['variant'] as String,
@@ -8492,6 +8507,11 @@ class VehicleCard {
         'monthly_price_rupees': monthlyPriceRupees,
         'plan_name': planName,
         'expires_on': expiresOn == null ? null : _date(expiresOn!),
+        'cycle_end': cycleEnd == null ? null : _date(cycleEnd!),
+        'inactive_by': inactiveBy == null ? null : _date(inactiveBy!),
+        'payment_status': paymentStatus,
+        'status_message': statusMessage,
+        'last_payment_failed': lastPaymentFailed,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
         'variant': variant,

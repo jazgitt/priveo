@@ -30283,6 +30283,51 @@
             ],
             "title": "Expires On"
           },
+          "cycle_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle End"
+          },
+          "inactive_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive By"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "status_message": {
+            "type": "string",
+            "title": "Status Message",
+            "default": ""
+          },
+          "last_payment_failed": {
+            "type": "boolean",
+            "title": "Last Payment Failed",
+            "default": false
+          },
           "cutoff_time": {
             "anyOf": [
               {

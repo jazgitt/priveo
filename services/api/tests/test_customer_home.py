@@ -165,8 +165,10 @@ def test_home_shows_the_customers_own_vehicles(client, asha):
         "id": creta["id"], "registration": "HR 26 DK 8337", "model": "Hyundai Creta",
         "society": "DLF Meadows", "parking": "B1-223", "subscription_status": "Active",
         "monthly_price_rupees": 1299, "cutoff_time": "06:30", "interior_day": "Friday",
-        "plan_name": None, "expires_on": creta["expires_on"], "next_service": None, "make": "", "variant": "",
-        "photo_url": creta["photo_url"],
+        "plan_name": None, "expires_on": None, "next_service": None, "make": "", "variant": "",
+        "photo_url": creta["photo_url"], "cycle_end": None, "inactive_by": None,
+        "payment_status": creta["payment_status"], "status_message": creta["status_message"],
+        "last_payment_failed": False,
     }
     assert creta["photo_url"].startswith("/v1/media/local/")
     assert (swift["registration"], swift["parking"], swift["cutoff_time"]) == ("", "", None)
@@ -186,6 +188,38 @@ def test_home_shows_the_plan_name_of_each_subscription(client, db, asha):
     creta, swift, punch = client.get("/v1/customer/home", headers=asha).json()["vehicles"]
     assert creta["plan_name"] == "Daily Premium"
     assert swift["plan_name"] is None and punch["plan_name"] is None
+
+
+def test_home_hides_the_end_date_unless_the_payment_is_over_due(client, db, asha):
+    from datetime import timedelta
+
+    from app.billing.models import Payment
+    from app.platform.clock import today_ist
+
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.source_ref == "master:1"))
+    sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
+    today = today_ist()
+    sub.first_service_date = today - timedelta(days=40)  # its first cycle ended 11 days ago
+    pay = Payment(customer_id=vehicle.customer_id, vehicle_id=vehicle.id, subscription_id=sub.id,
+                  kind="Plan", description="Plan", amount_rupees=1299, status="Open",
+                  due_date=today - timedelta(days=11), cycle_start=today - timedelta(days=40),
+                  cycle_end=today - timedelta(days=10))
+    db.add(pay)
+    db.commit()
+
+    def creta():
+        return client.get("/v1/customer/home", headers=asha).json()["vehicles"][0]
+
+    over = creta()
+    assert (over["payment_status"], over["status_message"]) == ("Over due", "11 days over due")
+    last_day = (today - timedelta(days=11)).isoformat()
+    assert over["cycle_end"] == last_day == over["expires_on"]
+    assert over["inactive_by"] == (today - timedelta(days=4)).isoformat()
+    pay.status = "Paid"
+    db.commit()
+    paid = creta()
+    assert paid["payment_status"] != "Over due"
+    assert paid["expires_on"] is None and paid["cycle_end"] is None and paid["inactive_by"] is None
 
 
 def test_a_customer_sees_only_their_own_record(client, asha):

@@ -43,6 +43,8 @@ def test_a_confirmed_early_payment_does_not_move_the_cycle(money):
     m.client.post(f"/v1/admin/payments/{p['id']}/confirm", headers=m.admin)
     s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
     assert (s["cycle_start"], s["payment_status"], s["expires_on"]) == ("2026-10-01", "Paid", None)
+    home = m.client.get("/v1/customer/home", headers=m.customer).json()
+    assert [v["expires_on"] for v in home["vehicles"]] == [None]  # hidden unless Over due
 
 
 def test_admin_lists_subscriptions_with_filters_and_a_status_history(money):
