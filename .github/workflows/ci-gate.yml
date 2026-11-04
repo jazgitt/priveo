@@ -1,0 +1,60 @@
+name: ci-gate
+
+# The one required check for branch protection on main (docs/nightly-pipeline.md, section 12).
+# api-ci, web-ci, mobile-ci and web-e2e use path filters, so a pull request may start only some
+# of them, or none. This job runs on every pull request, waits for the other checks that started
+# for the same commit, and passes when none of them failed or was cancelled.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: ci-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci-gate:
+    name: ci-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Wait for the other checks of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Give the other workflows time to register their checks.
+          sleep 60
+          stable=0
+          deadline=$((SECONDS + 5000))
+          while (( SECONDS < deadline )); do
+            json=$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name != "ci-gate")]')
+            total=$(jq 'length' <<< "$json")
+            pending=$(jq '[.[] | select(.status != "completed")] | length' <<< "$json")
+            bad=$(jq -r '[.[] | select(.status == "completed" and (.conclusion | IN("failure","cancelled","timed_out","action_required","startup_failure"))) | .name] | join(", ")' <<< "$json")
+            echo "checks=$total pending=$pending failed=[$bad]"
+            if [ -n "$bad" ]; then
+              echo "::error::These checks did not pass: $bad"
+              exit 1
+            fi
+            if [ "$pending" -eq 0 ]; then
+              # Two quiet looks in a row, in case a workflow registers late.
+              stable=$((stable + 1))
+              if [ "$stable" -ge 2 ]; then
+                echo "All $total other check(s) passed or were skipped."
+                exit 0
+              fi
+            else
+              stable=0
+            fi
+            sleep 20
+          done
+          echo "::error::The other checks did not finish in time."
+          exit 1

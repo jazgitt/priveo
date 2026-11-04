@@ -3,24 +3,27 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/api_failure.dart';
 import '../../core/ui/widgets.dart';
-import '../../core/util/format.dart';
 import 'data/money_models.dart';
 import 'strings.dart';
 
-/// What the customer reads for a payment status (PAY-09): "Due by 07-Nov-26",
-/// Over due, Initiated or Received. The backend sets it; the app displays it.
-String paymentStatusLabel(PaymentDto p) => switch (p.status) {
-      'Due' => MoneyStrings.statusDue(formatDate(p.dueDate)),
+/// What the customer reads for a payment status (PAY-09): Not Due, Due, Due
+/// today, Over due, Initiated or Paid. The backend sets it; the app displays it.
+String paymentStatusLabel(PaymentDto p) => paymentStatusText(p.status);
+
+String paymentStatusText(String status) => switch (status) {
+      'Not Due' => MoneyStrings.statusNotDue,
+      'Due' => MoneyStrings.statusDue,
+      'Due today' => MoneyStrings.statusDueToday,
       'Over due' => MoneyStrings.statusOverdue,
       'Initiated' => MoneyStrings.statusInitiated,
-      'Received' => MoneyStrings.statusReceived,
+      'Paid' => MoneyStrings.statusPaid,
       final other => other,
     };
 
 ChipTone paymentTone(String status) => switch (status) {
-      'Received' => ChipTone.ok,
+      'Paid' => ChipTone.ok,
       'Initiated' => ChipTone.info,
-      'Over due' => ChipTone.warn,
+      'Due' || 'Due today' || 'Over due' => ChipTone.warn,
       _ => ChipTone.neutral,
     };
 
@@ -32,6 +35,34 @@ class PaymentStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       StatusChip(paymentStatusLabel(payment), tone: paymentTone(payment.status));
+}
+
+/// The status message under a payment ("Due in 3 days", "2 days over due"),
+/// and "Your last payment failed" after a rejection (PAY-17).
+class PaymentStatusNote extends StatelessWidget {
+  const PaymentStatusNote({
+    super.key,
+    required this.message,
+    required this.lastPaymentFailed,
+  });
+
+  final String message;
+  final bool lastPaymentFailed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.bodySmall;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (message.isNotEmpty) Text(message, style: small),
+        if (lastPaymentFailed)
+          Text(MoneyStrings.lastPaymentFailed,
+              style: small?.copyWith(color: scheme.error)),
+      ],
+    );
+  }
 }
 
 /// The text to show for a failed call: the server's own message, which says

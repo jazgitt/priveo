@@ -6,7 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
 
-PAYMENT_STATUSES = ("Due", "Over due", "Initiated", "Received")
+# Stored values. Not Due, Due, Due today and Over due are worked out from the
+# due date (app.billing.status).
+PAYMENT_STATUSES = ("Open", "Initiated", "Paid")
 
 
 class Payment(Base):
@@ -27,7 +29,7 @@ class Payment(Base):
     description: Mapped[str] = mapped_column(String(120))
     # Whole rupees, GST included.
     amount_rupees: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(10), default="Due")
+    status: Mapped[str] = mapped_column(String(10), default="Open")
     due_date: Mapped[date] = mapped_column(Date)
     # The 30 days this payment pays for (plan payments).
     cycle_start: Mapped[date | None] = mapped_column(Date)
@@ -35,6 +37,8 @@ class Payment(Base):
     # The day the payment became Over due. The 7 days to Inactive count from it.
     overdue_since: Mapped[date | None] = mapped_column(Date)
     initiated_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
+    # Set when the admin rejects an Initiated payment; shows "Your last payment failed".
+    rejected_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     received_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     confirmed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
     # Set when an unpaid add-on is cancelled: it is no longer owed.

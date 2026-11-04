@@ -10,12 +10,17 @@ freeze cutoff time (ADM-SCH-25):
 
     "crons": [
       {"path": "/v1/internal/cron/freeze-due",          "schedule": "35 14 * * *"},
-      {"path": "/v1/internal/cron/payments-generate",   "schedule": "35 18 * * *"},
-      {"path": "/v1/internal/cron/payments-overdue",    "schedule": "40 18 * * *"},
+      {"path": "/v1/internal/cron/payments-daily",      "schedule": "30 20 * * *"},
       {"path": "/v1/internal/cron/renewal-reminders",   "schedule": "30 4 * * *"},
       {"path": "/v1/internal/cron/checkin-notify",      "schedule": "0 5 * * *"},
       {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "30 15 * * *"}
     ]
+
+`payments-daily` runs at 2:00 IST (20:30 UTC): it makes the current-cycle
+payments, then marks overdue and runs auto-Inactive. The payment day changes at
+2:00 IST (PAY-19). The old `payments-generate` and `payments-overdue` names still
+answer a manual call. `renewal-reminders` stays at 10:00 IST (04:30 UTC) so no
+push arrives at 2 AM.
 
 Automatic planning and complaint escalation temporarily run daily at 21:00 IST
 (15:30 UTC) for Vercel Hobby compatibility. Overdue complaints and pending alert
@@ -33,7 +38,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings, get_money_settings
-from app.changes.rules import Clock, get_now, today_of
+from app.changes.rules import Clock, get_now, payment_day_of, today_of
 from app.notifications import emit
 from app.platform.db import get_db
 from app.platform.errors import ApiError
@@ -73,14 +78,22 @@ def _freeze_due(db: Session, now: datetime, settings: MoneySettings) -> dict:
 def _payments_generate(db: Session, now: datetime, settings: MoneySettings) -> dict:
     from app.billing.service import generate_due_payments
 
-    return {"created": generate_due_payments(now, db, settings)}
+    return {"created": generate_due_payments(now, db, settings, today=payment_day_of(now))}
 
 
 def _payments_overdue(db: Session, now: datetime, settings: MoneySettings) -> dict:
     from app.billing.service import mark_overdue_and_inactive
 
-    report = mark_overdue_and_inactive(now, db, settings)
+    report = mark_overdue_and_inactive(now, db, settings, today=payment_day_of(now))
     return {"marked_overdue": report.marked_overdue, "inactivated": len(report.inactivated)}
+
+
+def _payments_daily(db: Session, now: datetime, settings: MoneySettings) -> dict:
+    """The 2:00 IST job (ADM-PAY-14), in this order: make each Active
+    subscription's current-cycle payment (the day after a cycle ends, the next
+    one appears), then mark overdue and run auto-Inactive (ADM-SUB-03). The
+    reminders go out separately at 10:00 IST (`renewal-reminders`)."""
+    return {**_payments_generate(db, now, settings), **_payments_overdue(db, now, settings)}
 
 
 def _renewal_reminders(db: Session, now: datetime, settings: MoneySettings) -> dict:
@@ -121,6 +134,8 @@ JOBS = {
     "crew-society-moves": _crew_society_moves,
     "automatic-planning": _automatic_planning,
     "freeze-due": _freeze_due,
+    "payments-daily": _payments_daily,
+    # Older names, kept so manual calls still work. Not scheduled any more.
     "payments-generate": _payments_generate,
     "payments-overdue": _payments_overdue,
     "renewal-reminders": _renewal_reminders,

@@ -98,7 +98,7 @@ def test_a_date_inside_a_pause_cannot_be_skipped(money):
     assert r.status_code == 409 and r.json()["code"] == "inside_pause"
 
 
-def test_pause_shows_the_visits_and_the_new_renewal_date(money):
+def test_pause_shows_the_visits_and_the_renewal_date_does_not_move(money):
     m = money
     # First service 01-Oct-26, so the cycle renews on 31-Oct-26.
     before = m.client.get(f"{base(m)}/changes", headers=m.customer).json()
@@ -107,7 +107,7 @@ def test_pause_shows_the_visits_and_the_new_renewal_date(money):
                       json={"from_date": "2026-10-19", "to_date": "2026-10-25"},
                       headers=m.customer)
     body = r.json()
-    assert (body["days"], body["visits_paused"], body["renewal_date"]) == (7, 7, "2026-11-07")
+    assert (body["days"], body["visits_paused"], body["renewal_date"]) == (7, 7, "2026-10-31")
 
 
 def test_a_skip_inside_a_pause_is_counted_once(money):
@@ -116,7 +116,7 @@ def test_a_skip_inside_a_pause_is_counted_once(money):
     r = m.client.post(f"{base(m)}/pauses",
                       json={"from_date": "2026-10-19", "to_date": "2026-10-25"},
                       headers=m.customer)
-    assert r.json()["renewal_date"] == "2026-11-07"
+    assert r.json()["renewal_date"] == "2026-10-31"
     changes = m.client.get(f"{base(m)}/changes", headers=m.customer).json()
     assert changes["skips"] == [] and len(changes["pauses"]) == 1
 
@@ -146,13 +146,13 @@ def test_ending_a_running_pause_resumes_from_the_next_open_date(money):
     pause = m.client.post(f"{base(m)}/pauses",
                           json={"from_date": "2026-10-12", "to_date": "2026-10-25"},
                           headers=m.customer).json()
-    assert pause["renewal_date"] == "2026-11-14"
+    assert pause["renewal_date"] == "2026-10-31"
     m.clock.now = at(14, 20, 0)  # The pause has run for a few days.
     r = m.client.delete(f"{base(m)}/pauses/{pause['id']}", headers=m.customer)
     assert r.status_code == 200
     # 15-Oct-26 is still before its 9 PM cutoff, so visits resume then.
     assert r.json()["end_date"] == "2026-10-14"
-    assert r.json()["renewal_date"] == "2026-11-03"  # Three days paused.
+    assert r.json()["renewal_date"] == "2026-10-31"  # A pause moves nothing.
     assert (vid(m), date(2026, 10, 15)) not in m.gateway.paused
 
 

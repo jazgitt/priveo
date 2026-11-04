@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCheck, FileText, Plus } from "lucide-react";
+import { CheckCheck, FileText, Plus, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -19,7 +19,7 @@ import { Input } from "@/ui/input";
 
 import { CustomerPicker, VehiclePicker, type PickedCustomer } from "../customers/picker";
 import { useAction, useAlerts, useCreatePayment, useInvoice, usePayments, usePaymentsSummary, useReadAlert, useSetStatus } from "./api";
-import { NO_FILTERS, STATUSES, canConfirm, canReject, type AdminPayment, type Invoice, type PaymentFilters } from "./types";
+import { DATE_STATUSES, NO_FILTERS, OPEN, STATUSES, canConfirm, canReject, statusChoices, type AdminPayment, type Invoice, type PaymentFilters } from "./types";
 
 const ALL = NONE;
 
@@ -48,13 +48,13 @@ export function PaymentsPage() {
   return (
     <>
       <PageHeader title="Payments" site={site.name || undefined}
-                  description="Confirm UPI payments, set statuses and issue GST invoices."
+                  description="Approve or reject UPI payments, set statuses and issue GST invoices."
                   actions={<Button onClick={() => setRecording(true)}><Plus aria-hidden /> Record a payment</Button>} />
       {linked.error ? <div className="mb-4"><ErrorState message={errorMessage(linked.error)} /></div> : null}
 
       {(alerts.data?.length ?? 0) > 0 && (
         <Panel className="mb-6" title={`Payments marked as paid (${alerts.data!.length})`}
-               description="Customers say they have paid. Check the money arrived, then confirm."
+               description="Customers say they have paid. Check the money arrived, then approve or reject."
                actions={<Button size="sm" variant="outline" onClick={() => { setFilters({ ...NO_FILTERS, status: "Initiated" }); setCustomer(null); setPage(0); }}>
                  Show Initiated payments
                </Button>}
@@ -118,7 +118,11 @@ export function PaymentsPage() {
           { key: "desc", header: "For", cell: (p) => p.description || "-" },
           { key: "amount", header: "Amount", width: "7rem", align: "right", cell: (p) => <span className="tabular-nums">{inr(p.amount_rupees)}</span> },
           { key: "due", header: "Due", width: "7rem", cell: (p) => showDate(p.due_date) },
-          { key: "status", header: "Status", width: "7.5rem", cell: (p) => <StatusBadge status={p.status} /> },
+          { key: "status", header: "Status", width: "11rem", cell: (p) => (
+            <div className="min-w-0"><StatusBadge status={p.status} />
+              {p.status_message ? <span className="mt-0.5 block truncate text-xs text-muted-foreground">{p.status_message}</span> : null}
+              {p.last_payment_failed ? <span className="mt-0.5 flex items-center gap-1 text-xs text-destructive"><TriangleAlert className="size-3" aria-hidden /> Last payment failed</span> : null}
+            </div>) },
           { key: "act", header: "", width: "5.5rem", align: "right", cell: (p) => <Button size="sm" variant="outline" onClick={() => setOpen(p)}>Open</Button> },
         ]}
         footer={<Pager page={page} size={50} count={list.data?.length ?? 0} busy={list.isFetching} onPage={setPage} />}
@@ -166,10 +170,14 @@ function PaymentDialog({ payment, onChange, onClose }: {
         { label: "Vehicle", value: payment.vehicle },
         { label: "Type", value: payment.kind },
         { label: "Amount", value: `${inr(payment.amount_rupees)} (GST included)` },
-        { label: "Status", value: <StatusBadge status={payment.status} /> },
+        { label: "Status", value: <>
+          <StatusBadge status={payment.status} />
+          {payment.status_message ? <span className="mt-0.5 block text-xs text-muted-foreground">{payment.status_message}</span> : null}
+          {payment.last_payment_failed ? <span className="mt-0.5 flex items-center gap-1 text-xs text-destructive"><TriangleAlert className="size-3" aria-hidden /> Last payment failed</span> : null}
+        </> },
         { label: "Due", value: showDate(payment.due_date) },
         { label: "Cycle", value: payment.cycle_start ? `${showDate(payment.cycle_start)} to ${showDate(payment.cycle_end)}` : "-" },
-        { label: "Received on", value: showDate(payment.received_on) },
+        { label: "Paid on", value: showDate(payment.received_on) },
         { label: "Description", value: payment.description, wide: true },
         { label: "Invoice", value: payment.invoice_number ?? "Not issued" },
       ]} />
@@ -177,19 +185,19 @@ function PaymentDialog({ payment, onChange, onClose }: {
       <div className="flex flex-wrap gap-2 border-t pt-4">
         {canConfirm(payment) && (
           <BusyButton type="button" busy={confirmPay.isPending} disabled={busy}
-                      onClick={() => void ask("Confirm the money arrived?", `${who} becomes Received and its received date is today.`, "Confirm received",
-                        () => confirmPay.mutateAsync(payment.id), "Payment confirmed.")}>
-            <CheckCheck aria-hidden /> Confirm received
+                      onClick={() => void ask("Approve this payment?", `${who} becomes Paid and the customer is told the payment was received.`, "Approve",
+                        () => confirmPay.mutateAsync(payment.id), "Payment approved.")}>
+            <CheckCheck aria-hidden /> Approve
           </BusyButton>
         )}
         {canReject(payment) && (
           <BusyButton type="button" variant="outline" className="text-destructive" busy={reject.isPending} disabled={busy}
-                      onClick={() => void ask("The money did not arrive?", `${who} moves back from ${payment.status}.`, "Reject",
-                        () => reject.mutateAsync(payment.id), "Payment moved back.", true)}>
+                      onClick={() => void ask("Reject this payment?", `${who} goes back to the cycle dates and the customer is told the last payment failed.`, "Reject",
+                        () => reject.mutateAsync(payment.id), "Payment rejected.", true)}>
             Reject (money did not arrive)
           </BusyButton>
         )}
-        {payment.status === "Received" && (
+        {payment.status === "Paid" && (
           <BusyButton type="button" variant="outline" busy={issue.isPending} disabled={busy}
                       onClick={async () => {
                         if (payment.invoice_number || await confirm({ title: "Issue a GST invoice?", description: `An invoice number is given to ${who}. It cannot be taken back.`, confirmLabel: "Issue invoice" })) issue.mutate();
@@ -200,11 +208,12 @@ function PaymentDialog({ payment, onChange, onClose }: {
       </div>
 
       <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[14rem_auto]">
-        <Field label="Set status">
-          {(p) => <SelectBox {...p} value={next} onChange={setNext} choices={STATUSES.filter((s) => s !== payment.status).map((s) => ({ value: s, label: s }))} />}
+        <Field label="Set status" hint="Not paid means Not Due, Due, Due today or Over due, which follows the cycle dates.">
+          {(p) => <SelectBox {...p} value={next} onChange={setNext} choices={statusChoices(payment)} />}
         </Field>
         <BusyButton type="button" variant="outline" className="justify-self-start" disabled={!next || busy} busy={setStatus.isPending}
-                    onClick={() => void ask(`Set the status to ${next}?`, `${who} is ${payment.status} now.`, "Save status",
+                    onClick={() => void ask(next === OPEN ? "Set the payment to not paid?" : `Set the status to ${next}?`,
+                      next === OPEN ? `${who} is ${payment.status} now. It will follow the cycle dates again.` : `${who} is ${payment.status} now.`, "Save status",
                       () => setStatus.mutateAsync({ id: payment.id, status: next }), "Status updated.")}>
           Save status
         </BusyButton>
@@ -226,32 +235,37 @@ function PaymentDialog({ payment, onChange, onClose }: {
 function RecordDialog({ onClose }: { onClose: () => void }) {
   const create = useCreatePayment();
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
-  const [f, setF] = useState({ vehicle_id: "", kind: "Plan", description: "", amount: "", due_date: "", cycle_start: "", status: "Received" });
+  const [f, setF] = useState({ vehicle_id: "", kind: "Plan", description: "", amount: "", due_date: "", cycle_start: "", status: "Paid" });
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
+  const addOn = f.kind === "Add-on";
   const fe = create.error instanceof ApiError ? create.error.fields : {};
   const save = useAppMutation<void>({
     event: EVENTS.paymentRecorded,
     mutationFn: () => create.mutateAsync({
       vehicle_id: f.vehicle_id, kind: f.kind, description: f.description,
-      amount_rupees: Number(f.amount), due_date: f.due_date, cycle_start: f.cycle_start || null, status: f.status,
+      amount_rupees: Number(f.amount), due_date: addOn ? f.due_date : null,
+      cycle_start: addOn ? null : f.cycle_start || null, status: f.status,
     }),
     success: "Payment recorded.", onSuccess: onClose,
   });
 
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title="Record a payment" size="lg"
-                description="For a payment made outside the app. Amounts include GST."
-                submitLabel="Record" busy={save.isPending} disabled={!f.vehicle_id || !f.amount || !f.due_date}
+                description="For a payment made outside the app, also for a past cycle. Amounts include GST."
+                submitLabel="Record" busy={save.isPending} disabled={!f.vehicle_id || !f.amount || (addOn && !f.due_date)}
                 onSubmit={() => save.mutate()}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <CustomerPicker value={customer} onChange={(c) => { setCustomer(c); set("vehicle_id")(""); }} />
         <VehiclePicker customerId={customer?.id ?? null} value={f.vehicle_id} onChange={(id) => set("vehicle_id")(id)} />
         <Field label="Type">{(p) => <SelectBox {...p} value={f.kind} onChange={set("kind")} choices={[{ value: "Plan", label: "Plan" }, { value: "Add-on", label: "Add-on" }]} />}</Field>
-        <Field label="Status">{(p) => <SelectBox {...p} value={f.status} onChange={set("status")} choices={STATUSES.map((s) => ({ value: s, label: s }))} />}</Field>
+        <Field label="Status" hint={DATE_STATUSES.includes(f.status) ? "Follows the cycle dates." : undefined}>{(p) => <SelectBox {...p} value={f.status} onChange={set("status")} choices={STATUSES.map((s) => ({ value: s, label: s }))} />}</Field>
         <Field label="Description" optional className="sm:col-span-2">{(p) => <Input {...p} value={f.description} onChange={(e) => set("description")(e.target.value)} />}</Field>
         <Field label="Amount (₹, GST included)" error={fe.amount_rupees}>{(p) => <Input {...p} type="number" min="1" value={f.amount} onChange={(e) => set("amount")(e.target.value)} />}</Field>
-        <Field label="Due date" error={fe.due_date}>{(p) => <Input {...p} type="date" value={f.due_date} onChange={(e) => set("due_date")(e.target.value)} />}</Field>
-        <Field label="Cycle start" optional hint="For plan payments.">{(p) => <Input {...p} type="date" value={f.cycle_start} onChange={(e) => set("cycle_start")(e.target.value)} />}</Field>
+        {addOn ? (
+          <Field label="Due date" error={fe.due_date}>{(p) => <Input {...p} type="date" value={f.due_date} onChange={(e) => set("due_date")(e.target.value)} />}</Field>
+        ) : (
+          <Field label="Cycle start" optional hint="Empty means the current cycle. The cycle runs 30 days and is due on its last day.">{(p) => <Input {...p} type="date" value={f.cycle_start} onChange={(e) => set("cycle_start")(e.target.value)} />}</Field>
+        )}
       </div>
     </FormDialog>
   );

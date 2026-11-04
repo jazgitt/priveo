@@ -1,7 +1,8 @@
-"""Payments: Due, Over due, Initiated, Received; the 7-day Inactive rule;
+"""Payments: Not Due .. Over due, Initiated, Paid; the 7-day Inactive rule;
 invoices; the admin's confirmation (PAY-, SUB-, ADM-PAY-, ADM-SUB-)."""
 import uuid
 
+import pytest
 from sqlalchemy import select
 
 from app.billing.models import MoneyAlert, Payment, PaymentEvent
@@ -15,8 +16,7 @@ def vehicle(m):
 
 
 def admin_payment(m, **kw):
-    body = {"vehicle_id": m.vehicle_id, "amount_rupees": 1299, "due_date": "2026-10-31",
-            "description": "Plan 31-Oct-26", **kw}
+    body = {"vehicle_id": m.vehicle_id, "amount_rupees": 1299, **kw}
     r = m.client.post("/v1/admin/payments", json=body, headers=m.admin)
     assert r.status_code == 201, r.text
     return r.json()
@@ -25,30 +25,26 @@ def admin_payment(m, **kw):
 def test_my_subscription_shows_the_cycle(money):
     m = money
     s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert (s["status"], s["cycle_start"], s["renewal_date"], s["cycle_days"]) == (
-        "Active", "2026-10-01", "2026-10-31", 30)
-    assert (s["days_left"], s["monthly_price_rupees"], s["payment_method"]) == (20, 1299, "UPI")
+    assert (s["status"], s["cycle_start"], s["cycle_days"]) == ("Active", "2026-10-01", 30)
+    # The end date is hidden unless the payment is Over due (SUB-01).
+    assert (s["renewal_date"], s["expires_on"], s["days_left"]) == (None, None, None)
+    assert (s["monthly_price_rupees"], s["payment_method"]) == (1299, "UPI")
     assert (s["registration"], s["society"], s["can_pay_next"]) == (
-        "HR 26 DK 8337", "DLF Meadows", False)
+        "HR 26 DK 8337", "DLF Meadows", True)
+    assert (s["payment_status"], s["days_to_due"]) == ("Not Due", 19)
     assert s["latest_payment"] is None
 
 
-def test_a_confirmed_renewal_moves_the_expiry_date_on_at_once(money):
-    """Paying the next cycle early: until the admin confirms, the plan expires
-    on the end of the current cycle; once Received, on the end of the next."""
+def test_a_confirmed_early_payment_does_not_move_the_cycle(money):
+    """Paying the current cycle early only changes its status (PAY-15)."""
     m = money
-    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert s["expires_on"] == "2026-10-30" and s["days_left"] == 20
-    p = admin_payment(m, cycle_start="2026-10-31")
-    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert s["expires_on"] == "2026-10-30"  # Due: not renewed yet.
+    p = admin_payment(m, cycle_start="2026-10-01")
     m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
     m.client.post(f"/v1/admin/payments/{p['id']}/confirm", headers=m.admin)
     s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert s["expires_on"] == "2026-11-29"  # 30 days more.
-    assert s["days_left"] == 50
+    assert (s["cycle_start"], s["payment_status"], s["expires_on"]) == ("2026-10-01", "Paid", None)
     home = m.client.get("/v1/customer/home", headers=m.customer).json()
-    assert [v["expires_on"] for v in home["vehicles"]] == ["2026-11-29"]
+    assert [v["expires_on"] for v in home["vehicles"]] == [None]  # hidden unless Over due
 
 
 def test_admin_lists_subscriptions_with_filters_and_a_status_history(money):
@@ -95,11 +91,11 @@ def test_admin_lists_subscriptions_with_filters_and_a_status_history(money):
     assert m.client.get("/v1/admin/subscriptions", headers=m.customer).status_code == 403
 
 
-def test_a_payment_runs_from_due_to_received(money):
+def test_a_payment_runs_from_not_due_to_paid(money):
     m = money
     p = admin_payment(m)
     assert (p["status"], p["kind"], p["customer_name"], p["flat"]) == (
-        "Due", "Plan", "Meera Rao", "A-101")
+        "Not Due", "Plan", "Meera Rao", "A-101")
     detail = m.client.get(f"/v1/customer/payments/{p['id']}", headers=m.customer).json()
     assert detail["instructions"]["amount_rupees"] == 1299
     assert detail["instructions"]["upi_id"].endswith("@upi")  # A placeholder.
@@ -114,14 +110,14 @@ def test_a_payment_runs_from_due_to_received(money):
     assert [x["id"] for x in to_confirm] == [p["id"]]
 
     r = m.client.post(f"/v1/admin/payments/{p['id']}/confirm", headers=m.admin)
-    assert r.json()["status"] == "Received" and r.json()["received_on"] == "2026-10-11"
+    assert r.json()["status"] == "Paid" and r.json()["received_on"] == "2026-10-11"
     hist = m.client.get(f"{vehicle(m)}/payments", headers=m.customer).json()
-    assert [(h["status"], h["amount_rupees"]) for h in hist] == [("Received", 1299)]
+    assert [(h["status"], h["amount_rupees"]) for h in hist] == [("Paid", 1299)]
     r = m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
     assert r.status_code == 409 and r.json()["code"] == "already_received"
     events = m.db.scalars(select(PaymentEvent).order_by(PaymentEvent.at)).all()
     assert [(e.from_status, e.to_status) for e in events] == [
-        (None, "Due"), ("Due", "Initiated"), ("Initiated", "Received")]
+        (None, "Not Due"), ("Not Due", "Initiated"), ("Initiated", "Paid")]
 
 
 def test_i_have_paid_twice_is_one_change(money):
@@ -135,51 +131,52 @@ def test_i_have_paid_twice_is_one_change(money):
 
 def test_the_admin_can_reject_and_move_back(money):
     m = money
-    p = admin_payment(m, due_date="2026-10-05", cycle_start="2026-10-05")
+    p = admin_payment(m, cycle_start="2026-09-01")  # ended 30-Sep-26
     m.client.post(f"/v1/customer/payments/{p['id']}/paid", headers=m.customer)
     r = m.client.post(f"/v1/admin/payments/{p['id']}/reject", headers=m.admin)
     assert r.json()["status"] == "Over due"  # The date has passed.
-    r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Received"},
+    assert r.json()["last_payment_failed"] is True
+    r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Paid"},
                      headers=m.admin)
-    assert r.json()["status"] == "Received"
+    assert r.json()["status"] == "Paid"
     r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Due"},
                      headers=m.admin)
-    assert r.json()["status"] == "Due" and r.json()["received_on"] is None
-    r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Paid"},
+    assert r.json()["status"] == "Over due" and r.json()["received_on"] is None
+    r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Received"},
                      headers=m.admin)
     assert r.status_code == 422
 
 
 def test_the_admin_can_record_an_offline_payment(money):
-    p = admin_payment(money, status="Received")
-    assert p["status"] == "Received"
+    p = admin_payment(money, status="Paid")
+    assert p["status"] == "Paid"
 
 
 def test_over_due_then_inactive_after_seven_days(money):
     m = money
-    p = admin_payment(m, due_date="2026-10-20", cycle_start="2026-10-20")
+    p = admin_payment(m, cycle_start="2026-10-01")  # last day 30-Oct-26
     sub_id = m.subscription_id
 
-    # On the due date it is still Due.
-    mark_overdue_and_inactive(at(20, 23, 59), m.db)
-    assert m.db.get(Payment, uuid.UUID(p["id"])).status == "Due"
+    # On the last day it is still Due today.
+    mark_overdue_and_inactive(at(30, 23, 59), m.db)
+    assert m.db.get(Payment, uuid.UUID(p["id"])).overdue_since is None
 
     # The day after, it is Over due and the subscription is still Active.
-    report = mark_overdue_and_inactive(at(21, 1, 0), m.db)
+    report = mark_overdue_and_inactive(at(31, 1, 0), m.db)
     assert report.marked_overdue == 1 and report.inactivated == []
     assert m.subscription().status == "Active"
     row = m.db.scalar(select(Payment))
-    assert (row.status, row.overdue_since.isoformat()) == ("Over due", "2026-10-21")
+    assert (row.status, row.overdue_since.isoformat()) == ("Open", "2026-10-31")  # shown Over due
 
-    # Six days over due: still Active. Seven: Inactive.
-    mark_overdue_and_inactive(at(27, 12), m.db)
+    # Seven days over due: still Active. Eight: Inactive.
+    mark_overdue_and_inactive(at(6, 12, month=11), m.db)
     assert m.subscription().status == "Active"
-    report = mark_overdue_and_inactive(at(28, 0, 5), m.db)
+    report = mark_overdue_and_inactive(at(7, 0, 5, month=11), m.db)
     assert report.inactivated == [sub_id]
     assert m.subscription().status == "Inactive"
 
     # Running it again changes nothing more.
-    again = mark_overdue_and_inactive(at(29, 8), m.db)
+    again = mark_overdue_and_inactive(at(9, 8, month=11), m.db)
     assert again.marked_overdue == 0 and again.inactivated == []
     assert [a.kind for a in m.db.scalars(select(MoneyAlert))] == ["auto_inactive"]
     s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
@@ -198,11 +195,11 @@ def _addon(m, day="2026-10-20"):
 def test_an_add_on_payment_is_due_on_the_service_date_and_stays_due_until_done(money):
     m = money
     booking, row = _addon(m)
-    assert (row.kind, row.status, row.due_date.isoformat()) == ("Add-on", "Due", "2026-10-20")
+    assert (row.kind, row.status, row.due_date.isoformat()) == ("Add-on", "Open", "2026-10-20")
     # Service not done: still Due, even after the service date has passed.
     mark_overdue_and_inactive(at(25, 8), m.db)
     m.db.expire_all()
-    assert m.db.scalar(select(Payment)).status == "Due"
+    assert m.db.scalar(select(Payment)).status == "Open"
 
 
 def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(money):
@@ -213,7 +210,7 @@ def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(m
     report = mark_overdue_and_inactive(at(20, 18), m.db)
     m.db.expire_all()
     row = m.db.scalar(select(Payment))
-    assert report.marked_overdue == 1 and row.status == "Over due"
+    assert report.marked_overdue == 1 and row.overdue_since is not None
     mark_overdue_and_inactive(at(30, 8), m.db)
     assert m.subscription().status == "Active"
 
@@ -221,12 +218,12 @@ def test_a_completed_add_on_with_unreceived_payment_is_over_due_never_inactive(m
 def test_a_completed_add_on_already_received_is_left_alone(money):
     m = money
     booking, row = _addon(m)
-    row.status = "Received"
+    row.status = "Paid"
     booking.status = "Completed"
     m.db.commit()
     assert mark_overdue_and_inactive(at(25, 8), m.db).marked_overdue == 0
     m.db.expire_all()
-    assert m.db.scalar(select(Payment)).status == "Received"
+    assert m.db.scalar(select(Payment)).status == "Paid"
 
 
 def test_changing_the_add_on_date_moves_the_payment_due_date(money):
@@ -241,50 +238,65 @@ def test_changing_the_add_on_date_moves_the_payment_due_date(money):
 
 def test_a_received_payment_is_never_made_over_due(money):
     m = money
-    admin_payment(m, due_date="2026-10-01", cycle_start="2026-10-01", status="Received")
+    admin_payment(m, cycle_start="2026-10-01", status="Paid")
     report = mark_overdue_and_inactive(at(30, 8), m.db)
     assert report.marked_overdue == 0 and m.subscription().status == "Active"
 
 
-def test_an_admin_set_over_due_starts_its_own_seven_days(money):
+def test_an_admin_set_over_due_on_an_add_on_is_shown_and_never_inactivates(money):
     m = money
-    p = admin_payment(m, due_date="2026-10-05", cycle_start="2026-10-05")
-    m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Over due"},
-                 headers=m.admin)
-    mark_overdue_and_inactive(at(17, 8), m.db)  # Six days after 11-Oct-26.
+    p = admin_payment(m, kind="Add-on", due_date="2026-10-05", description="Spa")
+    assert p["status"] == "Due"
+    r = m.client.put(f"/v1/admin/payments/{p['id']}/status", json={"status": "Over due"},
+                     headers=m.admin)
+    assert r.json()["status"] == "Over due"
+    mark_overdue_and_inactive(at(25, 8), m.db)
     assert m.subscription().status == "Active"
-    mark_overdue_and_inactive(at(18, 8), m.db)
-    assert m.subscription().status == "Inactive"
 
 
-def test_the_next_payment_opens_one_week_before_renewal(money):
+def test_the_customer_can_pay_the_current_cycle_any_time(money):
     m = money
     r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
-    assert r.status_code == 409 and r.json()["code"] == "too_early"
-    m.clock.now = at(24, 9)  # Renewal is 31-Oct-26: seven days.
-    s = m.client.get(f"{vehicle(m)}/subscription", headers=m.customer).json()
-    assert s["can_pay_next"] is True
-    r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
+    assert r.status_code == 200, r.text  # 19 days before the end: no "too early"
     p = r.json()["payment"]
-    assert (p["status"], p["due_date"], p["amount_rupees"]) == ("Due", "2026-10-31", 1299)
+    assert (p["status"], p["due_date"], p["amount_rupees"]) == ("Not Due", "2026-10-30", 1299)
     again = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer).json()
     assert again["payment"]["id"] == p["id"]
 
 
-def test_the_daily_job_creates_the_next_payment_and_follows_a_pause(money):
+def test_a_pause_does_not_move_the_cycle_or_its_payment(money):
     m = money
-    assert generate_due_payments(at(23, 6), m.db) == 0
-    assert generate_due_payments(at(24, 6), m.db) == 1
-    assert generate_due_payments(at(25, 6), m.db) == 0
-    assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-10-31"
-    # A pause of three days moves the renewal date, and the Due payment with it.
-    m.clock.now = at(24, 9)
-    m.client.post(f"{vehicle(m)}/pauses",
-                  json={"from_date": "2026-10-27", "to_date": "2026-10-29"},
-                  headers=m.customer)
+    generate_due_payments(at(11), m.db)
+    row = m.db.scalar(select(Payment).where(Payment.subscription_id == m.subscription_id))
+    assert row.due_date.isoformat() == "2026-10-30"
+    r = m.client.post(f"{vehicle(m)}/pauses",
+                      json={"from_date": "2026-10-27", "to_date": "2026-10-29"},
+                      headers=m.customer)
+    assert r.status_code == 201, r.text
     generate_due_payments(at(26, 6), m.db)
     m.db.expire_all()
-    assert m.db.scalar(select(Payment)).due_date.isoformat() == "2026-11-03"
+    assert m.db.scalar(select(Payment).where(
+        Payment.subscription_id == m.subscription_id)).due_date.isoformat() == "2026-10-30"
+
+
+@pytest.fixture
+def stalled(monkeypatch):
+    """Sign-ins made while this fixture is active get tokens that read 16 minutes old as soon as
+    they are issued, as if the machine had stalled for 16 minutes right after signing in."""
+    import datetime as dt
+
+    from app.identity import tokens
+
+    real = tokens.utcnow
+    monkeypatch.setattr(tokens, "utcnow", lambda: real() - dt.timedelta(minutes=16))
+
+
+def test_a_sign_in_survives_a_stalled_machine(stalled, money):
+    """The nightly dry run of 04-Nov-26 slept 15 minutes inside a test: the 15 minute token expired
+    and the pause request got a 401. Tests now sign in with a long-lived token."""
+    m = money
+    r = m.client.get(f"{vehicle(m)}/payments", headers=m.customer)
+    assert r.status_code == 200, r.text
 
 
 def test_invoice_number_and_the_customers_copy(money):
@@ -335,24 +347,19 @@ def test_roles_are_enforced_and_unknown_ids_are_not_found(money):
 def test_a_changed_inactive_after_days_is_the_one_used(money):
     m = money
     set_setting(m.db.get_bind(), "billing.inactive_after_days", 2)
-    admin_payment(m, due_date="2026-10-20", cycle_start="2026-10-20")
-    mark_overdue_and_inactive(at(21, 1, 0), m.db)  # Over due from 21-Oct-26.
-    mark_overdue_and_inactive(at(22, 12), m.db)
+    admin_payment(m, cycle_start="2026-10-01")  # last day 30-Oct-26
+    mark_overdue_and_inactive(at(31, 1, 0), m.db)  # Over due from 31-Oct-26.
+    mark_overdue_and_inactive(at(1, 12, month=11), m.db)
     assert m.subscription().status == "Active"
-    report = mark_overdue_and_inactive(at(23, 8), m.db)
+    report = mark_overdue_and_inactive(at(2, 8, month=11), m.db)
     assert report.inactivated == [m.subscription_id]
 
 
-def test_a_changed_pay_ahead_window_and_upi_id_are_shown(money):
+def test_a_changed_upi_id_is_shown(money):
     m = money
-    set_setting(m.db.get_bind(), "billing.pay_ahead_days", 3)
-    m.clock.now = at(24, 9)  # Renewal is 31-Oct-26: seven days.
-    r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
-    assert r.status_code == 409 and r.json()["code"] == "too_early"
-    m.clock.now = at(28, 9)
+    set_setting(m.db.get_bind(), "payment.upi_id", "pay@bank")
     r = m.client.post(f"{vehicle(m)}/payments/next", headers=m.customer)
     assert r.status_code == 200, r.text
-    set_setting(m.db.get_bind(), "payment.upi_id", "pay@bank")
     pid = r.json()["payment"]["id"]
     detail = m.client.get(f"/v1/customer/payments/{pid}", headers=m.customer).json()
     assert detail["instructions"]["upi_id"] == "pay@bank"
@@ -363,18 +370,19 @@ def test_subscription_rows_say_whether_a_plan_payment_is_waiting(money):
     row = next(r for r in m.client.get("/v1/admin/subscriptions", headers=m.admin).json()
                if r["vehicle_id"] == m.vehicle_id)
     assert row["payment_due"] is False
-    admin_payment(m, kind="Plan")
+    admin_payment(m, kind="Plan", cycle_start="2026-09-01")
     row = next(r for r in m.client.get("/v1/admin/subscriptions", headers=m.admin).json()
                if r["vehicle_id"] == m.vehicle_id)
-    assert row["payment_status"] == "Due" and row["payment_due"] is True
+    assert row["payment_status"] == "Over due" and row["payment_due"] is True
 
 
 def test_payments_summary_counts_and_adds_up_each_status(money):
     m = money
-    admin_payment(m, amount_rupees=1000)
-    admin_payment(m, amount_rupees=500, status="Received", kind="Add-on", description="Spa")
+    admin_payment(m, amount_rupees=1000, cycle_start="2026-10-01")
+    admin_payment(m, amount_rupees=500, status="Paid", kind="Add-on", description="Spa",
+                  due_date="2026-10-20")
     s = m.client.get("/v1/admin/payments/summary", headers=m.admin).json()
-    assert s["by_status"]["Due"]["count"] >= 1 and s["by_status"]["Received"] == {
+    assert s["by_status"]["Not Due"]["count"] >= 1 and s["by_status"]["Paid"] == {
         "count": 1, "rupees": 500}
     assert s["total"] == sum(v["count"] for v in s["by_status"].values())
     assert s["total_rupees"] == sum(v["rupees"] for v in s["by_status"].values())

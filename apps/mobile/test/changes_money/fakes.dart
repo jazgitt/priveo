@@ -21,7 +21,12 @@ const vehicle = 'v1';
 DateTime d(int day, [int month = 10]) => DateTime(2026, month, day);
 
 PaymentDto payment(String id,
-        {String status = 'Due', int amount = 1299, String? invoice, DateTime? due}) =>
+        {String status = 'Due',
+        int amount = 1299,
+        String? invoice,
+        DateTime? due,
+        String message = '',
+        bool failed = false}) =>
     PaymentDto(
       id: id,
       kind: 'Plan',
@@ -30,6 +35,8 @@ PaymentDto payment(String id,
       status: status,
       dueDate: due ?? d(7, 11),
       invoiceNumber: invoice,
+      statusMessage: message,
+      lastPaymentFailed: failed,
     );
 
 class FakeMoneyRepository implements MoneyRepository {
@@ -63,15 +70,18 @@ class FakeMoneyRepository implements MoneyRepository {
     renewalDate: d(7, 11),
     cycleDays: 30,
     daysLeft: 26,
-    latestPayment: payment('p0', status: 'Received'),
+    latestPayment: payment('p0', status: 'Paid'),
     canPayNext: true,
   );
   List<PaymentDto> history = [
-    payment('p1'),
-    payment('p0', status: 'Received', invoice: 'PRV102643210001', due: d(8)),
+    payment('p1', message: 'Due in 3 days', failed: true),
+    payment('p0', status: 'Paid', invoice: 'PRV102643210001', due: d(8)),
   ];
   /// The last day the plan covers (PAUSE-08); null leaves the dates unlimited.
   DateTime? planEndsOn;
+
+  /// The status the payment screen's payment has.
+  String detailStatus = 'Due';
   AddonsDto addonList = const AddonsDto(offers: [
     AddonOfferDto(
         service: 'Deep Spa',
@@ -150,7 +160,8 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<PaymentDetailDto> paymentDetail(String id) async => PaymentDetailDto(
-        payment: payment(id, amount: id == 'p-addon' ? 1500 : 1299),
+        payment: payment(id,
+            status: detailStatus, amount: id == 'p-addon' ? 1500 : 1299),
         instructions: PayInstructionsDto(
             amountRupees: id == 'p-addon' ? 1500 : 1299,
             upiId: 'priveo-placeholder@upi',
@@ -271,7 +282,8 @@ class FakeAdminPaymentsRepository implements AdminPaymentsRepository {
   ];
 
   @override
-  Future<List<AdminPaymentDto>> toConfirm() async => pending;
+  Future<List<AdminPaymentDto>> payments({String? status}) async =>
+      status == null ? pending : pending.where((p) => p.status == status).toList();
 
   @override
   Future<void> confirm(String id) async {

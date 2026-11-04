@@ -1168,13 +1168,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get money_noPlanName => 'Plan';
 
   @override
+  String get money_statusNotDue => 'Not Due';
+
+  @override
+  String get money_statusDue => 'Due';
+
+  @override
+  String get money_statusDueToday => 'Due today';
+
+  @override
   String get money_statusOverdue => 'Over due';
 
   @override
   String get money_statusInitiated => 'Initiated';
 
   @override
-  String get money_statusReceived => 'Received';
+  String get money_statusPaid => 'Paid';
+
+  @override
+  String get money_lastPaymentFailed => 'Your last payment failed';
+
+  @override
+  String get money_paymentInitiated =>
+      'Payment initiated. Waiting for Priveo to confirm.';
+
+  @override
+  String money_inactiveWarning(String date) {
+    return 'Your subscription becomes Inactive if this is not paid by $date.';
+  }
+
+  @override
+  String money_cycleEnded(String date) {
+    return 'Billing cycle ended on $date';
+  }
 
   @override
   String get money_payTitle => 'Pay by UPI';
@@ -1269,13 +1295,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get money_adminNoPayments => 'Nothing to confirm.';
 
   @override
-  String get money_adminConfirm => 'Confirm';
+  String get money_adminApprove => 'Approve';
+
+  @override
+  String get money_adminAll => 'All';
 
   @override
   String get money_adminReject => 'Reject';
 
   @override
-  String get money_adminConfirmed => 'Payment confirmed.';
+  String get money_adminApproved => 'Payment approved.';
 
   @override
   String get money_adminRejected => 'Payment sent back.';
@@ -1300,18 +1329,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String money_pauseDone(String from, String to, String renewal) {
-    return 'Paused $from to $to. Plan now renews $renewal.';
+  String money_pauseDone(String from, String to) {
+    return 'Paused $from to $to.';
   }
 
   @override
   String money_pausePeriod(String from, String to) {
     return '$from to $to';
-  }
-
-  @override
-  String money_statusDue(String date) {
-    return 'Due by $date';
   }
 
   @override

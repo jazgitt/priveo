@@ -82,7 +82,7 @@ void main() {
     expect((await r.home()).paymentsToConfirm,isNotEmpty);await r.complaints(status:'Open',category:'Cleaning');expect(http.requests.last.queryParameters,{'status':'Open','category':'Cleaning'});
     await r.complaint('c1');await r.setStatus('c1','Resolved','Fixed');expect(http.requests.last.data,{'status':'Resolved','note':'Fixed'});await r.addNote('c1','Progress');
     await r.feedback(rating:5);await r.ratings();await r.needsScheduling(societyId:'s1');await r.day(day,societyId:'s1');await r.capacity('s1',day,days:14);expect(http.requests.last.queryParameters['days'],14);
-    final p=DioAdminPaymentsRepository(http.dio());expect(await p.toConfirm(),isNotEmpty);await p.confirm('p1');await p.reject('p1');expect(await p.alerts(),isNotEmpty);await p.markRead('a1');
+    final p=DioAdminPaymentsRepository(http.dio());expect(await p.payments(),isNotEmpty);await p.confirm('p1');await p.reject('p1');expect(await p.alerts(),isNotEmpty);await p.markRead('a1');
     final alerts=ApiAlertsRepository(http.dio());expect((await alerts.list()).items,isNotEmpty);await alerts.markRead('a1');await alerts.markAllRead();
     http.overrides['/v1/admin/customers']=[{'id':'c1'}];http.overrides['/v1/admin/customers/c1']={'id':'c1'};
     final actions=AdminActionsRepository(http.dio());await actions.list('/v1/admin/customers',{'q':'Asha'});await actions.detail('/v1/admin/customers/c1');await actions.post('/v1/admin/customers/c1/sessions/logout',{});await actions.remove('/v1/admin/vehicles/v1/skips/s1');

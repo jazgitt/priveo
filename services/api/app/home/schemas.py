@@ -23,8 +23,15 @@ class VehicleCard(BaseModel):
     monthly_price_rupees: int | None
     # The subscription's plan name. None for a vehicle with no subscription.
     plan_name: str | None = None
-    # The last day the plan covers ("Expires on"). None with no subscription.
+    # The cycle's last day ("Expires on"), only when the payment is Over due (SUB-01);
+    # `cycle_end` is the same day and `inactive_by` is the day to clear it by.
     expires_on: date | None = None
+    cycle_end: date | None = None
+    inactive_by: date | None = None
+    # The current payment: Not Due, Due, Due today, Over due, Initiated or Paid.
+    payment_status: str | None = None
+    status_message: str = ""
+    last_payment_failed: bool = False
     # "HH:MM", the time by which the daily clean is done (ONB-16).
     cutoff_time: str | None
     interior_day: str | None

@@ -177,7 +177,7 @@ For each phase: what is built (modules, screens, endpoints), the requirement are
 | Web portal | Payments and invoices, add-on requests, subscription status |
 | Requirements | `SKIP-`, `PAUSE-`, `PAY-`, `ADM-PAY`, `ADM-ADD`, `ADM-SUB` |
 | You arrange | Business UPI ID and QR image, seller name, address and GSTIN, second AWS environment |
-| Done when | A payment runs from Due to Received, and an unpaid one makes the subscription Inactive after 7 days |
+| Done when | A payment runs from Due to Paid, and an unpaid one makes the subscription Inactive after 7 days |
 
 ### Phase 7: Support and feedback
 

@@ -61,7 +61,7 @@ void main() {
       await openTile(tester, 'All payments');
       await untilFound(tester, find.text('Plan: TEST plan cycle'));
       expect(find.text('Add-on: Deep Spa'), findsOneWidget);
-      expect(find.text('Confirm'), findsNWidgets(4));
+      expect(find.text('Approve'), findsNWidgets(4));
       expect(find.text('Reject'), findsNWidgets(4));
       await letTimersFinish(tester);
     });

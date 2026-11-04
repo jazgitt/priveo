@@ -32,7 +32,7 @@ The original local SQLite seeder below retains its isolation and reset guards.
 
 The original 16 cases are retained as **C01–C16** in the [executable catalogue](../../tools/test-data/scenarios.json). A plan provides daily **external** cleaning and, when included, weekly **internal** cleaning. Deep Spa is purchased separately. Multiple add-ons currently mean multiple bookings of Deep Spa; this application does not yet have several distinct Spa service types.
 
-Keep three dimensions independent: vehicle active/inactive, subscription Active/Activating/Inactive, and add-on Requested/Scheduled/Completed/Cancelled/Missed. Payment states are **Due, Initiated, Received, Over due**. Cancelled unpaid add-ons have a voided payment, rather than an invented fifth payment status. Customers with no subscription owe no plan payment; they can owe standalone Spa payments.
+Keep three dimensions independent: vehicle active/inactive, subscription Active/Activating/Inactive, and add-on Requested/Scheduled/Completed/Cancelled/Missed. Scenarios name the payment statuses the customer sees: **Not Due, Due, Due today, Over due, Initiated, Paid**. The script stores only Open, Initiated or Paid and sets the cycle so the date rule shows the named status. Cancelled unpaid add-ons have a voided payment, rather than an invented fifth payment status. Customers with no subscription owe no plan payment; they can owe standalone Spa payments.
 
 Your vehicle counts needed one correction: case 14 now has **five vehicles: two with Active subscriptions and three with Inactive subscriptions**. All five vehicle records remain active. C25 separately tests an inactive vehicle record with an Active subscription.
 
@@ -44,7 +44,7 @@ There are **40 scenario families**. Each has a synthetic customer, its own socie
 |---|---|---|
 | C01 | Owned vehicle, no subscription or payments | Account details; standalone Spa entry; no plan billing |
 | C02 | External + weekly internal plan, no add-ons | Plan inclusions, internal day, calendar, subscription |
-| C03–C04 | One/two completed Spa bookings and Received payments/invoices | Add-on history; invoice preview; service detail |
+| C03–C04 | One/two completed Spa bookings and Paid payments/invoices | Add-on history; invoice preview; service detail |
 | C05–C07 | Requested, Scheduled and mixed Completed bookings | Pending/completed badges; dates; independent payment state |
 | C08 | Four unsubscribed vehicles, standalone Spa, four payment states | Standalone ownership; payment detail; no plan payment |
 | C09 | Four subscribed vehicles, four payment states | Per-vehicle billing; Admin payment review |
@@ -72,7 +72,7 @@ There are **40 scenario families**. Each has a synthetic customer, its own socie
 | R04 | Inactive crew and locked crew login | Disabled/locked login; Admin reset/unlock action |
 | R05 | Ten-minute working windows, twenty-minute unassigned job | Genuine capacity shortage; needs-scheduling; manual placement |
 | R06 | Draft plan visit and Frozen scheduled Spa | Draft hidden from Crew; freeze publishes; frozen changes require review |
-| A01 | Initiated/Received payments, 18% mock GST invoice, read/unread alerts | Admin Mobile quick actions; Web confirm/invoice; unread badge |
+| A01 | Initiated/Paid payments, 18% mock GST invoice, read/unread alerts | Admin Mobile quick actions; Web confirm/invoice; unread badge |
 | A02 | Complaints, ratings, feedback, check-ins, history | Admin Web reports and Mobile read views |
 | A03 | Operations failures, skipped-job extension, unassigned work | Resolve/skip/retry; preserve original outcome; audit after action |
 | A04 | Admin-created customer with no subscription and incomplete onboarding | Customer editing; standalone purchase; no fabricated plan |
@@ -87,7 +87,7 @@ These are part of the E2E plan, not claims that database seeding has tested them
 - Skip/unskip, pause/resume, add-on change/cancel, overlap merging, billing-cycle extension, duplicate retries, and cutoffs immediately before/at/after the IST boundary. `--as-of` moves fixture dates; it **does not freeze the running application's clock**.
 - Actual photo, RC, complaint attachment and video files; confirmation, failed/missing upload, size/type limits, signed URL expiry and interrupted upload. Seeded historical Completed jobs have checklist/timing records **without proof files**. They are historical display fixtures, not valid examples for testing completion validation. Upload real sample proof through the app for those tests.
 - Device SQLite upload queues, airplane mode, reconnect, retry, app restart and login-owner changes. These cannot be created by the server seed alone.
-- Customer first/last renewal cycle, leap day/month/year rollover, invoice rounding/IGST variants, Received payments without an issued invoice, paid cancellation/credit and operations retry chains. Add focused variants before automating those branches.
+- Customer first/last renewal cycle, leap day/month/year rollover, invoice rounding/IGST variants, Paid payments without an issued invoice, paid cancellation/credit and operations retry chains. Add focused variants before automating those branches.
 - Automatic planner disabled/enabled/time/error/retry cases, overdue-complaint alert generation, empty Admin reports, and Admin global settings/catalogue variants. Apply those profiles **sequentially** on the one Admin account and reset between profiles. Initial data leaves automatic planning disabled and email preferences disabled.
 - Inactive societies/catalogues, deactivated/renamed checklist/options and preservation of issued/historical snapshots; invalid registrations and cross-role/cross-society access.
 - Real email/S3/native push require a separate configured integration environment. The local fixtures do not prove provider delivery.
@@ -186,7 +186,7 @@ export LOCAL_SEED_PASSWORD='choose-a-local-password'    # used for the seeded lo
 | Subscriptions | all Active | 293 Active, 7 Inactive (4 customers, payments Over due more than 7 days) |
 | Overdue payments | 4 customers, 2 to 6 days | 4 Inactive owners plus 6 more, 2 to 6 days |
 
-Basic is a daily external clean Monday to Saturday. Premium adds one internal clean a week and Luxe two, set with a weekly schedule pattern. The vehicles of one customer have different plans and different cycle start dates. There are also Due, Initiated and Received plan payments with invoices, skips and pauses, add-on bookings (Requested and Completed), and complaints. Logins: all crew, and the first five customers of each society, have the local password; other customers sign in by emailed code. Emails use `priveo.test`; names start with `TEST`.
+Basic is a daily external clean Monday to Saturday. Premium adds one internal clean a week and Luxe two, set with a weekly schedule pattern. The vehicles of one customer have different plans and different cycle start dates. There are also plan payments in every status (Paid, Initiated, Open before and after the due date) with invoices, skips and pauses, add-on bookings (Requested and Completed), and complaints. Logins: all crew, and the first five customers of each society, have the local password; other customers sign in by emailed code. Emails use `priveo.test`; names start with `TEST`.
 
 **Walk situations.** The real scheduler plans tomorrow (then frozen) and the six days after it (Draft). In each society the most loaded Member is then marked Sick tomorrow, so that Member's jobs are still assigned, and one job on tomorrow's frozen schedule is Completed (it cannot be moved). Many jobs stay unplaced; see the capacity note.
 

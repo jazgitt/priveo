@@ -15,7 +15,7 @@ function json(status: number, body?: unknown) {
 }
 
 const pay = (over: Record<string, unknown> = {}) => ({
-  id: "p1", kind: "Plan", description: "Monthly plan", amount_rupees: 1500, status: "Initiated",
+  id: "p1", kind: "Plan", description: "Monthly plan", amount_rupees: 1500, status: "Initiated", days_to_due: 3, status_message: "", last_payment_failed: false,
   due_date: "2026-11-07", cycle_start: "2026-11-07", cycle_end: "2026-12-07", vehicle_id: "v1",
   received_on: null, invoice_number: null, customer_name: "Asha Rao", flat: "B-12",
   society: "Lake View", vehicle: "Swift KA01", initiated_at: null, ...over,
@@ -34,8 +34,8 @@ function route(path: string, init?: RequestInit) {
   if (path === "/v1/admin/customers/c1") return json(200, customerDetail);
   if (path.startsWith("/v1/admin/payments/summary")) {
     return json(200, { total: 3, total_rupees: 4500, by_status: {
-      Due: { count: 1, rupees: 1500 }, "Over due": { count: 0, rupees: 0 },
-      Initiated: { count: 1, rupees: 1500 }, Received: { count: 1, rupees: 1500 } } });
+      "Not Due": { count: 0, rupees: 0 }, Due: { count: 1, rupees: 1500 }, "Due today": { count: 0, rupees: 0 },
+      "Over due": { count: 0, rupees: 0 }, Initiated: { count: 1, rupees: 1500 }, Paid: { count: 1, rupees: 1500 } } });
   }
   if (path.startsWith("/v1/admin/payments") && method === "GET") return json(200, payments);
   return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
@@ -109,38 +109,61 @@ describe("payments page", () => {
     await waitFor(() => expect(lastList()).not.toContain("status="));
   });
 
-  it("confirms an Initiated payment after asking", async () => {
+  it("approves an Initiated payment after asking", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
-      p.endsWith("/confirm") ? json(200, pay({ status: "Received", received_on: "2026-11-08" })) : route(p, init));
+      p.endsWith("/confirm") ? json(200, pay({ status: "Paid", received_on: "2026-11-08" })) : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
-    await userEvent.click(screen.getByRole("button", { name: "Confirm received" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     expect(calls("/confirm")).toHaveLength(0);
-    await confirmWith("Confirm received");
+    await confirmWith("Approve");
     expect(await screen.findByRole("button", { name: "Issue invoice" })).toBeInTheDocument();
     expect(calls("/v1/admin/payments/p1/confirm")[0][1].method).toBe("POST");
   });
 
-  it("offers reject only for Initiated or Received", async () => {
-    payments = [pay({ status: "Due" })];
+  it("offers approve and reject only for an Initiated payment", async () => {
+    payments = [pay({ status: "Due", days_to_due: 3, status_message: "Due in 3 days" })];
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
-    expect(screen.getByRole("button", { name: "Confirm received" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Reject/ })).toBeNull();
+    expect(within(screen.getByRole("dialog")).getByText("Due in 3 days")).toBeInTheDocument();
+  });
+
+  it("shows days over due and the last payment failed note", async () => {
+    payments = [pay({ status: "Over due", days_to_due: -2, status_message: "2 days over due", last_payment_failed: true })];
+    renderPage();
+    const row = (await screen.findByText("Asha Rao")).closest("tr")!;
+    expect(within(row).getByText("2 days over due")).toBeInTheDocument();
+    expect(within(row).getByText("Last payment failed")).toBeInTheDocument();
+  });
+
+  it("sets a payment back to the cycle dates from Paid", async () => {
+    payments = [pay({ status: "Paid" })];
+    fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
+      p.endsWith("/status") ? json(200, pay({ status: "Due" })) : route(p, init));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    expect(screen.getAllByText(/follows the cycle dates/).length).toBeGreaterThan(0);
+    await choose("Set status", /Not paid/);
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save status" }));
+    await confirmWith("Save status");
+    await waitFor(() => expect(calls("/status")).toHaveLength(1));
+    expect(JSON.parse(calls("/status")[0][1].body)).toEqual({ status: "Open" });
   });
 
   it("sets a status with the chosen value after asking", async () => {
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
-      p.endsWith("/status") ? json(200, pay({ status: "Over due" })) : route(p, init));
+      p.endsWith("/status") ? json(200, pay({ status: "Paid" })) : route(p, init));
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
-    await choose("Set status", "Over due");
+    await choose("Set status", "Paid");
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save status" }));
     await confirmWith("Save status");
     await waitFor(() => expect(calls("/status")).toHaveLength(1));
     const [, init] = calls("/status")[0];
     expect(init.method).toBe("PUT");
-    expect(JSON.parse(init.body)).toEqual({ status: "Over due" });
+    expect(JSON.parse(init.body)).toEqual({ status: "Paid" });
   });
 
   it("shows the error message from the API", async () => {
@@ -155,8 +178,8 @@ describe("payments page", () => {
     expect(await screen.findByText("Already moved.")).toBeInTheDocument();
   });
 
-  it("issues an invoice for a Received payment after asking", async () => {
-    payments = [pay({ status: "Received", received_on: "2026-11-08" })];
+  it("issues an invoice for a Paid payment after asking", async () => {
+    payments = [pay({ status: "Paid", received_on: "2026-11-08" })];
     fetchMock.mockImplementation(async (p: string, init?: RequestInit) =>
       p.endsWith("/invoice")
         ? json(200, { number: "PRV10264321", issued_on: "2026-11-08", amount_rupees: 1500,
@@ -184,11 +207,12 @@ describe("payments page", () => {
     await pickCustomer(dialog);
     await choose("Vehicle", /KA01AB1234/);
     await userEvent.type(within(dialog).getByLabelText("Amount (₹, GST included)"), "1500");
+    await choose("Type", "Add-on");
     fireEvent.change(within(dialog).getByLabelText("Due date"), { target: { value: "2026-11-07" } });
     await userEvent.click(within(dialog).getByRole("button", { name: "Record" }));
     expect((await screen.findAllByText(/That vehicle was not found/)).length).toBeGreaterThan(0);
     const post = calls("/v1/admin/payments").find((c) => c[1]?.method === "POST")!;
-    expect(JSON.parse(post[1].body)).toMatchObject({ vehicle_id: "v9", amount_rupees: 1500, due_date: "2026-11-07" });
+    expect(JSON.parse(post[1].body)).toMatchObject({ vehicle_id: "v9", amount_rupees: 1500, kind: "Add-on", due_date: "2026-11-07", status: "Paid" });
   });
 });
 
