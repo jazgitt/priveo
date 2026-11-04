@@ -37,6 +37,11 @@ it("turns API errors, plain errors and anything else into a message", () => {
 it("gives each status one tone", () => {
   expect(toneOf("Active")).toBe("ok");
   expect(toneOf("Over due")).toBe("error");
+  expect(toneOf("Paid")).toBe("ok");
+  expect(toneOf("Not Due")).toBe("neutral");
+  expect(toneOf("Due")).toBe("warn");
+  expect(toneOf("Due today")).toBe("warn");
+  expect(toneOf("Initiated")).toBe("info");
   expect(toneOf("Something new")).toBe("neutral");
   render(<StatusBadge status="Frozen" />);
   expect(screen.getByText("Frozen")).toHaveClass("text-info");

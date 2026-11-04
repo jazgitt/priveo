@@ -1147,7 +1147,7 @@ class AdminPaymentIn {
   final String? kind;
   final String? description;
   final int amountRupees;
-  final DateTime dueDate;
+  final DateTime? dueDate;
   final DateTime? cycleStart;
   final String? status;
 
@@ -1156,7 +1156,7 @@ class AdminPaymentIn {
         kind: j['kind'] == null ? null : j['kind'] as String,
         description: j['description'] == null ? null : j['description'] as String,
         amountRupees: j['amount_rupees'] as int,
-        dueDate: DateTime.parse(j['due_date'] as String),
+        dueDate: j['due_date'] == null ? null : DateTime.parse(j['due_date'] as String),
         cycleStart: j['cycle_start'] == null ? null : DateTime.parse(j['cycle_start'] as String),
         status: j['status'] == null ? null : j['status'] as String,
       );
@@ -1166,7 +1166,7 @@ class AdminPaymentIn {
         'kind': kind,
         'description': description,
         'amount_rupees': amountRupees,
-        'due_date': _date(dueDate),
+        'due_date': dueDate == null ? null : _date(dueDate!),
         'cycle_start': cycleStart == null ? null : _date(cycleStart!),
         'status': status,
       };
@@ -1179,6 +1179,9 @@ class AdminPaymentOut {
     required this.description,
     required this.amountRupees,
     required this.status,
+    this.daysToDue,
+    this.statusMessage,
+    this.lastPaymentFailed,
     required this.dueDate,
     required this.cycleStart,
     required this.cycleEnd,
@@ -1197,6 +1200,9 @@ class AdminPaymentOut {
   final String description;
   final int amountRupees;
   final String status;
+  final int? daysToDue;
+  final String? statusMessage;
+  final bool? lastPaymentFailed;
   final DateTime dueDate;
   final DateTime? cycleStart;
   final DateTime? cycleEnd;
@@ -1215,6 +1221,9 @@ class AdminPaymentOut {
         description: j['description'] as String,
         amountRupees: j['amount_rupees'] as int,
         status: j['status'] as String,
+        daysToDue: j['days_to_due'] == null ? null : j['days_to_due'] as int,
+        statusMessage: j['status_message'] == null ? null : j['status_message'] as String,
+        lastPaymentFailed: j['last_payment_failed'] == null ? null : j['last_payment_failed'] as bool,
         dueDate: DateTime.parse(j['due_date'] as String),
         cycleStart: j['cycle_start'] == null ? null : DateTime.parse(j['cycle_start'] as String),
         cycleEnd: j['cycle_end'] == null ? null : DateTime.parse(j['cycle_end'] as String),
@@ -1234,6 +1243,9 @@ class AdminPaymentOut {
         'description': description,
         'amount_rupees': amountRupees,
         'status': status,
+        'days_to_due': daysToDue,
+        'status_message': statusMessage,
+        'last_payment_failed': lastPaymentFailed,
         'due_date': _date(dueDate),
         'cycle_start': cycleStart == null ? null : _date(cycleStart!),
         'cycle_end': cycleEnd == null ? null : _date(cycleEnd!),
@@ -6475,6 +6487,9 @@ class PaymentOut {
     required this.description,
     required this.amountRupees,
     required this.status,
+    this.daysToDue,
+    this.statusMessage,
+    this.lastPaymentFailed,
     required this.dueDate,
     required this.cycleStart,
     required this.cycleEnd,
@@ -6488,6 +6503,9 @@ class PaymentOut {
   final String description;
   final int amountRupees;
   final String status;
+  final int? daysToDue;
+  final String? statusMessage;
+  final bool? lastPaymentFailed;
   final DateTime dueDate;
   final DateTime? cycleStart;
   final DateTime? cycleEnd;
@@ -6501,6 +6519,9 @@ class PaymentOut {
         description: j['description'] as String,
         amountRupees: j['amount_rupees'] as int,
         status: j['status'] as String,
+        daysToDue: j['days_to_due'] == null ? null : j['days_to_due'] as int,
+        statusMessage: j['status_message'] == null ? null : j['status_message'] as String,
+        lastPaymentFailed: j['last_payment_failed'] == null ? null : j['last_payment_failed'] as bool,
         dueDate: DateTime.parse(j['due_date'] as String),
         cycleStart: j['cycle_start'] == null ? null : DateTime.parse(j['cycle_start'] as String),
         cycleEnd: j['cycle_end'] == null ? null : DateTime.parse(j['cycle_end'] as String),
@@ -6515,6 +6536,9 @@ class PaymentOut {
         'description': description,
         'amount_rupees': amountRupees,
         'status': status,
+        'days_to_due': daysToDue,
+        'status_message': statusMessage,
+        'last_payment_failed': lastPaymentFailed,
         'due_date': _date(dueDate),
         'cycle_start': cycleStart == null ? null : _date(cycleStart!),
         'cycle_end': cycleEnd == null ? null : _date(cycleEnd!),
@@ -7639,7 +7663,6 @@ class SubscriptionSetup {
     required this.interiorDay,
     required this.interiorDayNotes,
     required this.firstServiceDate,
-    this.firstPaymentStatus,
   });
 
   final String planId;
@@ -7647,7 +7670,6 @@ class SubscriptionSetup {
   final String? interiorDay;
   final String? interiorDayNotes;
   final DateTime? firstServiceDate;
-  final String? firstPaymentStatus;
 
   factory SubscriptionSetup.fromJson(Map<String, dynamic> j) => SubscriptionSetup(
         planId: j['plan_id'] as String,
@@ -7655,7 +7677,6 @@ class SubscriptionSetup {
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
         firstServiceDate: j['first_service_date'] == null ? null : DateTime.parse(j['first_service_date'] as String),
-        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7664,7 +7685,6 @@ class SubscriptionSetup {
         'interior_day': interiorDay,
         'interior_day_notes': interiorDayNotes,
         'first_service_date': firstServiceDate == null ? null : _date(firstServiceDate!),
-        'first_payment_status': firstPaymentStatus,
       };
 }
 
@@ -7734,6 +7754,13 @@ class SubscriptionView {
     required this.expiresOn,
     required this.cycleDays,
     required this.daysLeft,
+    required this.cycleEnd,
+    required this.inactiveBy,
+    required this.paymentId,
+    this.paymentStatus,
+    this.daysToDue,
+    this.statusMessage,
+    this.lastPaymentFailed,
     required this.latestPayment,
     required this.canPayNext,
   });
@@ -7754,10 +7781,17 @@ class SubscriptionView {
   final String? interiorDay;
   final DateTime startDate;
   final DateTime cycleStart;
-  final DateTime renewalDate;
-  final DateTime expiresOn;
+  final DateTime? renewalDate;
+  final DateTime? expiresOn;
   final int cycleDays;
-  final int daysLeft;
+  final int? daysLeft;
+  final DateTime? cycleEnd;
+  final DateTime? inactiveBy;
+  final String? paymentId;
+  final String? paymentStatus;
+  final int? daysToDue;
+  final String? statusMessage;
+  final bool? lastPaymentFailed;
   final PaymentOut? latestPayment;
   final bool canPayNext;
 
@@ -7778,10 +7812,17 @@ class SubscriptionView {
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         startDate: DateTime.parse(j['start_date'] as String),
         cycleStart: DateTime.parse(j['cycle_start'] as String),
-        renewalDate: DateTime.parse(j['renewal_date'] as String),
-        expiresOn: DateTime.parse(j['expires_on'] as String),
+        renewalDate: j['renewal_date'] == null ? null : DateTime.parse(j['renewal_date'] as String),
+        expiresOn: j['expires_on'] == null ? null : DateTime.parse(j['expires_on'] as String),
         cycleDays: j['cycle_days'] as int,
-        daysLeft: j['days_left'] as int,
+        daysLeft: j['days_left'] == null ? null : j['days_left'] as int,
+        cycleEnd: j['cycle_end'] == null ? null : DateTime.parse(j['cycle_end'] as String),
+        inactiveBy: j['inactive_by'] == null ? null : DateTime.parse(j['inactive_by'] as String),
+        paymentId: j['payment_id'] == null ? null : j['payment_id'] as String,
+        paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
+        daysToDue: j['days_to_due'] == null ? null : j['days_to_due'] as int,
+        statusMessage: j['status_message'] == null ? null : j['status_message'] as String,
+        lastPaymentFailed: j['last_payment_failed'] == null ? null : j['last_payment_failed'] as bool,
         latestPayment: j['latest_payment'] == null ? null : PaymentOut.fromJson(j['latest_payment'] as Map<String, dynamic>),
         canPayNext: j['can_pay_next'] as bool,
       );
@@ -7803,10 +7844,17 @@ class SubscriptionView {
         'interior_day': interiorDay,
         'start_date': _date(startDate),
         'cycle_start': _date(cycleStart),
-        'renewal_date': _date(renewalDate),
-        'expires_on': _date(expiresOn),
+        'renewal_date': renewalDate == null ? null : _date(renewalDate!),
+        'expires_on': expiresOn == null ? null : _date(expiresOn!),
         'cycle_days': cycleDays,
         'days_left': daysLeft,
+        'cycle_end': cycleEnd == null ? null : _date(cycleEnd!),
+        'inactive_by': inactiveBy == null ? null : _date(inactiveBy!),
+        'payment_id': paymentId,
+        'payment_status': paymentStatus,
+        'days_to_due': daysToDue,
+        'status_message': statusMessage,
+        'last_payment_failed': lastPaymentFailed,
         'latest_payment': latestPayment?.toJson(),
         'can_pay_next': canPayNext,
       };
@@ -8388,6 +8436,11 @@ class VehicleCard {
     required this.monthlyPriceRupees,
     required this.planName,
     required this.expiresOn,
+    required this.cycleEnd,
+    required this.inactiveBy,
+    required this.paymentStatus,
+    this.statusMessage,
+    this.lastPaymentFailed,
     required this.cutoffTime,
     required this.interiorDay,
     this.variant,
@@ -8405,6 +8458,11 @@ class VehicleCard {
   final int? monthlyPriceRupees;
   final String? planName;
   final DateTime? expiresOn;
+  final DateTime? cycleEnd;
+  final DateTime? inactiveBy;
+  final String? paymentStatus;
+  final String? statusMessage;
+  final bool? lastPaymentFailed;
   final String? cutoffTime;
   final String? interiorDay;
   final String? variant;
@@ -8422,6 +8480,11 @@ class VehicleCard {
         monthlyPriceRupees: j['monthly_price_rupees'] == null ? null : j['monthly_price_rupees'] as int,
         planName: j['plan_name'] == null ? null : j['plan_name'] as String,
         expiresOn: j['expires_on'] == null ? null : DateTime.parse(j['expires_on'] as String),
+        cycleEnd: j['cycle_end'] == null ? null : DateTime.parse(j['cycle_end'] as String),
+        inactiveBy: j['inactive_by'] == null ? null : DateTime.parse(j['inactive_by'] as String),
+        paymentStatus: j['payment_status'] == null ? null : j['payment_status'] as String,
+        statusMessage: j['status_message'] == null ? null : j['status_message'] as String,
+        lastPaymentFailed: j['last_payment_failed'] == null ? null : j['last_payment_failed'] as bool,
         cutoffTime: j['cutoff_time'] == null ? null : j['cutoff_time'] as String,
         interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
         variant: j['variant'] == null ? null : j['variant'] as String,
@@ -8440,6 +8503,11 @@ class VehicleCard {
         'monthly_price_rupees': monthlyPriceRupees,
         'plan_name': planName,
         'expires_on': expiresOn == null ? null : _date(expiresOn!),
+        'cycle_end': cycleEnd == null ? null : _date(cycleEnd!),
+        'inactive_by': inactiveBy == null ? null : _date(inactiveBy!),
+        'payment_status': paymentStatus,
+        'status_message': statusMessage,
+        'last_payment_failed': lastPaymentFailed,
         'cutoff_time': cutoffTime,
         'interior_day': interiorDay,
         'variant': variant,
@@ -8462,7 +8530,6 @@ class VehicleCreate {
     required this.interiorDayNotes,
     required this.photoUploadId,
     required this.rcUploadId,
-    this.firstPaymentStatus,
   });
 
   final String societyId;
@@ -8477,7 +8544,6 @@ class VehicleCreate {
   final String? interiorDayNotes;
   final String? photoUploadId;
   final String? rcUploadId;
-  final String? firstPaymentStatus;
 
   factory VehicleCreate.fromJson(Map<String, dynamic> j) => VehicleCreate(
         societyId: j['society_id'] as String,
@@ -8492,7 +8558,6 @@ class VehicleCreate {
         interiorDayNotes: j['interior_day_notes'] == null ? null : j['interior_day_notes'] as String,
         photoUploadId: j['photo_upload_id'] == null ? null : j['photo_upload_id'] as String,
         rcUploadId: j['rc_upload_id'] == null ? null : j['rc_upload_id'] as String,
-        firstPaymentStatus: j['first_payment_status'] == null ? null : j['first_payment_status'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -8508,7 +8573,6 @@ class VehicleCreate {
         'interior_day_notes': interiorDayNotes,
         'photo_upload_id': photoUploadId,
         'rc_upload_id': rcUploadId,
-        'first_payment_status': firstPaymentStatus,
       };
 }
 

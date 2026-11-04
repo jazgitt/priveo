@@ -171,7 +171,8 @@ const customerJson = {
       'subscription_status': 'Active',
       'monthly_price_rupees': 1299,
       'plan_name': 'Daily Premium',
-      'expires_on': '2026-11-06',
+      'payment_status': 'Due',
+      'status_message': 'Due in 3 days',
       'cutoff_time': '07:00',
       'interior_day': 'Friday',
       'next_service': {

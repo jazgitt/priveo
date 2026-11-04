@@ -18,6 +18,7 @@ from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.billing.service import ensure_current_cycle_payments
 from app.customers.logins import ensure_login, mobile_taken
 from app.customers.models import WEEKDAYS, AddonRequest, Customer, Subscription, Vehicle
 from app.directory.models import Society
@@ -146,6 +147,8 @@ class _Importer:
         self.vehicles: dict[str, list[tuple[Vehicle, str, str]]] = {}
         self.customers: dict[str, Customer] = {}
         self.master_emails: set[str] = set()
+        # Subscriptions made by this run: each gets its current cycle's payment.
+        self.new_subs: list[Subscription] = []
         self.latest_start: date | None = None
 
     def warn(self, sheet: str, ref: str, message: str) -> None:
@@ -274,9 +277,11 @@ class _Importer:
         if day is not None and day not in WEEKDAYS:
             self.warn(MASTER_SHEET, ref, "the interior day is not a weekday, left empty")
             day = None
-        self.db.add(Subscription(
+        sub = Subscription(
             vehicle_id=vehicle.id, monthly_price_rupees=int(price), status="Active",
-            first_service_date=start, cutoff_time=cutoff, interior_day=day))
+            first_service_date=start, cutoff_time=cutoff, interior_day=day)
+        self.db.add(sub)
+        self.new_subs.append(sub)
         self.report.vehicles_created += 1
         self.vehicles.setdefault(email, []).append((vehicle, car_number, model))
         return None
@@ -373,6 +378,7 @@ def import_workbook(db: Session, path: Path | str, *, apply: bool) -> ImportRepo
             for row in _rows(workbook[ADDON_SHEET]):
                 run.addon_row(row, year)
         run.drop_unused_placeholder()
+        ensure_current_cycle_payments(db, run.new_subs)
         if apply:
             db.commit()
         else:

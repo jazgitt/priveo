@@ -14,6 +14,23 @@ ENVIRONMENT must not be test or prod. The database must carry this tool's marker
 `init-marker` writes, on an already migrated database that has the single Admin. Nothing here
 creates application tables; schema comes from the Alembic migrations.
 
+Payment status. No status is chosen when a subscription is created: it comes from the cycle
+dates and today's date (the as-of day). The tool only sets each subscription's first service date,
+then runs the daily payments job logic: the current cycle's payment is made as
+generate_due_payments makes it (due on the cycle's last day; seeded subscriptions only), Paid and
+Initiated are recorded on it afterwards as the admin would, and mark_overdue_and_inactive marks
+Over due payments and makes subscriptions Inactive after 7 days late. No past payments are
+invented. Dates for a 30-day cycle (see CURRENT_CYCLE_MIX):
+  first service date 9 or 19 days ago ........ cycle ends in 20 or 10 days: Not Due
+  first service date 24 or 28 days ago ....... ends in 5 or 1 days: Due
+  first service date 29 days ago ............. ends today: Due today
+  first service date 31 to 36 days ago ....... first cycle ended 1 to 6 days ago, unpaid: Over due
+  first service date 38 to 42 days ago ....... ended 9 to 13 days ago: Over due, then Inactive
+  Initiated or Paid (recorded) ............... any of the above dates
+All six display statuses appear. Add-on payments are Open (booking Requested) or Paid (Completed).
+Note: mark_overdue_and_inactive works on every unpaid payment in the target database, not only
+the seeded ones.
+
 What remove deletes. Every row this tool created (listed in `two_society_seed_manifest`) plus
 every row that references one of them through a foreign key, found by walking the metadata,
 including rows made while testing by hand on the seeded customers, vehicles or crew. It never
@@ -53,8 +70,7 @@ from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401  (registers the tables)
 from app.addons.models import AddonBooking
-from app.billing.models import Invoice, Payment, PaymentEvent
-from app.billing.tax import included_gst
+from app.billing.models import Payment
 from app.changes.models import ScheduleChange
 from app.crew.models import CrewMember
 from app.customers.models import Customer, SchedulePattern, Subscription, Vehicle
@@ -256,40 +272,53 @@ def _vehicle_count(i: int) -> int:
     return 4 + (i // 2) % 2 if i % 2 == 0 else 1 + (i // 2) % 2
 
 
-def _plan_payment(db, admin, customer, login, vehicle, sub, status, *, cycle_start, overdue_since,
-                  key, now):
-    cycle_end = cycle_start + timedelta(days=29)
-    pay = Payment(
-        id=ident(f"payment:{key}"), customer_id=customer.id, vehicle_id=vehicle.id,
-        subscription_id=sub.id, kind="Plan", description="TEST plan cycle",
-        amount_rupees=sub.monthly_price_rupees, status=status, due_date=cycle_start,
-        cycle_start=cycle_start, cycle_end=cycle_end,
-        overdue_since=overdue_since if status == "Over due" else None,
-        initiated_at=now if status == "Initiated" else None,
-        received_at=now if status == "Received" else None,
-        confirmed_by=admin.id if status == "Received" else None)
-    _add(db, pay)
-    events = [PaymentEvent(id=ident(f"event:{key}"), payment_id=pay.id, to_status=status,
-                           by_login_id=admin.id if status == "Received" else None, at=now,
-                           note="Synthetic baseline")]
-    if status == "Received":
-        tax = included_gst(pay.amount_rupees, 18, "CGST_SGST")
-        tax["mock_configuration"] = True
-        events.append(Invoice(
-            id=ident(f"invoice:{key}"), payment_id=pay.id, number=f"SEED-{key.upper()}"[:24],
-            issued_by=admin.id, amount_rupees=pay.amount_rupees,
-            customer_name=login.display_name, vehicle_label=vehicle.registration or vehicle.model,
-            description=pay.description,
-            seller_details={"seller_name": "Placeholder TEST Priveo",
-                            "seller_address": "Placeholder test address",
-                            "seller_gstin": "Placeholder TEST GSTIN"},
-            tax_details=tax, issued_at=now))
-    _add(db, *events)
-    return pay
+# The current cycle of an ordinary Active vehicle: (what is recorded on it, days to the due date,
+# which is the cycle's last day). Nothing is stored by hand: the first service date puts the
+# cycle where the date rule needs it, the daily job logic makes the payment, and Paid or
+# Initiated is recorded on it afterwards, as the admin or the customer would. Dates (30-day cycle,
+# due on its last day, today = the as-of day): 20 or 10 days left is Not Due, 5 or 1 is Due, 0 is
+# Due today, a first service date 31 days ago or more is Over due (the overdue vehicles below,
+# 1 to 6 days late stay Active; 9 to 13 days late the job makes Inactive), Initiated and Paid are
+# recorded. Ten rows, used in turn.
+CURRENT_CYCLE_MIX = (
+    ("Paid", 25), ("Paid", 12), ("Paid", 5), (None, 20), (None, 10),
+    (None, 5), (None, 1), (None, 0), ("Initiated", 2), ("Paid", 15),
+)
+
+
+def _record_payments(db, admin, now, planned, late_start):
+    """Makes the payments the way the daily job would have. A subscription that started a cycle
+    ago and has not paid had its first payment made on its first service date (`late_start`);
+    each subscription's current cycle payment is made as generate_due_payments does it (only for
+    the seeded subscriptions). Then the Paid and Initiated ones are recorded, as the admin would,
+    and the job marks the late ones Over due and makes the long-late subscriptions Inactive.
+    No past payment is invented."""
+    from app.billing.config import get_money_settings
+    from app.billing.service import BillingService, mark_overdue_and_inactive
+    from app.changes.cycle import cycle_window
+
+    service = BillingService(db, lambda: now, get_money_settings())
+    today = (now + timedelta(hours=IST_OFFSET_HOURS)).date()
+    seeded = db.execute(
+        select(Subscription, Vehicle).join(Vehicle, Vehicle.id == Subscription.vehicle_id)
+        .where(Vehicle.source_ref.like("seed2:%"))).all()
+    for sub, vehicle in seeded:
+        if sub.id in late_start:
+            service.ensure_cycle_payment(sub, vehicle, sub.first_service_date)
+        start, _ = cycle_window(sub.first_service_date, 0, today, service._cycle_days)
+        service.ensure_cycle_payment(sub, vehicle, start)
+    db.commit()
+    for sub_id, state in planned.items():
+        payment = db.scalar(select(Payment).where(
+            Payment.subscription_id == sub_id, Payment.status == "Open", Payment.kind == "Plan"))
+        service._apply(payment, state, admin.id, "Synthetic baseline")
+    db.commit()
+    mark_overdue_and_inactive(now, db=db)
+    db.commit()
 
 
 def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, roles, day, now,
-                  password_hash, sequence, counters):
+                  password_hash, sequence, counters, planned, late_start):
     s_no = int(tag[1:])
     society = Society(id=ident(f"{tag}:society"), name=name, city="Synthetic City",
                       sector="Seed data")
@@ -364,28 +393,32 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
                 source_ref=f"seed2:{tag}:{n}")
             _add(db, vehicle)
             plan = plans[(i + v) % 3]
-            # Different start dates for the vehicles of one customer.
-            cycle_age = (i * 3 + v * 7) % 28
-            cycle_start = day - timedelta(days=cycle_age)
-            first = cycle_start - timedelta(days=30 * (1 + (i + v) % 3))
+            # The current cycle ends `days_left` days from today (negative: Over due).
             inactive = inactive_left > 0 and v < inactive_left
             overdue_days = None
             if inactive:
-                overdue_days = 9 + (n % 5)  # more than 7 days: the plan has gone Inactive
+                overdue_days = 9 + (n % 5)  # more than 7 days: the job makes the plan Inactive
             elif i in overdue_small and v == 0:
                 overdue_days = 1 + (i % 6)  # 6 days or fewer: the plan is still Active
+            record = None
             if overdue_days is not None:
-                cycle_start = day - timedelta(days=overdue_days)
-                status, state = ("Inactive" if inactive else "Active"), "Over due"
+                days_left = -overdue_days
             else:
-                status, state = "Active", ["Received"] * 7 + ["Due", "Initiated", "Received"]
-                state = state[(i + v) % 10]
+                record, days_left = CURRENT_CYCLE_MIX[(i + v) % len(CURRENT_CYCLE_MIX)]
+            cycle_start = day + timedelta(days=days_left - 29)
+            if days_left < 0:
+                late_start.add(ident(f"{tag}:sub:{i}:{v}"))
+            # The first service date is where the date rule needs the cycle. A late vehicle
+            # started one cycle ago: its first payment is the overdue one.
+            first = cycle_start
             sub = Subscription(
                 id=ident(f"{tag}:sub:{i}:{v}"), vehicle_id=vehicle.id, plan_id=plan.id,
-                monthly_price_rupees=plan.monthly_price_rupees, status=status,
-                first_service_date=min(first, cycle_start - timedelta(days=30)),
+                monthly_price_rupees=plan.monthly_price_rupees, status="Active",
+                first_service_date=first,
                 cutoff_time=time(11), interior_day=None)
             _add(db, sub)
+            if record:
+                planned[sub.id] = record
             interior = []
             if plan.name == "Premium":
                 interior = [WEEKDAYS[(i + v) % 6]]
@@ -394,14 +427,9 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
             _add(db, SchedulePattern(
                 id=ident(f"{tag}:pattern:{i}:{v}"), subscription_id=sub.id, kind="Weekly",
                 exterior_weekdays=list(WEEKDAYS[:6]), interior_weekdays=interior))
-            _plan_payment(db, admin, customer, login, vehicle, sub, state,
-                          cycle_start=cycle_start, overdue_since=cycle_start,
-                          key=f"{tag}:{i}:{v}", now=now)
             counters["vehicles"] += 1
-            counters["overdue"] += state == "Over due"
-            counters["inactive"] += status == "Inactive"
-            if status == "Active":
-                counters["active"] += 1
+            counters["overdue"] += days_left < 0
+            status = "Inactive" if inactive else "Active"  # what the daily job will leave it as
             # A skip or a pause on some vehicles
             if status == "Active" and (i + v) % 13 == 0:
                 kind = "pause" if (i + v) % 26 == 0 else "skip"
@@ -417,14 +445,14 @@ def _seed_society(db, admin, plans, addons, tag, name, n_customers, n_crew, role
                 item = addons[(i // 6) % 4]
                 booking_state = ["Requested", "Completed", "Requested"][(i // 6) % 3]
                 offset = 2 + (i % 4) if booking_state == "Requested" else -(2 + i % 5)
-                pay_state = "Received" if booking_state == "Completed" else "Due"
+                pay_state = "Paid" if booking_state == "Completed" else "Open"
                 due = day + timedelta(days=offset)
                 pay = Payment(
                     id=ident(f"payment:{tag}:addon:{i}"), customer_id=customer.id,
                     vehicle_id=vehicle.id, kind="Add-on", description=item.name,
                     amount_rupees=item.price_rupees, status=pay_state, due_date=due,
-                    received_at=now if pay_state == "Received" else None,
-                    confirmed_by=admin.id if pay_state == "Received" else None)
+                    received_at=now if pay_state == "Paid" else None,
+                    confirmed_by=admin.id if pay_state == "Paid" else None)
                 _add(db, pay)
                 _add(db, AddonBooking(
                     id=ident(f"{tag}:booking:{i}"), customer_id=customer.id,
@@ -465,11 +493,19 @@ def add(engine: Engine, as_of: date | None = None, password: str = "", *,
             plans, addons = _setup_globals(db)
             sequence = [db.scalar(select(func.coalesce(func.max(Complaint.number), 0)))]
             societies = {}
+            planned: dict = {}
+            late_start: set = set()
             for index, (tag, name, n_cust, n_crew, roles) in enumerate(SOCIETIES):
                 size = customers[index] if customers else n_cust
                 societies[tag] = _seed_society(db, admin, plans, addons, tag, name, size, n_crew,
-                                               roles, day, now, password_hash, sequence, counters)
+                                               roles, day, now, password_hash, sequence, counters, planned, late_start)
             db.commit()
+            _record_payments(db, admin, now, planned, late_start)
+            counters["inactive"] = db.scalar(
+                select(func.count()).select_from(Subscription).join(
+                    Vehicle, Vehicle.id == Subscription.vehicle_id)
+                .where(Vehicle.source_ref.like("seed2:%"), Subscription.status == "Inactive"))
+            counters["active"] = counters["vehicles"] - counters["inactive"]
             summary: dict = {"as_of": day.isoformat(), **counters, "schedule": {}}
             if schedule:
                 summary["schedule"] = _schedule_overlay(db, admin, societies, day)
@@ -566,11 +602,14 @@ def _closure(db: Session) -> dict[str, set]:
         if extra:
             selected["admin_alerts"] |= extra
             changed = True
-        # The scheduler writes audit rows that name a schedule by a plain string, not a key.
-        schedule_ids = {str(k) for k in selected["schedules"]}
-        audit = set(db.scalars(select(DirectoryAudit.id).where(
-            DirectoryAudit.entity == "schedule", DirectoryAudit.entity_id.in_(schedule_ids)))) \
-            if schedule_ids else set()
+        # The scheduler and billing write audit rows that name a schedule or a payment by a
+        # plain string, not a key.
+        named = {str(k) for name in ("schedules", "payments") for k in selected[name]}
+        audit = set()
+        for start in range(0, len(named), 5000):
+            audit |= set(db.scalars(select(DirectoryAudit.id).where(
+                DirectoryAudit.entity.in_(("schedule", "payment")),
+                DirectoryAudit.entity_id.in_(list(named)[start:start + 5000]))))
         extra = audit - selected["directory_audit"]
         if extra:
             selected["directory_audit"] |= extra

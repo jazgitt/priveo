@@ -106,7 +106,7 @@ void main() {
       await tapFinder(tester, find.textContaining('To:'));
       await tapFinder(tester, find.text('OK'));
       await tapFinder(tester, find.text('Confirm pause'));
-      await untilFound(tester, find.textContaining('Plan now renews'));
+      await untilFound(tester, find.textContaining('Paused '));
       expect(find.textContaining('Paused '), findsWidgets);
 
       // The pause is listed with a way to end it.

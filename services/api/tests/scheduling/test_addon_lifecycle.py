@@ -31,11 +31,11 @@ def test_standalone_without_subscription_is_scheduled_unpaid_and_tracks_completi
     assert job.duration_minutes == 120 and job.finish_by_minute == 720 and job.crew_id
     assert world.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id)) is None
     payment = world.db.get(Payment, uuid.UUID(booking['payment_id']))
-    assert payment.status == 'Due'
+    assert payment.status == 'Open'
     service.set_job_status(world.db, job.id, 'Completed')
     # The payment turns Over due as soon as the service completes, not on the daily run.
     world.db.refresh(payment)
-    assert payment.status == 'Over due' and payment.overdue_since is not None
+    assert payment.status == 'Open' and payment.overdue_since is not None
     result = api.get('/v1/customer/addons', headers=customer).json()['requests'][0]
     assert result['status'] == 'Completed' and result['visit_id'] == str(job.visit_id)
 

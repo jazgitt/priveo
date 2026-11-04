@@ -35,7 +35,7 @@ requirement. Where a screen decision fills a gap, it is marked **UI decision** a
 | Saving | Every change shows "Saving…", then "Saved" or the reason it failed, from one shared hook. The control that started it shows a spinner and is disabled while it runs. |
 | Confirmation | Anything that deletes, signs out, clears, freezes, unfreezes, ends or deactivates asks first, in a dialog that names the record and says what will happen. |
 | Long actions | A run that takes more than a moment (the scheduler) shows a progress panel with the elapsed time and what is happening. The admin can leave the page; the result arrives as a notification with a link to it. |
-| Status | Status chips use one colour set everywhere: Active/Received green, Activating/Due amber, Inactive/Over due red, Frozen blue, Draft grey. |
+| Status | Status chips use one colour set everywhere: Active/Paid green, Activating/Due amber, Inactive/Over due red, Frozen blue, Draft grey. |
 | Dates | `dd-Mon-yy` everywhere (for example 07-Nov-26), with the weekday where the day matters (schedules). Prices as "₹999", GST included. |
 | Loading speed | Each page's code loads when it is first opened. A save updates only what changed. Fonts are compressed (woff2). |
 

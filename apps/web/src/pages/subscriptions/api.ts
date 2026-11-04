@@ -15,8 +15,9 @@ export interface SubscriptionRow {
   plan_name: string | null;
   status: string; // Active | Activating | Paused | Inactive
   first_service_date: string | null;
+  /** Only set while the plan payment is Over due (PAY-14). */
   renewal_date: string | null;
-  /** The latest plan payment's status, and whether it is waiting (Due or Over due). */
+  /** The latest plan payment's status, and whether it is waiting (Due, Due today or Over due). */
   payment_status?: string | null;
   payment_due?: boolean;
 }

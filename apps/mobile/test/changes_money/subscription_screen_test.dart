@@ -25,8 +25,6 @@ SubscriptionDto _sub({
   planListPriceRupees: listPrice,
   planCode: planCode,
   cycleStart: d(8),
-  renewalDate: d(7, 11),
-  expiresOn: d(6, 11),
   cycleDays: 30,
   daysLeft: 12,
   latestPayment: payment('p0', status: 'Received'),
@@ -64,7 +62,29 @@ void main() {
       expect(find.text('Weekly internal cleaning'), findsOneWidget);
       expect(find.text('₹1,499'), findsOneWidget);
       expect(find.text('Plan ID: PLN-0001'), findsOneWidget);
-      expect(find.textContaining('Expires on'), findsWidgets);
+      expect(find.textContaining('Expires on'), findsNothing);
+    });
+
+    testWidgets('Over due shows the end date and the Inactive warning (SUB-01)',
+        (tester) async {
+      final repo = FakeMoneyRepository()
+        ..sub = SubscriptionDto(
+          vehicleId: vehicle, planName: 'Premium Care', vehicle: 'Hyundai Creta',
+          registration: 'HR 26 DK 8337', society: 'DLF', status: 'Active',
+          monthlyPriceRupees: 999, paymentMethod: 'UPI', cutoffTime: null,
+          interiorDay: null, cycleStart: d(1), cycleDays: 30, daysLeft: 0,
+          cycleEnd: d(30), inactiveBy: d(7, 11), paymentId: 'p9',
+          paymentStatus: 'Over due', daysToDue: -2,
+          statusMessage: '2 days over due', lastPaymentFailed: true,
+          latestPayment: payment('p9', status: 'Over due'), canPayNext: true,
+        );
+      await openAt(tester, path, money: repo);
+      expect(find.text('Billing cycle ended on 30-Oct-26'), findsOneWidget);
+      expect(
+          find.text('Your subscription becomes Inactive if this is not paid by 07-Nov-26.'),
+          findsOneWidget);
+      expect(find.text('2 days over due'), findsOneWidget);
+      expect(find.text('Your last payment failed'), findsOneWidget);
     });
 
     testWidgets('lists the open add-ons for this vehicle only', (tester) async {

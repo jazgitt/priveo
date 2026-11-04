@@ -113,7 +113,7 @@ def test_skip_pause_and_cutoff_change_on_projected_days(api, asha, clock):
     assert by_date(month(api, asha, "2026-12"))["2026-12-12"]["cutoff_time"] == "08:30"
 
 
-def test_renewal_dates_move_with_a_pause(api, asha, clock):
+def test_renewal_dates_do_not_move_with_a_pause(api, asha, clock):
     vid = asha["vehicles"][0]
     # First service 14-Sep-26: renewals on 14-Oct-26, 13-Nov-26, 13-Dec-26.
     assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-13"]
@@ -124,8 +124,8 @@ def test_renewal_dates_move_with_a_pause(api, asha, clock):
         headers=asha["headers"],
     )
     assert r.status_code == 201, r.text
-    # Two paused days: the renewals before the pause move two days on.
-    assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-15"]
+    # A pause moves nothing.
+    assert [r["date"] for r in month(api, asha, "2026-12")["renewals"]] == ["2026-12-13"]
 
 
 def test_a_requested_cutoff_change_keeps_the_current_value(api, asha, clock, db):

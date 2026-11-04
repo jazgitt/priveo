@@ -212,9 +212,11 @@ def test_overdue_and_inactive_rules_hold(prepared):
         inactive = db.scalars(select(Subscription).where(Subscription.status == "Inactive")).all()
         assert len(inactive) == 7
         inactive_ids = {s.id for s in inactive}
-        late = db.scalars(select(Payment).where(Payment.status == "Over due")).all()
+        late = db.scalars(select(Payment).where(
+            Payment.status == "Open", Payment.kind == "Plan", Payment.due_date < AS_OF)).all()
+        assert late
         for payment in late:
-            age = (AS_OF - payment.overdue_since).days
+            age = (AS_OF - payment.due_date).days
             if payment.subscription_id in inactive_ids:
                 assert age > 7
             else:
@@ -226,3 +228,32 @@ def test_overdue_and_inactive_rules_hold(prepared):
         many = sum(1 for n in counts_by_customer.values() if n > 3)
         assert many == 70  # half of the 40 and half of the 100 customers
         assert _count(db, AddonBooking) > 0
+
+
+def test_seed_shows_all_six_payment_statuses(prepared):
+    from app.billing.models import Payment
+    from app.billing.status import DISPLAY_STATUSES, STORED_STATUSES, display_status
+
+    seed.add(prepared, AS_OF, "Local-pw-1", customers=(40, 100), schedule=False)
+    with Session(prepared) as db:
+        payments = db.scalars(select(Payment)).all()
+        assert {p.status for p in payments} <= set(STORED_STATUSES)
+        shown = {display_status(p, AS_OF).status for p in payments if p.kind == "Plan"}
+        assert shown == set(DISPLAY_STATUSES)
+        current = {}  # the latest cycle of each subscription
+        for p in sorted((p for p in payments if p.kind == "Plan"), key=lambda p: p.cycle_start):
+            current[p.subscription_id] = p
+        seeded = db.scalars(select(Subscription.id).join(Vehicle, Vehicle.id == Subscription.vehicle_id)
+                            .where(Vehicle.source_ref.like("seed2:%"))).all()
+        assert seeded and set(seeded) <= set(current)  # one current-cycle payment each
+        # No past payment is invented: a vehicle has one payment, or two when its first
+        # cycle ended unpaid.
+        per_sub = {}
+        for p in payments:
+            if p.kind == "Plan":
+                per_sub.setdefault(p.subscription_id, []).append(p)
+        assert all(len(rows) <= 2 for rows in per_sub.values())
+        for rows in per_sub.values():
+            if len(rows) == 2:
+                first = min(rows, key=lambda r: r.cycle_start)
+                assert first.status == "Open" and first.due_date < AS_OF

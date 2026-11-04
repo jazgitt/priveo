@@ -29,8 +29,8 @@ from app.notifications.service import NotificationService
 
 log = logging.getLogger("priveo.notifications")
 
-REMINDER_FIRST_DAYS = 7  # NOTIF-05: one week before the renewal date
-REMINDER_SECOND_DAYS = 1  # then one day before, then every 2 days
+# NOTIF-05: days from the due date (the cycle end) on which the reminder goes.
+REMINDER_OFFSETS = (-7, -1, 0, 1, 7)
 
 
 def _safe(fn):
@@ -429,21 +429,54 @@ def addon_cancelled(db: Session, booking) -> None:
 
 # Payments ---------------------------------------------------------------------
 
+def _payment_login(db: Session, payment) -> uuid.UUID | None:
+    from app.customers.models import Customer
+
+    return db.scalar(select(Customer.login_id).where(Customer.id == payment.customer_id))
+
+
+@_safe
+def payment_received(db: Session, payment, what: str) -> None:
+    """PAY-08, ADM-PAY-03: the admin approved. `what` names the vehicle and the cycle dates."""
+    _service(db).notify(
+        _payment_login(db, payment), "payment_received", "Payment received",
+        f"We have received your payment of Rs {payment.amount_rupees} for {what}.",
+        ref_type="payment", ref_id=str(payment.id), dedupe_key=f"payment_received:{payment.id}")
+
+
+@_safe
+def payment_failed(db: Session, payment, what: str) -> None:
+    """PAY-17: the admin rejected the payment. Every rejection is told."""
+    _service(db).notify(
+        _payment_login(db, payment), "payment_failed", "Your last payment failed",
+        f"We could not confirm your payment for {what}. Please check and mark it paid again.",
+        ref_type="payment", ref_id=str(payment.id),
+        dedupe_key=f"payment_failed:{payment.id}:{payment.rejected_at.isoformat()}")
+
+
 def reminder_due(offset_days: int) -> bool:
-    """NOTIF-05. `offset_days` is today minus the renewal date: a reminder one
-    week before (-7), one day before (-1), then every 2 days (1, 3, 5, ...)."""
-    if offset_days in (-REMINDER_FIRST_DAYS, -REMINDER_SECOND_DAYS):
-        return True
-    return offset_days > 0 and offset_days % 2 == 1
+    """NOTIF-05. `offset_days` is today minus the cycle end date (the due date):
+    7 days before (-7), 1 day before (-1), the due day (0), 1 day after (1) and
+    7 days after (7)."""
+    return offset_days in REMINDER_OFFSETS
+
+
+def _reminder_when(offset_days: int, due_date: date) -> str:
+    if offset_days == 0:
+        return "is due today"
+    if offset_days < 0:
+        return f"is due on {_show(due_date)}"
+    return f"was due on {_show(due_date)}"
 
 
 @_safe
 def renewal_reminders(db: Session, today: date) -> int:
-    """The daily job: "Renewal reminder" for each plan payment still Due or
-    Over due on an Active subscription. It stops by itself when the payment
-    becomes Initiated or Received or the subscription Inactive, and starts
-    again if the admin moves the payment back to Due or Over due (ADM-PAY-07),
-    with no extra message. Safe to run again the same day."""
+    """The reminder job (NOTIF-05): "Renewal reminder" for each plan payment that
+    is still Open (not Initiated, not Paid) on an Active subscription, on the
+    five days counted from its due date. It stops by itself when the payment
+    becomes Initiated or Paid or the subscription Inactive. A rejected payment is
+    Open again, so the days still ahead send as usual; days already passed are
+    not made up (ADM-PAY-07). Safe to run again the same day."""
     from app.billing.models import Payment
     from app.customers.models import Customer, Subscription
 
@@ -451,17 +484,17 @@ def renewal_reminders(db: Session, today: date) -> int:
         select(Payment, Customer.login_id)
         .join(Customer, Customer.id == Payment.customer_id)
         .join(Subscription, Subscription.id == Payment.subscription_id)
-        .where(Payment.kind == "Plan", Payment.status.in_(("Due", "Over due")),
+        .where(Payment.kind == "Plan", Payment.status == "Open",
                Payment.voided_at.is_(None), Subscription.status == "Active")).all()
     sent = 0
     for payment, login_id in rows:
-        if not reminder_due((today - payment.due_date).days):
+        offset = (today - payment.due_date).days
+        if not reminder_due(offset):
             continue
-        when = f"is due on {_show(payment.due_date)}" if payment.due_date >= today \
-            else f"was due on {_show(payment.due_date)}"
         row = _service(db).notify(
             login_id, "renewal_reminder", "Renewal reminder",
-            f"Your plan payment of Rs {payment.amount_rupees} {when}. Pay now to keep "
+            f"Your plan payment of Rs {payment.amount_rupees} "
+            f"{_reminder_when(offset, payment.due_date)}. Pay now to keep "
             "your service going.", ref_type="payment", ref_id=str(payment.id),
             dedupe_key=f"reminder:{payment.id}:{today.isoformat()}")
         sent += 1 if row is not None else 0

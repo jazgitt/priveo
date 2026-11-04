@@ -8,7 +8,7 @@ export interface NewPayment {
   kind: string;
   description: string;
   amount_rupees: number;
-  due_date: string;
+  due_date: string | null;
   cycle_start: string | null;
   status: string;
 }

@@ -107,6 +107,11 @@ class PaymentDto {
     required this.status,
     required this.dueDate,
     this.invoiceNumber,
+    this.daysToDue = 0,
+    this.statusMessage = '',
+    this.lastPaymentFailed = false,
+    this.cycleStart,
+    this.cycleEnd,
   });
 
   final String id;
@@ -116,10 +121,29 @@ class PaymentDto {
   final String description;
   final int amountRupees;
 
-  /// Due, Over due, Initiated or Received (PAY-09).
+  /// Not Due, Due, Due today, Over due, Initiated or Paid (PAY-09).
   final String status;
   final DateTime dueDate;
   final String? invoiceNumber;
+
+  /// Negative when over due. The backend works it out (PAY-14).
+  final int daysToDue;
+
+  /// "Due in 3 days", "2 days over due", "Waiting for Priveo to confirm",
+  /// "Payment received"; empty for Not Due.
+  final String statusMessage;
+
+  /// The last payment was rejected by the admin (PAY-17).
+  final bool lastPaymentFailed;
+  final DateTime? cycleStart;
+  final DateTime? cycleEnd;
+
+  /// A payment the customer can still start: it is not Initiated or Paid.
+  bool get canMarkPaid => status != 'Initiated' && status != 'Paid';
+
+  /// Due, Due today or Over due: worth a payment line (PAY-18).
+  bool get needsPayment =>
+      status == 'Due' || status == 'Due today' || status == 'Over due';
 
   factory PaymentDto.fromJson(Map<String, dynamic> j) => PaymentDto(
     id: j['id'] as String,
@@ -129,6 +153,11 @@ class PaymentDto {
     status: j['status'] as String,
     dueDate: _date(j['due_date']),
     invoiceNumber: j['invoice_number'] as String?,
+    daysToDue: j['days_to_due'] as int? ?? 0,
+    statusMessage: j['status_message'] as String? ?? '',
+    lastPaymentFailed: j['last_payment_failed'] as bool? ?? false,
+    cycleStart: _dateOrNull(j['cycle_start']),
+    cycleEnd: _dateOrNull(j['cycle_end']),
   );
 }
 
@@ -193,10 +222,17 @@ class SubscriptionDto {
     this.planListPriceRupees,
     this.planCode,
     required this.cycleStart,
-    required this.renewalDate,
+    this.renewalDate,
     this.expiresOn,
     required this.cycleDays,
-    required this.daysLeft,
+    this.daysLeft,
+    this.cycleEnd,
+    this.inactiveBy,
+    this.paymentId,
+    this.paymentStatus = 'Not Due',
+    this.daysToDue = 0,
+    this.statusMessage = '',
+    this.lastPaymentFailed = false,
     required this.latestPayment,
     required this.canPayNext,
   });
@@ -219,15 +255,30 @@ class SubscriptionDto {
   final int? planListPriceRupees;
   final String? planCode;
   final DateTime cycleStart;
-  final DateTime renewalDate;
 
-  /// The last day the plan covers. Later than the cycle end once a renewal
-  /// payment is confirmed. Older replies without it end the day before renewal.
+  /// The dates below are null unless the payment is Over due (SUB-01).
+  final DateTime? renewalDate;
   final DateTime? expiresOn;
-  DateTime get endDate =>
-      expiresOn ?? renewalDate.subtract(const Duration(days: 1));
+  final DateTime? cycleEnd;
+
+  /// The date the subscription becomes Inactive if still unpaid.
+  final DateTime? inactiveBy;
   final int cycleDays;
-  final int daysLeft;
+  final int? daysLeft;
+
+  /// The payment of the current cycle, and its display status (PAY-09).
+  final String? paymentId;
+  final String paymentStatus;
+  final int daysToDue;
+  final String statusMessage;
+  final bool lastPaymentFailed;
+
+  bool get isOverdue => paymentStatus == 'Over due';
+
+  /// The last day of the cycle, worked out from its start and length. Only for
+  /// logic (calendar coverage, the ring); it is never shown unless Over due.
+  DateTime get coveredUntil => DateTime(
+      cycleStart.year, cycleStart.month, cycleStart.day + cycleDays - 1);
   final PaymentDto? latestPayment;
   final bool canPayNext;
 
@@ -247,10 +298,17 @@ class SubscriptionDto {
     planListPriceRupees: j['plan_list_price_rupees'] as int?,
     planCode: j['plan_code'] as String?,
     cycleStart: _date(j['cycle_start']),
-    renewalDate: _date(j['renewal_date']),
-    expiresOn: j['expires_on'] == null ? null : _date(j['expires_on']),
+    renewalDate: _dateOrNull(j['renewal_date']),
+    expiresOn: _dateOrNull(j['expires_on']),
     cycleDays: j['cycle_days'] as int,
-    daysLeft: j['days_left'] as int,
+    daysLeft: j['days_left'] as int?,
+    cycleEnd: _dateOrNull(j['cycle_end']),
+    inactiveBy: _dateOrNull(j['inactive_by']),
+    paymentId: j['payment_id'] as String?,
+    paymentStatus: j['payment_status'] as String? ?? 'Not Due',
+    daysToDue: j['days_to_due'] as int? ?? 0,
+    statusMessage: j['status_message'] as String? ?? '',
+    lastPaymentFailed: j['last_payment_failed'] as bool? ?? false,
     latestPayment: j['latest_payment'] == null
         ? null
         : PaymentDto.fromJson(j['latest_payment'] as Map<String, dynamic>),

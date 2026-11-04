@@ -56,7 +56,7 @@ class BillingHistoryScreen extends ConsumerWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
                   final p = rows[i];
-                  final unpaid = p.status == 'Due' || p.status == 'Over due';
+                  final unpaid = p.canMarkPaid;
                   return SectionCard(
                     child: InkWell(
                       onTap: unpaid ? () => context.push(payPath(p.id)) : null,
@@ -72,6 +72,9 @@ class BillingHistoryScreen extends ConsumerWidget {
                                 ),
                                 Text(formatRupees(p.amountRupees)),
                                 Text(formatDate(p.dueDate)),
+                                PaymentStatusNote(
+                                    message: p.statusMessage,
+                                    lastPaymentFailed: p.lastPaymentFailed),
                               ],
                             ),
                           ),

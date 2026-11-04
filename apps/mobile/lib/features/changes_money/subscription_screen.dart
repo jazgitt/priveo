@@ -116,7 +116,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${MoneyStrings.expiresOn} ${formatDate(s.endDate)}'),
                     Text('${MoneyStrings.monthly}: ${formatRupees(s.monthlyPriceRupees)}'),
                     Text('${MoneyStrings.paymentMethod}: ${s.paymentMethod}'),
                     if (s.planCode != null) Text('${MoneyStrings.planId}: ${s.planCode}'),
@@ -198,7 +197,15 @@ class _PlanHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = context.brand;
     final text = Theme.of(context).textTheme;
-    final progress = s.cycleDays == 0 ? 0.0 : 1 - (s.daysLeft / s.cycleDays);
+    // Days left count to the end of the cycle. The API sends them only when
+    // Over due, so they are worked out here from the cycle start and length.
+    final today = DateTime.now();
+    final daysLeft = (s.daysLeft ??
+            s.coveredUntil
+                .difference(DateTime(today.year, today.month, today.day))
+                .inDays)
+        .clamp(0, s.cycleDays);
+    final progress = s.cycleDays == 0 ? 0.0 : 1 - (daysLeft / s.cycleDays);
     final tone = switch (s.status) {
       'Active' => ChipTone.ok,
       'Paused' || 'Activating' => ChipTone.info,
@@ -258,7 +265,7 @@ class _PlanHero extends StatelessWidget {
           Row(
             children: [
               Semantics(
-                label: MoneyStrings.daysLeft(s.daysLeft),
+                label: MoneyStrings.daysLeft(daysLeft),
                 child: ExcludeSemantics(
                   child: SizedBox(
                     width: 64,
@@ -273,7 +280,7 @@ class _PlanHero extends StatelessWidget {
                               value: progress.clamp(0.0, 1.0).toDouble(),
                               strokeWidth: 6),
                         ),
-                        Text('${s.daysLeft}', style: text.titleLarge),
+                        Text('$daysLeft', style: text.titleLarge),
                       ],
                     ),
                   ),
@@ -284,14 +291,34 @@ class _PlanHero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(MoneyStrings.daysLeft(s.daysLeft), style: text.titleMedium),
-                    Text('${MoneyStrings.expiresOnLong} ${formatDate(s.endDate)}',
-                        style: text.bodyMedium?.copyWith(color: b.mute)),
+                    Text(MoneyStrings.daysLeft(daysLeft), style: text.titleMedium),
+                    // SUB-01: dates only when Over due.
+                    if (s.isOverdue && s.cycleEnd != null)
+                      Text(MoneyStrings.cycleEnded(formatDate(s.cycleEnd!)),
+                          style: text.bodyMedium?.copyWith(color: b.mute)),
                   ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              StatusChip(paymentStatusText(s.paymentStatus),
+                  tone: paymentTone(s.paymentStatus)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: PaymentStatusNote(
+                    message: s.statusMessage,
+                    lastPaymentFailed: s.lastPaymentFailed),
+              ),
+            ],
+          ),
+          if (s.isOverdue && s.inactiveBy != null) ...[
+            const SizedBox(height: 8),
+            Text(MoneyStrings.inactiveWarning(formatDate(s.inactiveBy!)),
+                style: text.bodyMedium),
+          ],
         ],
       ),
     );

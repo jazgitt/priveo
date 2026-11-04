@@ -167,15 +167,14 @@ Events inside the service (Derived): `VisitCompleted`, `PaymentStatusChanged`, `
 
 ### 4.8 Background jobs
 
-The same code runs the jobs. Today Vercel cron (`vercel.json`) calls eight routes under `/v1/internal/cron/`, each checked with `CRON_SECRET`. A ninth route, `mani-retention`, is registered in the same table but is not in the schedule yet. On AWS, EventBridge Scheduler starts an ECS task instead. Jobs call services, never repositories.
+The same code runs the jobs. Today Vercel cron (`vercel.json`) calls seven scheduled routes under `/v1/internal/cron/`, each checked with `CRON_SECRET`. A ninth route, `mani-retention`, is registered in the same table but is not in the schedule yet. On AWS, EventBridge Scheduler starts an ECS task instead. Jobs call services, never repositories.
 
 | Job (route) | Does |
 |---|---|
-| `payments-generate` | Creates each plan payment 7 days before the renewal date, Due by the renewal date |
-| `payments-overdue` | Moves unpaid to Over due, then makes the subscription Inactive after 7 days |
+| `payments-daily` (2:00 IST) | Creates the current cycle's payment for each Active subscription, then moves unpaid to Over due and makes the subscription Inactive after 7 days. The old `payments-generate` and `payments-overdue` names still answer a manual call |
 | `freeze-due` | Freezes schedules whose cutoff (8 PM the day before) has passed |
 | `automatic-planning` | Runs the automatic planner (coded, default off) |
-| `renewal-reminders` | Sends renewal reminders |
+| `renewal-reminders` (10:00 IST) | Sends renewal reminders at 7 days before, 1 day before, on, 1 day after and 7 days after the due date |
 | `checkin-notify` | Sends the monthly check-in prompt |
 | `complaints-overdue` | Alerts the admin about overdue complaints and sends the pending support emails |
 | `crew-society-moves` | Applies the crew society moves that have come due |
@@ -345,7 +344,7 @@ Phases follow the dependencies: a customer cannot sign in until an admin has cre
 | 3 Scheduling | `scheduling`, solver, capacity, schedule board, freeze and unfreeze, needs-scheduling | A frozen schedule for one society and a week is produced from test data |
 | 4 Crew app | Job cards, performing a service, checklist, offline upload queue, could-not-complete, manager features, `visits` and `media` | A crew member completes a day of jobs with a poor connection |
 | 5 Customer app | Onboarding, home, calendar, service details with proof, vehicles, account, notifications | A customer sees a completed visit with its photos |
-| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions, and the `staging` environment | A payment runs from Due to Received, and an over-due payment makes the subscription Inactive after 7 days |
+| 6 Changes and money | `changes` (skip, pause, cutoff), `billing` (UPI flow, statuses, jobs, invoices), `addons`, admin payment screens and quick actions, and the `staging` environment | A payment runs from Due to Paid, and an over-due payment makes the subscription Inactive after 7 days |
 | 7 Support and feedback | `support` (complaints, issues, feedback, ratings, check-ins), admin alerts, ratings shown to crew | A complaint goes from a customer to the admin and back |
 | 8 Hardening | Load test of the scheduler, security review, accessibility pass, backup restore test, store submissions | The release checklist is signed off |
 

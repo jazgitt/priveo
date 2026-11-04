@@ -22,6 +22,20 @@ from app.customers.sheet_load import load_monthly_customers
 from app.platform.db import get_engine
 
 
+def run_payments_job() -> None:
+    """The daily payments job, run once after loading so each subscription has its current
+    cycle's payment and its status (from the cycle dates) straight away. No payment is invented
+    beyond what the job makes; payments the admin records later set Paid or Initiated."""
+    from app.billing.service import generate_due_payments, mark_overdue_and_inactive
+    from app.platform.db import utcnow
+
+    now = utcnow()
+    made = generate_due_payments(now)
+    report = mark_overdue_and_inactive(now)
+    print(f"payments job: {made} cycle payments made, {report.marked_overdue} marked Over due, "
+          f"{len(report.inactivated)} subscriptions made Inactive")
+
+
 def main() -> None:
     args = sys.argv[1:]
     apply = "--apply" in args
@@ -56,6 +70,8 @@ def main() -> None:
             print(f"  {line}")
     if report.errors:
         raise SystemExit(1)
+    if apply:
+        run_payments_job()
 
 
 if __name__ == "__main__":

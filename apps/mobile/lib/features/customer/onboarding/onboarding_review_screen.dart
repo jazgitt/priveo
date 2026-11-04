@@ -252,7 +252,7 @@ class _ReviewState extends ConsumerState<_Review> {
       final due = [
         for (final v in summary)
           for (final p in v['payments'] as List)
-            if (p['status'] == 'Due' || p['status'] == 'Over due') p,
+            if (_needsPayment(p['status'])) p,
       ];
       if (due.isNotEmpty && mounted) {
         final router = GoRouter.of(context);
@@ -487,7 +487,7 @@ class _ReviewState extends ConsumerState<_Review> {
     if (result.hasError) return [ErrorView(onRetry: () => ref.invalidate(onboardingSummaryProvider))];
     final summary = result.value ?? [];
     final total = summary.fold<int>(0, (sum, v) => sum +
-        (v['payments'] as List).where((p) => p['status'] == 'Due' || p['status'] == 'Over due')
+        (v['payments'] as List).where((p) => _needsPayment(p['status']))
             .fold<int>(0, (n, p) => n + (p['amount_rupees'] as int)));
     Widget row(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -691,9 +691,7 @@ class _ReviewState extends ConsumerState<_Review> {
                   label: _onReview
                       ? ((ref.watch(onboardingSummaryProvider).value ?? []).any(
                               (v) => (v['payments'] as List).any(
-                                (p) =>
-                                    p['status'] == 'Due' ||
-                                    p['status'] == 'Over due',
+                                (p) => _needsPayment(p['status']),
                               ),
                             )
                             ? l.addVehicleConfirm
@@ -867,3 +865,8 @@ class _Choices extends StatelessWidget {
     );
   }
 }
+
+/// PAY-13: the review asks for payment only when the first payment is Due, Due
+/// today or Over due. Not Due, Initiated and Paid ask for none.
+bool _needsPayment(Object? status) =>
+    status == 'Due' || status == 'Due today' || status == 'Over due';
