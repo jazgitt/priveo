@@ -91,6 +91,23 @@ class RunLogTrace(unittest.TestCase):
             self.assertTrue((log.dir / "manifest.json").exists())
             self.assertIn("dryrun", log.dir.name)
 
+    def test_a_sleeping_mac_is_noticed(self):
+        import types
+        wall, mono = iter([100.0, 1100.0]), iter([5.0, 6.0])
+        fake = types.SimpleNamespace(time=lambda: next(wall), monotonic=lambda: next(mono), sleep=lambda s: None)
+        with tempfile.TemporaryDirectory() as d:
+            log = lib.RunLog(Path(d), dry_run=True)
+            real, lib.time = lib.time, fake
+            try:
+                log.run("long", ["true"])
+            finally:
+                lib.time = real
+            events = [json.loads(line) for line in (log.dir / "events.jsonl").read_text().splitlines()]
+            cmd = [e for e in events if e["event"] == "command"][0]
+            self.assertEqual(cmd["slept_seconds"], 999.0)
+            self.assertTrue(any("slept" in n for n in log.manifest["notes"]))
+            lib.RunLog(Path(d), dry_run=True).run("quick", ["true"])  # no sleep, no note
+
     def test_failed_stage_is_recorded_and_reraised(self):
         with tempfile.TemporaryDirectory() as d:
             log = lib.RunLog(Path(d), dry_run=False)

@@ -15,6 +15,7 @@ from pathlib import Path
 
 REPO_SLUG = "jazgitt/priveo"
 DEFAULT_HOME = Path(os.environ.get("NIGHTLY_HOME", str(Path.home() / "priveo-nightly")))
+SLEEP_NOTICE_SECONDS = 120
 TEST_API_URL = os.environ.get("NIGHTLY_TEST_URL", "https://priveo-api-test.vercel.app")
 
 
@@ -117,6 +118,7 @@ class RunLog:
         safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in name)[:50]
         log_path = self.dir / "commands" / f"{self.n:02d}-{safe}.log"
         start = time.time()
+        start_mono = time.monotonic()
         started = now_iso()
         full_env = {**os.environ, **(env or {})}
         try:
@@ -132,9 +134,17 @@ class RunLog:
             rc = 127
             log_path.write_text(f"[nightly] {e}\n")
         seconds = round(time.time() - start, 1)
+        # On macOS the monotonic clock stops while the Mac sleeps and the wall clock does not, so the
+        # difference is the time the machine slept during this command.
+        slept = round(seconds - (time.monotonic() - start_mono), 1)
+        extra = {}
+        if slept >= SLEEP_NOTICE_SECONDS:
+            extra["slept_seconds"] = slept
+            self.note(f"the Mac appears to have slept for about {int(slept // 60)} min during '{name}' "
+                      "(wall clock ran, the process did not); timeouts and token lifetimes can fail because of it")
         self.event("command", name=name, argv=argv, cwd=str(cwd) if cwd else None, started=started,
                    ended=now_iso(), seconds=seconds, exit=rc, passed=rc == 0,
-                   output=str(log_path.relative_to(self.dir)))
+                   output=str(log_path.relative_to(self.dir)), **extra)
         return CmdResult(rc, log_path, seconds)
 
     # -- stages ------------------------------------------------------------------

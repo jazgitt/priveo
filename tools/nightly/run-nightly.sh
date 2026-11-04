@@ -8,4 +8,6 @@ HOME_DIR="${NIGHTLY_HOME:-$HOME/priveo-nightly}"
 cd "$HOME_DIR" || { echo "No nightly clone at $HOME_DIR. Run tools/nightly/setup-clone.sh." >&2; exit 2; }
 git fetch -q origin main && git checkout -q -B main origin/main && git reset -q --hard origin/main \
   || echo "Warning: could not update the clone; running what is there." >&2
-exec caffeinate -i python3 tools/nightly/nightly.py "$@"
+# -i no idle sleep, -m no disk sleep, -s no system sleep on AC power. The dry run of 04-Nov-26 was
+# frozen by 'Maintenance Sleep' every 15 minutes and ran for 3 hours.
+exec caffeinate -ims python3 tools/nightly/nightly.py "$@"

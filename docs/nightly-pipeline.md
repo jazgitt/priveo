@@ -273,7 +273,7 @@ To undo: Settings, Branches, delete the rule, or `gh api -X DELETE repos/jazgitt
 - `in.priveo.nightly`: starts `~/priveo-nightly/tools/nightly/run-nightly.sh` at 02:00 local time (IST on this Mac).
 - `in.priveo.nightly-watchdog`: starts `watchdog.py` at 06:30.
 - Plists are in `~/Library/LaunchAgents/`. Stop with `launchctl bootout gui/$(id -u)/in.priveo.nightly`.
-- Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate` so the Mac does not sleep during it.
+- Wake at 01:55 needs `sudo pmset repeat wakeorpoweron MTWRFSU 01:55:00` (not done by the pipeline). A missed 02:00 start runs when the Mac wakes. The run holds `caffeinate -ims` (no idle, disk or system sleep on AC power) so the Mac does not sleep during it. The dry run of 04-Nov-26 was frozen by macOS "Maintenance Sleep" about every 15 minutes (a 25-minute run took 3 hours, `pmset -g log` shows the sleeps); a sleep jumps the wall clock, which expires the 15-minute access token inside a test and makes web tests time out. The run log now records `slept_seconds` on any command during which the Mac slept 2 minutes or more, and adds a note to the report.
 
 ## 13. Built state (04-Nov-26)
 
