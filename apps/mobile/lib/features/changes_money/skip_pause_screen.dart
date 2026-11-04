@@ -123,8 +123,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
           .pause(widget.vehicleId, _from!, _to!);
       _pauseResult = MoneyStrings.pauseDone(
           formatDate(p.startDate),
-          formatDate(p.endDate),
-          p.renewalDate == null ? '' : formatDate(p.renewalDate!));
+          formatDate(p.endDate));
       _from = null;
       _to = null;
       _refresh();
@@ -227,14 +226,10 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
     ];
   }
 
-  /// The visits paused and the new renewal date, before confirming
-  /// (PAUSE-02). One visit a day, and the renewal moves a day for each.
-  String _pausePreview(DateTime? renewal) {
-    final n = _to!.difference(_from!).inDays + 1;
-    final moved = renewal?.add(Duration(days: n));
-    return CalStrings.pausePreview(
-        n, renewal == null ? null : formatDate(renewal), moved == null ? null : formatDate(moved));
-  }
+  /// The number of visits paused, before confirming (PAUSE-02). Paused days
+  /// are not added to the plan: the cycle dates do not move.
+  String _pausePreview() =>
+      CalStrings.pausePreview(_to!.difference(_from!).inDays + 1);
 
   List<Widget> _pauseSection(ChangesDto? changes) {
     String show(DateTime? d) => d == null ? '--' : formatDate(d);
@@ -271,7 +266,7 @@ class _SkipPauseScreenState extends ConsumerState<SkipPauseScreen> {
       if (_from != null && _to != null && _pauseResult == null)
         Padding(
           padding: const EdgeInsets.only(top: 12),
-          child: Text(_pausePreview(changes?.renewalDate)),
+          child: Text(_pausePreview()),
         ),
       if (_pauseResult != null)
         Padding(

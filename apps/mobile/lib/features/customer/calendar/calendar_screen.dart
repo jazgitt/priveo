@@ -112,7 +112,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ? null
         : ref.watch(calendarSubscriptionProvider(vehicleId)).value;
     final coveredFrom = sub?.startDate == null ? null : _dateOnly(sub!.startDate!);
-    final coveredTo = sub == null ? null : _dateOnly(sub.endDate);
+    final coveredTo = sub == null ? null : _dateOnly(sub.coveredUntil);
     final cycleStart = sub == null ? null : _dateOnly(sub.cycleStart);
     return month.when(
       skipLoadingOnReload: true,

@@ -31,9 +31,30 @@
   "money_cutoff": "Service cutoff time",
   "money_interiorDay": "Interior care day",
   "money_noPlanName": "Plan",
+  "money_statusNotDue": "Not Due",
+  "money_statusDue": "Due",
+  "money_statusDueToday": "Due today",
   "money_statusOverdue": "Over due",
   "money_statusInitiated": "Initiated",
-  "money_statusReceived": "Received",
+  "money_statusPaid": "Paid",
+  "money_lastPaymentFailed": "Your last payment failed",
+  "money_paymentInitiated": "Payment initiated. Waiting for Priveo to confirm.",
+  "money_inactiveWarning": "Your subscription becomes Inactive if this is not paid by {date}.",
+  "@money_inactiveWarning": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "money_cycleEnded": "Billing cycle ended on {date}",
+  "@money_cycleEnded": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "money_payTitle": "Pay by UPI",
   "money_payAmount": "Amount to pay",
   "money_qrMissing": "The UPI QR code will be shown here.",
@@ -68,9 +89,10 @@
   "money_standaloneDone": "Request sent. Priveo will call you.",
   "money_adminPaymentsTitle": "Payments to confirm",
   "money_adminNoPayments": "Nothing to confirm.",
-  "money_adminConfirm": "Confirm",
+  "money_adminApprove": "Approve",
+  "money_adminAll": "All",
   "money_adminReject": "Reject",
-  "money_adminConfirmed": "Payment confirmed.",
+  "money_adminApproved": "Payment approved.",
   "money_adminRejected": "Payment sent back.",
   "money_adminAlertsTitle": "Alerts",
   "money_adminNoAlerts": "No alerts.",
@@ -99,16 +121,13 @@
       }
     }
   },
-  "money_pauseDone": "Paused {from} to {to}. Plan now renews {renewal}.",
+  "money_pauseDone": "Paused {from} to {to}.",
   "@money_pauseDone": {
     "placeholders": {
       "from": {
         "type": "String"
       },
       "to": {
-        "type": "String"
-      },
-      "renewal": {
         "type": "String"
       }
     }
@@ -120,14 +139,6 @@
         "type": "String"
       },
       "to": {
-        "type": "String"
-      }
-    }
-  },
-  "money_statusDue": "Due by {date}",
-  "@money_statusDue": {
-    "placeholders": {
-      "date": {
         "type": "String"
       }
     }

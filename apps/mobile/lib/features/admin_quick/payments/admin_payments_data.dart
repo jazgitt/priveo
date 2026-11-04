@@ -1,4 +1,5 @@
 import '../../../core/network/read_refresh.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +18,9 @@ class AdminPaymentDto {
     required this.customerName,
     required this.flat,
     required this.vehicle,
+    this.daysToDue = 0,
+    this.statusMessage = '',
+    this.lastPaymentFailed = false,
   });
 
   final String id;
@@ -29,6 +33,11 @@ class AdminPaymentDto {
   final String flat;
   final String vehicle;
 
+  /// Not Due, Due, Due today, Over due, Initiated or Paid (ADM-PAY-01).
+  final int daysToDue;
+  final String statusMessage;
+  final bool lastPaymentFailed;
+
   factory AdminPaymentDto.fromJson(Map<String, dynamic> j) => AdminPaymentDto(
     id: j['id'] as String,
     kind: j['kind'] as String,
@@ -39,6 +48,9 @@ class AdminPaymentDto {
     customerName: j['customer_name'] as String,
     flat: j['flat'] as String,
     vehicle: j['vehicle'] as String,
+    daysToDue: j['days_to_due'] as int? ?? 0,
+    statusMessage: j['status_message'] as String? ?? '',
+    lastPaymentFailed: j['last_payment_failed'] as bool? ?? false,
   );
 }
 
@@ -69,7 +81,8 @@ class AdminAlertDto {
 /// The admin's quick actions for money (ADM-ACC-07 b). They call the same
 /// admin routes as the web portal (ADM-ACC-10).
 abstract class AdminPaymentsRepository {
-  Future<List<AdminPaymentDto>> toConfirm();
+  /// Payments with the given status, or all of them when [status] is null.
+  Future<List<AdminPaymentDto>> payments({String? status});
   Future<void> confirm(String paymentId);
   Future<void> reject(String paymentId);
   Future<List<AdminAlertDto>> alerts();
@@ -93,10 +106,10 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
   }
 
   @override
-  Future<List<AdminPaymentDto>> toConfirm() => _call(
+  Future<List<AdminPaymentDto>> payments({String? status}) => _call(
     () => _dio.get<dynamic>(
       '/v1/admin/payments',
-      queryParameters: {'status': 'Initiated'},
+      queryParameters: {'status': ?status},
     ),
     (d) => [
       for (final x in d as List)
@@ -129,12 +142,25 @@ class DioAdminPaymentsRepository implements AdminPaymentsRepository {
 }
 
 final adminPaymentsRepositoryProvider = Provider<AdminPaymentsRepository>(
-  (ref) => DioAdminPaymentsRepository((ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2),
+  (ref) => DioAdminPaymentsRepository(
+    (ref.watch(readRefreshProvider), ref.watch(dioProvider)).$2,
+  ),
 );
 
-final paymentsToConfirmProvider =
-    FutureProvider.autoDispose<List<AdminPaymentDto>>(
-      (ref) => ref.watch(adminPaymentsRepositoryProvider).toConfirm(),
+/// The statuses the admin can filter by; null is all of them.
+const adminPaymentStatuses = [
+  'Initiated',
+  'Over due',
+  'Due today',
+  'Due',
+  'Not Due',
+  'Paid',
+];
+
+final adminPaymentsProvider = FutureProvider.autoDispose
+    .family<List<AdminPaymentDto>, String?>(
+      (ref, status) =>
+          ref.watch(adminPaymentsRepositoryProvider).payments(status: status),
     );
 
 final adminAlertsProvider = FutureProvider.autoDispose<List<AdminAlertDto>>(

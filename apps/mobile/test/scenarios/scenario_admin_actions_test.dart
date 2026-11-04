@@ -41,8 +41,8 @@ void main() {
       await openTile(tester, 'All payments');
       await untilFound(tester, find.text('Creta TS 36 TT 0001'));
 
-      await tapFinder(tester, paymentButton('Creta TS 36 TT 0001', 'Confirm'));
-      await untilFound(tester, find.text('Payment confirmed.'));
+      await tapFinder(tester, paymentButton('Creta TS 36 TT 0001', 'Approve'));
+      await untilFound(tester, find.text('Payment approved.'));
       await until(
         tester,
         () => find.text('Creta TS 36 TT 0001').evaluate().isEmpty,
