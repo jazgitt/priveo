@@ -63,3 +63,18 @@ def test_failed_audit_insert_rolls_back_session_revocation(client, db, settings)
         db.rollback()
     assert db.scalar(select(AuthSession).where(AuthSession.login_id == c.login_id)).ended_at is None
     assert db.scalar(select(DirectoryAudit)) is None
+
+
+def test_audit_rows_get_the_society_of_the_customer_and_none_for_a_login(client, db):
+    login(client, "customer")
+    admin = login(client, "admin")
+    c = db.scalar(select(Customer))
+    assert client.post(f"/v1/admin/customers/{c.id}/sessions/logout",
+                       headers=auth(admin["access_token"])).status_code == 200
+    assert client.post("/v1/admin/sessions/logout-all",
+                       headers=auth(admin["access_token"])).status_code == 204
+    db.expire_all()
+    mine = db.scalar(select(DirectoryAudit).where(DirectoryAudit.action == "sessions_logout"))
+    assert mine.society_id == c.society_id
+    own = db.scalar(select(DirectoryAudit).where(DirectoryAudit.action == "logout_all"))
+    assert own.society_id is None  # an admin login belongs to no society

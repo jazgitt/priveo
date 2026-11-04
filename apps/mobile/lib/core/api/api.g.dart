@@ -3965,6 +3965,7 @@ class DirectoryAuditOut {
     required this.entityId,
     required this.action,
     required this.detail,
+    required this.societyId,
   });
 
   final String id;
@@ -3974,6 +3975,7 @@ class DirectoryAuditOut {
   final String entityId;
   final String action;
   final Map<String, dynamic> detail;
+  final String? societyId;
 
   factory DirectoryAuditOut.fromJson(Map<String, dynamic> j) => DirectoryAuditOut(
         id: j['id'] as String,
@@ -3983,6 +3985,7 @@ class DirectoryAuditOut {
         entityId: j['entity_id'] as String,
         action: j['action'] as String,
         detail: j['detail'] as Map<String, dynamic>,
+        societyId: j['society_id'] == null ? null : j['society_id'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -3993,6 +3996,35 @@ class DirectoryAuditOut {
         'entity_id': entityId,
         'action': action,
         'detail': detail,
+        'society_id': societyId,
+      };
+}
+
+class DirectoryAuditPage {
+  const DirectoryAuditPage({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  final List<DirectoryAuditOut> items;
+  final int total;
+  final int limit;
+  final int offset;
+
+  factory DirectoryAuditPage.fromJson(Map<String, dynamic> j) => DirectoryAuditPage(
+        items: [for (final x in j['items'] as List) DirectoryAuditOut.fromJson(x as Map<String, dynamic>)],
+        total: j['total'] as int,
+        limit: j['limit'] as int,
+        offset: j['offset'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'items': [for (final x in items) x.toJson()],
+        'total': total,
+        'limit': limit,
+        'offset': offset,
       };
 }
 

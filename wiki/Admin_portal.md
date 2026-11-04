@@ -34,7 +34,7 @@ Complex transactions remain web-only: customer/vehicle creation, full subscripti
 
 The portal uses shared UI components, confirmation dialogs, mutation handling and task presentation for longer work. Authentication uses a cookie session and CSRF controls, with a 60-minute inactivity rule.[^3][^4]
 
-The Audit page explicitly asks for Refresh, loads the last 1,000 events and pages them in groups of 50. Analytics uses the project's PostHog EU setup, with autocapture and release replay off under the latest owner decisions.[^1][^5]
+The Audit trail page (under "This site") shows the chosen site together with the changes marked "All sites" (settings, plans, sign-in events and other changes that belong to no site), 50 events a page paged by the server, and explicitly asks for Refresh. Analytics uses the project's PostHog EU setup, with autocapture and release replay off under the latest owner decisions.[^1][^5]
 
 ## See also
 

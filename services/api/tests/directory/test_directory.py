@@ -646,20 +646,105 @@ def test_changes_are_audited_with_the_admin(client, admin, engine):
     made = society(client, admin)
     client.patch(f"{BASE}/societies/{made['id']}", headers=admin, json={"city": "Pune"})
     client.put(f"{BASE}/settings/support.hours", headers=admin, json={"value": "8 AM"})
-    rows = client.get(f"{BASE}/audit", headers=admin).json()
+    rows = client.get(f"{BASE}/audit", headers=admin).json()["items"]
     kinds = {(r["entity"], r["action"]) for r in rows}
     assert {("society", "create"), ("society", "update"), ("setting", "update")} <= kinds
     update = next(r for r in rows if r["entity"] == "society" and r["action"] == "update")
     assert update["detail"] == {"city": ["", "Pune"]}
     assert all(r["admin_login_id"] for r in rows)
-    only = client.get(f"{BASE}/audit?entity=setting", headers=admin).json()
+    only = client.get(f"{BASE}/audit?entity=setting", headers=admin).json()["items"]
     assert {r["entity"] for r in only} == {"setting"}
     # A change that changes nothing is not audited.
-    before = len(client.get(f"{BASE}/audit", headers=admin).json())
+    before = client.get(f"{BASE}/audit", headers=admin).json()["total"]
     client.patch(f"{BASE}/societies/{made['id']}", headers=admin, json={"city": "Pune"})
-    assert len(client.get(f"{BASE}/audit", headers=admin).json()) == before
+    assert client.get(f"{BASE}/audit", headers=admin).json()["total"] == before
     with Session(engine) as db:
         assert db.scalar(select(DirectoryAudit).limit(1)) is not None
+
+
+def _entry(db, society_id, n):
+    from datetime import UTC, datetime, timedelta
+
+    db.add(DirectoryAudit(entity="setting", entity_id=f"k{n}", action="update", detail={},
+                          society_id=society_id,
+                          at=datetime(2026, 11, 1, tzinfo=UTC) + timedelta(minutes=n)))
+
+
+def test_audit_is_paged_newest_first_and_stable(client, admin, engine):
+    made = society(client, admin)
+    with Session(engine) as db:
+        for n in range(120):  # two rows share every minute
+            _entry(db, uuid.UUID(made["id"]), n // 2)
+        db.commit()
+    url = f"{BASE}/audit?society_id={made['id']}"
+    first = client.get(url, headers=admin).json()
+    assert first["total"] == 121 and first["limit"] == 50 and first["offset"] == 0  # and the create
+    second = client.get(url + "&offset=50", headers=admin).json()
+    third = client.get(url + "&offset=100", headers=admin).json()
+    assert [len(p["items"]) for p in (first, second, third)] == [50, 50, 21]
+    pages = [first, second, third]
+    ids = [r["id"] for p in pages for r in p["items"]]
+    assert len(set(ids)) == 121  # no row repeated or skipped
+    ats = [r["at"] for p in pages for r in p["items"]]
+    assert ats == sorted(ats, reverse=True)
+    assert client.get(url + "&limit=201", headers=admin).status_code == 422
+
+
+def test_audit_of_a_site_holds_only_that_sites_rows(client, admin):
+    a = society(client, admin, "Alpha")
+    b = society(client, admin, "Beta")
+    client.put(f"{BASE}/settings/support.hours", headers=admin, json={"value": "8 AM"})  # no site
+    zone = client.post(f"{BASE}/societies/{a['id']}/zones", headers=admin, json={"name": "Z1"})
+    assert zone.status_code == 201, zone.text
+    client.patch(f"{BASE}/societies/{b['id']}", headers=admin, json={"city": "Pune"})
+    only_a = client.get(f"{BASE}/audit?society_id={a['id']}", headers=admin).json()["items"]
+    view_a = client.get(f"{BASE}/audit?society_id={a['id']}", headers=admin).json()
+    only_a = view_a["items"]
+    # Site A's own rows and the no-site row; none of site B's.
+    assert {(r["entity"], r["action"]) for r in only_a} == {
+        ("society", "create"), ("zone", "create"), ("setting", "update")}
+    assert {r["society_id"] for r in only_a} == {a["id"], None}
+    assert view_a["total"] == 3
+    view_b = client.get(f"{BASE}/audit?society_id={b['id']}", headers=admin).json()
+    assert {(r["entity"], r["action"]) for r in view_b["items"]} == {
+        ("society", "create"), ("society", "update"), ("setting", "update")}
+    assert view_b["total"] == 3
+    # A change with no society appears in every site's view; the unfiltered list has all.
+    everything = client.get(f"{BASE}/audit", headers=admin).json()
+    assert everything["total"] == 5
+    assert any(r["entity"] == "setting" and r["society_id"] is None for r in everything["items"])
+
+
+def test_audit_paging_counts_the_site_and_the_no_site_rows(client, admin, engine):
+    a = society(client, admin, "Alpha")
+    b = society(client, admin, "Beta")
+    with Session(engine) as db:
+        for n in range(30):
+            _entry(db, uuid.UUID(a["id"]), n)
+            _entry(db, None, 100 + n)  # applies to all sites
+            _entry(db, uuid.UUID(b["id"]), 200 + n)
+        db.commit()
+    url = f"{BASE}/audit?society_id={a['id']}"
+    pages = [client.get(f"{url}&offset={o}", headers=admin).json() for o in (0, 50)]
+    assert pages[0]["total"] == 1 + 30 + 30  # the create, A's rows and the no-site rows
+    assert [len(p["items"]) for p in pages] == [50, 11]
+    rows = pages[0]["items"] + pages[1]["items"]
+    assert len({r["id"] for r in rows}) == 61
+    assert {r["society_id"] for r in rows} == {a["id"], None}
+    assert [r["at"] for r in rows] == sorted((r["at"] for r in rows), reverse=True)
+
+
+def test_audit_scope_follows_the_row_an_entry_points_at(engine):
+    from app.directory.audit_scope import society_of
+
+    with Session(engine) as db:
+        s = Society(name="Scope Park")
+        db.add(s)
+        db.flush()
+        assert society_of(db, "society", s.id) == s.id
+        assert society_of(db, "setting", "billing.cycle_days") is None
+        assert society_of(db, "customer", uuid.uuid4()) is None  # a row that is gone
+        assert society_of(db, "plan", "x", {"society_id": str(s.id)}) == s.id
 
 
 # ---- seed ------------------------------------------------------------------------

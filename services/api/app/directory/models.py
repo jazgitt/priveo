@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, event
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
 
@@ -182,3 +182,21 @@ class DirectoryAudit(Base):
     action: Mapped[str] = mapped_column(String(16))
     # {field: [old, new]} for an update, the new row for a create.
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    # The society the change belongs to, set when the row is saved (see audit_scope).
+    # Empty for a change that belongs to no society (settings, plans, logins...).
+    society_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("societies.id"), index=True)
+
+
+def _scope_new_audit_rows(session, _flush_context, _instances) -> None:
+    """Gives every new audit row its society just before it is written, so no
+    call site has to pass it (ADM-AUD-01)."""
+    rows = [o for o in session.new if isinstance(o, DirectoryAudit) and o.society_id is None]
+    if rows:
+        from app.directory.audit_scope import society_of
+
+        with session.no_autoflush:
+            for row in rows:
+                row.society_id = society_of(session, row.entity, row.entity_id, row.detail)
+
+
+event.listen(Session, "before_flush", _scope_new_audit_rows)

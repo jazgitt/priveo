@@ -1,16 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { signInAsAdmin } from "./helpers";
 
-test.describe("Audit", () => {
+test.describe("Audit trail", () => {
   test.beforeEach(async ({ page }) => {
     await signInAsAdmin(page);
-    await page.getByRole("link", { name: "Audit", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Audit" })).toBeVisible();
+    await page.getByRole("link", { name: "Audit trail", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Audit trail" })).toBeVisible();
   });
 
   test("says it does not refresh by itself, and has a Refresh button [ADM-SET-06]", async ({ page }) => {
     await expect(page.getByRole("note")).toContainText("does not update by itself");
-    await expect(page.getByRole("note")).toContainText("last 1000 events");
+    await expect(page.getByRole("note")).toContainText("marked All sites");
     await expect(page.getByRole("button", { name: "Refresh" })).toBeEnabled();
   });
 

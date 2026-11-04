@@ -238,12 +238,12 @@ def test_past_retry_rolls_back_and_audit_filters_find_the_actual_actor(
     rows = api.get(
         f"/v1/admin/directory/audit?entity=operations&actor_id={audit.admin_login_id}",
         headers=admin,
-    ).json()
+    ).json()["items"]
     assert len(rows) == 1 and rows[0]["action"] == "skip"
     assert (
         api.get(
             f"/v1/admin/directory/audit?entity=operations&actor_id={uuid.uuid4()}", headers=admin
-        ).json()
+        ).json()["items"]
         == []
     )
     assert (

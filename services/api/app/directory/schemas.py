@@ -303,6 +303,16 @@ class DirectoryAuditOut(BaseModel):
     entity_id: str
     action: str
     detail: dict
+    society_id: uuid.UUID | None = None
+
+
+class DirectoryAuditPage(BaseModel):
+    """One page of the audit trail, newest first, with the count of all matches."""
+
+    items: list[DirectoryAuditOut]
+    total: int
+    limit: int
+    offset: int
 
 
 # ---- zones -----------------------------------------------------------------------
