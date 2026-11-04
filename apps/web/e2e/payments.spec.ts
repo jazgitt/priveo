@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { choose, chooseSite, signInAsAdmin } from "./helpers";
 
-// A01 holds an Initiated payment (the customer says they paid). Confirming it
+// A01 holds an Initiated payment (the customer says they paid). Approving it
 // mutates the fixture database; the stack rebuilds that database every run.
 test.describe("Payments (scenario A01)", () => {
   test.beforeEach(async ({ page }) => {
@@ -11,7 +11,7 @@ test.describe("Payments (scenario A01)", () => {
     await chooseSite(page, /TEST A01/);
   });
 
-  test("confirms an Initiated payment, then issues a GST invoice [ADM-PAY-03, ADM-PAY-08]", async ({ page }) => {
+  test("approves an Initiated payment, then issues a GST invoice [ADM-PAY-03, ADM-PAY-08]", async ({ page }) => {
     await choose(page, "Status", "Initiated");
     const row = page.locator("tbody tr").filter({ hasText: "Initiated" }).first();
     await expect(row).toBeVisible();
@@ -19,10 +19,10 @@ test.describe("Payments (scenario A01)", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("(GST included)")).toBeVisible();
-    await dialog.getByRole("button", { name: "Confirm received" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "Confirm received" }).click();
-    await expect(page.getByText("Payment confirmed.")).toBeVisible();
-    await expect(dialog.getByText("Received", { exact: true })).toBeVisible();
+    await dialog.getByRole("button", { name: "Approve" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("Payment approved.")).toBeVisible();
+    await expect(dialog.getByText("Paid", { exact: true })).toBeVisible();
 
     await dialog.getByRole("button", { name: /Issue invoice|View invoice/ }).click();
     const confirmInvoice = page.getByRole("alertdialog");
@@ -36,10 +36,10 @@ test.describe("Payments (scenario A01)", () => {
   test("a summary tile filters the list by status [ADM-PAY-12]", async ({ page }) => {
     const tiles = page.getByRole("region", { name: "Payment summary" });
     await expect(tiles.getByRole("button", { name: /^All payments: [1-9]/ })).toBeVisible();
-    // The earlier test confirms the one Initiated payment, so Received is what A01 has.
-    await tiles.getByRole("button", { name: /^Received: [1-9]/ }).click();
+    // The earlier test confirms the one Initiated payment, so Paid is what A01 has.
+    await tiles.getByRole("button", { name: /^Paid: [1-9]/ }).click();
     await expect(page.locator("tbody tr").first()).toBeVisible();
-    await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Received" })).toHaveCount(0);
+    await expect(page.locator("tbody tr td:nth-child(7)").filter({ hasNotText: "Paid" })).toHaveCount(0);
   });
 
   test("a filter with no matches shows the empty state [ADM-PAY-01]", async ({ page }) => {

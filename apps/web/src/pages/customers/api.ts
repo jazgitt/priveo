@@ -78,7 +78,7 @@ export interface Changes { skips: { id: string; start_date: string }[]; pauses: 
 
 export const newVehicle = (): VehicleInput => ({ society_id: "", catalogue_id: "", registration: "",
   parking_basement: "", parking_number: "", zone_id: null, plan_id: "", cutoff_time: "09:00", interior_day: null,
-  interior_day_notes: null, photo_upload_id: "", first_payment_status: "Due" });
+  interior_day_notes: null, photo_upload_id: "", first_payment_status: "Not Due" });
 export const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 /** "Custom": the customer's cars take turns; the notes say whose turn it is. */
 export const CUSTOM_DAY = "Custom";

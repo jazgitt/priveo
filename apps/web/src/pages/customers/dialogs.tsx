@@ -11,6 +11,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
+import { STATUSES } from "../payments/types";
 import {
   CUSTOM_DAY, interiorDays, PARKING_NUMBER_MAX, parkingOk, times, uploadCustomerAsset, weekdays,
   type Catalogue, type Customer, type Plan, type PlanChangeQuote, type SchedulePattern, type Society, type Subscription, type Vehicle, type ZoneChoice,
@@ -223,7 +224,7 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
   const [interior, setInterior] = useState("");
   const [notes, setNotes] = useState("");
   const [starts, setStarts] = useState("");
-  const [payment, setPayment] = useState("Due");
+  const [payment, setPayment] = useState("Not Due");
   const save = useCustomerSave(customerId, "Subscription set up. It starts as Activating.", onClose);
   const plan = plans.data?.find((p) => p.id === planId);
   const needsInterior = Boolean(plan?.includes_interior);
@@ -258,7 +259,7 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
         </Field>
         <Field label="First payment status">
           {(p) => <SelectBox {...p} value={payment} onChange={setPayment}
-                             choices={["Due", "Over due", "Initiated", "Received"].map((s) => ({ value: s, label: s }))} />}
+                             choices={STATUSES.map((s) => ({ value: s, label: s }))} />}
         </Field>
       </div>
     </FormDialog>

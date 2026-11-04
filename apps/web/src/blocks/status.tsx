@@ -4,8 +4,8 @@ export type Tone = "ok" | "warn" | "error" | "info" | "spa" | "neutral";
 
 /** One colour for each status, the same on every page. */
 const TONE_OF: Record<string, Tone> = {
-  Active: "ok", Received: "ok", Completed: "ok", Resolved: "ok", Working: "ok",
-  Activating: "warn", Due: "warn", Initiated: "info", Partial: "warn", Pending: "warn",
+  Active: "ok", Paid: "ok", Completed: "ok", Resolved: "ok", Working: "ok",
+  Activating: "warn", Due: "warn", "Due today": "warn", "Not Due": "neutral", Initiated: "info", Partial: "warn", Pending: "warn",
   Unscheduled: "warn", Late: "error",
   Inactive: "error", "Over due": "error", Missed: "error", Off: "neutral",
   Frozen: "info", Draft: "neutral", Scheduled: "info", "In progress": "info", "Could not complete": "error",

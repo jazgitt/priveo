@@ -15,6 +15,7 @@ import { Input } from "@/ui/input";
 import { Switch } from "@/ui/switch";
 
 import { CUSTOM_DAY, interiorDays, newVehicle, PARKING_NUMBER_MAX, parkingOk, parkingText, times, uploadCustomerAsset, type VehicleInput } from "./api";
+import { STATUSES } from "../payments/types";
 import { useCatalogue, usePlans, useSocietyList, useZones } from "./dialogs";
 
 const LABELS = { first_name: "First name", last_name: "Last name", mobile: "Mobile number", email: "Email", flat: "Flat" } as const;
@@ -261,7 +262,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
             <>
               <Field label="First payment status" className="max-w-xs">
                 {(p) => <SelectBox {...p} value={vehicle.first_payment_status} onChange={(s) => set("first_payment_status", s)}
-                                   choices={["Due", "Over due", "Initiated", "Received"].map((s) => ({ value: s, label: s }))} />}
+                                   choices={STATUSES.map((s) => ({ value: s, label: s }))} />}
               </Field>
               <p className="text-xs text-muted-foreground">The subscription starts as Activating. You set the first service date when you activate it.</p>
             </>
