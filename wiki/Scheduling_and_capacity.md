@@ -6,7 +6,7 @@
 
 Demand includes daily exterior work, eligible weekly interior work, add-on requests and allowed missed-job retries. Availability comes from crew hours, attendance exceptions, society assignments and service working slots. Trainees contribute no independent capacity.[^1]
 
-Default planning durations are 20 minutes for exterior and interior cleaning and 120 minutes for Deep Spa. Default cleaning slots are 5–11 AM; Deep Spa can use any time of day. Services and slots are editable, and every day is open in principle.[^1]
+Default planning durations are 20 minutes for exterior and interior cleaning and 120 minutes for Deep Spa. Default cleaning slots are 5–11 AM; Deep Spa can use any time of day. Services and slots are editable, and every day is open in principle. A weekday with no working slot for a service is a day off for it: demand is 0, the day is not over capacity and the scheduler plans nothing (ADM-CAP-08).[^1]
 
 The customer supplies a finish-by cutoff in 30-minute steps. A cutoff outside available slots is accepted as a preference; infeasibility is surfaced to administrators rather than rejected in customer onboarding.[^1][^3]
 

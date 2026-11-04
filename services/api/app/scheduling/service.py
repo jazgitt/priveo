@@ -123,7 +123,8 @@ def _customer_changes(
 def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[Demand]:
     """Cleaning-External every day, Cleaning-Internal on the interior care day
     and a Deep Spa on the date the customer asked for (ADM-SVS-10). Only
-    Active subscriptions count (ADM-SUB-02)."""
+    Active subscriptions count (ADM-SUB-02). A weekday the site has no working
+    slot for a service gives no demand for it (ADM-CAP-08)."""
     out: list[Demand] = []
     rows = db.execute(
         select(Subscription, Vehicle)
@@ -231,7 +232,19 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
                 job.source_job_id,
             )
         )
-    return out
+    # The site's working slots say which weekdays it is off for each service:
+    # no slot on a weekday means no demand that day (owner, 04-Nov-26). A
+    # service with no slot at all is not filtered. Re-run jobs already exist
+    # and stay.
+    open_days: dict[str, set[int] | None] = {}
+    for slot in lookup.working_slots(db, society_id):
+        open_days.setdefault(slot.service, set()).update(slot.days)
+    return [
+        d for d in out
+        if d.source_job_id is not None
+        or open_days.get(d.service) is None
+        or d.day.weekday() in open_days[d.service]
+    ]
 
 
 def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingCrew]:
