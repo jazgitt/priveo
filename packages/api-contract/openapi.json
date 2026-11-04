@@ -20570,8 +20570,15 @@
             "title": "Amount Rupees"
           },
           "due_date": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Due Date"
           },
           "cycle_start": {
@@ -20595,8 +20602,7 @@
         "type": "object",
         "required": [
           "vehicle_id",
-          "amount_rupees",
-          "due_date"
+          "amount_rupees"
         ],
         "title": "AdminPaymentIn",
         "description": "Record a payment for a customer, for example one made in person\n(ADM-PAY-04) or the first payment of a new subscription (ADM-CUS-06)."
@@ -20622,6 +20628,21 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "days_to_due": {
+            "type": "integer",
+            "title": "Days To Due",
+            "default": 0
+          },
+          "status_message": {
+            "type": "string",
+            "title": "Status Message",
+            "default": ""
+          },
+          "last_payment_failed": {
+            "type": "boolean",
+            "title": "Last Payment Failed",
+            "default": false
           },
           "due_date": {
             "type": "string",
@@ -27685,6 +27706,21 @@
             "type": "string",
             "title": "Status"
           },
+          "days_to_due": {
+            "type": "integer",
+            "title": "Days To Due",
+            "default": 0
+          },
+          "status_message": {
+            "type": "string",
+            "title": "Status Message",
+            "default": ""
+          },
+          "last_payment_failed": {
+            "type": "boolean",
+            "title": "Last Payment Failed",
+            "default": false
+          },
           "due_date": {
             "type": "string",
             "format": "date",
@@ -29320,13 +29356,27 @@
             "title": "Cycle Start"
           },
           "renewal_date": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Renewal Date"
           },
           "expires_on": {
-            "type": "string",
-            "format": "date",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Expires On"
           },
           "cycle_days": {
@@ -29334,8 +29384,70 @@
             "title": "Cycle Days"
           },
           "days_left": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Days Left"
+          },
+          "cycle_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle End"
+          },
+          "inactive_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive By"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          },
+          "payment_status": {
+            "type": "string",
+            "title": "Payment Status",
+            "default": "Not Due"
+          },
+          "days_to_due": {
+            "type": "integer",
+            "title": "Days To Due",
+            "default": 0
+          },
+          "status_message": {
+            "type": "string",
+            "title": "Status Message",
+            "default": ""
+          },
+          "last_payment_failed": {
+            "type": "boolean",
+            "title": "Last Payment Failed",
+            "default": false
           },
           "latest_payment": {
             "anyOf": [
@@ -29367,10 +29479,7 @@
           "interior_day",
           "start_date",
           "cycle_start",
-          "renewal_date",
-          "expires_on",
           "cycle_days",
-          "days_left",
           "latest_payment",
           "can_pay_next"
         ],

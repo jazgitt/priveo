@@ -11,6 +11,7 @@ from urllib.parse import quote
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.billing.card import card_state
 from app.billing.config import MoneySettings
 from app.billing.models import (
     Invoice,
@@ -31,9 +32,15 @@ from app.billing.schemas import (
     SubscriptionRowOut,
     SubscriptionView,
 )
-from app.billing.status import LEGACY_STATUSES, legacy_shown, legacy_shown_sql
+from app.billing.status import (
+    DISPLAY_STATUSES,
+    PaymentStatusView,
+    display_status,
+    display_status_sql,
+    stored_for,
+)
 from app.changes.access import parse_id
-from app.changes.cycle import cycle_window, paused_days, plan_expires_on, shift_days
+from app.changes.cycle import cycle_window, paused_days, shift_days
 from app.changes.rules import Clock, show_date, today_of
 from app.customers import plan_changes
 from app.customers.models import Customer, Subscription, Vehicle
@@ -56,16 +63,6 @@ def vehicle_label(v: Vehicle | None) -> str:
     return f"{v.model} {show_registration(v.registration)}".strip()
 
 
-# TODO(B2): interim shim, see app.billing.status.legacy_shown.
-_LEGACY_STATUSES = LEGACY_STATUSES
-_shown = legacy_shown
-_shown_sql = legacy_shown_sql
-
-
-def _stored(shown: str) -> str:
-    return {"Received": "Paid", "Initiated": "Initiated"}.get(shown, "Open")
-
-
 @dataclass
 class OverdueReport:
     marked_overdue: int = 0
@@ -84,10 +81,6 @@ class BillingService:
         return lookup.setting(self._db, "billing.cycle_days")
 
     @property
-    def _pay_ahead(self) -> int:  # ADM-PAY-06, SUB-09
-        return lookup.setting(self._db, "billing.pay_ahead_days")
-
-    @property
     def _inactive_after(self) -> int:  # SUB-11, ADM-SUB-03
         return lookup.setting(self._db, "billing.inactive_after_days")
 
@@ -99,16 +92,27 @@ class BillingService:
         rows = self._db.scalars(select(Invoice).where(Invoice.payment_id.in_(payment_ids)))
         return {i.payment_id: i for i in rows}
 
+    def _today(self) -> date:
+        return today_of(self._now())
+
+    def _view(self, p: Payment) -> PaymentStatusView:
+        return display_status(p, self._today())
+
     def _out(self, p: Payment, invoice: Invoice | None) -> PaymentOut:
+        view = self._view(p)
         return PaymentOut(
             id=str(p.id),
             kind=p.kind,
             description=p.description,
             amount_rupees=p.amount_rupees,
-            status=_shown(p),  # TODO(B2)
+            status=view.status,
+            days_to_due=view.days_to_due,
+            status_message=view.message,
+            last_payment_failed=view.last_payment_failed,
             due_date=p.due_date,
             cycle_start=p.cycle_start,
-            cycle_end=p.cycle_end,
+            # The last day of the cycle, counted (stored as the day after).
+            cycle_end=p.cycle_end - timedelta(days=1) if p.cycle_end else None,
             vehicle_id=str(p.vehicle_id) if p.vehicle_id else None,
             received_on=p.received_at.astimezone(self._tz()).date() if p.received_at else None,
             invoice_number=invoice.number if invoice else None,
@@ -175,6 +179,7 @@ class BillingService:
         return sub.status
 
     def _unpaid_plan_payment(self, sub: Subscription) -> Payment | None:
+        """The oldest plan payment still Open (not Initiated, not Paid)."""
         return self._db.scalar(
             select(Payment)
             .where(
@@ -182,8 +187,20 @@ class BillingService:
                 Payment.kind == "Plan",
                 Payment.status == "Open",
                 Payment.voided_at.is_(None),
+                # Debt of a previous activation does not follow the new one.
+                Payment.cycle_start >= sub.first_service_date,
             )
             .order_by(Payment.due_date)
+        )
+
+    def _current_payment(self, sub: Subscription, start: date) -> Payment | None:
+        return self._db.scalar(
+            select(Payment).where(
+                Payment.subscription_id == sub.id,
+                Payment.kind == "Plan",
+                Payment.cycle_start == start,
+                Payment.voided_at.is_(None),
+            )
         )
 
     def subscription_view(
@@ -191,30 +208,14 @@ class BillingService:
     ) -> SubscriptionView:
         if sub is None:
             raise ApiError("no_subscription", "This vehicle has no subscription.", 404)
-        today = today_of(self._now())
-        start, renewal = cycle_window(
-            sub.first_service_date, shift_days(self._db, vehicle.id), today, self._cycle_days
-        )
+        today = self._today()
+        card = card_state(self._db, sub, today)
+        start, focus, view, last_day = card.cycle_start, card.focus, card.view, card.last_day
+        latest = focus or card.current
         plan = self._db.get(Plan, sub.plan_id) if sub.plan_id else None
         society = self._db.get(Society, vehicle.society_id or customer.society_id)
-        latest = self._db.scalar(
-            select(Payment)
-            .where(
-                Payment.subscription_id == sub.id,
-                Payment.kind == "Plan",
-                Payment.voided_at.is_(None),
-            )
-            .order_by(Payment.due_date.desc(), Payment.created_at.desc())
-        )
         status = self.effective_status(sub, vehicle, today)
-        expires_on = plan_expires_on(self._db, sub, today)
-        payable = sub.status in ("Active",) and (
-            self._unpaid_plan_payment(sub) is not None
-            or (
-                (renewal - today).days <= self._pay_ahead
-                and (latest is None or latest.cycle_start != renewal)
-            )
-        )
+        overdue = card.overdue
         return SubscriptionView(
             vehicle_id=str(vehicle.id),
             subscription_id=str(sub.id),
@@ -232,12 +233,20 @@ class BillingService:
             interior_day=sub.interior_day,
             start_date=sub.first_service_date,
             cycle_start=start,
-            renewal_date=renewal,
-            expires_on=expires_on,
+            # The end date is shown only when the payment is Over due (SUB-01).
+            renewal_date=last_day + timedelta(days=1) if overdue else None,
+            expires_on=last_day if overdue else None,
             cycle_days=self._cycle_days,
-            days_left=max(0, (expires_on - today).days + 1),
+            days_left=max(0, (last_day - today).days + 1) if overdue else None,
+            cycle_end=last_day if overdue else None,
+            inactive_by=card.inactive_by,
+            payment_id=str(focus.id) if focus else None,
+            payment_status=view.status,
+            days_to_due=view.days_to_due,
+            status_message=view.message,
+            last_payment_failed=view.last_payment_failed,
             latest_payment=self._outs([latest])[0] if latest else None,
-            can_pay_next=payable,
+            can_pay_next=sub.status == "Active" and view.status not in ("Initiated", "Paid"),
         )
 
     def history(self, customer: Customer, vehicle: Vehicle) -> list[PaymentOut]:
@@ -275,14 +284,17 @@ class BillingService:
                                               "interior_day": sub.interior_day if sub else None})
 
     def mark_paid(self, customer: Customer, payment_id: str) -> PaymentDetail:
-        """ "I've paid" (PAY-06): the status becomes Initiated and goes to the admin."""
+        """ "I've paid" (PAY-06, PAY-17): the status becomes Initiated and goes to the
+        admin. A cycle has one payment, so there is only one Initiated payment per
+        cycle; tapping again on it changes nothing."""
         p = self._own_payment(customer, payment_id)
         if p.status == "Paid":
             raise ApiError("already_received", "Priveo has received this payment already.", 409)
         if p.status != "Initiated":
-            old = _shown(p)
+            old = self._view(p).status
             p.status = "Initiated"
             p.initiated_at = utcnow()
+            p.rejected_at = None
             self._event(p, old, "Initiated", None, "Customer tapped I've paid")
             self._alert(
                 "payment_initiated",
@@ -295,51 +307,56 @@ class BillingService:
     def ensure_next_payment(
         self, customer: Customer, vehicle: Vehicle, sub: Subscription | None
     ) -> PaymentDetail:
-        """ "Pay for next month" from one week before the renewal date (SUB-09)."""
+        """The payment screen for the vehicle (SUB-09): the oldest unpaid cycle,
+        else the current cycle, which the customer may pay at any time."""
         if sub is None or sub.status != "Active":
             raise ApiError(
                 "subscription_not_active", "Payments are for an active subscription.", 409
             )
-        today = today_of(self._now())
         unpaid = self._unpaid_plan_payment(sub)
         if unpaid is not None:
             return self._detail(unpaid)
-        _, renewal = cycle_window(
-            sub.first_service_date, shift_days(self._db, vehicle.id), today, self._cycle_days
+        start, _ = cycle_window(
+            sub.first_service_date, shift_days(self._db, vehicle.id), self._today(),
+            self._cycle_days,
         )
-        if (renewal - today).days > self._pay_ahead:
-            opens = renewal - timedelta(days=self._pay_ahead)
-            raise ApiError("too_early", f"You can pay from {show_date(opens)}.", 409)
-        p = self._cycle_payment(sub, vehicle, renewal)
+        p = self.ensure_cycle_payment(sub, vehicle, start)
         self._db.commit()
         return self._detail(p)
 
-    def _cycle_payment(self, sub: Subscription, vehicle: Vehicle, renewal: date) -> Payment:
+    def ensure_cycle_payment(self, sub: Subscription, vehicle: Vehicle, cycle_start: date
+                             ) -> Payment:
+        """The one plan payment of the cycle that starts on `cycle_start`; made if
+        it is not there yet. Due on the cycle's last day (PAY-14). Safe to call
+        again: the (subscription, cycle start) pair is unique. The caller commits."""
         found = self._db.scalar(
-            select(Payment).where(Payment.subscription_id == sub.id, Payment.cycle_start == renewal)
+            select(Payment).where(
+                Payment.subscription_id == sub.id,
+                Payment.cycle_start == cycle_start,
+            )
         )
         if found is not None:
             return found
+        last_day = cycle_start + timedelta(days=self._cycle_days - 1)
         p = Payment(
             customer_id=vehicle.customer_id,
             vehicle_id=vehicle.id,
             subscription_id=sub.id,
             kind="Plan",
-            description=f"Plan {show_date(renewal)} to "
-            f"{show_date(renewal + timedelta(days=self._cycle_days - 1))}",
+            description=f"Plan {show_date(cycle_start)} to {show_date(last_day)}",
             amount_rupees=(
                 self._db.get(Plan, sub.pending_plan_id).monthly_price_rupees
-                if sub.pending_plan_id and sub.pending_from and renewal >= sub.pending_from
+                if sub.pending_plan_id and sub.pending_from and cycle_start >= sub.pending_from
                 else sub.monthly_price_rupees
             ),
             status="Open",
-            due_date=renewal,
-            cycle_start=renewal,
-            cycle_end=renewal + timedelta(days=self._cycle_days),
+            due_date=last_day,
+            cycle_start=cycle_start,
+            cycle_end=cycle_start + timedelta(days=self._cycle_days),
         )
         self._db.add(p)
         self._db.flush()
-        self._event(p, None, "Due", None, "Created for the next cycle")
+        self._event(p, None, self._view(p).status, None, "Created for the cycle")
         return p
 
     def open_addon_payment(
@@ -467,7 +484,10 @@ class BillingService:
     ) -> list[AdminPaymentOut]:
         q = select(Payment).where(Payment.voided_at.is_(None))
         if status:
-            q = q.where(_shown_sql() == status)
+            if status not in DISPLAY_STATUSES:
+                raise ApiError("validation_failed", "Choose a payment status.", 422,
+                               {"status": "invalid"})
+            q = q.where(display_status_sql(self._today()) == status)
         if kind:
             q = q.where(Payment.kind == kind)
         if customer_id:
@@ -496,51 +516,85 @@ class BillingService:
     def set_status(
         self, payment_id: str, status: str, admin_id: uuid.UUID, note: str = ""
     ) -> AdminPaymentOut:
-        """Any status to any status (ADM-PAY-02, ADM-PAY-07). Audited (ADM-PAY-05)."""
-        if status not in _LEGACY_STATUSES:
+        """Any status to any status (ADM-PAY-02, ADM-PAY-07). Paid and Initiated are
+        stored. Not Due, Due, Due today and Over due all mean Open: no payment counts
+        and the date rule shows which one. Audited (ADM-PAY-05)."""
+        if status not in DISPLAY_STATUSES:
             raise ApiError(
                 "validation_failed",
-                "Choose Due, Over due, Initiated or Received.",
+                "Choose Not Due, Due, Due today, Over due, Initiated or Paid.",
                 422,
                 {"status": "invalid"},
             )
         p = self._payment(payment_id)
-        if _shown(p) != status:
-            self._apply(p, status, admin_id, note)
+        was_paid = p.status == "Paid"
+        if self._apply(p, status, admin_id, note):
             self._db.commit()
+            if status == "Paid" and not was_paid:
+                emit.payment_received(self._db, p, self._cycle_text(p))  # notify hook
         return self._admin_out([p])[0]
 
-    def _apply(self, p: Payment, status: str, admin_id: uuid.UUID, note: str) -> None:
-        old, now = _shown(p), self._now().astimezone(UTC)
-        p.status = _stored(status)
-        if status == "Received":
+    def _cycle_text(self, p: Payment) -> str:
+        """"Hyundai Creta HR 26 DK 8337, 01-Oct-26 to 30-Oct-26" for a message."""
+        v = self._db.get(Vehicle, p.vehicle_id) if p.vehicle_id else None
+        what = vehicle_label(v) or "your car"
+        if p.cycle_start and p.cycle_end:
+            return (f"{what}, {show_date(p.cycle_start)} to "
+                    f"{show_date(p.cycle_end - timedelta(days=1))}")
+        return f"{what}, {p.description}"
+
+    def _apply(self, p: Payment, status: str, admin_id: uuid.UUID, note: str) -> bool:
+        """Sets the stored status for a chosen display status. False when nothing
+        changed. The caller commits."""
+        old, now = self._view(p).status, self._now().astimezone(UTC)
+        if stored_for(status) == p.status and (
+                p.status != "Open" or p.kind != "Add-on"
+                or (status == "Over due") == (p.overdue_since is not None)):
+            return False  # Open to Open on a plan payment: the date rule decides.
+        p.status = stored_for(status)
+        if status == "Paid":
             p.received_at, p.confirmed_by = now, admin_id
         else:
             p.received_at = None
             p.confirmed_by = None
         if status == "Initiated":
             p.initiated_at = p.initiated_at or now
-        if status == "Over due":
-            # The 7 days to Inactive start again from the admin's decision.
-            p.overdue_since = today_of(self._now())
-        elif status in ("Due", "Initiated"):
+        p.rejected_at = None  # Only Reject records a failed payment.
+        if p.kind == "Add-on":
+            # An add-on is Over due only after its service is done unpaid, or when the
+            # admin says so; the 7 days to Inactive never apply to it.
+            p.overdue_since = self._today() if status == "Over due" else None
+        elif p.status != "Open":
             p.overdue_since = None
-        self._event(p, old, status, admin_id, note)
+        self._db.flush()
+        shown = self._view(p).status
+        self._event(p, old, shown, admin_id, note)
+        return True
 
     def confirm(self, payment_id: str, admin_id: uuid.UUID) -> AdminPaymentOut:
-        """PAY-08, ADM-PAY-03."""
-        return self.set_status(payment_id, "Received", admin_id, "Confirmed")
+        """Approve (PAY-08, ADM-PAY-03): Paid, and the customer is told."""
+        return self.set_status(payment_id, "Paid", admin_id, "Approved")
 
     def reject(self, payment_id: str, admin_id: uuid.UUID) -> AdminPaymentOut:
-        """The money did not arrive: back to Due, or Over due when the date has passed."""
+        """The money did not arrive (PAY-17): back to Open, so the date rule shows
+        the status, and the customer sees "Your last payment failed"."""
         p = self._payment(payment_id)
-        today = today_of(self._now())
-        return self.set_status(
-            payment_id, "Over due" if p.due_date < today else "Due", admin_id, "Rejected"
-        )
+        if p.status == "Open":
+            return self._admin_out([p])[0]
+        old = self._view(p).status
+        p.status = "Open"
+        p.received_at = p.confirmed_by = None
+        p.rejected_at = self._now().astimezone(UTC)
+        self._db.flush()
+        self._event(p, old, self._view(p).status, admin_id, "Rejected")
+        self._db.commit()
+        emit.payment_failed(self._db, p, self._cycle_text(p))  # notify hook
+        return self._admin_out([p])[0]
 
     def create_payment(self, body: AdminPaymentIn, admin_id: uuid.UUID) -> AdminPaymentOut:
-        if body.status not in _LEGACY_STATUSES or body.kind not in ("Plan", "Add-on"):
+        """Records a payment for any cycle, past ones too (ADM-PAY-04, ADM-PAY-15,
+        ADM-CUS-06). A cycle that has an Open payment already is updated, not doubled."""
+        if body.status not in DISPLAY_STATUSES or body.kind not in ("Plan", "Add-on"):
             raise ApiError("validation_failed", "Check the status and type.", 422)
         if body.amount_rupees <= 0:
             raise ApiError(
@@ -557,39 +611,56 @@ class BillingService:
         if body.kind == "Plan":
             if sub is None:
                 raise ApiError("no_subscription", "This vehicle has no subscription.", 404)
-            cycle_start = body.cycle_start or body.due_date
-            if self._db.scalar(
+            cycle_start = body.cycle_start or cycle_window(
+                sub.first_service_date, shift_days(self._db, vehicle.id), self._today(),
+                self._cycle_days)[0]
+            found = self._db.scalar(
                 select(Payment).where(
                     Payment.subscription_id == sub.id, Payment.cycle_start == cycle_start
                 )
-            ):
-                raise ApiError("payment_exists", "That cycle has a payment already.", 409)
+            )
+            if found is not None:
+                if found.status != "Open" or found.voided_at is not None:
+                    raise ApiError("payment_exists", "That cycle has a payment already.", 409)
+                found.amount_rupees = body.amount_rupees
+                if body.description:
+                    found.description = body.description
+                self._apply(found, body.status, admin_id, "Recorded by the admin")
+                self._db.commit()
+                return self._admin_out([found])[0]
+        elif body.due_date is None:
+            raise ApiError("validation_failed", "Choose the date the add-on is due.", 422,
+                           {"due_date": "Required."})
+        due = (cycle_start + timedelta(days=self._cycle_days - 1) if cycle_start
+               else body.due_date)
         p = Payment(
             customer_id=vehicle.customer_id,
             vehicle_id=vehicle.id,
             subscription_id=sub.id if sub else None,
             kind=body.kind,
             description=body.description
-            or ("Plan payment" if body.kind == "Plan" else "Add-on payment"),
+            or (f"Plan {show_date(cycle_start)} to {show_date(due)}" if cycle_start
+                else "Add-on payment"),
             amount_rupees=body.amount_rupees,
             status="Open",
-            due_date=body.due_date,
+            due_date=due,
             cycle_start=cycle_start,
             cycle_end=cycle_start + timedelta(days=self._cycle_days) if cycle_start else None,
         )
         self._db.add(p)
         self._db.flush()
-        self._event(p, None, "Due", admin_id, "Created by the admin")
-        if body.status != "Due":
+        self._event(p, None, self._view(p).status, admin_id, "Created by the admin")
+        if stored_for(body.status) != "Open" or (
+                p.kind == "Add-on" and body.status == "Over due"):
             self._apply(p, body.status, admin_id, "Recorded by the admin")
         self._db.commit()
         return self._admin_out([p])[0]
 
     def issue_invoice(self, payment_id: str, admin_id: uuid.UUID) -> InvoiceOut:
-        """ADM-PAY-08, ADM-PAY-09. Only for a Received payment."""
+        """ADM-PAY-08, ADM-PAY-09. Only for a Paid payment."""
         p = self._payment(payment_id)
         if p.status != "Paid":
-            raise ApiError("not_received", "An invoice is made once the payment is Received.", 409)
+            raise ApiError("not_received", "An invoice is made once the payment is Paid.", 409)
         existing = self._db.scalar(select(Invoice).where(Invoice.payment_id == p.id))
         if existing is not None:
             return self._invoice_out(existing)
@@ -672,7 +743,7 @@ class BillingService:
         page = found[offset: offset + limit]
         latest: dict[uuid.UUID, str] = {}
         for sub_id, pay_status in self._db.execute(
-            select(Payment.subscription_id, _shown_sql())
+            select(Payment.subscription_id, display_status_sql(today))
             .where(Payment.subscription_id.in_([x[0].id for x in page]),
                    Payment.kind == "Plan", Payment.voided_at.is_(None))
             .order_by(Payment.due_date, Payment.created_at)
@@ -692,20 +763,22 @@ class BillingService:
                 plan_name=plans.get(sub.plan_id) if sub.plan_id else None,
                 status=shown, first_service_date=sub.first_service_date,
                 renewal_date=renewal, payment_status=latest.get(sub.id),
-                payment_due=latest.get(sub.id) in ("Due", "Over due")))
+                payment_due=latest.get(sub.id) in ("Due", "Due today", "Over due")))
         return out
 
     def payments_summary(self, society: str | None = None) -> dict:
-        """How many payments, and how many rupees, there are in each status (ADM-PAY-*)."""
-        q = (select(_shown_sql(), func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
+        """How many payments, and how many rupees, there are in each status
+        (ADM-PAY-12): Not Due, Due, Due today, Over due, Initiated, Paid."""
+        shown = display_status_sql(self._today()).label("s")  # one object: PostgreSQL groups by it
+        q = (select(shown, func.count(), func.coalesce(func.sum(Payment.amount_rupees), 0))
              .where(Payment.voided_at.is_(None)))
         if society:
             q = q.join(Customer, Payment.customer_id == Customer.id).outerjoin(
                 Vehicle, Payment.vehicle_id == Vehicle.id).join(
                 Society, Society.id == func.coalesce(Vehicle.society_id, Customer.society_id)
             ).where(Society.name == society)
-        by_status = {s: {"count": 0, "rupees": 0} for s in _LEGACY_STATUSES}
-        for status, count, rupees in self._db.execute(q.group_by(_shown_sql())):
+        by_status = {s: {"count": 0, "rupees": 0} for s in DISPLAY_STATUSES}
+        for status, count, rupees in self._db.execute(q.group_by(shown)):
             by_status[status] = {"count": count, "rupees": int(rupees)}
         return {
             "total": sum(v["count"] for v in by_status.values()),
@@ -803,9 +876,9 @@ class BillingService:
                     and previously_active is None and not reactivated):
                 initial.cycle_start = first_service_date
                 initial.cycle_end = first_service_date + timedelta(days=self._cycle_days)
-                initial.due_date = first_service_date
+                initial.due_date = initial.cycle_end - timedelta(days=1)
         if status == "Active" and reactivated:
-            self._cycle_payment(sub, self._db.get(Vehicle, sub.vehicle_id), first_service_date)
+            self.ensure_cycle_payment(sub, self._db.get(Vehicle, sub.vehicle_id), first_service_date)
         self._db.add(
             SubscriptionEvent(
                 subscription_id=sub.id,
@@ -824,9 +897,10 @@ class BillingService:
     # --- the jobs (EventBridge, later) ---------------------------------------
 
     def generate_due_payments(self, now: datetime) -> int:
-        """Creates each plan payment 7 days before the renewal date, Due by the
-        renewal date (ADM-PAY-06). Pause edits move existing unpaid records
-        transactionally. Returns how many were created."""
+        """Applies plan changes that start today, then makes the payment of each
+        Active subscription's current cycle if it is not there yet: on the day after a
+        cycle ends, the next cycle's payment appears (ADM-PAY-06, PAY-14). Returns how
+        many were created."""
         today = today_of(now)
         for pending in self._db.scalars(
             select(Subscription).where(
@@ -844,34 +918,13 @@ class BillingService:
         subs = self._db.scalars(select(Subscription).where(Subscription.status == "Active"))
         for sub in list(subs):
             vehicle = self._db.get(Vehicle, sub.vehicle_id)
-            _, renewal = cycle_window(
+            start, _ = cycle_window(
                 sub.first_service_date, shift_days(self._db, vehicle.id), today, self._cycle_days
             )
-            due = self._db.scalar(
-                select(Payment)
-                .where(
-                    Payment.subscription_id == sub.id,
-                    Payment.kind == "Plan",
-                    Payment.status == "Open",
-                    Payment.voided_at.is_(None),
-                    Payment.cycle_start >= today - timedelta(days=self._cycle_days),
-                )
-                .order_by(Payment.cycle_start.desc())
-            )
-            if due is not None:
-                # Pause edits synchronize these dates transactionally. Do not
-                # move a first-cycle/reactivation Due record to a later cycle.
-                continue
-            if (renewal - today).days > self._pay_ahead:
-                continue
-            if self._db.scalar(
-                select(Payment).where(
-                    Payment.subscription_id == sub.id, Payment.cycle_start == renewal
-                )
-            ):
-                continue
-            self._cycle_payment(sub, vehicle, renewal)
-            created += 1
+            before = self._db.scalar(select(Payment.id).where(
+                Payment.subscription_id == sub.id, Payment.cycle_start == start))
+            self.ensure_cycle_payment(sub, vehicle, start)
+            created += 0 if before else 1
         self._db.commit()
         return created
 
@@ -889,7 +942,7 @@ class BillingService:
         )
         for p in list(due):
             p.overdue_since = p.due_date + timedelta(days=1)
-            self._event(p, "Due", "Over due", None, "Due date passed")
+            self._event(p, "Due today", "Over due", None, "Due date passed")
             report.marked_overdue += 1
         # An add-on payment is Over due once its service is Completed and the
         # payment is not yet Received. A service not done stays Due.
@@ -916,10 +969,10 @@ class BillingService:
             select(Payment).where(
                 Payment.kind == "Plan",
                 Payment.status == "Open",
-                Payment.overdue_since.is_not(None),
                 Payment.voided_at.is_(None),
                 Payment.subscription_id.is_not(None),
-                Payment.overdue_since <= today - timedelta(days=self._inactive_after),
+                # Over due for more than N days: due date + N is before today.
+                Payment.due_date < today - timedelta(days=self._inactive_after),
             )
         )
         for p in list(stale):

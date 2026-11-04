@@ -263,12 +263,14 @@ def build_company(db: Session) -> World:
 
     # Money.
     plan_cycle = date(2026, 10, 15)
-    w.payment(asha, "Due", 1299, cycle_start=plan_cycle, sub=s1)
-    w.payment(bela, "Over due", 1299, cycle_start=plan_cycle, overdue_since=date(2026, 10, 25), sub=s2)
+    w.payment(asha, "Due", 1299, due=date(2026, 10, 31), cycle_start=plan_cycle, sub=s1)
+    w.payment(bela, "Over due", 1299, due=date(2026, 10, 24), cycle_start=plan_cycle,
+              overdue_since=date(2026, 10, 25), sub=s2)
     w.payment(chen, "Received", 1299, cycle_start=plan_cycle, received_at=utc(2026, 10, 10, 5), sub=s3)
-    w.payment(dev, "Over due", 999, cycle_start=plan_cycle, overdue_since=date(2026, 10, 20), sub=s4)
-    w.payment(asha, "Over due", 1299, cycle_start=date(2026, 9, 15), overdue_since=date(2026, 10, 22),
-              sub=s1)
+    w.payment(dev, "Over due", 999, due=date(2026, 10, 19), cycle_start=plan_cycle,
+              overdue_since=date(2026, 10, 20), sub=s4)
+    w.payment(asha, "Over due", 1299, due=date(2026, 10, 21), cycle_start=date(2026, 9, 15),
+              overdue_since=date(2026, 10, 22), sub=s1)
     w.payment(bela, "Received", 500, cycle_start=date(2026, 9, 1), sub=s2,
               received_at=utc(2026, 10, 25, 20, 0))  # 01:30 on Monday 26-Oct India time
     w.payment(chen, "Received", 250, cycle_start=date(2026, 8, 16), received_at=utc(2026, 10, 18, 19, 0),

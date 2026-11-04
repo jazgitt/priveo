@@ -19,7 +19,7 @@ from app.addons.schemas import (
 from app.billing.config import MoneySettings
 from app.billing.models import Payment
 from app.billing.service import BillingService, customer_name, vehicle_label
-from app.billing.status import legacy_shown
+from app.billing.status import display_status
 from app.changes.access import owned_vehicle, parse_id
 from app.changes.cycle import paused_days
 from app.changes.rules import Clock, is_open, require_open, today_of
@@ -110,7 +110,7 @@ class AddonService:
         if b.payment_id is None:
             return None
         p = self._db.get(Payment, b.payment_id)
-        return legacy_shown(p) if p and p.voided_at is None else None  # TODO(B2)
+        return display_status(p, today_of(self._now())).status if p and p.voided_at is None else None
 
     def _out(self, b: AddonBooking) -> AddonOut:
         assignment = self._db.execute(

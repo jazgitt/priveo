@@ -7,7 +7,7 @@ is its twin for filters, tiles and group-by, and a test keeps them equal."""
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import case, literal_column
+from sqlalchemy import and_, case
 
 STORED_STATUSES = ("Open", "Initiated", "Paid")
 DISPLAY_STATUSES = ("Not Due", "Due", "Due today", "Over due", "Initiated", "Paid")
@@ -65,26 +65,37 @@ def payment_status_sql(today: date, due_date=None, status=None):
     )
 
 
-# TODO(B2): interim shim. Until the billing-flow rework, the API still speaks the
-# old four names: Open with `overdue_since` set shows as "Over due", otherwise
-# "Due"; Paid shows as "Received". B2 replaces this with payment_status().
-LEGACY_STATUSES = ("Due", "Over due", "Initiated", "Received")
+# The statuses the admin may choose that mean "no payment counts for the cycle":
+# the date rule decides which one is shown (ADM-PAY-02).
+DATE_BASED_STATUSES = ("Not Due", "Due", "Due today", "Over due")
 
 
-def legacy_shown(p) -> str:
-    if p.status == "Paid":
-        return "Received"
-    if p.status == "Initiated":
-        return "Initiated"
-    return "Over due" if p.overdue_since is not None else "Due"
+def stored_for(display: str) -> str:
+    """What is saved for a status the admin or an import chose."""
+    return {"Paid": "Paid", "Initiated": "Initiated"}.get(display, "Open")
 
 
-def legacy_shown_sql():
+def display_status(p, today: date) -> PaymentStatusView:
+    """The status of any payment row. A plan payment (and a plan-change charge)
+    follows the date rule. An add-on is Due until its service is done unpaid, then
+    Over due (ADM-PAY-13); it is not tied to a cycle."""
+    if p.kind != "Add-on" or p.status != "Open":
+        return payment_status(p.due_date, p.status, p.rejected_at, today)
+    failed = p.rejected_at is not None
+    d = (p.due_date - today).days
+    if p.overdue_since is not None:
+        return PaymentStatusView("Over due", d, "Service done, payment not received", failed)
+    return PaymentStatusView("Due", d, f"Due on {p.due_date.strftime('%d-%b-%y')}", failed)
+
+
+def display_status_sql(today: date):
+    """SQL twin of `display_status` over the Payment columns. Label it once and
+    reuse the label (see `payment_status_sql`)."""
     from app.billing.models import Payment
 
-    # Literal columns, not bound strings, so that PostgreSQL accepts the same
-    # expression in the select list and in GROUP BY.
-    return case((Payment.status == literal_column("'Paid'"), literal_column("'Received'")),
-                (Payment.status == literal_column("'Initiated'"), literal_column("'Initiated'")),
-                (Payment.overdue_since.is_not(None), literal_column("'Over due'")),
-                else_=literal_column("'Due'"))
+    addon_open = and_(Payment.kind == "Add-on", Payment.status == "Open")
+    return case(
+        (and_(addon_open, Payment.overdue_since.is_(None)), "Due"),
+        (addon_open, "Over due"),
+        else_=payment_status_sql(today),
+    )

@@ -116,6 +116,6 @@ class AddonsSummary(ReadTool):
             f"{len(pending)} pending {only or 'add-on'} bookings; add-on revenue received in "
             f"{this_month['month']} is Rs {this_month['rupees']} from {this_month['payments']} payments; "
             f"{len(payments)} add-on payments became Over due on completion. Revenue counts payments "
-            "marked Received, by the day received (India time), GST included. Bookings made before "
+            "marked Paid, by the day received (India time), GST included. Bookings made before "
             "the booking table existed are not included.")
         return data, summary
