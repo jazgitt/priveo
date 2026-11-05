@@ -11,8 +11,8 @@
 1. **Serial, small pull requests.** One phase at a time, one slice (PR) at a time, in the order of section 3. A code PR is opened regular, a docs-only PR as a draft (CLAUDE.md, memory of 3-Nov-26). The owner confirms before each next phase.
 2. **Local checks first.** Before marking a PR ready: `tools/dev/check-local.sh --changed`. The PostgreSQL stage is included for any API, database or scheduler change (never `--no-pg` for those). Merge only when the local checks and the four CI checks (`api-ci`, `web-ci`, `mobile-ci`, `web-e2e`) are green. A merge to `main` deploys to test (`docs/build-and-release.md`). Repeat runs rerun only the touched tests and say why.
 3. **Migration number re-checked at build time.** The head on `main` is 0050 today. `check-local.sh` stops on a duplicate revision or more than one head. Each phase below says "0051 or the next free number".
-4. **Kill switch.** A per-site setting `scheduler.rules_version` (site scope, stored in the new site settings store of P1a). Value 1 is the old behaviour and is the default for every existing site. Value 2 turns on the v1.2 rules built so far. A phase ships dark: its new code paths run only when the site's value is 2, and its migrations and settings are additive. The owner flips the value per site (gate G7). Setting it back to 1 is the rollback for behaviour. The switch itself is a registry/site key editable in the portal, not a code constant (SCHR-CFG-01).
-5. **Nothing hardcoded (SCHR-CFG).** Every new value is a registry key or a table row seeded by migration or the seed tool. Removing a constant must be behaviour-neutral: the migration seeds the value the code had (for example durations 20, 20 and 120, slots 05:00 to 11:00 on all days) for existing sites. The new defaults (30 minutes, Wednesday closed) are seeded for new sites and reach existing sites only through an approved data script (gates G3 to G5).
+4. **Kill switch.** A per-site setting `scheduler.rules_version` (site scope, stored in the new site settings store of P1a). Value 1 is the old behaviour and is the default for every existing site. Value 2 turns on the v1.2 rules built so far. A phase ships dark: its new code paths run only when the site's value is 2, and its migrations and settings are additive. The owner flips the value per site (gate OG7). Setting it back to 1 is the rollback for behaviour. The switch itself is a registry/site key editable in the portal, not a code constant (SCHR-CFG-01).
+5. **Nothing hardcoded (SCHR-CFG).** Every new value is a registry key or a table row seeded by migration or the seed tool. Removing a constant must be behaviour-neutral: the migration seeds the value the code had (for example durations 20, 20 and 120, slots 05:00 to 11:00 on all days) for existing sites. The new defaults (30 minutes, Wednesday closed) are seeded for new sites and reach existing sites only through an approved data script (gates OG3 to OG5).
 6. **Reuse before new** (SCHR-CFG-02, SCHR-CFG-10). Reuse the Settings page Schedule tab (every `schedule.*` and new `scheduler.*` registry key appears there by itself, `apps/web/src/pages/settings/SettingsPage.tsx`), the Slots, Services and Zones tabs (`apps/web/src/pages/reference/`) and Crew detail (`apps/web/src/pages/crew/`). New UI only: a "Scheduling rules" tab in Site Setup, a break dialog, and crew fields.
 7. **API contract.** After any API change: `scripts/export_openapi.py` (`check-local.sh` regenerates and fails if stale) and, for mobile, `cd apps/mobile && dart run tool/gen_api.dart`. Commit the regenerated files.
 8. **Do not decide for the owner.** Every open choice is a gate in the table below.
@@ -21,17 +21,17 @@
 
 | Gate | What needs the owner | Needed before |
 |---|---|---|
-| G1 | Approve this plan; say which phase goes first | Any build |
-| G2 | PR #156 (requirements and this plan) merged to `main`, so the SCHR- IDs exist there | P1a |
-| G3 | Wednesday closed on **live** sites: a data script for `working_slots` and for crew `working_hours` | Flipping any live site |
-| G4 | Durations 20 to 30 on **live** sites (services, and the two extra add-ons seeded at 20) | Flipping any live site |
-| G5 | Frozen or draft schedules that already hold Wednesday jobs: leave them or move them | G3 |
-| G6 | Entitlement backfill: create the current week's entitlement for Active interior subscriptions; no past debt is created | P5 go-live |
-| G7 | Flip `scheduler.rules_version` to 2, per site, first on test, then each production site | Each flip |
-| G8 | Capacity decision (more cleaners, longer shifts, fewer cars per cleaner) after the capacity check of section 4 | Flipping a production site |
-| G9 | Production release: `v*` tag or manual run, with the reviewer approval of the `production` environment | Any production deploy |
-| G10 | Add `hypothesis` as a dev dependency for property tests, or keep plain seeded pytest loops (this plan assumes the latter) | P3 |
-| G11 | Customer wording changes (PAY-02, ONB-18, SUB-08) and the edits to existing requirement rows | P8 |
+| OG1 | Approve this plan; say which phase goes first | Any build |
+| OG2 | PR #156 (requirements and this plan) merged to `main`, so the SCHR- IDs exist there | P1a |
+| OG3 | Wednesday closed on **live** sites: a data script for `working_slots` and for crew `working_hours` | Flipping any live site |
+| OG4 | Durations 20 to 30 on **live** sites (services, and the two extra add-ons seeded at 20) | Flipping any live site |
+| OG5 | Frozen or draft schedules that already hold Wednesday jobs: leave them or move them | OG3 |
+| OG6 | Entitlement backfill: create the current week's entitlement for Active interior subscriptions; no past debt is created | P5 go-live |
+| OG7 | Flip `scheduler.rules_version` to 2, per site, first on test, then each production site | Each flip |
+| OG8 | Capacity decision (more cleaners, longer shifts, fewer cars per cleaner) after the capacity check of section 4 | Flipping a production site |
+| OG9 | Production release: `v*` tag or manual run, with the reviewer approval of the `production` environment | Any production deploy |
+| OG10 | Add `hypothesis` as a dev dependency for property tests, or keep plain seeded pytest loops (this plan assumes the latter) | P3 |
+| OG11 | Customer wording changes (PAY-02, ONB-18, SUB-08) and the edits to existing requirement rows | P8 |
 
 ---
 
@@ -105,7 +105,7 @@ For every phase: **Contract** means export the OpenAPI file and run `dart run to
   3. FIFO ordering in Pass B, carry-forward and credit to the original week on completion (outcomes).
   4. Waiver for a fully paused week; one-day skip stays pending (SCHR-INT-21); the Deferred state for key or car unavailable; partial completion keeps ADM-CNC-10.
   5. Customer calendar projection (`changes/projection.py:18-29`).
-  6. Backfill script (gate G6), run on test first.
+  6. Backfill script (gate OG6), run on test first.
 - **Contract:** yes (job and customer calendar fields; mobile generation needed). **Acceptance:** the catch-up example of requirements section 12 passes end to end. **Rollback:** version 1 ignores the ledger; the downgrade drops the table and the column.
 
 ### P6. Home zone and spill
@@ -120,26 +120,26 @@ For every phase: **Contract** means export the OpenAPI file and run `dart run to
 
 ### P8. Documentation follow-up
 - **Covers:** gap analysis section 5 in full; G30.
-- **PR slices:** (1) edit the existing requirement rows (gate G11) and the version lines, check IDs with `/ids` and `/synccheck`; (2) `docs/coverage/business-rules.md`, `data-entities.md`; (3) wiki pages and `wiki/validate.py`; README prototype differences; board redesign doc; (4) add the scheduler file to the `REQS` list in `tools/priveo-reqs/hooks/register.ts`; (5) remove the version-1 path if the owner agrees.
+- **PR slices:** (1) edit the existing requirement rows (gate OG11) and the version lines, check IDs with `/ids` and `/synccheck`; (2) `docs/coverage/business-rules.md`, `data-entities.md`; (3) wiki pages and `wiki/validate.py`; README prototype differences; board redesign doc; (4) add the scheduler file to the `REQS` list in `tools/priveo-reqs/hooks/register.ts`; (5) remove the version-1 path if the owner agrees.
 - **Rollback:** documents only.
 
 ---
 
 ## 3. Dependency graph and PR order
 
-P1a, then P1b, then P2, then P3, then P5. P4 (break) needs P3 and may run before or after P5. P6 needs P3 and, because it touches the same solver, runs serially after P5. P7 last. P8 starts after G1 for the requirement-file edits and finishes last.
+P1a, then P1b, then P2, then P3, then P5. P4 (break) needs P3 and may run before or after P5. P6 needs P3 and, because it touches the same solver, runs serially after P5. P7 last. P8 starts after OG1 for the requirement-file edits and finishes last.
 
 | Order | Phase | Can be released alone (dark) | Depends on |
 |---|---|---|---|
-| 1 | P1a | Yes | G2 |
-| 2 | P1b | Yes | P1a, G3, G4 for live sites |
+| 1 | P1a | Yes | OG2 |
+| 2 | P1b | Yes | P1a, OG3, OG4 for live sites |
 | 3 | P2 | Yes | P1b |
 | 4 | P3 | Yes | P2 |
 | 5 | P4 | Yes | P3 |
-| 6 | P5 | Yes | P3, G6 |
+| 6 | P5 | Yes | P3, OG6 |
 | 7 | P6 | Yes | P5 |
 | 8 | P7 | Yes | P5, P6 |
-| 9 | P8 | Docs | G11 |
+| 9 | P8 | Docs | OG11 |
 
 ---
 
@@ -149,14 +149,14 @@ P1a, then P1b, then P2, then P3, then P5. P4 (break) needs P3 and may run before
 |---|---|---|
 | New settings and tables | Migration, additive, seeded with values equal to today's code for existing sites | none (dark) |
 | New sites | Seed tool gives the new defaults (30 minutes, weekly off Wednesday, 05:00, 05:30, 07:00, break 09:30 to 10:00) | none |
-| Existing sites' slots and crew hours (Wednesday) | A reviewed data script, run on test first, prints old and new values | G3, G5 |
-| Existing durations and the two extra add-ons | Same kind of script | G4 |
+| Existing sites' slots and crew hours (Wednesday) | A reviewed data script, run on test first, prints old and new values | OG3, OG5 |
+| Existing durations and the two extra add-ons | Same kind of script | OG4 |
 | Jobs already created at 20 minutes | Keep their length; unfrozen ones refresh on the next re-run | none |
-| Frozen schedules that hold Wednesday jobs | Leave, or move by hand | G5 |
-| Entitlement backfill | Current week only, no past debt; test first | G6 |
-| Capacity check before any flip | Run the capacity view for the next 4 weeks at version 2 in a copy: expect about 10 jobs per cleaner per day against 18 today, and no Interior before a 09:00 cutoff on strict days (gap analysis section 7) | G8 |
-| Flip | `scheduler.rules_version` = 2 per site, test site first | G7 |
-| Production | Merge to `main` deploys to test. Production deploys from a `v*` tag or a manual run and the `production` GitHub Environment reviewer; a migration runs before the new code and must keep the previous release working (`docs/build-and-release.md`) | G9 |
+| Frozen schedules that hold Wednesday jobs | Leave, or move by hand | OG5 |
+| Entitlement backfill | Current week only, no past debt; test first | OG6 |
+| Capacity check before any flip | Run the capacity view for the next 4 weeks at version 2 in a copy: expect about 10 jobs per cleaner per day against 18 today, and no Interior before a 09:00 cutoff on strict days (gap analysis section 7) | OG8 |
+| Flip | `scheduler.rules_version` = 2 per site, test site first | OG7 |
+| Production | Merge to `main` deploys to test. Production deploys from a `v*` tag or a manual run and the `production` GitHub Environment reviewer; a migration runs before the new code and must keep the previous release working (`docs/build-and-release.md`) | OG9 |
 
 A site never changes behaviour because of a deploy; it changes only when its value is flipped.
 
@@ -347,7 +347,7 @@ Deterministic: fixed seed from the settings, small fixtures built as in `test_so
 
 ### 5.5 Property tests
 
-Plain pytest with seeded random generators (no new dependency; gate G10 if `hypothesis` is wanted). Generate 200 random days (cleaners, windows, cars, cutoffs, entitlements) per run and check: no two jobs overlap for a cleaner or a car; every job inside a cleaner window; nothing before first-job time; no Interior before the Interior-earliest time; no job on the weekly-off day; on strict days no job ends after its cutoff; at most one Interior per car per service week and per day; Exterior count never decreases when capacity is added; same input gives the same output. File: `tests/scheduling/test_rules_v2_properties.py`.
+Plain pytest with seeded random generators (no new dependency; gate OG10 if `hypothesis` is wanted). Generate 200 random days (cleaners, windows, cars, cutoffs, entitlements) per run and check: no two jobs overlap for a cleaner or a car; every job inside a cleaner window; nothing before first-job time; no Interior before the Interior-earliest time; no job on the weekly-off day; on strict days no job ends after its cutoff; at most one Interior per car per service week and per day; Exterior count never decreases when capacity is added; same input gives the same output. File: `tests/scheduling/test_rules_v2_properties.py`.
 
 ### 5.6 Configuration guard tests (SCHR-CFG-09)
 
@@ -378,7 +378,7 @@ Budgets are written into the P3 PR description and stored as settings, not const
 
 ### 5.10 UAT on the test environment (`priveo-api-test`)
 
-Prerequisite: the phase is merged and deployed to test; the test site flipped to version 2 (gate G7) using `scripts/seed_two_societies.py` data. Script per phase:
+Prerequisite: the phase is merged and deployed to test; the test site flipped to version 2 (gate OG7) using `scripts/seed_two_societies.py` data. Script per phase:
 1. Reset the two seeded societies; set the site values from the requirements defaults.
 2. Run the week's plan from the Schedule page; open the Board for a strict day, a Wednesday, a Saturday and a Sunday.
 3. Check against the phase's acceptance list (section 2) and the scenario rows of that phase, with the expected values written beforehand by the tester.
@@ -386,7 +386,7 @@ Prerequisite: the phase is merged and deployed to test; the test site flipped to
 5. Edit a setting; confirm the audit row and that the frozen schedule did not change.
 6. Flip the site back to version 1; confirm the old plan returns.
 7. Run `scripts/smoke_test.py` against the test API.
-**Exit criteria:** every acceptance item passes; no open defect of severity high; the capacity check of section 4 is shown to the owner; the owner signs off the phase. Only then is a production release asked for (G9).
+**Exit criteria:** every acceptance item passes; no open defect of severity high; the capacity check of section 4 is shown to the owner; the owner signs off the phase. Only then is a production release asked for (OG9).
 
 ### 5.11 Defect handling
 
@@ -408,16 +408,16 @@ A defect found in UAT or CI is recorded with the SCHR- or G ID, the scenario num
 | P7 | L | 5 to 6 | No |
 | P8 | M | 5 | No |
 
-Critical path: P1a, P1b, P2, P3, P5. Suggested order for the owner to confirm: P1a, P1b, P2, P3, P5, P4, P6, P7, P8. The owner decides the order and when each wave starts (G1).
+Critical path: P1a, P1b, P2, P3, P5. Suggested order for the owner to confirm: P1a, P1b, P2, P3, P5, P4, P6, P7, P8. The owner decides the order and when each wave starts (OG1).
 
 ---
 
 ## 7. Risks and open items
 
-- **Capacity** (gap analysis section 7): about 10 jobs per cleaner per day against 18 today, and no Interior before a 09:00 customer cutoff on strict days. Mitigation: the capacity check and gate G8 before any production flip.
+- **Capacity** (gap analysis section 7): about 10 jobs per cleaner per day against 18 today, and no Interior before a 09:00 customer cutoff on strict days. Mitigation: the capacity check and gate OG8 before any production flip.
 - **Solve time:** two passes double the solver calls and the hosting limit was not verified (section 5.9).
-- **Backfill:** creates the current week's entitlement only (G6); past weeks are not turned into debt.
-- **Customer calendar wording:** Interior may land on a day other than the preferred day (SCHR-INT-05); the projection and the wording change in P5 and P8 (G11).
+- **Backfill:** creates the current week's entitlement only (OG6); past weeks are not turned into debt.
+- **Customer calendar wording:** Interior may land on a day other than the preferred day (SCHR-INT-05); the projection and the wording change in P5 and P8 (OG11).
 - **Custom interior day** is replaced by the entitlement model (owner decision 8); the notes stay informational.
 - **Tooling blind spot:** `tools/priveo-reqs` tracks only three requirement files until P8.
 - **Reporting-time note** in the owner's sheet was truncated in extraction; it is read as "each crew member".
