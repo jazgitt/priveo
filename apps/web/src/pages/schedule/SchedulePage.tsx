@@ -33,6 +33,7 @@ import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
+import { REPORT_SECTIONS } from "./reports";
 import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
@@ -78,7 +79,24 @@ const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) =>
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "queue", label: "Crew queue" },
   { id: "improve", label: "Draft improvements" },
+  // Shown only when a report section file exists in ./reports.
+  ...(REPORT_SECTIONS.length ? [{ id: "reports", label: "Reports" }] : []),
 ] as const;
+
+/** The reports of the chosen day, one block per section file found in the reports folder. */
+function ReportsPanel({ societyId, date }: { societyId: string; date: string }) {
+  if (!societyId) return <EmptyState title="Choose a site">Pick a site at the top left to see its reports.</EmptyState>;
+  return (
+    <div className="flex flex-col gap-8">
+      {REPORT_SECTIONS.map(({ id, title, component: Report }) => (
+        <section key={id} aria-labelledby={`report-${id}`} className="flex flex-col gap-3">
+          <h2 id={`report-${id}`} className="text-lg font-semibold">{title}</h2>
+          <Report societyId={societyId} date={date} />
+        </section>
+      ))}
+    </div>
+  );
+}
 
 function periodDays(period: Period, start: string): number {
   if (period === "daily") return 1;
@@ -526,6 +544,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           ? <QueuePanel key={date} crew={board.crew} jobs={dayJobs} date={date} refresh={refresh} />
           : <EmptyState title="No schedule for this day">Run the scheduler for this day to make a draft first.</EmptyState>)}
         {tab === "improve" && <DraftImprovements key={date} board={board} date={date} refresh={refresh} />}
+        {tab === "reports" && REPORT_SECTIONS.length > 0 && <ReportsPanel societyId={societyId} date={date} />}
       </Tabs>}
 
       {open && (

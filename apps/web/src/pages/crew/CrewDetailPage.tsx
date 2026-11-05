@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { ErrorState, PageHeader } from "@/blocks/layout";
+import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
 import { errorMessage } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { Tabs } from "@/components";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/ui/skeleton";
 
 import { useCrew, type Crew } from "./api";
 import { AccountPanel, DetailsPanel, ExceptionsPanel, HoursPanel, RolePanel, SessionsPanel } from "./panels";
+import { CREW_RULES_SECTIONS } from "./rules";
 import { SocietyPanel } from "./SocietyPanel";
 
 /** The sections of a crew member's page, one tab each. */
@@ -20,7 +21,25 @@ export const CREW_TABS = [
   { id: "exceptions", label: "Exceptions" },
   { id: "account", label: "Account" },
   { id: "sessions", label: "Sessions" },
+  { id: "scheduling", label: "Scheduling" },
 ] as const;
+
+/** The scheduling rules of one crew member, one block per section file found in the rules folder. */
+function SchedulingPanel({ crew }: { crew: Crew }) {
+  if (!CREW_RULES_SECTIONS.length) {
+    return <EmptyState title="No scheduling rules yet">Scheduling rules for this crew member appear here as they are added.</EmptyState>;
+  }
+  return (
+    <div className="flex flex-col gap-8">
+      {CREW_RULES_SECTIONS.map(({ id, title, component: Part }) => (
+        <section key={id} aria-labelledby={`crew-rules-${id}`} className="flex flex-col gap-3">
+          <h2 id={`crew-rules-${id}`} className="text-lg font-semibold">{title}</h2>
+          <Part crew={crew} />
+        </section>
+      ))}
+    </div>
+  );
+}
 
 function Section({ tab, crew }: { tab: string; crew: Crew }) {
   // The key resets a section's form when the saved record changes.
@@ -32,6 +51,7 @@ function Section({ tab, crew }: { tab: string; crew: Crew }) {
     case "exceptions": return <ExceptionsPanel crew={crew} />;
     case "account": return <AccountPanel crew={crew} />;
     case "sessions": return <SessionsPanel crew={crew} />;
+    case "scheduling": return <SchedulingPanel crew={crew} />;
     default: return <DetailsPanel key={`d-${v}`} crew={crew} />;
   }
 }
