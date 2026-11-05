@@ -1,0 +1,1380 @@
+{
+ "DLF Meadows:availability": {
+  "2026-10-18": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-19": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      420,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ],
+     [
+      960,
+      1080
+     ]
+    ]
+   ]
+  ],
+  "2026-10-20": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-21": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ]
+  ],
+  "2026-10-22": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-23": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-24": [
+   [
+    "Asha",
+    [
+     [
+      360,
+      420
+     ]
+    ]
+   ],
+   [
+    "Bala",
+    [
+     [
+      300,
+      780
+     ]
+    ]
+   ],
+   [
+    "Dev",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ]
+ },
+ "DLF Meadows:capacity": [
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-18",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Late start from 07:00. Works 07:00-13:00.",
+     "status": "Partial",
+     "windows": [
+      {
+       "end": 780,
+       "start": 420
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00, 16:00-18:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      },
+      {
+       "end": 1080,
+       "start": 960
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 360,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "07:00-13:00"
+    },
+    {
+     "minutes": 510,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00, 16:00-18:00"
+    }
+   ],
+   "date": "2026-10-19",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 60,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-20",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    },
+    {
+     "jobs": 1,
+     "minutes": 20,
+     "service": "Cleaning-Internal",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 80,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Day off: not a working day for Wednesday.",
+     "status": "Off",
+     "windows": []
+    }
+   ],
+   "capacity_minutes": 540,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    }
+   ],
+   "date": "2026-10-21",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 60,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-22",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 60,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-23",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 60,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Asha",
+     "reason": "Works 06:00-07:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 420,
+       "start": 360
+      }
+     ]
+    },
+    {
+     "crew_id": "Bala",
+     "reason": "Works 05:00-13:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 780,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Chitra",
+     "reason": "Trainee: adds no capacity and follows the paired Member's jobs.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Dev",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 930,
+   "crew": [
+    {
+     "minutes": 60,
+     "name": "Asha",
+     "role": "Member",
+     "slots": "06:00-07:00"
+    },
+    {
+     "minutes": 480,
+     "name": "Bala",
+     "role": "Member",
+     "slots": "05:00-13:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Dev",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-24",
+   "demand": [
+    {
+     "jobs": 3,
+     "minutes": 60,
+     "service": "Cleaning-External",
+     "source": "Subscription"
+    }
+   ],
+   "demand_minutes": 60,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  }
+ ],
+ "DLF Meadows:service_windows": {
+  "Cleaning-External:2026-10-18": [],
+  "Cleaning-External:2026-10-19": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-External:2026-10-20": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-External:2026-10-21": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-External:2026-10-22": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-External:2026-10-23": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-External:2026-10-24": [
+   [
+    330,
+    600
+   ]
+  ],
+  "Cleaning-Internal:2026-10-18": [],
+  "Cleaning-Internal:2026-10-19": [
+   [
+    420,
+    480
+   ]
+  ],
+  "Cleaning-Internal:2026-10-20": [
+   [
+    420,
+    480
+   ]
+  ],
+  "Cleaning-Internal:2026-10-21": [],
+  "Cleaning-Internal:2026-10-22": [],
+  "Cleaning-Internal:2026-10-23": [],
+  "Cleaning-Internal:2026-10-24": [],
+  "Deep Spa:2026-10-18": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-19": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-20": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-21": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-22": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-23": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-24": [
+   [
+    0,
+    1440
+   ]
+  ]
+ },
+ "Second Site:availability": {
+  "2026-10-18": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ],
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-19": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ],
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-20": [
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-21": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ]
+  ],
+  "2026-10-22": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ],
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-23": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ],
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ],
+  "2026-10-24": [
+   [
+    "Esha",
+    [
+     [
+      300,
+      600
+     ]
+    ]
+   ],
+   [
+    "Farid",
+    [
+     [
+      330,
+      720
+     ]
+    ]
+   ]
+  ]
+ },
+ "Second Site:capacity": [
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 690,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-18",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 690,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-19",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Sick on this date.",
+     "status": "Off",
+     "windows": []
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 390,
+   "crew": [
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-20",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Leave on this date.",
+     "status": "Off",
+     "windows": []
+    }
+   ],
+   "capacity_minutes": 300,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    }
+   ],
+   "date": "2026-10-21",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 690,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-22",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 690,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-23",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  },
+  {
+   "availability": [
+    {
+     "crew_id": "Esha",
+     "reason": "Works 05:00-10:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 600,
+       "start": 300
+      }
+     ]
+    },
+    {
+     "crew_id": "Farid",
+     "reason": "Works 05:30-12:00.",
+     "status": "Working",
+     "windows": [
+      {
+       "end": 720,
+       "start": 330
+      }
+     ]
+    }
+   ],
+   "capacity_minutes": 690,
+   "crew": [
+    {
+     "minutes": 300,
+     "name": "Esha",
+     "role": "Member",
+     "slots": "05:00-10:00"
+    },
+    {
+     "minutes": 390,
+     "name": "Farid",
+     "role": "Member",
+     "slots": "05:30-12:00"
+    }
+   ],
+   "date": "2026-10-24",
+   "demand": [],
+   "demand_minutes": 0,
+   "over_capacity": false,
+   "scheduled_minutes": 0
+  }
+ ],
+ "Second Site:service_windows": {
+  "Cleaning-External:2026-10-18": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-19": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-20": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-21": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-22": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-23": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-External:2026-10-24": [
+   [
+    360,
+    540
+   ]
+  ],
+  "Cleaning-Internal:2026-10-18": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-19": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-20": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-21": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-22": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-23": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Cleaning-Internal:2026-10-24": [
+   [
+    300,
+    660
+   ]
+  ],
+  "Deep Spa:2026-10-18": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-19": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-20": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-21": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-22": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-23": [
+   [
+    0,
+    1440
+   ]
+  ],
+  "Deep Spa:2026-10-24": [
+   [
+    0,
+    1440
+   ]
+  ]
+ }
+}
