@@ -337,7 +337,7 @@ describe("crew page layout", () => {
     renderAt("/crew/c1");
     const tabs = await screen.findAllByRole("tab");
     expect(tabs.map((t) => t.textContent)).toEqual([
-      "Details", "Society", "Role and pairing", "Working hours", "Exceptions", "Account", "Sessions"]);
+      "Details", "Society", "Role and pairing", "Working hours", "Exceptions", "Account", "Sessions", "Scheduling"]);
     expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(screen.queryByLabelText("Paired Member")).not.toBeInTheDocument();
