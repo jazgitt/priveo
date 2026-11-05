@@ -22,6 +22,7 @@ from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
 from app.scheduling import queue, rules
+from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     DURATIONS,
     Job,
@@ -299,27 +300,7 @@ def availability(
     """For each date, the working windows of every counted crew member: the
     weekday's hours (one or more slots), then the date's exception
     (ADM-CRW-04, ADM-CRW-09, ADM-CRW-25)."""
-    exceptions: dict[tuple[uuid.UUID, date], SchedulingCrewException] = {}
-    if crew and days:
-        for ex in db.execute(
-            select(SchedulingCrewException).where(
-                SchedulingCrewException.crew_id.in_(list(crew)),
-                SchedulingCrewException.on_date.in_(days),
-            )
-        ).scalars():
-            exceptions[(ex.crew_id, ex.on_date)] = ex
-    out: dict[date, dict[uuid.UUID, list[tuple[int, int]]]] = {}
-    for day in days:
-        out[day] = {}
-        for cid, c in crew.items():
-            ex = exceptions.get((cid, day))
-            base = rules.hours_windows(
-                c.working_hours, day.weekday(), c.start_minute, c.end_minute)
-            windows = rules.windows_for(
-                c.role, base, ex.kind if ex else None, ex.from_minute if ex else None)
-            if windows:
-                out[day][cid] = windows
-    return out
+    return window_builder.cleaner_windows(db, crew, days)
 
 
 def _clock(m: int) -> str:
@@ -362,79 +343,9 @@ def capacity(
 ) -> list[dict]:
     """Crew minutes against the minutes of work due, for each date (ADM-CAP-01
     to ADM-CAP-04)."""
-    days = daterange(start, end)
-    crew = load_crew(db, society_id)
-    windows = availability(db, crew, days)
-    day_exceptions: dict[date, dict[uuid.UUID, SchedulingCrewException]] = {d: {} for d in days}
-    if crew and days:
-        for ex in db.execute(
-            select(SchedulingCrewException).where(
-                SchedulingCrewException.crew_id.in_(list(crew)),
-                SchedulingCrewException.on_date.in_(days),
-            )
-        ).scalars():
-            day_exceptions[ex.on_date][ex.crew_id] = ex
-    names = {
-        row.id: row.display_name
-        for row in db.execute(
-            select(Login).where(Login.id.in_([c.login_id for c in crew.values()]))
-        ).scalars()
-    }
-    demand_minutes = dict.fromkeys(days, 0)
-    lines: dict[date, dict[tuple[str, str], list[int]]] = {day: {} for day in days}
-    durations = lookup.durations(db)
-    for d in build_demand(db, society_id, days):
-        if d.skipped:
-            continue
-        minutes = durations.get(d.service, d.duration)
-        demand_minutes[d.day] += minutes
-        source = "Add-on" if (d.addon_request_id or d.addon_booking_id) else "Subscription"
-        line = lines[d.day].setdefault((d.service, source), [0, 0])
-        line[0] += 1
-        line[1] += minutes
-    scheduled = dict.fromkeys(days, 0)
-    if schedule is not None:
-        rows = db.execute(
-            select(Visit.date, Job.duration_minutes)
-            .join(Job, Job.visit_id == Visit.id)
-            .where(
-                Visit.schedule_id == schedule.id, Job.crew_id.is_not(None), Job.status != "Skipped"
-            )
-        ).all()
-        for day, minutes in rows:
-            if day in scheduled:
-                scheduled[day] += minutes
-    out = []
-    for day in days:
-        cap = sum(e - s for wins in windows[day].values() for s, e in wins)
-        crew_lines = [
-            {
-                "name": names.get(crew[cid].login_id, ""),
-                "role": crew[cid].role,
-                "minutes": sum(e - s for s, e in wins),
-                "slots": ", ".join(f"{s // 60:02d}:{s % 60:02d}-{e // 60:02d}:{e % 60:02d}"
-                                   for s, e in wins),
-            }
-            for cid, wins in windows[day].items()
-            if wins
-        ]
-        crew_lines.sort(key=lambda c: c["name"])
-        out.append(
-            {
-                "date": day,
-                "crew": crew_lines,
-                "availability": day_availability(crew, windows[day], day_exceptions[day], day),
-                "demand": [
-                    {"service": svc_name, "source": source, "jobs": n, "minutes": m}
-                    for (svc_name, source), (n, m) in sorted(lines[day].items())
-                ],
-                "capacity_minutes": cap,
-                "demand_minutes": demand_minutes[day],
-                "scheduled_minutes": scheduled[day],
-                "over_capacity": demand_minutes[day] > cap,
-            }
-        )
-    return out
+    from app.scheduling import capacity as capacity_module
+
+    return capacity_module.capacity(db, society_id, start, end, schedule)
 
 
 def release_unfit(db: Session, crew: SchedulingCrew, today: date) -> list[dict]:
@@ -573,10 +484,7 @@ def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
 
 
 def service_windows(db, society_id, service, day):
-    slots = lookup.working_slots(db, society_id, service)
-    if not slots:
-        return ((0, 1440),) if service == "Deep Spa" else ((300, 660),)
-    return tuple((s.start_minute, s.end_minute) for s in slots if day.weekday() in s.days)
+    return window_builder.job_windows(db, society_id, service, day)
 
 
 def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) -> RunSummary:
