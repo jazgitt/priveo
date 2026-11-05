@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, event
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, event, false
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -134,6 +134,8 @@ class CncReason(Base):
     label: Mapped[str] = mapped_column(String(120))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # The reason defers the job (car or keys not available) instead of ending it.
+    defers: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class SystemSetting(Base):

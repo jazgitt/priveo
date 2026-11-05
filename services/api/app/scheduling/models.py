@@ -14,6 +14,7 @@ from sqlalchemy import (
     event,
     false,
     select,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,6 +50,11 @@ class SchedulingCrew(Base):
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).
     paired_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Scheduler rules v1.2 (unused until their stories): per-crew reporting and
+    # first-job minutes, and the home zone. Null means "use the site setting".
+    reporting_minute: Mapped[int | None] = mapped_column(Integer)
+    first_job_minute: Mapped[int | None] = mapped_column(Integer)
+    home_zone_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("zones.id"))
 
 
 class SchedulingCrewException(Base):
@@ -149,6 +155,12 @@ class Job(Base):
     queue_unlocked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Immutable issued definition. Legacy backfill is explicitly identified.
     checklist_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Scheduler rules v1.2 (unused until their stories): the first date of the
+    # service week an Interior counts against, why a job sits outside its
+    # crew member's home zone, and the structured reason code for the job.
+    service_week_start: Mapped[date | None] = mapped_column(Date)
+    cross_zone_reason: Mapped[str | None] = mapped_column(String(120))
+    reason_code: Mapped[str | None] = mapped_column(String(40))
 
 
 @event.listens_for(Job, "before_insert")
@@ -181,3 +193,80 @@ class SchedulingEvent(Base):
     kind: Mapped[str] = mapped_column(String(24))
     detail: Mapped[str] = mapped_column(Text, default="")
     at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class SocietySetting(Base):
+    """A scheduler setting for one site. A site with no row uses the global
+    default (SCHR-PAR-01). The value is text; its type is in the key registry."""
+
+    __tablename__ = "society_settings"
+    __table_args__ = (UniqueConstraint("society_id", "key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    key: Mapped[str] = mapped_column(String(60))
+    value: Mapped[str] = mapped_column(Text)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class BreakRule(Base):
+    """A break for a site, optionally for one crew member, over a date range
+    (SCHR-BRK). Without minutes it uses the site default break."""
+
+    __tablename__ = "break_rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    crew_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    start_minute: Mapped[int | None] = mapped_column(Integer)
+    end_minute: Mapped[int | None] = mapped_column(Integer)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class InteriorEntitlement(Base):
+    """One Interior owed to a car for one service week (SCHR-INT-06, INT-11)."""
+
+    __tablename__ = "interior_entitlements"
+    __table_args__ = (UniqueConstraint("vehicle_id", "service_week_start", "seq"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    subscription_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("subscriptions.id"), index=True)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id"), index=True)
+    service_week_start: Mapped[date] = mapped_column(Date, index=True)
+    # Which of the week's entitlements this is (1 when the default is one a week).
+    seq: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    status: Mapped[str] = mapped_column(String(12), default="Pending")  # Pending | Completed | Waived
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
+    completed_on: Mapped[date | None] = mapped_column(Date)
+    waived_reason: Mapped[str | None] = mapped_column(String(160))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class ScheduleRunConfig(Base):
+    """The settings a run used, kept as a snapshot so the plan can be explained."""
+
+    __tablename__ = "schedule_run_config"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    schedule_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("schedules.id"), index=True)
+    values: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class ScheduleFinding(Base):
+    """An exception a run found (a shortfall, a missed break, a cross-zone job)."""
+
+    __tablename__ = "schedule_findings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    schedule_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("schedules.id"), index=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"))
+    code: Mapped[str] = mapped_column(String(40))
+    detail: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
