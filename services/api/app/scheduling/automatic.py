@@ -27,8 +27,6 @@ def next_period(day: date, period: str, week_start: int) -> tuple[date, int]:
 
 
 def run_due(db, now):
-    if not lookup.setting(db, "schedule.auto_enabled"):
-        return {"disabled": True, "planned": 0, "errors": 0}
     local = now.astimezone(IST)
     at = lookup.setting(db, "schedule.auto_time")
     if not at or local.strftime("%H:%M") < at:
@@ -38,8 +36,6 @@ def run_due(db, now):
     planned = errors = 0
     society_ids = list(db.scalars(select(Society.id).where(Society.active.is_(True))))
     for sid in society_ids:
-        if not lookup.setting(db, "schedule.auto_enabled"):
-            break
         row = db.scalar(select(AutomaticPlanningRun).where(
             AutomaticPlanningRun.society_id == sid, AutomaticPlanningRun.start_date == start,
         ).with_for_update(skip_locked=True))

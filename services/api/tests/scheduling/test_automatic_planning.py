@@ -1,13 +1,10 @@
 from datetime import date, datetime, timedelta
 
-import pytest
 from sqlalchemy import select
 
-from app.directory import lookup
 from app.directory.models import Society
 from app.directory.service import save_settings
 from app.platform.clock import IST
-from app.platform.errors import ApiError
 from app.scheduling import service
 from app.scheduling.automatic import next_period, run_due
 from app.scheduling.models import AutomaticPlanningRun, Schedule
@@ -21,25 +18,30 @@ def configure(db, world):
     for society in db.scalars(select(Society)):
         society.active = society.id == world.society.id
     db.commit()
-    save_settings(db, None, {'schedule.auto_enabled': 1, 'schedule.auto_time': '18:00', 'schedule.period': 'Daily'})
+    save_settings(db, None, {'schedule.auto_time': '18:00', 'schedule.period': 'Daily'})
 
 
-def test_only_admin_can_enable_planning_with_a_time(api, admin):
+def test_only_admin_can_save_the_planning_time(api, admin):
     from tests.test_api import auth, login
     path = '/v1/admin/scheduling/automatic-planning'
-    assert api.get(path, headers=admin).json() == {'enabled': False, 'time_ist': ''}
-    assert api.put(path, headers=admin, json={'enabled': True, 'time_ist': ''}).status_code == 422
+    assert api.get(path, headers=admin).json() == {'time_ist': ''}
     assert api.put(path, headers=auth(login(api, 'customer')['access_token']),
-                   json={'enabled': True, 'time_ist': '18:00'}).status_code == 403
-    assert api.put(path, headers=admin, json={'enabled': True, 'time_ist': '18:00'}).status_code == 200
-    assert api.get(path, headers=admin).json() == {'enabled': True, 'time_ist': '18:00'}
+                   json={'time_ist': '18:00'}).status_code == 403
+    assert api.put(path, headers=admin, json={'time_ist': '18:00'}).status_code == 200
+    assert api.get(path, headers=admin).json() == {'time_ist': '18:00'}
 
 
-def test_planning_is_disabled_and_enabling_requires_time(world, db):
-    assert run_due(db, datetime(2026, 10, 17, 19, tzinfo=IST))['disabled']
-    with pytest.raises(ApiError):
-        save_settings(db, None, {'schedule.auto_enabled': 1})
-    assert lookup.setting(db, 'schedule.auto_enabled') == 0
+def test_the_switch_needs_a_time_and_the_time_cannot_be_cleared_while_on(api, admin):
+    switch = '/v1/admin/operations/cron/automatic-planning'
+    time_path = '/v1/admin/scheduling/automatic-planning'
+    assert api.put(switch, headers=admin, json={'enabled': True}).status_code == 422
+    api.put(time_path, headers=admin, json={'time_ist': '18:00'})
+    assert api.put(switch, headers=admin, json={'enabled': True}).status_code == 200
+    assert api.put(time_path, headers=admin, json={'time_ist': ''}).status_code == 422
+
+
+def test_without_a_time_planning_is_not_due(world, db):
+    assert run_due(db, datetime(2026, 10, 17, 19, tzinfo=IST))['not_due']
 
 
 def test_draft_is_created_after_ist_time_once_and_never_frozen(world, db):

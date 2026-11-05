@@ -15,6 +15,7 @@ import { routes as features } from "./pages/features";
 import { routes as payments } from "./pages/payments";
 import { routes as reference } from "./pages/reference";
 import { routes as schedule } from "./pages/schedule";
+import { routes as scheduledJobs } from "./pages/scheduled-jobs";
 import { routes as slots } from "./pages/slots";
 import { routes as settings } from "./pages/settings";
 import { routes as subscriptions } from "./pages/subscriptions";
@@ -34,6 +35,7 @@ export const PAGE_ROUTES: RouteObject[] = [
   ...settings,
   ...features,
   ...audit,
+  ...scheduledJobs,
   ...crew,
   ...customers,
   ...addons,

@@ -417,7 +417,6 @@
     "hours": "wire-value"
   },
   "AutomaticPlanningSettings": {
-    "enabled": true,
     "time_ist": "wire-value"
   },
   "Board": {
@@ -1403,6 +1402,41 @@
     "effective_from": "2026-10-20",
     "effective_to": "2026-10-20",
     "pending": true
+  },
+  "CronJobOut": {
+    "job": "wire-value",
+    "label": "wire-value",
+    "purpose": "wire-value",
+    "schedule_utc": "wire-value",
+    "schedule_ist": "wire-value",
+    "scheduled_on_vercel": true,
+    "enabled": true,
+    "status": "wire-value",
+    "last_run": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "trigger": "wire-value",
+      "started_at": "2026-10-20T07:30:00+00:00",
+      "finished_at": "2026-10-20T07:30:00+00:00",
+      "status": "wire-value",
+      "duration_ms": 1,
+      "what_it_did": "wire-value",
+      "error": "wire-value"
+    },
+    "purpose_achieved": true,
+    "purpose_achieved_text": "wire-value"
+  },
+  "CronRunOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "trigger": "wire-value",
+    "started_at": "2026-10-20T07:30:00+00:00",
+    "finished_at": "2026-10-20T07:30:00+00:00",
+    "status": "wire-value",
+    "duration_ms": 1,
+    "what_it_did": "wire-value",
+    "error": "wire-value"
+  },
+  "CronSwitch": {
+    "enabled": true
   },
   "CustomerCreate": {
     "first_name": "wire-value",

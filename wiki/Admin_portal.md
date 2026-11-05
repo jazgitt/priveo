@@ -22,7 +22,7 @@ These areas are defined in the administrator requirements; the table is a scope 
 
 The portal supports society/site context and uses filters, summary tiles and status counts for major operational lists. Customer and subscription lists have table/tile views in the requirements. Payments summarize count and amount by status; complaints summarize status and overdue counts.[^1]
 
-The reference-data area is named Site Setup. The add-on request page is named Add on Service Requests. Settings groups are separate tabs, including alert email and automatic-planning controls.[^1]
+The reference-data area is named Site Setup. The add-on request page is named Add on Service Requests. Settings groups are separate tabs, including alert email and the automatic-planning time. A Scheduled jobs page (All sites) switches each scheduled job on or off and shows its runs.[^1]
 
 ## Mobile quick actions
 

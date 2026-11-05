@@ -40,23 +40,26 @@ admin = APIRouter(prefix="/v1/admin/scheduling", tags=["scheduling"])
 
 
 class AutomaticPlanningSettings(BaseModel):
-    enabled: bool = False
+    """The planning time only. On or off is the `automatic-planning` switch on the
+    Scheduled jobs page (ADM-OPS-05)."""
     time_ist: str = ""
 
 
 @admin.get("/automatic-planning", response_model=AutomaticPlanningSettings)
 def automatic_settings(_: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
     from app.directory import lookup
-    return AutomaticPlanningSettings(enabled=bool(lookup.setting(db, "schedule.auto_enabled")),
-                                      time_ist=lookup.setting(db, "schedule.auto_time"))
+    return AutomaticPlanningSettings(time_ist=lookup.setting(db, "schedule.auto_time"))
 
 
 @admin.put("/automatic-planning", response_model=AutomaticPlanningSettings)
 def save_automatic_settings(body: AutomaticPlanningSettings,
                             user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
     from app.directory.service import save_settings
-    save_settings(db, user.id, {"schedule.auto_enabled": int(body.enabled),
-                               "schedule.auto_time": body.time_ist})
+    from app.notifications import cron_log
+    if not body.time_ist and cron_log.is_enabled(db, "automatic-planning"):
+        from app.directory.service import invalid
+        raise invalid("schedule.auto_time", "Choose an IST time while automatic planning is on.")
+    save_settings(db, user.id, {"schedule.auto_time": body.time_ist})
     return automatic_settings(user, db)
 
 

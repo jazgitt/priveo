@@ -141,7 +141,7 @@ def test_partial_reset_removes_test_actions_and_preserves_other_scenario_and_adm
         admin.locked = True
         admin.failed_attempts = 3
         original_admin_hash = admin.password_hash
-        db.get(SystemSetting, "schedule.auto_enabled").value = "0"
+        db.get(SystemSetting, "support.hours").value = "Changed hours"
         extra = Complaint(
             number=999999,
             customer_id=identity("C07", "customer"),
@@ -236,7 +236,7 @@ def test_full_fresh_start_resets_settings_and_preserves_admin_password(tmp_path)
     with Session(engine) as db:
         admin_hash = db.get(Login, identity("shared", "admin")).password_hash
         db.get(Login, identity("shared", "admin")).locked = True
-        db.get(SystemSetting, "schedule.auto_enabled").value = "1"
+        db.get(SystemSetting, "support.hours").value = "Changed hours"
         db.add(Society(name="Added manually during testing"))
         db.commit()
     engine.dispose()
@@ -244,7 +244,7 @@ def test_full_fresh_start_resets_settings_and_preserves_admin_password(tmp_path)
     assert len(data["scenarios"]) == len(catalogue())
     engine = open_database(path)
     with Session(engine) as db:
-        assert db.get(SystemSetting, "schedule.auto_enabled").value == "0"
+        assert db.get(SystemSetting, "support.hours").value != "Changed hours"
         admin = db.get(Login, identity("shared", "admin"))
         assert admin.password_hash == admin_hash and not admin.locked
         assert (

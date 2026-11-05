@@ -21,7 +21,7 @@ beforeEach(() => {
         setting("payment.upi", "UPI ID", "payment"),
         setting("billing.cycle_days", "Cycle days", "billing")]), { status: 200 });
     }
-    if (path === "/v1/admin/scheduling/automatic-planning") return new Response(JSON.stringify({ enabled: false, time_ist: "20:00" }), { status: 200 });
+    if (path === "/v1/admin/scheduling/automatic-planning") return new Response(JSON.stringify({ time_ist: "20:00" }), { status: 200 });
     if (path.includes("alert-email")) return new Response(JSON.stringify({ email: "a@b.in", enabled: true }), { status: 200 });
     return new Response(JSON.stringify({}), { status: 200 });
   });

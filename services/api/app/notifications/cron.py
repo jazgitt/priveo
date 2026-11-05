@@ -1,45 +1,35 @@
-"""The daily and hourly jobs, as HTTP endpoints for Vercel cron on dev.
+"""The scheduled jobs, as HTTP endpoints for Vercel cron.
 
 Vercel cron calls each path with GET and sends `Authorization: Bearer
 $CRON_SECRET`. Every job calls an existing service function and is safe to
-run again: a repeat changes nothing and sends nothing twice.
+run again: a repeat changes nothing and sends nothing twice. Schedules are in
+`services/api/vercel.json` (cron times are UTC; IST is UTC+5:30) and are mirrored
+in `cron_log.EXPECTED`; a test keeps them equal.
 
-Add this to `services/api/vercel.json` (the file is the coordinator's). Cron
-times are UTC. IST is UTC+5:30, so `35 14` is 20:05 IST, just after the 8 PM
-freeze cutoff time (ADM-SCH-25):
+The API runs on Vercel Hobby: each job runs once a day, anywhere inside its
+scheduled hour. A job can be switched off by the admin (Scheduled jobs page,
+`cron_jobs`); a switched-off job does nothing and answers `skipped`. Every call
+is recorded in `cron_runs` and logged on `priveo.cron` (`cron_log`).
 
-    "crons": [
-      {"path": "/v1/internal/cron/freeze-due",          "schedule": "35 14 * * *"},
-      {"path": "/v1/internal/cron/payments-daily",      "schedule": "30 20 * * *"},
-      {"path": "/v1/internal/cron/renewal-reminders",   "schedule": "30 4 * * *"},
-      {"path": "/v1/internal/cron/checkin-notify",      "schedule": "0 5 * * *"},
-      {"path": "/v1/internal/cron/complaints-overdue",  "schedule": "30 15 * * *"}
-    ]
-
-`payments-daily` runs at 2:00 IST (20:30 UTC): it makes the current-cycle
-payments, then marks overdue and runs auto-Inactive. The payment day changes at
-2:00 IST (PAY-19). The old `payments-generate` and `payments-overdue` names still
-answer a manual call. `renewal-reminders` stays at 10:00 IST (04:30 UTC) so no
-push arrives at 2 AM.
-
-Automatic planning and complaint escalation temporarily run daily at 21:00 IST
-(15:30 UTC) for Vercel Hobby compatibility. Overdue complaints and pending alert
-email retries are processed on that daily invocation. Hobby invocation timing
-can vary within the scheduled hour. Planning still respects its admin settings.
+`payments-daily` runs at 2:00 IST: it makes the current-cycle payments, then
+marks overdue and runs auto-Inactive. The payment day changes at 2:00 IST
+(PAY-19). Crew society moves have no job: they apply when the crew data or the
+scheduler is read (`apply_due_moves`).
 
 `CRON_SECRET` is environment configuration, never committed. Without it every
 call is refused."""
 import hmac
+import time
 from datetime import datetime
 from functools import lru_cache
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.orm import Session
 
 from app.billing.config import MoneySettings, get_money_settings
 from app.changes.rules import Clock, get_now, payment_day_of, today_of
-from app.notifications import emit
+from app.notifications import cron_log, emit
 from app.platform.db import get_db
 from app.platform.errors import ApiError
 
@@ -124,20 +114,10 @@ def _automatic_planning(db: Session, now: datetime, settings: MoneySettings) -> 
     return run_due(db, now)
 
 
-def _crew_society_moves(db: Session, now: datetime, settings: MoneySettings) -> dict:
-    from app.changes.rules import today_of
-    from app.crew.society_moves import apply_due_moves
-    return {"applied": apply_due_moves(db, today_of(now))}
-
-
 JOBS = {
-    "crew-society-moves": _crew_society_moves,
     "automatic-planning": _automatic_planning,
     "freeze-due": _freeze_due,
     "payments-daily": _payments_daily,
-    # Older names, kept so manual calls still work. Not scheduled any more.
-    "payments-generate": _payments_generate,
-    "payments-overdue": _payments_overdue,
     "renewal-reminders": _renewal_reminders,
     "checkin-notify": _checkin_notify,
     "complaints-overdue": _complaints_overdue,
@@ -145,10 +125,30 @@ JOBS = {
 
 
 @router.api_route("/{job}", methods=["GET", "POST"], dependencies=[Depends(require_cron_secret)])
-def run_job(job: str, db: Session = Depends(get_db), now: Clock = Depends(get_now),
+def run_job(job: str, request: Request, db: Session = Depends(get_db), now: Clock = Depends(get_now),
             settings: MoneySettings = Depends(get_money_settings)) -> dict:
     runner = JOBS.get(job)
     if runner is None:
         raise ApiError("not_found", "There is no such job.", 404)
     at = now()
-    return {"job": job, "ran_at": at.isoformat(), "result": runner(db, at, settings)}
+    trigger = "vercel" if request.headers.get("user-agent", "").startswith("vercel-cron") else "manual"
+    if not cron_log.is_enabled(db, job):
+        cron_log.start_run(db, job, trigger, "skipped", {"skipped": "disabled"})
+        cron_log.log_line(job, trigger, "skipped", 0, {"skipped": "disabled"})
+        return {"job": job, "ran_at": at.isoformat(), "skipped": "disabled"}
+    run_id = cron_log.start_run(db, job, trigger)
+    began = time.monotonic()
+    try:
+        result = runner(db, at, settings)
+    except BaseException as exc:
+        ms = int((time.monotonic() - began) * 1000)
+        error = cron_log.error_text(exc)
+        cron_log.finish_run(db, run_id, "failed", ms, error=error)
+        cron_log.log_line(job, trigger, "failed", ms, None, error)
+        raise
+    ms = int((time.monotonic() - began) * 1000)
+    cron_log.finish_run(db, run_id, "success", ms, result)
+    cron_log.log_line(job, trigger, "success", ms, result)
+    if job == "payments-daily":
+        cron_log.prune(db, at)
+    return {"job": job, "ran_at": at.isoformat(), "result": result}

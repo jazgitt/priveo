@@ -167,17 +167,16 @@ Events inside the service (Derived): `VisitCompleted`, `PaymentStatusChanged`, `
 
 ### 4.8 Background jobs
 
-The same code runs the jobs. Today Vercel cron (`vercel.json`) calls seven scheduled routes under `/v1/internal/cron/`, each checked with `CRON_SECRET`. A ninth route, `mani-retention`, is registered in the same table but is not in the schedule yet. On AWS, EventBridge Scheduler starts an ECS task instead. Jobs call services, never repositories.
+The same code runs the jobs. Today Vercel cron (`vercel.json`) calls seven scheduled routes under `/v1/internal/cron/`, each checked with `CRON_SECRET`. A further route, `mani-retention`, is registered in the same table but is not in the schedule. Each job has an admin switch (`cron_jobs`; on by default: `payments-daily`, `complaints-overdue`) and every call is recorded in `cron_runs` (90 days). On AWS, EventBridge Scheduler starts an ECS task instead. Jobs call services, never repositories.
 
 | Job (route) | Does |
 |---|---|
-| `payments-daily` (2:00 IST) | Creates the current cycle's payment for each Active subscription, then moves unpaid to Over due and makes the subscription Inactive after 7 days. The old `payments-generate` and `payments-overdue` names still answer a manual call |
+| `payments-daily` (2:00 IST) | Creates the current cycle's payment for each Active subscription, then moves unpaid to Over due and makes the subscription Inactive after 7 days. |
 | `freeze-due` | Freezes schedules whose cutoff (8 PM the day before) has passed |
-| `automatic-planning` | Runs the automatic planner (coded, default off) |
+| `automatic-planning` | Runs the automatic planner (coded, default off; the on/off is the job switch) |
 | `renewal-reminders` (10:00 IST) | Sends renewal reminders at 7 days before, 1 day before, on, 1 day after and 7 days after the due date |
 | `checkin-notify` | Sends the monthly check-in prompt |
 | `complaints-overdue` | Alerts the admin about overdue complaints and sends the pending support emails |
-| `crew-society-moves` | Applies the crew society moves that have come due |
 | `mani-retention` | Deletes Mani conversations older than 90 days |
 
 All jobs are idempotent and safe to run twice. Not built as jobs yet: media cleanup of unconfirmed uploads and the notification retry (`media.cleanup`, `notifications.retry` in v0.3).
