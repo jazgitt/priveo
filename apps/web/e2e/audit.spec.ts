@@ -10,7 +10,7 @@ test.describe("Audit trail", () => {
 
   test("says it does not refresh by itself, and has a Refresh button [ADM-SET-06]", async ({ page }) => {
     await expect(page.getByRole("note")).toContainText("does not update by itself");
-    await expect(page.getByRole("note")).toContainText("marked All sites");
+    await expect(page.getByRole("note")).toContainText("apply to every site");
     await expect(page.getByRole("button", { name: "Refresh" })).toBeEnabled();
   });
 
@@ -23,5 +23,24 @@ test.describe("Audit trail", () => {
     expect(calls).toBe(0);
     await page.getByRole("button", { name: "Refresh" }).click();
     await expect.poll(() => calls).toBe(1);
+  });
+
+  test("searches only when the button is pressed, from 3 characters [ADM-SET-09]", async ({ page }) => {
+    let calls = 0;
+    let lastQ: string | null = null;
+    page.on("request", (r) => {
+      if (r.url().includes("/directory/audit")) { calls += 1; lastQ = new URL(r.url()).searchParams.get("q"); }
+    });
+    const box = page.getByLabel("Search");
+    const button = page.getByRole("button", { name: "Search", exact: true });
+    await box.fill("lo");
+    await expect(button).toBeDisabled();
+    await box.fill("login");
+    await page.waitForTimeout(500);
+    expect(calls).toBe(0);
+    await button.click();
+    await expect.poll(() => lastQ).toBe("login");
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(box).toHaveValue("");
   });
 });

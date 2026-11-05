@@ -90,16 +90,88 @@ it("Refresh from a later page goes back to the first page", async () => {
   expect(lastUrl().searchParams.get("offset")).toBe("0");
 });
 
-it("asks again for a new filter, from the first page", async () => {
+async function typeSearch(value: string) {
+  const box = screen.getByLabelText("Search");
+  await userEvent.clear(box);
+  if (value) await userEvent.type(box, value);
+  return box;
+}
+
+it("does not ask while typing, and the button waits for 3 characters [ADM-SET-09]", async () => {
+  renderPage();
+  await screen.findByText("1-50 of 120 · Page 1 of 3");
+  const before = listCalls().length;
+  expect(screen.queryByLabelText("Actor ID")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
+  await typeSearch("ab");
+  expect(screen.getByText("Type at least 3 characters")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Search"), "c");
+  expect(screen.getByRole("button", { name: "Search" })).toBeEnabled();
+  await new Promise((r) => setTimeout(r, 50));
+  expect(listCalls()).toHaveLength(before);
+});
+
+it("asks with q when the Search button is pressed, from the first page [ADM-SET-09]", async () => {
   renderPage();
   await screen.findByText("1-50 of 120 · Page 1 of 3");
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText("51-100 of 120 · Page 2 of 3");
-  fireEvent.change(screen.getByLabelText("Actor ID"), { target: { value: "abc" } });
-  await waitFor(() => expect(lastUrl().searchParams.get("actor_id")).toBe("abc"));
+  await typeSearch("  gold  ");
+  await userEvent.click(screen.getByRole("button", { name: "Search" }));
+  await waitFor(() => expect(lastUrl().searchParams.get("q")).toBe("gold"));
   expect(lastUrl().searchParams.get("offset")).toBe("0");
   expect(lastUrl().searchParams.get("society_id")).toBe("s1");
+  expect(lastUrl().searchParams.has("actor_id")).toBe(false);
   expect(await screen.findByText("1-50 of 120 · Page 1 of 3")).toBeInTheDocument();
+});
+
+it("asks with q when Enter is pressed [ADM-SET-09]", async () => {
+  renderPage();
+  await screen.findByText("1-50 of 120 · Page 1 of 3");
+  await typeSearch("plan{Enter}");
+  await waitFor(() => expect(lastUrl().searchParams.get("q")).toBe("plan"));
+});
+
+it("does not ask on Enter under 3 characters [ADM-SET-09]", async () => {
+  renderPage();
+  await screen.findByText("1-50 of 120 · Page 1 of 3");
+  const before = listCalls().length;
+  await typeSearch("ab{Enter}");
+  await new Promise((r) => setTimeout(r, 50));
+  expect(listCalls()).toHaveLength(before);
+});
+
+it("keeps the search with the other filters and with paging [ADM-SET-09]", async () => {
+  renderPage();
+  await screen.findByText("1-50 of 120 · Page 1 of 3");
+  fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-10-01" } });
+  await waitFor(() => expect(lastUrl().searchParams.get("date_from")).toBe("2026-10-01"));
+  await typeSearch("gold{Enter}");
+  await waitFor(() => expect(lastUrl().searchParams.get("q")).toBe("gold"));
+  expect(lastUrl().searchParams.get("date_from")).toBe("2026-10-01");
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  await waitFor(() => expect(lastUrl().searchParams.get("offset")).toBe("50"));
+  expect(lastUrl().searchParams.get("q")).toBe("gold");
+});
+
+it("Clear drops the search and loads again [ADM-SET-09]", async () => {
+  renderPage();
+  await screen.findByText("1-50 of 120 · Page 1 of 3");
+  await typeSearch("gold{Enter}");
+  await waitFor(() => expect(lastUrl().searchParams.get("q")).toBe("gold"));
+  await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+  await waitFor(() => expect(lastUrl().searchParams.has("q")).toBe(false));
+  expect(screen.getByLabelText("Search")).toHaveValue("");
+  expect(lastUrl().searchParams.get("offset")).toBe("0");
+});
+
+it("says so when a search finds nothing [ADM-SET-09]", async () => {
+  fetchMock.mockImplementation(async () => new Response(JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }), { status: 200 }));
+  renderPage();
+  await screen.findByText("No changes recorded for this site or for all sites");
+  await typeSearch("zzz{Enter}");
+  expect(await screen.findByText('No changes match "zzz"')).toBeInTheDocument();
 });
 
 it("goes back to the first page when the site changes", async () => {
@@ -117,16 +189,4 @@ it("says so when the site has no changes", async () => {
   fetchMock.mockImplementation(async () => new Response(JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }), { status: 200 }));
   renderPage();
   expect(await screen.findByText("No changes recorded for this site or for all sites")).toBeInTheDocument();
-});
-
-it("labels a change that applies to all sites", async () => {
-  const rows = [
-    { ...entry(1), id: "own", society_id: "s1" },
-    { ...entry(2), id: "global", entity: "setting", entity_id: "billing.cycle_days", society_id: null },
-  ];
-  fetchMock.mockImplementation(async () => new Response(JSON.stringify({ items: rows, total: 2, limit: 50, offset: 0 }), { status: 200 }));
-  renderPage();
-  expect(await screen.findByText("All sites")).toBeInTheDocument();
-  expect(screen.getAllByText("All sites")).toHaveLength(1); // the site's own row names the site instead
-  expect(screen.getAllByRole("cell", { name: "Lake View" })).toHaveLength(1);
 });

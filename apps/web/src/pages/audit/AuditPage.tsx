@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Search, X } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "@/api/client";
@@ -8,7 +8,6 @@ import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
 import { showDateTime } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
@@ -27,6 +26,8 @@ export interface AuditEntry {
 const ENTITIES = ["society", "plan", "vehicle", "slot", "service", "checklist", "reason",
   "setting", "addon", "zone", "customer", "subscription", "cutoff_request", "schedule_change", "operations", "schedule", "payment", "crew", "job"];
 export const PAGE_SIZE = 50;
+/** A search needs at least this many characters (ADM-SET-09). */
+export const MIN_SEARCH = 3;
 
 function show(v: unknown): string {
   if (v === null || v === undefined || v === "") return "(empty)";
@@ -72,7 +73,9 @@ export function AuditPage() {
   const [entity, setEntity] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [actor, setActor] = useState("");
+  // `typed` is what is in the box; `search` is what was sent. Typing alone asks nothing.
+  const [typed, setTyped] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [lastSite, setLastSite] = useState(site.id);
   // A new site starts again from the first page.
@@ -84,9 +87,9 @@ export function AuditPage() {
   q.set("offset", String(page * PAGE_SIZE));
   if (from) q.set("date_from", from);
   if (to) q.set("date_to", to);
-  if (actor) q.set("actor_id", actor);
+  if (search) q.set("q", search);
   const list = useQuery({
-    queryKey: ["admin-audit", site.id, entity, from, to, actor, page],
+    queryKey: ["admin-audit", site.id, entity, from, to, search, page],
     queryFn: () => api<AuditPageData>(`/v1/admin/directory/audit?${q.toString()}`),
     enabled: !!site.id,
     // Never reload on its own: not on a timer (the app polls every 30 s by default), not on focus, not on reconnect.
@@ -97,6 +100,13 @@ export function AuditPage() {
     refetchOnMount: false,
   });
   const change = (set: (v: string) => void) => (v: string) => { set(v); setPage(0); };
+  const canSearch = typed.trim().length >= MIN_SEARCH;
+  const runSearch = () => { if (canSearch) { setSearch(typed.trim()); setPage(0); } };
+  const clearSearch = () => {
+    // Without a search the first page may be kept from before; forget it so Clear loads it again.
+    qc.removeQueries({ queryKey: ["admin-audit", site.id, entity, from, to, "", 0] });
+    setTyped(""); setSearch(""); setPage(0);
+  };
   const refresh = () => {
     // Pages read earlier are out of date too: forget them, then load the first page again.
     qc.removeQueries({ queryKey: ["admin-audit"], type: "inactive" });
@@ -112,7 +122,7 @@ export function AuditPage() {
                     </Button>
                   )} />
       <p role="note" className="mb-4 text-sm text-muted-foreground">
-        This list does not update by itself. Press Refresh to load the latest events. It shows the changes made to this site and the changes marked All sites, such as settings, plans and sign-in events, which apply to every site.
+        This list does not update by itself. Press Refresh to load the latest events. It shows the changes made to this site and the changes that apply to all sites, such as settings, plans and sign-in events, which apply to every site.
         {list.dataUpdatedAt > 0 && <> Loaded at {new Date(list.dataUpdatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.</>}
       </p>
       {list.isError && <div className="mb-4"><ErrorState message="Could not load the audit trail." onRetry={() => void list.refetch()} /></div>}
@@ -128,15 +138,21 @@ export function AuditPage() {
               {(p) => <SelectBox {...p} value={entity || NONE} onChange={(v) => change(setEntity)(v === NONE ? "" : v)}
                                  choices={[{ value: NONE, label: "All" }, ...ENTITIES.map((x) => ({ value: x, label: x.replaceAll("_", " ") }))]} />}
             </Field>
-            <Field label="Actor ID" optional className="w-64">{(p) => <Input {...p} value={actor} onChange={(e) => change(setActor)(e.target.value)} />}</Field>
+            <form className="flex flex-wrap items-end gap-2" role="search" onSubmit={(e) => { e.preventDefault(); runSearch(); }}>
+              <Field label="Search" className="w-72"
+                     hint={typed.length > 0 && !canSearch ? `Type at least ${MIN_SEARCH} characters` : undefined}>
+                {(p) => <Input {...p} value={typed} onChange={(e) => setTyped(e.target.value)} />}
+              </Field>
+              <Button type="submit" disabled={!canSearch}><Search aria-hidden /> Search</Button>
+              {(search || typed) && <Button type="button" variant="ghost" onClick={clearSearch}><X aria-hidden /> Clear</Button>}
+            </form>
           </div>
         )}
-        empty={<EmptyState title="No changes recorded for this site or for all sites" />}
+        empty={search
+          ? <EmptyState title={`No changes match "${search}"`} />
+          : <EmptyState title="No changes recorded for this site or for all sites" />}
         columns={[
           { key: "at", header: "When", width: "9.5rem", cell: (a) => showDateTime(a.at) },
-          { key: "site", header: "Site", width: "8rem", cell: (a) => a.society_id
-            ? (site.sites.find((s) => s.id === a.society_id)?.name ?? site.name)
-            : <Badge variant="secondary">All sites</Badge> },
           { key: "entity", header: "Entity", width: "9rem", cell: (a) => a.entity.replaceAll("_", " ") },
           { key: "action", header: "Action", width: "8rem", cell: (a) => a.action },
           { key: "by", header: "By", width: "9rem", cell: (a) => a.admin_login_id ?? "system" },
