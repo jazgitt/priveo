@@ -450,6 +450,64 @@ describe("search and filters on every view (ADM-SCH-33)", () => {
   });
 });
 
+describe("focus view and the board in its own tab (ADM-SCH-33)", () => {
+  it("opens the board alone in a full-screen dialog, where a card still opens, and Escape goes back", async () => {
+    server();
+    await openDay();
+    await column("c1");
+    await userEvent.click(screen.getByRole("button", { name: /Focus/ }));
+    const focus = await screen.findByRole("dialog", { name: "Schedule board, focus view" });
+    // Only the board: no tabs, no Run.
+    expect(within(focus).queryByRole("tablist")).not.toBeInTheDocument();
+    expect(within(focus).queryByRole("button", { name: "Run" })).not.toBeInTheDocument();
+    expect(within(focus).getByRole("button", { name: "Freeze" })).toBeInTheDocument();
+    const card = await within(focus).findByRole("button", { name: /KA01AB1234/ });
+    await userEvent.click(card);
+    // The job dialog stacks over the focus view.
+    expect(await screen.findByRole("dialog", { name: /KA01AB1234/ })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /KA01AB1234/ })).not.toBeInTheDocument());
+    expect(screen.getByRole("dialog", { name: "Schedule board, focus view" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Schedule board, focus view" })).not.toBeInTheDocument());
+  });
+
+  it("opens the focus view with the F key, but not while typing", async () => {
+    server();
+    await openDay();
+    await column("c1");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a job" }), "f");
+    expect(screen.queryByRole("dialog", { name: "Schedule board, focus view" })).not.toBeInTheDocument();
+    await userEvent.click(document.body);
+    await userEvent.keyboard("f");
+    expect(await screen.findByRole("dialog", { name: "Schedule board, focus view" })).toBeInTheDocument();
+  });
+
+  it("links to the board alone in a new tab, keeping the day and the view", async () => {
+    server();
+    await openDay("2026-11-08", "&view=table");
+    const link = await screen.findByRole("link", { name: /New tab/ });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(link.getAttribute("href")).toBe("/schedule/board?date=2026-11-08&view=table");
+  });
+
+  it("shows only the board when it is the page of its own tab", async () => {
+    server();
+    wrap(<SchedulePage mode="solo" />, "/schedule/board?date=2026-11-08");
+    expect(await within(await screen.findByTestId("col-c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Focus/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next day" })).toBeInTheDocument();
+    // The strip of days starts folded here, to leave the room to the board, and never changes what the page remembers.
+    expect(screen.queryByRole("group", { name: "Days" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Show days" }));
+    expect(await screen.findByRole("group", { name: "Days" })).toBeInTheDocument();
+    expect(localStorage.getItem("priveo.schedule.days-folded")).toBeNull();
+  });
+});
+
 describe("the table view (ADM-SCH-33)", () => {
   const three = () => server({ jobs: [
     job({ customer_name: "Meena Rao" }),

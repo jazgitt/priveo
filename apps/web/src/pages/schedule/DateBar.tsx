@@ -22,10 +22,12 @@ export function addDays(iso: string, n: number): string {
  * with the status of their schedule (Draft or Frozen) and a mark where
  * something needs the admin (ADM-SCH-35).
  */
-export function DateBar({ date, today, from, to, scheduleOf, attention, onChange, title, site, children }: {
+export function DateBar({ date, today, from, to, scheduleOf, attention, onChange, title, site, startFolded = false, children }: {
   /** The page title and the site, shown at the left of the one slim bar. */
   title: string;
   site?: string;
+  /** Start with the strip folded, whatever was remembered: for a view that wants the room (focus, own tab). */
+  startFolded?: boolean;
   date: string;
   today: string;
   /** The first and last day of the strip. */
@@ -46,8 +48,8 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
   const days = datesOf(from < date ? from : date, to > date ? to : date);
 
   // The strip can be folded away to give the board the room; the choice is remembered.
-  const [folded, setFolded] = useState(readFolded);
-  const toggle = () => setFolded((f) => { saveFolded(!f); return !f; });
+  const [folded, setFolded] = useState(() => startFolded || readFolded());
+  const toggle = () => setFolded((f) => { if (!startFolded) saveFolded(!f); return !f; });
 
   return (
     <div className="mb-2 rounded-xl border bg-card shadow-xs">

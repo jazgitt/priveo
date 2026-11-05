@@ -85,6 +85,25 @@ export function Shell() {
   );
 }
 
+/**
+ * A signed-in page with no navigation and no top bar, for a page that wants the whole window, such as
+ * the Schedule board opened in its own browser tab. It has the same Site, confirmation and task
+ * providers as the Shell, so the page works the same.
+ */
+export function BareShell() {
+  return (
+    <SiteProvider>
+      <TooltipProvider delayDuration={250}>
+        <ConfirmProvider>
+          <TasksProvider>
+            <main className="min-h-screen w-full min-w-0 bg-background p-3"><Outlet /></main>
+          </TasksProvider>
+        </ConfirmProvider>
+      </TooltipProvider>
+    </SiteProvider>
+  );
+}
+
 /** The logo, Site selector, areas and the signed-in user: the sidebar on a wide screen, the drawer on a narrow one. */
 function SidebarBody({ navLabel, onNavigate }: { navLabel: string; onNavigate?: () => void }) {
   const { user, signOut } = useAuth();

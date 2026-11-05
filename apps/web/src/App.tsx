@@ -5,7 +5,8 @@ import { NAV } from "./nav";
 import { PAGE_ROUTES } from "./pageRoutes";
 import { Placeholder } from "./pages/Placeholder";
 import { SignIn } from "./pages/SignIn";
-import { Shell } from "./Shell";
+import { SchedulePage } from "./pages/schedule/SchedulePage";
+import { BareShell, Shell } from "./Shell";
 
 function RequireAuth() {
   const { status } = useAuth();
@@ -22,6 +23,10 @@ export function AppRoutes() {
     <Routes>
       <Route path="/sign-in" element={<SignIn />} />
       <Route element={<RequireAuth />}>
+        {/* The Schedule board alone, in its own browser tab (ADM-SCH-33). */}
+        <Route element={<BareShell />}>
+          <Route path="/schedule/board" element={<SchedulePage mode="solo" />} />
+        </Route>
         <Route element={<Shell />}>
           {PAGE_ROUTES.map((r) => (
             <Route key={r.path} path={r.path} element={r.element} />
