@@ -230,7 +230,7 @@ def cutoff_requests(user: User = Depends(require_role("admin")), db: Session = D
                 "date": c.start_date,
                 "cutoff_time": c.cutoff_time.strftime("%H:%M"),
                 "registration": v.registration,
-                "customer_name": f"{owner.first_name} {owner.last_name}",
+                "customer_name": f"{owner.first_name} {owner.last_name}".strip(),
                 "old_cutoff": assignment["finish_by"] if assignment else None,
                 "crew_name": assignment["crew_name"] if assignment else None,
                 "start_time": assignment["start_time"] if assignment else None,

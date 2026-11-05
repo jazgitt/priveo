@@ -81,7 +81,7 @@ class VehicleAnswer(BaseModel):
 
 class OnboardingAnswers(BaseModel):
     first_name: str
-    last_name: str
+    last_name: str = ""
     mobile: str
     vehicles: list[VehicleAnswer]
 
@@ -282,6 +282,9 @@ class CustomerService:
             value = getattr(draft, field)
             if value is not None:
                 value = " ".join(value.split())
+                if value == "" and field == "last_name":
+                    personal[field] = value
+                    continue
                 if not _NAME.fullmatch(value):
                     raise ApiError("validation_failed", "Check your name.", 422)
                 personal[field] = value
@@ -297,7 +300,7 @@ class CustomerService:
                 setattr(sub if field in ("cutoff_time", "interior_day") else vehicle, field, value)
         customer.onboarding_step = draft.step
         self._db.get(Login, customer.login_id).display_name = (
-            f"{customer.first_name} {customer.last_name}")
+            f"{customer.first_name} {customer.last_name}".strip())
         self._db.commit()
 
     def confirm_onboarding(self, login_id: uuid.UUID, answers: OnboardingAnswers) -> None:
@@ -312,7 +315,7 @@ class CustomerService:
         mobile = answers.mobile.strip()
         if not _NAME.fullmatch(first):
             errors["first_name"] = "Enter your first name, using letters only."
-        if not _NAME.fullmatch(last):
+        if last and not _NAME.fullmatch(last):
             errors["last_name"] = "Enter your last name, using letters only."
         # The number on file stands as it is. A new one must be 10 digits.
         if mobile != customer.mobile and not re.fullmatch(r"\d{10}", mobile):

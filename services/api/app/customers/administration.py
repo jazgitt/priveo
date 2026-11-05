@@ -81,7 +81,7 @@ class VehicleCreate(Input):
 
 class CustomerCreate(Input):
     first_name: str
-    last_name: str
+    last_name: str = ""
     # Optional: a contact, not a login. The customer signs in with the mobile
     # number and the MPIN, which starts as its last 6 digits.
     email: str | None = None
@@ -92,7 +92,7 @@ class CustomerCreate(Input):
 
 class CustomerEdit(Input):
     first_name: str
-    last_name: str
+    last_name: str = ""
     mobile: str
     flat: str = Field(default="", max_length=40)
     address_line1: str = Field(default="", max_length=120)
@@ -173,7 +173,7 @@ def valid_person(first, last, mobile):
     errors = {}
     if not _NAME.fullmatch(first):
         errors["first_name"] = "Enter a first name using letters."
-    if not _NAME.fullmatch(last):
+    if last and not _NAME.fullmatch(last):
         errors["last_name"] = "Enter a last name using letters."
     if not re.fullmatch(r"\d{10}", mobile):
         errors["mobile"] = "Enter a 10-digit mobile number."
@@ -442,7 +442,7 @@ def _matching(q: str, society_id: uuid.UUID | None):
         text = f"%{q.strip()}%"
         query = query.where(
             or_(
-                (Customer.first_name + " " + Customer.last_name).ilike(text),
+                func.trim(Customer.first_name + " " + Customer.last_name).ilike(text),
                 Customer.last_name.ilike(text),
                 Customer.email.ilike(text),
                 Customer.mobile.ilike(text),
@@ -550,7 +550,7 @@ def list_customers(
     return [
         {
             "id": str(c.id),
-            "name": f"{c.first_name} {c.last_name}",
+            "name": f"{c.first_name} {c.last_name}".strip(),
             "email": c.email,
             "mobile": c.mobile,
             "flat": c.flat,
@@ -634,7 +634,7 @@ def edit_customer(
             raise ApiError("validation_failed", "Choose an active society.", 422)
         c.society_id = society.id
     if c.login_id:
-        db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}"
+        db.get(Login, c.login_id).display_name = f"{c.first_name} {c.last_name}".strip()
     # Alternate names are not written to the audit log (owner, 3 Nov 2026).
     audit(db, user.id, "customer", c.id, "update",
           body.model_dump(mode="json", exclude={"alternate_names"}))

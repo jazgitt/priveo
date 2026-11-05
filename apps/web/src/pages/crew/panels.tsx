@@ -10,6 +10,7 @@ import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { showDate, showDateTime } from "@/components/format";
 import { Button } from "@/ui/button";
+import { phoneDigits } from "@/lib/utils";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -68,7 +69,7 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
               onSubmit={(e) => { e.preventDefault(); if (changed) void save(); }}>
           <Field label="Name" error={fe.name}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
           <Field label="Mobile number" error={fe.mobile} hint="A new number is the new login ID and signs the crew member out.">
-            {(p) => <Input {...p} inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} />}
+            {(p) => <Input {...p} inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(phoneDigits(e.target.value))} />}
           </Field>
           <BusyButton type="submit" className="sm:mb-5" disabled={!changed} busy={run.isPending}>Save details</BusyButton>
         </form>

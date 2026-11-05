@@ -8,6 +8,7 @@ import { useAppMutation } from "@/blocks/mutation";
 import { inr, showDate } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
 import { Checkbox } from "@/ui/checkbox";
+import { phoneDigits } from "@/lib/utils";
 import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
@@ -81,13 +82,13 @@ function CustomerForm({ c, onClose }: { c: Customer; onClose: () => void }) {
     <FormDialog open onOpenChange={(o) => !o && onClose()} title="Edit customer details"
                 description="The customer is not notified. The change is recorded in the audit log."
                 submitLabel="Save customer" busy={save.isPending}
-                disabled={!shown.first_name.trim() || !shown.last_name.trim() || !mobileOk}
+                disabled={!shown.first_name.trim() || !mobileOk}
                 onSubmit={() => save.mutate({ path: `/v1/admin/customers/${c.id}`, method: "PATCH", body: { ...shown, society_id: shown.society_id || undefined } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="First name">{(p) => <Input {...p} value={shown.first_name} onChange={set("first_name")} />}</Field>
-        <Field label="Last name">{(p) => <Input {...p} value={shown.last_name} onChange={set("last_name")} />}</Field>
+        <Field label="Last name" optional>{(p) => <Input {...p} value={shown.last_name} onChange={set("last_name")} />}</Field>
         <Field label="Mobile" hint="10 digits. It is the sign-in ID, so a new number signs the customer out everywhere." error={shown.mobile && !mobileOk ? "Enter a 10-digit mobile number." : undefined}>
-          {(p) => <Input {...p} inputMode="numeric" value={shown.mobile} onChange={set("mobile")} />}
+          {(p) => <Input {...p} inputMode="numeric" maxLength={10} value={shown.mobile} onChange={(e) => { setV({ ...shown, mobile: phoneDigits(e.target.value) }); setTouched(true); }} />}
         </Field>
         <Field label="Flat" optional>{(p) => <Input {...p} value={shown.flat} onChange={set("flat")} />}</Field>
         <Field label="Alternate names" optional className="sm:col-span-2" hint="Other names the customer is known by. Separate them with commas.">

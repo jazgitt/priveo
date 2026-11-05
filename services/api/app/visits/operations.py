@@ -225,7 +225,7 @@ def job_out(db, job, store, derived=None):
         "society_id": str(schedule.society_id),
         "society": society.name,
         "customer_id": str(customer.id),
-        "customer_name": f"{customer.first_name} {customer.last_name}",
+        "customer_name": f"{customer.first_name} {customer.last_name}".strip(),
         "vehicle": f"{vehicle.make} {vehicle.model}",
         "registration": vehicle.registration,
         "crew_name": login.display_name if login else None,

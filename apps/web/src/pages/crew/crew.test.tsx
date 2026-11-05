@@ -359,6 +359,16 @@ describe("crew page layout", () => {
     expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("ADM-CRW-02: the mobile field on the Details tab keeps only numbers, at most 10", async () => {
+    mock();
+    renderAt("/crew/c1");
+    const field = (await screen.findByLabelText("Mobile number")) as HTMLInputElement;
+    await userEvent.clear(field);
+    await userEvent.click(field);
+    await userEvent.paste("+9198765432109");
+    expect(field.value).toBe("919876543");
+  });
+
   it("falls back to Details for an unknown tab", async () => {
     mock();
     renderAt("/crew/c1?tab=nonsense");
