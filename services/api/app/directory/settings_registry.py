@@ -19,7 +19,7 @@ TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 @dataclass(frozen=True)
 class SettingDef:
     key: str
-    kind: str  # text | phone | upi | url | gstin | int | time | code
+    kind: str  # text | phone | upi | url | gstin | int | time | code | bool | weekdays
     label: str
     group: str
     default: Any = ""
@@ -27,6 +27,9 @@ class SettingDef:
     maximum: int = 10_000_000
     max_length: int = 200
     required: bool = True
+    # True when a site may hold its own value (SCHR-PAR-01). The value in
+    # system_settings is then the global default for every site.
+    site: bool = False
 
 
 DEFINITIONS: tuple[SettingDef, ...] = (
@@ -77,6 +80,65 @@ DEFINITIONS: tuple[SettingDef, ...] = (
                minimum=0, maximum=30),
 )
 
+# Scheduler rules v1.2 (SCHS-02). Defined once here; the seed tool writes the
+# defaults (rule_seed) and `directory/site_settings.py` reads and writes the
+# per-site values. Minutes are minutes after midnight. Weekdays are numbers,
+# Monday 0 to Sunday 6, in a comma separated list.
+# Not defined yet, as the requirements table gives no value: scheduler.objective_order
+# and the weights of the new objectives (zone, break, FIFO).
+RULE_DEFINITIONS: tuple[SettingDef, ...] = (
+    # Kill switch (build stories, rule 7): behaviour of v2 runs only at 2.
+    SettingDef("scheduler.rules_version", "int", "Scheduling rules version (1 old, 2 new)",
+               "scheduler", 1, minimum=1, maximum=2, site=True),
+    SettingDef("scheduler.grid_minutes", "int", "Planning grid step in minutes", "schedule", 5,
+               minimum=1, maximum=60),
+    SettingDef("scheduler.solve_seconds", "int", "Solver time limit in seconds", "schedule", 10,
+               minimum=1, maximum=600),
+    SettingDef("scheduler.seed", "int", "Solver random seed", "schedule", 7,
+               minimum=0, maximum=2_147_483_647),
+    SettingDef("scheduler.workers", "int", "Solver workers", "schedule", 1,
+               minimum=1, maximum=16),
+    SettingDef("scheduler.weight_placed", "int", "Weight of each minute of work placed",
+               "scheduler", 1_000_000_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_late", "int", "Weight of each minute past the cutoff",
+               "scheduler", 10_000_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_early", "int", "Weight of each minute earlier a job starts",
+               "scheduler", 1, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.retry_minutes_running", "int",
+               "Minutes before an automatic planning run that did not finish is tried again",
+               "schedule", 30, minimum=1, maximum=1440),
+    SettingDef("scheduler.retry_minutes_error", "int",
+               "Minutes before a failed automatic planning run is tried again",
+               "schedule", 5, minimum=1, maximum=1440),
+    SettingDef("site.reporting_minute", "int", "Crew reporting time (minutes after midnight)",
+               "site", 300, minimum=0, maximum=1439, site=True),
+    SettingDef("site.first_job_minute", "int", "Earliest first job (minutes after midnight)",
+               "site", 330, minimum=0, maximum=1439, site=True),
+    SettingDef("site.interior_earliest_minute", "int",
+               "Earliest Interior start (minutes after midnight)",
+               "site", 420, minimum=0, maximum=1439, site=True),
+    SettingDef("site.break_enabled", "bool", "Crew break on", "site", True, site=True),
+    SettingDef("site.break_start_minute", "int", "Break start (minutes after midnight)",
+               "site", 570, minimum=0, maximum=1439, site=True),
+    SettingDef("site.break_end_minute", "int", "Break end (minutes after midnight)",
+               "site", 600, minimum=0, maximum=1439, site=True),
+    SettingDef("site.weekday_cutoff_hard", "bool", "Customer cutoff is strict on weekdays",
+               "site", True, site=True),
+    SettingDef("site.weekend_cutoff_flexible", "bool", "Customer cutoff is flexible on weekend days",
+               "site", True, site=True),
+    SettingDef("site.weekend_weekdays", "weekdays", "Weekend days (Monday 0 to Sunday 6)",
+               "site", "5,6", site=True),
+    SettingDef("site.cross_zone_help_allowed", "bool", "A cleaner may serve another zone",
+               "site", True, site=True),
+    SettingDef("schedule.interior_entitlement_per_week", "int",
+               "Interior services a plan gives each service week", "schedule", 1,
+               minimum=0, maximum=7),
+    SettingDef("schedule.service_week_start", "int", "Service week start (Monday 0, Sunday 6)",
+               "schedule", 0, minimum=0, maximum=6),
+)
+
+DEFINITIONS = DEFINITIONS + RULE_DEFINITIONS
+
 BY_KEY: dict[str, SettingDef] = {d.key: d for d in DEFINITIONS}
 
 # Settings whose older home is environment configuration.
@@ -104,12 +166,30 @@ def default_for(key: str) -> str:
             return str(getattr(get_support_settings(), attr))
         from app.billing.config import get_money_settings
         return str(getattr(get_money_settings(), attr))
+    if definition.kind == "bool":
+        return "true" if definition.default else "false"
     return str(definition.default)
 
 
 def parse(definition: SettingDef, raw: Any) -> str:
     """Check a value and return the text to store. Raises ValueError with a
     message for the admin."""
+    if definition.kind == "bool":
+        if isinstance(raw, bool):
+            return "true" if raw else "false"
+        if isinstance(raw, str) and raw.strip().lower() in ("true", "false"):
+            return raw.strip().lower()
+        raise ValueError("Choose on or off.")
+    if definition.kind == "weekdays":
+        if isinstance(raw, str):
+            parts = [p.strip() for p in raw.split(",") if p.strip()]
+        elif isinstance(raw, (list, tuple)) and not isinstance(raw, bool):
+            parts = [str(p).strip() for p in raw]
+        else:
+            raise ValueError("Enter weekdays as numbers from 0 (Monday) to 6 (Sunday).")
+        if not all(re.fullmatch(r"[0-6]", p) for p in parts) or len(set(parts)) != len(parts):
+            raise ValueError("Enter weekdays as different numbers from 0 (Monday) to 6 (Sunday).")
+        return ",".join(sorted(parts))
     if isinstance(raw, bool) or raw is None:
         raise ValueError("Enter a value.")
     if definition.kind == "int":
@@ -162,4 +242,8 @@ def parse(definition: SettingDef, raw: Any) -> str:
 def typed(definition: SettingDef, stored: str) -> Any:
     if definition.kind == "int":
         return int(stored)
+    if definition.kind == "bool":
+        return stored == "true"
+    if definition.kind == "weekdays":
+        return [int(p) for p in stored.split(",") if p]
     return stored

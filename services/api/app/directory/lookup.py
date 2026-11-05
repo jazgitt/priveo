@@ -84,6 +84,24 @@ def all_settings(db: Session) -> dict[str, Any]:
     return {d.key: setting(db, d.key) for d in settings_registry.DEFINITIONS}
 
 
+def site_setting(db: Session, society_id: uuid.UUID, key: str) -> Any:
+    """A setting for one site: its own value, else the global one. Raises
+    `SettingMissing` when neither exists; there is no default from code
+    (SCHR-CFG-04)."""
+    from app.directory import site_settings
+    return site_settings.read(db, society_id, key)
+
+
+def site_settings_all(db: Session, society_id: uuid.UUID) -> dict[str, Any]:
+    from app.directory import site_settings
+    return site_settings.read_all(db, society_id)
+
+
+def rules_version(db: Session, society_id: uuid.UUID) -> int:
+    """The kill switch of the scheduler rules for a site: 1 old, 2 new."""
+    return site_setting(db, society_id, "scheduler.rules_version")
+
+
 def unfreeze_code(db: Session) -> str:
     return setting(db, "schedule.unfreeze_code")
 
