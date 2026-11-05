@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, windowsOf } from "./Board";
+import { gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf } from "./Board";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
@@ -19,12 +19,14 @@ interface Tip { job: AdminJob; x: number; y: number }
  * as wide as its duration and coloured by its status. Hovering or focusing a
  * block shows its details. Nothing can be moved here (ADM-SCH-33).
  */
-export function Timeline({ crew, jobs, availability, focus, search, now }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", now }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
   focus: string;
   search: string;
+  /** EXT, INT or SPA keeps only that kind bright; empty shows all. */
+  type?: string;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
 }) {
@@ -87,12 +89,12 @@ export function Timeline({ crew, jobs, availability, focus, search, now }: {
                 {mine.map((job) => (
                   <div key={job.id} tabIndex={0} aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
                        aria-describedby={tip?.job.id === job.id ? "sch-tl-tip" : undefined}
-                       className={cn("sch-tl-job", statusClass(job), isSpa(job) && "spa", job.late && "late",
-                         !matches(job, focus, search) && "dim")}
+                       className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
+                         !matches(job, focus, search, type) && "dim")}
                        style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
                        onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
                        onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
-                    <span>{serviceCode(job.service)}</span>
+                    <span>{job.status === "Completed" ? "✓ " : job.status === "Could not complete" ? "✕ " : ""}{serviceCode(job.service)}</span>
                   </div>
                 ))}
                 {now !== undefined && now >= first && now <= last && (
@@ -104,12 +106,13 @@ export function Timeline({ crew, jobs, availability, focus, search, now }: {
         })}
       </Scroller>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-label="Legend">
-        <span className="sch-legend"><i className="sch-tl-job" /> Scheduled</span>
-        <span className="sch-legend"><i className="sch-tl-job active" /> In progress</span>
-        <span className="sch-legend"><i className="sch-tl-job done" /> Completed</span>
-        <span className="sch-legend"><i className="sch-tl-job failed" /> Could not complete</span>
-        <span className="sch-legend"><i className="sch-tl-job spa" /> Deep Spa</span>
-        <span className="sch-legend"><i className="sch-tl-job late" /> Late</span>
+        <span className="sch-legend"><i className="sch-tl-job t-ext" /> Exterior</span>
+        <span className="sch-legend"><i className="sch-tl-job t-int" /> Interior</span>
+        <span className="sch-legend"><i className="sch-tl-job t-spa" /> Deep Spa</span>
+        <span className="sch-legend"><i className="sch-tl-job t-ext active" /> In progress</span>
+        <span className="sch-legend"><i className="sch-tl-job t-ext done" /> Completed (✓)</span>
+        <span className="sch-legend"><i className="sch-tl-job t-ext failed" /> Could not complete (✕)</span>
+        <span className="sch-legend"><i className="sch-tl-job t-ext late" /> Late</span>
         <span className="sch-legend"><i className="sch-off-key" /> Cannot work</span>
         {unplaced > 0 && <span className="font-medium text-[#9a6513]">{unplaced} unscheduled, not on the timeline</span>}
       </div>

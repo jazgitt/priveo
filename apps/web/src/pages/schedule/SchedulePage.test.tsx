@@ -146,7 +146,12 @@ function dragTo(card: Element, target: Element, clientY = 0) {
   fireEvent(target, dropEvent);
 }
 
-beforeEach(() => vi.stubGlobal("fetch", fetchMock));
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+  // What the admin chose in one test must not carry into the next.
+  localStorage.removeItem("priveo.schedule.card-density");
+  localStorage.removeItem("priveo.schedule.days-folded");
+});
 afterEach(() => {
   fetchMock.mockReset();
   vi.unstubAllGlobals();
@@ -194,6 +199,85 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(path).toBe("/v1/admin/scheduling/jobs/j1/move");
     expect(JSON.parse(init.body)).toEqual({ crew_id: "c2", start_minute: 480 });
     expect(await screen.findByText("KA01AB1234 moved to Ravi at 08:00.")).toBeInTheDocument();
+  });
+
+  it("shows the move at once, before the server answers, and puts the card back if it is refused", async () => {
+    let answer: (r: Response) => void = () => {};
+    server({ moveReply: () => new Promise<Response>((res) => { answer = res; }) as unknown as Response });
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    dragTo(card, bodyOf(await column("c2")));
+    // The server has not answered, yet the card is already in Ravi's column and shows it is saving.
+    const moved = await within(await column("c2")).findByRole("button", { name: /KA01AB1234/ });
+    expect(moved).toHaveAttribute("aria-busy", "true");
+    expect(within(await column("c1")).queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+    answer(json(409, err("conflict", "That time is taken.")));
+    expect(await within(await column("c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
+    expect(within(await column("c2")).queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+  });
+
+  it("offers Undo after a move, which moves the card back", async () => {
+    server();
+    await openDay();
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(2));
+    expect(JSON.parse(callsTo("/move")[1][1].body)).toEqual({ crew_id: "c1", start_minute: 540 });
+  });
+
+  it("moves a placed card 5 minutes with Alt and the arrow keys, only into free time", async () => {
+    server();
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    card.focus();
+    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c1", start_minute: 545 });
+  });
+
+  it("colours a card by its kind of work and keeps the status as an icon, not a fill", async () => {
+    server({ jobs: [
+      job(),
+      job({ id: "j2", registration: "KA02IN0002", service: "Cleaning-Internal", crew_id: "c2", crew_name: "Ravi",
+            start_minute: 600, start_time: "10:00", end_time: "10:20", status: "Completed" }),
+      job({ id: "j3", registration: "KA03SP0003", service: "Deep Spa", crew_id: "c2", crew_name: "Ravi",
+            start_minute: 700, start_time: "11:40", end_time: "12:00" }),
+    ] });
+    await openDay();
+    const ext = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    const int = within(await column("c2")).getByRole("button", { name: /KA02IN0002/ });
+    const spa = within(await column("c2")).getByRole("button", { name: /KA03SP0003/ });
+    expect(ext).toHaveClass("t-ext");
+    expect(int).toHaveClass("t-int", "done");
+    expect(spa).toHaveClass("t-spa");
+    expect(int.querySelector(".sch-st.done")).not.toBeNull();
+  });
+
+  it("shows more on a card as the detail grows, and remembers it", async () => {
+    localStorage.removeItem("priveo.schedule.card-density");
+    server();
+    await openDay();
+    const card = () => within(screen.getByTestId("col-c1")).getByRole("button", { name: /KA01AB1234/ });
+    await screen.findByRole("group", { name: "Card detail" });
+    expect(card()).not.toHaveTextContent("Meena");
+    await userEvent.click(screen.getByRole("button", { name: "Detailed" }));
+    expect(card()).toHaveTextContent("Meena");
+    expect(localStorage.getItem("priveo.schedule.card-density")).toBe("detailed");
+    await userEvent.click(screen.getByRole("button", { name: "Compact" }));
+    expect(card()).toHaveClass("compact");
+  });
+
+  it("keeps only one kind of work bright when its chip is pressed", async () => {
+    server({ jobs: [job(), job({ id: "j2", registration: "KA02IN0002", service: "Cleaning-Internal", crew_id: "c2",
+                                 crew_name: "Ravi", start_minute: 600, start_time: "10:00", end_time: "10:20" })] });
+    await openDay();
+    const int = within(await column("c2")).getByRole("button", { name: /KA02IN0002/ });
+    const ext = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    await userEvent.click(await screen.findByRole("button", { name: "INT" }));
+    expect(ext).toHaveClass("dim");
+    expect(int).not.toHaveClass("dim");
+    await userEvent.click(screen.getByRole("button", { name: "INT" }));
+    expect(ext).not.toHaveClass("dim");
   });
 
   it("puts a card dropped below another at the first free time after it", async () => {
