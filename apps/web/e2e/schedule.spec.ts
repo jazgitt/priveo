@@ -66,6 +66,45 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(rows).toHaveCount(2);
   });
 
+  test("the Focus view fills the window and the job dialog opens over it [ADM-SCH-33]", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    await page.getByRole("button", { name: /Focus/ }).click();
+    const focus = page.getByRole("dialog", { name: "Schedule board, focus view" });
+    await expect(focus).toBeVisible();
+    // The dialog zooms in as it opens; wait until it has settled to the full window.
+    await expect.poll(async () => (await focus.boundingBox())!.width).toBeGreaterThanOrEqual(1360);
+    await expect.poll(async () => (await focus.boundingBox())!.height).toBeGreaterThanOrEqual(760);
+    await expect(focus.getByRole("tablist")).toHaveCount(0);
+    const lanes = focus.getByRole("group", { name: "Day board" });
+    expect((await lanes.boundingBox())!.height).toBeGreaterThan(450);
+
+    await focus.getByRole("button", { name: /TS35TT0001/ }).click();
+    const job = page.getByRole("dialog", { name: /TS35TT0001/ });
+    await expect(job).toBeVisible();
+    // The job dialog is on top: its Cancel button can be clicked.
+    await job.getByRole("button", { name: "Cancel" }).click();
+    await expect(job).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(focus).toHaveCount(0);
+  });
+
+  test("the board opens alone in a new browser tab, signed in, on the same day [ADM-SCH-33]", async ({ page, context }) => {
+    const day = addDays(scenario("R06").as_of, 1);
+    await openBoard(page, day);
+    const [tab] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("link", { name: /New tab/ }).click(),
+    ]);
+    await tab.waitForLoadState();
+    await expect(tab).toHaveURL(new RegExp(`/schedule/board\\?date=${day}`));
+    await expect(tab.getByRole("group", { name: "Day board" })).toBeVisible();
+    await expect(tab.getByLabel("Day", { exact: true })).toHaveValue(day);
+    // No sidebar, no tabs: only the board.
+    await expect(tab.getByRole("navigation", { name: "Admin areas" })).toHaveCount(0);
+    await expect(tab.getByRole("tablist")).toHaveCount(0);
+  });
+
   test("a frozen schedule refuses a wrong unfreeze code [ADM-SCH-18]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     const board = page.getByRole("group", { name: "Schedule of this day" });
