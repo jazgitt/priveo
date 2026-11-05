@@ -1,5 +1,5 @@
-import { Check, X } from "lucide-react";
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { Check, ChevronsLeft, ChevronsRight, X } from "lucide-react";
+import { useEffect, useRef, useState, type DragEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,21 @@ import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
 const UNSCHEDULED = "unscheduled";
+
+const FOLD_KEY = "priveo.schedule.folded-lanes";
+
+/** The crew members whose lanes are folded to a thin strip, remembered in the browser. */
+function useFoldedLanes(): [Set<string>, (id: string) => void] {
+  const [ids, setIds] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem(FOLD_KEY) ?? "[]")); } catch { return new Set<string>(); }
+  });
+  return [ids, (id) => setIds((cur) => {
+    const next = new Set(cur);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    try { localStorage.setItem(FOLD_KEY, JSON.stringify([...next])); } catch { /* A private window keeps nothing; the fold still applies now. */ }
+    return next;
+  })];
+}
 
 /** How much a card shows: one line, the usual three, or also the customer and the model. */
 export type Density = "compact" | "standard" | "detailed";
@@ -72,6 +87,10 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   const [over, setOver] = useState<Over | null>(null);
   const [blocked, setBlocked] = useState("");
   const root = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement | null>(null);
+  const pan = useRef<{ x: number; left: number } | null>(null);
+  const [panning, setPanning] = useState(false);
+  const [folded, toggleFold] = useFoldedLanes();
   // Searching brings the first match into view, so a car in a long lane is not hunted for.
   useEffect(() => {
     if (!search.trim()) return;
@@ -94,6 +113,24 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     if (avail?.status === "Off") return false;
     const others = jobs.filter((j) => j.crew_id === member.id && j.id !== dragged.id && j.start_minute !== null);
     return freeStart(windowsOf(member, avail), others, 0, dragged.duration_minutes) !== null;
+  };
+  /** Dragging the background or a column heading pans the board sideways, like grabbing paper. */
+  const panStart = (e: PointerEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    if (e.button !== 0 || !strip.current) return;
+    if (!(t === e.currentTarget || t.closest(".sch-col-head")) || t.closest("button,a,input,[role=button]")) return;
+    pan.current = { x: e.clientX, left: strip.current.scrollLeft };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setPanning(true);
+  };
+  const panMove = (e: PointerEvent<HTMLElement>) => {
+    if (pan.current && strip.current) strip.current.scrollLeft = pan.current.left - (e.clientX - pan.current.x);
+  };
+  const panEnd = () => { pan.current = null; setPanning(false); };
+  /** The wheel over the headings and the gaps, where there is nothing to scroll down, scrolls sideways. */
+  const wheel = (e: WheelEvent<HTMLElement>) => {
+    if ((e.target as HTMLElement).closest(".sch-col-body") || !strip.current) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) strip.current.scrollLeft += e.deltaY;
   };
   const slotOf = (e: DragEvent<HTMLElement>) => (e.target as HTMLElement).closest?.<HTMLElement>("[data-slot]") ?? null;
 
@@ -272,7 +309,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
 
   return (
     <div className="sch-fill" ref={root}>
-      <Scroller wrapClassName="sch-board-wrap" className="sch-board" role="group" aria-label="Day board">
+      <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", panning && "panning")} role="group" aria-label="Day board"
+                onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={panEnd} onWheel={wheel}>
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
                  className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
           <header className="sch-col-head">
@@ -296,17 +334,40 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           const available = minutesOf(wins);
           const booked = mine.reduce((n, j) => n + j.duration_minutes, 0);
           const pct = available ? Math.round((booked / available) * 100) : 0;
+          const fold = folded.has(member.id);
+          const state = cn("sch-col", closed && "closed", over?.col === member.id && "over",
+            takes(member) === true && "can", takes(member) === false && "cannot");
+          if (fold) {
+            // A folded lane is a thin strip: name, jobs and use. A card dropped on it goes to its first free time.
+            return (
+              <section key={member.id} aria-label={`${member.name}, folded`} data-testid={`col-${member.id}`}
+                       className={cn(state, "folded")}
+                       onDragOver={dragOver(member.id)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(member)(e)}>
+                <button type="button" className="sch-fold-btn" aria-label={`Show ${member.name}'s lane`} title="Show the lane"
+                        onClick={() => toggleFold(member.id)}>
+                  <ChevronsRight aria-hidden />
+                </button>
+                <span className="sch-count">{mine.length}</span>
+                <span className="sch-fold-name">{member.name}</span>
+                {!closed && <span className="text-xs font-semibold tabular-nums">{pct}%</span>}
+              </section>
+            );
+          }
           return (
-            <section key={member.id} aria-label={member.name} data-testid={`col-${member.id}`}
-                     className={cn("sch-col", closed && "closed", over?.col === member.id && "over",
-                       takes(member) === true && "can", takes(member) === false && "cannot")}>
+            <section key={member.id} aria-label={member.name} data-testid={`col-${member.id}`} className={state}>
               <header className="sch-col-head">
                 <span className="flex items-baseline justify-between gap-2">
                   <HoverTip label={<strong>{member.name}</strong>}
                             ariaLabel={`${member.name}, ${member.role}. Hover for how jobs are allocated.`}>
                     <Reasoning member={member} avail={avail} jobs={mine} />
                   </HoverTip>
-                  <span className="sch-count">{mine.length}</span>
+                  <span className="flex items-center gap-1">
+                    <span className="sch-count">{mine.length}</span>
+                    <button type="button" className="sch-fold-btn small" aria-label={`Fold ${member.name}'s lane`} title="Fold the lane to a thin strip"
+                            onClick={() => toggleFold(member.id)}>
+                      <ChevronsLeft aria-hidden />
+                    </button>
+                  </span>
                 </span>
                 <span className="truncate text-xs text-muted-foreground" title={avail?.reason}>
                   {member.role} · {closed ? avail?.reason || "Off" : wins.map((w) => `${hhmm(w.start)}-${hhmm(w.end)}`).join(", ")}

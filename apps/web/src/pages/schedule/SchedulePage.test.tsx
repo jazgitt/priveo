@@ -152,6 +152,7 @@ beforeEach(() => {
   // What the admin chose in one test must not carry into the next.
   localStorage.removeItem("priveo.schedule.card-density");
   localStorage.removeItem("priveo.schedule.days-folded");
+  localStorage.removeItem("priveo.schedule.folded-lanes");
 });
 afterEach(() => {
   fetchMock.mockReset();
@@ -505,6 +506,71 @@ describe("focus view and the board in its own tab (ADM-SCH-33)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show days" }));
     expect(await screen.findByRole("group", { name: "Days" })).toBeInTheDocument();
     expect(localStorage.getItem("priveo.schedule.days-folded")).toBeNull();
+  });
+});
+
+describe("lanes: fold, hide off crew, pan (ADM-SCH-33)", () => {
+  it("folds a crew member's lane to a thin strip, still takes a dropped card, and remembers it", async () => {
+    server();
+    await openDay();
+    await column("c1");
+    await userEvent.click(screen.getByRole("button", { name: "Fold Ravi's lane" }));
+    const strip = screen.getByRole("region", { name: "Ravi, folded" });
+    expect(strip).toHaveTextContent("Ravi");
+    expect(strip.querySelector(".sch-col-body")).toBeNull();
+    expect(JSON.parse(localStorage.getItem("priveo.schedule.folded-lanes")!)).toEqual(["c2"]);
+    // A card dropped on the strip goes to Ravi's first free time.
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), strip);
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 480 });
+    await userEvent.click(screen.getByRole("button", { name: "Show Ravi's lane" }));
+    expect(screen.getByRole("region", { name: "Ravi" })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("priveo.schedule.folded-lanes")!)).toEqual([]);
+  });
+
+  it("hides the crew members who are off today from the crew picker", async () => {
+    server({ boardReply: () => json(200, board("Draft", [job()], [
+      { crew_id: "c1", status: "Working", windows: [{ start: 480, end: 720 }], reason: "" },
+      { crew_id: "c2", status: "Off", windows: [], reason: "Sick on this date." },
+    ])) });
+    await openDay();
+    await column("c2");
+    await userEvent.click(screen.getByRole("button", { name: /Crew shown: All crew/ }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Hide crew who are off today" }));
+    await waitFor(() => expect(screen.queryByTestId("col-c2")).not.toBeInTheDocument());
+    expect(screen.getByTestId("col-c1")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByRole("button", { name: /Crew shown: Working crew/ })).toBeInTheDocument();
+  });
+
+  it("pans the board sideways when its background or a column heading is dragged", async () => {
+    server();
+    await openDay();
+    await column("c1");
+    const board = screen.getByRole("group", { name: "Day board" });
+    board.scrollLeft = 100;
+    fireEvent.pointerDown(board, { button: 0, clientX: 300, pointerId: 1 });
+    fireEvent.pointerMove(board, { clientX: 250, pointerId: 1 });
+    expect(board.scrollLeft).toBe(150);
+    expect(board).toHaveClass("panning");
+    fireEvent.pointerUp(board, { pointerId: 1 });
+    expect(board).not.toHaveClass("panning");
+    // A press on a card does not pan: it is a drag of the card.
+    const card = screen.getByRole("button", { name: /KA01AB1234/ });
+    fireEvent.pointerDown(card, { button: 0, clientX: 300, pointerId: 1 });
+    expect(board).not.toHaveClass("panning");
+  });
+
+  it("scrolls the board sideways with the wheel over a heading, not over a lane", async () => {
+    server();
+    await openDay();
+    await column("c1");
+    const board = screen.getByRole("group", { name: "Day board" });
+    board.scrollLeft = 0;
+    fireEvent.wheel(within(screen.getByTestId("col-c1")).getByText("1", { selector: ".sch-count" }), { deltaY: 120 });
+    expect(board.scrollLeft).toBe(120);
+    fireEvent.wheel(bodyOf(screen.getByTestId("col-c1")), { deltaY: 80 });
+    expect(board.scrollLeft).toBe(120);
   });
 });
 

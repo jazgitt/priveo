@@ -105,6 +105,46 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(tab.getByRole("tablist")).toHaveCount(0);
   });
 
+  test("Unscheduled stays pinned while the lanes scroll, and the board pans by dragging [ADM-SCH-33]", async ({ page }) => {
+    // Wide enough for the sidebar, narrow enough that the four columns do not fit.
+    await page.setViewportSize({ width: 1100, height: 700 });
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    const board = page.getByRole("group", { name: "Day board" });
+    const pinned = page.getByTestId("col-unscheduled");
+    await expect(pinned).toBeVisible();
+    const scrollable = await board.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(scrollable).toBeGreaterThan(50);
+
+    const left = async () => (await pinned.boundingBox())!.x - (await board.boundingBox())!.x;
+    const before = await left();
+    await board.evaluate((el) => { el.scrollLeft = 120; });
+    expect(Math.abs((await left()) - before)).toBeLessThan(2);
+
+    // A real drag of the heading of a lane pans the board.
+    await board.evaluate((el) => { el.scrollLeft = 0; });
+    const head = page.getByTestId("col-c0").or(page.locator(".sch-col-head").nth(1));
+    const box = (await head.first().boundingBox())!;
+    await page.mouse.move(box.x + box.width - 20, box.y + 6);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 120, box.y + 6, { steps: 6 });
+    await page.mouse.up();
+    expect(await board.evaluate((el) => el.scrollLeft)).toBeGreaterThan(40);
+  });
+
+  test("a lane folds to a thin strip and unfolds again [ADM-SCH-33]", async ({ page }) => {
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    const lane = page.getByRole("region", { name: "TEST R06 Manager 0" });
+    const wide = (await lane.boundingBox())!.width;
+    await page.getByRole("button", { name: "Fold TEST R06 Manager 0's lane" }).click();
+    const strip = page.getByRole("region", { name: "TEST R06 Manager 0, folded" });
+    await expect(strip).toBeVisible();
+    expect((await strip.boundingBox())!.width).toBeLessThan(wide / 3);
+    await page.reload();
+    await expect(page.getByRole("region", { name: "TEST R06 Manager 0, folded" })).toBeVisible();
+    await page.getByRole("button", { name: "Show TEST R06 Manager 0's lane" }).click();
+    await expect(page.getByRole("region", { name: "TEST R06 Manager 0" })).toBeVisible();
+  });
+
   test("a frozen schedule refuses a wrong unfreeze code [ADM-SCH-18]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     const board = page.getByRole("group", { name: "Schedule of this day" });
