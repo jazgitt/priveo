@@ -1,3 +1,4 @@
+import { Check, X } from "lucide-react";
 import { useRef, useState, type DragEvent, type ReactNode } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
@@ -6,12 +7,15 @@ import { cn } from "@/lib/utils";
 import { HoverTip } from "../../components";
 import {
   fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa, isUnplaced, jobLabel, matches, minutesOf, Reasoning,
-  serviceCode, SNAP, statusClass, windowsOf,
+  serviceCode, SNAP, statusClass, typeClass, windowsOf,
 } from "./Board";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
 const UNSCHEDULED = "unscheduled";
+
+/** How much a card shows: one line, the usual three, or also the customer and the model. */
+export type Density = "compact" | "standard" | "detailed";
 
 const byStart = (a: AdminJob, b: AdminJob) => (a.start_minute ?? 0) - (b.start_minute ?? 0);
 
@@ -46,12 +50,17 @@ function slotTime(el: HTMLElement, y: number, duration: number): number {
  * time. A crew member who cannot work that day is greyed out and takes no card
  * (ADM-SCH-32, -33).
  */
-export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onMove }: {
+export function CardBoard({ crew, jobs, availability, focus, search, type = "", density = "standard", savingId = null, onOpen, onMove }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
   focus: string;
   search: string;
+  /** EXT, INT or SPA keeps only that kind bright; empty shows all. */
+  type?: string;
+  density?: Density;
+  /** The job whose move is being saved, shown as working. */
+  savingId?: string | null;
   onOpen: (job: AdminJob) => void;
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
 }) {
@@ -69,6 +78,15 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
   const members = [...crew].sort((a, b) =>
     Number(availOf(a.id)?.status === "Off") - Number(availOf(b.id)?.status === "Off"));
   const unplaced = jobs.filter(isUnplaced);
+  const dragged = dragId ? jobs.find((j) => j.id === dragId) ?? null : null;
+  /** While a card is held, whether a crew member could take it at all: shown as green or red columns. */
+  const takes = (member: SchedulingCrew): boolean | null => {
+    if (!dragged) return null;
+    const avail = availOf(member.id);
+    if (avail?.status === "Off") return false;
+    const others = jobs.filter((j) => j.crew_id === member.id && j.id !== dragged.id && j.start_minute !== null);
+    return freeStart(windowsOf(member, avail), others, 0, dragged.duration_minutes) !== null;
+  };
   const slotOf = (e: DragEvent<HTMLElement>) => (e.target as HTMLElement).closest?.<HTMLElement>("[data-slot]") ?? null;
 
   /** Where among the column's other cards the pointer is: 0 is above the first. */
@@ -144,30 +162,61 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
     onMove(job, member.id, start);
   };
 
+  /** Alt + Up or Down moves a placed card 5 minutes earlier or later in its own column. */
+  const nudge = (job: AdminJob, by: number) => {
+    const member = crew.find((c) => c.id === job.crew_id);
+    if (!member || job.start_minute === null) return;
+    const start = job.start_minute + by;
+    const others = jobs.filter((j) => j.crew_id === member.id && j.id !== job.id && j.start_minute !== null);
+    if (!fitsAt(windowsOf(member, availOf(member.id)), others, start, job.duration_minutes)) {
+      setBlocked(`${job.registration} cannot start at ${hhmm(start)}: that time is not free for ${member.name}.`);
+      return;
+    }
+    setBlocked("");
+    onMove(job, member.id, start);
+  };
+
   const card = (job: AdminJob) => {
     const code = serviceCode(job.service);
     const open = isOpen(job);
+    const time = job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min`;
     return (
       <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
-           aria-label={jobLabel(job)}
-           title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}. ${job.status}${job.reason ? `. ${job.reason}` : ""}`}
-           className={cn("sch-card", statusClass(job), isSpa(job) && "spa", job.late && "late", job.manual && "manual",
-             !matches(job, focus, search) && "dim", dragId === job.id && "dragging", !open && "locked")}
+           aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
+           title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}. ${job.status}${job.reason ? `. ${job.reason}` : ""}${open && job.crew_id ? ". Alt and the up or down arrow move it 5 minutes." : ""}`}
+           className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
+             !matches(job, focus, search, type) && "dim", dragId === job.id && "dragging", !open && "locked",
+             savingId === job.id && "saving")}
            onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
            onClick={() => onOpen(job)}
-           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); } }}>
+           onKeyDown={(e) => {
+             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); }
+             else if (e.altKey && open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+               e.preventDefault();
+               nudge(job, e.key === "ArrowUp" ? -SNAP : SNAP);
+             }
+           }}>
         <span className="sch-card-top">
-          <span className="sch-time">{job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min`}</span>
+          <span className="sch-time">{time}</span>
           <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
+          {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
+          {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
+          {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
+          {density === "compact" && <strong className="reg ml-auto truncate">{job.registration}</strong>}
           {job.late && <span className="sch-flag late">Late</span>}
           {job.manual && <span className="sch-flag">By hand</span>}
         </span>
-        <span className="sch-card-main">
-          <strong className="reg">{job.registration}</strong>
-          <span>{job.parking || "-"}{job.finish_by ? ` · by ${job.finish_by}` : ""}</span>
-        </span>
-        {job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
-        {!job.crew_id && job.reason && <span className="sch-why">{job.reason}</span>}
+        {density !== "compact" && (
+          <span className="sch-card-main">
+            <strong className="reg">{job.registration}</strong>
+            <span>{job.parking || "-"}{job.finish_by ? ` · by ${job.finish_by}` : ""}</span>
+          </span>
+        )}
+        {density === "detailed" && (
+          <span className="sch-card-who">{job.customer_name} · {job.vehicle}</span>
+        )}
+        {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
+        {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
       </div>
     );
   };
@@ -178,11 +227,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
       ...mine.map((j) => ({ start: j.start_minute!, card: j, node: () => card(j) })),
       ...freeSlots(wins, mine).map((g) => ({ start: g.start, node: () => {
         const here = over?.col === member.id && over.gap === g.start;
+        const tight = here && dragged !== null && g.end - g.start < dragged.duration_minutes;
         return (
           <div key={`free-${g.start}`} data-slot data-start={g.start} data-end={g.end}
-               className={cn("sch-slot", here && "over")} style={{ height: gapHeight(g.end - g.start) }}
+               className={cn("sch-slot", here && "over", tight && "tight")} style={{ height: gapHeight(g.end - g.start) }}
                aria-label={`Free ${hhmm(g.start)}-${hhmm(g.end)}`}>
-            <span>{here && over.at !== undefined ? `Drop at ${hhmm(over.at)}` : `Free ${hhmm(g.start)}-${hhmm(g.end)}`}</span>
+            <span>{tight ? `Too short for ${dragged?.duration_minutes} min` : here && over.at !== undefined ? `Drop at ${hhmm(over.at)}` : `Free ${hhmm(g.start)}-${hhmm(g.end)}`}</span>
             <span>{hm(g.end - g.start)}</span>
           </div>
         );
@@ -216,7 +266,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
     <div className="sch-fill">
       <Scroller wrapClassName="sch-board-wrap" className="sch-board" role="group" aria-label="Day board">
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
-                 className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over")}>
+                 className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
           <header className="sch-col-head">
             <span className="flex items-baseline justify-between gap-2">
               <strong>Unscheduled</strong><span className="sch-count">{unplaced.length}</span>
@@ -240,7 +290,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
           const pct = available ? Math.round((booked / available) * 100) : 0;
           return (
             <section key={member.id} aria-label={member.name} data-testid={`col-${member.id}`}
-                     className={cn("sch-col", closed && "closed", over?.col === member.id && "over")}>
+                     className={cn("sch-col", closed && "closed", over?.col === member.id && "over",
+                       takes(member) === true && "can", takes(member) === false && "cannot")}>
               <header className="sch-col-head">
                 <span className="flex items-baseline justify-between gap-2">
                   <HoverTip label={<strong>{member.name}</strong>}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { render, screen } from "@testing-library/react";
 
-import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary } from "./Board";
+import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary, typeClass } from "./Board";
 import type { AdminJob } from "./api";
 
 const at = (start: number, duration = 20) => ({ start_minute: start, duration_minutes: duration } as AdminJob);
@@ -88,5 +88,23 @@ describe("partially completed visits (never hidden)", () => {
   it("counts partial visits in the status summary", () => {
     render(<StatusSummary jobs={[partial, done]} focus="" onFocus={() => {}} />);
     expect(screen.getByRole("button", { name: /Partially Completed/ })).toHaveTextContent("1");
+  });
+});
+
+describe("the kind of work (ADM-SCH-34)", () => {
+  const of = (service: string) => ({ service, status: "Scheduled", registration: "KA01", parking: "" } as AdminJob);
+
+  it("names the colour class from the service", () => {
+    expect(typeClass(of("Cleaning-External"))).toBe("t-ext");
+    expect(typeClass(of("Cleaning-Internal"))).toBe("t-int");
+    expect(typeClass(of("Deep Spa"))).toBe("t-spa");
+    expect(typeClass(of("Wax"))).toBe("t-other");
+  });
+
+  it("keeps only the chosen kind bright", () => {
+    expect(matches(of("Cleaning-Internal"), "", "", "INT")).toBe(true);
+    expect(matches(of("Cleaning-External"), "", "", "INT")).toBe(false);
+    expect(matches(of("Deep Spa"), "", "", "SPA")).toBe(true);
+    expect(matches(of("Deep Spa"), "", "")).toBe(true);
   });
 });

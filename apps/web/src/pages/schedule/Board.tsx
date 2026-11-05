@@ -23,6 +23,14 @@ export function isSpa(job: AdminJob): boolean {
   return job.service.toLowerCase().includes("spa");
 }
 
+/** The kind of work, which sets a card's colour: exterior green, interior blue, spa purple (ADM-SCH-34). */
+export const JOB_TYPES = ["EXT", "INT", "SPA"] as const;
+export function typeClass(job: AdminJob): string {
+  if (isSpa(job)) return "t-spa";
+  const code = serviceCode(job.service);
+  return code === "EXT" ? "t-ext" : code === "INT" ? "t-int" : "t-other";
+}
+
 /** Only a Scheduled job can still be placed or moved; a skipped or finished one cannot. */
 export function isOpen(job: AdminJob): boolean {
   return job.status === "Scheduled";
@@ -48,7 +56,8 @@ export function statusClass(job: AdminJob): string {
 }
 
 /** Whether a job stays bright for the chosen status and vehicle search. */
-export function matches(job: AdminJob, focus: string, search: string): boolean {
+export function matches(job: AdminJob, focus: string, search: string, type = ""): boolean {
+  if (type && (isSpa(job) ? "SPA" : serviceCode(job.service)) !== type) return false;
   if (focus === PARTIAL) return job.visit_outcome === PARTIAL && matchesSearch(job, search);
   if (focus && job.status !== focus) return false;
   return matchesSearch(job, search);
@@ -86,6 +95,20 @@ export function StatusSummary({ jobs, focus, onFocus }: {
       {chip("", "All jobs", jobs.length)}
       {shown.map((s) => chip(s, s, counts.get(s) ?? 0))}
       {partial > 0 && chip(PARTIAL, PARTIAL, partial)}
+    </div>
+  );
+}
+
+/** The three kinds of work as chips; pressing one keeps only that kind bright, pressing it again shows all. */
+export function TypeKey({ type, onType }: { type: string; onType: (type: string) => void }) {
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label="Kind of work">
+      {JOB_TYPES.map((t) => (
+        <button key={t} type="button" aria-pressed={type === t} onClick={() => onType(type === t ? "" : t)}
+                className={`sch-chip type t-${t.toLowerCase()}`}>
+          <i aria-hidden /> {t}
+        </button>
+      ))}
     </div>
   );
 }

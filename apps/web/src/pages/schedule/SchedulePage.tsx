@@ -20,8 +20,8 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { isOpen, JobFlags, JobLabel, StatusSummary } from "./Board";
-import { CardBoard } from "./CardBoard";
+import { isOpen, JobFlags, JobLabel, StatusSummary, TypeKey } from "./Board";
+import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
@@ -42,6 +42,23 @@ const PERIODS: { value: Period; label: string }[] = [
 
 /** How far back the day strip goes (ADM-SCH-35). */
 const DAYS_BACK = 30;
+
+const DENSITIES: [Density, string][] = [["compact", "Compact"], ["standard", "Standard"], ["detailed", "Detailed"]];
+const DENSITY_KEY = "priveo.schedule.card-density";
+
+/** How much each card shows, remembered in the browser. */
+function useDensity(): [Density, (d: Density) => void] {
+  const [density, set] = useState<Density>(() => {
+    try {
+      const v = localStorage.getItem(DENSITY_KEY);
+      return v === "compact" || v === "detailed" ? v : "standard";
+    } catch { return "standard"; }
+  });
+  return [density, (d) => {
+    set(d);
+    try { localStorage.setItem(DENSITY_KEY, d); } catch { /* A private window keeps nothing; the choice still applies now. */ }
+  }];
+}
 
 const count = (label: string, n: number) => (n ? `${label} (${n})` : label);
 
@@ -119,6 +136,8 @@ export function SchedulePage() {
   const runDays = periodDays(period, runStart);
 
   const [focusStatus, setFocusStatus] = useState("");
+  const [focusType, setFocusType] = useState("");
+  const [density, setDensity] = useDensity();
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
@@ -151,6 +170,13 @@ export function SchedulePage() {
     setProblem(null);
     setParams((p) => { const next = new URLSearchParams(p); next.set("date", d); next.set("tab", tab); return next; }, { replace: true });
   };
+
+  /** A move changes the board, the lists of what needs scheduling and the capacity, nothing else. */
+  const refreshAfterMove = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ["board"] }),
+    qc.invalidateQueries({ queryKey: ["needs-scheduling"] }),
+    qc.invalidateQueries({ queryKey: ["capacity"] }),
+  ]);
 
   const refresh = () => Promise.all([
     qc.invalidateQueries({ queryKey: ["board"] }),
@@ -195,15 +221,41 @@ export function SchedulePage() {
     }, () => { /* The task tray and a toast say why it failed. */ });
   };
 
+  // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
+  const boardKey = ["board", "id", schedule?.id];
   const move = useAppMutation<{ job: AdminJob; crewId: string | null; startMinute: number | null }, AdminJob>({
     mutationFn: (v) => api(`/v1/admin/scheduling/jobs/${v.job.id}/move`, {
       method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute },
     }),
-    pending: "Moving the job…",
+    pending: false,
+    optimistic: async (v) => {
+      await qc.cancelQueries({ queryKey: boardKey });
+      const before = qc.getQueryData<Board>(boardKey);
+      if (before) {
+        const crewName = before.crew.find((c) => c.id === v.crewId)?.name ?? null;
+        const placed = v.crewId !== null && v.startMinute !== null;
+        qc.setQueryData<Board>(boardKey, {
+          ...before,
+          jobs: before.jobs.map((j) => (j.id !== v.job.id ? j : {
+            ...j, crew_id: v.crewId, crew_name: crewName, manual: true,
+            start_minute: placed ? v.startMinute : null,
+            start_time: placed ? hhmm(v.startMinute!) : null,
+            end_time: placed ? hhmm(v.startMinute! + j.duration_minutes) : null,
+          })),
+        });
+      }
+      setOpen(null);
+      return () => qc.setQueryData(boardKey, before);
+    },
     success: (_d, v) => (v.crewId
       ? `${v.job.registration} moved to ${board?.crew.find((c) => c.id === v.crewId)?.name ?? "the crew member"} at ${hhmm(v.startMinute ?? 0)}.`
       : `${v.job.registration} taken off its crew member.`),
-    onSuccess: () => { setProblem(null); setOpen(null); void refresh(); },
+    // Undo puts the job back where it was, through the same move.
+    action: (_d, v) => (v.job.crew_id === v.crewId && v.job.start_minute === v.startMinute ? undefined : {
+      label: "Undo",
+      onClick: () => move.mutate({ job: v.job, crewId: v.job.crew_id, startMinute: v.job.start_minute }),
+    }),
+    onSuccess: () => { setProblem(null); void refreshAfterMove(); },
     onError: (e, v) => {
       setOpen(null);
       if (e instanceof ApiError && e.code === "schedule_frozen") {
@@ -328,6 +380,14 @@ export function SchedulePage() {
                            onChange={(e) => setSearch(e.target.value)} />
                   </label>
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
+                  <TypeKey type={focusType} onType={setFocusType} />
+                  {view === "cards" && (
+                    <div className="sch-views" role="group" aria-label="Card detail">
+                      {DENSITIES.map(([id, label]) => (
+                        <button key={id} type="button" aria-pressed={density === id} onClick={() => setDensity(id)}>{label}</button>
+                      ))}
+                    </div>
+                  )}
                   <span className={cn("inline-flex", schedule.status === "Frozen" && view === "cards" && "text-foreground")}
                         role="note" title={hint} aria-label={hint} tabIndex={0}>
                     <Info className="size-4 text-muted-foreground" aria-hidden />
@@ -340,9 +400,10 @@ export function SchedulePage() {
                 </div>
                 {view === "cards" ? (
                   <CardBoard crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
+                             type={focusType} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
                              onOpen={setOpen} onMove={onMove} />
                 ) : (
-                  <Timeline crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
+                  <Timeline crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType}
                             now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>

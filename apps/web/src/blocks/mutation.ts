@@ -16,8 +16,15 @@ export function errorMessage(e: unknown): string {
 
 export interface AppMutationOptions<TVars, TData> {
   mutationFn: (vars: TVars) => Promise<TData>;
-  /** Shown while it runs. */
-  pending?: string | ((vars: TVars) => string);
+  /** Shown while it runs. `false` shows nothing, for a change the screen already shows (see `optimistic`). */
+  pending?: string | false | ((vars: TVars) => string);
+  /**
+   * Shows the result on screen before the server answers. Returns a function that puts the
+   * screen back, which runs if the change fails.
+   */
+  optimistic?: (vars: TVars) => Promise<() => void> | (() => void) | void;
+  /** A button in the success toast, for example Undo. */
+  action?: (data: TData, vars: TVars) => { label: string; onClick: () => void } | undefined;
   /** Shown when it worked. */
   success: string | ((data: TData, vars: TVars) => string);
   /** Queries to refresh after it worked. */
@@ -34,19 +41,24 @@ export interface AppMutationOptions<TVars, TData> {
  */
 export function useAppMutation<TVars = void, TData = unknown>(o: AppMutationOptions<TVars, TData>) {
   const qc = useQueryClient();
-  return useMutation<TData, unknown, TVars, { toastId: string | number }>({
+  return useMutation<TData, unknown, TVars, { toastId?: string | number; rollback?: () => void }>({
     mutationFn: o.mutationFn,
-    onMutate: (vars) => ({
-      toastId: toast.loading(typeof o.pending === "function" ? o.pending(vars) : o.pending ?? "Saving…"),
-    }),
+    onMutate: async (vars) => {
+      const rollback = (await o.optimistic?.(vars)) || undefined;
+      const toastId = o.pending === false ? undefined
+        : toast.loading(typeof o.pending === "function" ? o.pending(vars) : o.pending ?? "Saving…");
+      return { toastId, rollback };
+    },
     onSuccess: async (data, vars, ctx) => {
+      const act = o.action?.(data, vars);
       toast.success(typeof o.success === "function" ? o.success(data, vars) : o.success,
-        { id: ctx?.toastId });
+        { id: ctx?.toastId, ...(act ? { action: act } : {}) });
       if (o.event) track(o.event);
       o.onSuccess?.(data, vars);
       await Promise.all((o.invalidate ?? []).map((queryKey) => qc.invalidateQueries({ queryKey })));
     },
     onError: (e, vars, ctx) => {
+      ctx?.rollback?.();
       toast.error(errorMessage(e), { id: ctx?.toastId, duration: 8000 });
       // Status and code only: the message and fields can name a customer.
       if (o.event) {
