@@ -83,17 +83,17 @@ class AccountMpinChange {
 class AccountProfileEdit {
   const AccountProfileEdit({
     required this.firstName,
-    required this.lastName,
+    this.lastName,
     required this.mobile,
   });
 
   final String firstName;
-  final String lastName;
+  final String? lastName;
   final String mobile;
 
   factory AccountProfileEdit.fromJson(Map<String, dynamic> j) => AccountProfileEdit(
         firstName: j['first_name'] as String,
-        lastName: j['last_name'] as String,
+        lastName: j['last_name'] == null ? null : j['last_name'] as String,
         mobile: j['mobile'] as String,
       );
 
@@ -3491,7 +3491,7 @@ class CronSwitch {
 class CustomerCreate {
   const CustomerCreate({
     required this.firstName,
-    required this.lastName,
+    this.lastName,
     required this.email,
     required this.mobile,
     this.flat,
@@ -3499,7 +3499,7 @@ class CustomerCreate {
   });
 
   final String firstName;
-  final String lastName;
+  final String? lastName;
   final String? email;
   final String mobile;
   final String? flat;
@@ -3507,7 +3507,7 @@ class CustomerCreate {
 
   factory CustomerCreate.fromJson(Map<String, dynamic> j) => CustomerCreate(
         firstName: j['first_name'] as String,
-        lastName: j['last_name'] as String,
+        lastName: j['last_name'] == null ? null : j['last_name'] as String,
         email: j['email'] == null ? null : j['email'] as String,
         mobile: j['mobile'] as String,
         flat: j['flat'] == null ? null : j['flat'] as String,
@@ -3527,7 +3527,7 @@ class CustomerCreate {
 class CustomerEdit {
   const CustomerEdit({
     required this.firstName,
-    required this.lastName,
+    this.lastName,
     required this.mobile,
     this.flat,
     this.addressLine1,
@@ -3537,7 +3537,7 @@ class CustomerEdit {
   });
 
   final String firstName;
-  final String lastName;
+  final String? lastName;
   final String mobile;
   final String? flat;
   final String? addressLine1;
@@ -3547,7 +3547,7 @@ class CustomerEdit {
 
   factory CustomerEdit.fromJson(Map<String, dynamic> j) => CustomerEdit(
         firstName: j['first_name'] as String,
-        lastName: j['last_name'] as String,
+        lastName: j['last_name'] == null ? null : j['last_name'] as String,
         mobile: j['mobile'] as String,
         flat: j['flat'] == null ? null : j['flat'] as String,
         addressLine1: j['address_line1'] == null ? null : j['address_line1'] as String,
@@ -6159,19 +6159,19 @@ class Onboarding {
 class OnboardingAnswers {
   const OnboardingAnswers({
     required this.firstName,
-    required this.lastName,
+    this.lastName,
     required this.mobile,
     required this.vehicles,
   });
 
   final String firstName;
-  final String lastName;
+  final String? lastName;
   final String mobile;
   final List<VehicleAnswer> vehicles;
 
   factory OnboardingAnswers.fromJson(Map<String, dynamic> j) => OnboardingAnswers(
         firstName: j['first_name'] as String,
-        lastName: j['last_name'] as String,
+        lastName: j['last_name'] == null ? null : j['last_name'] as String,
         mobile: j['mobile'] as String,
         vehicles: [for (final x in j['vehicles'] as List) VehicleAnswer.fromJson(x as Map<String, dynamic>)],
       );

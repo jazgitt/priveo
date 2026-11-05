@@ -49,7 +49,15 @@ def test_profile_read_and_edit(client, me):
     bad = client.patch("/v1/customer/profile", headers=me, json={
         "first_name": "A1", "last_name": "", "mobile": "12"})
     assert bad.status_code == 422
-    assert set(bad.json()["fields"]) == {"first_name", "last_name", "mobile"}
+    # An empty last name is allowed (ACC-06, owner 5-Nov-26); the rest is not.
+    assert set(bad.json()["fields"]) == {"first_name", "mobile"}
+    wrong = client.patch("/v1/customer/profile", headers=me, json={
+        "first_name": "Asha", "last_name": "R4o", "mobile": mobile})
+    assert wrong.status_code == 422 and set(wrong.json()["fields"]) == {"last_name"}
+    blank = client.patch("/v1/customer/profile", headers=me, json={
+        "first_name": "Asha", "mobile": mobile})
+    assert blank.status_code == 200, blank.text
+    assert blank.json()["last_name"] == "" and blank.json()["initials"] == "A"
 
 
 def test_failed_email_change_preserves_the_previous_pending_code(client, me, monkeypatch):

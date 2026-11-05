@@ -830,3 +830,33 @@ it("splits each vehicle into Vehicle details, Service history and Payments tabs"
   await userEvent.click(screen.getByRole("tab", { name: /Service history/ }));
   expect(await screen.findByRole("heading", { name: "Service history" })).toBeInTheDocument();
 });
+
+it("ADM-CUS-01: the wizard continues with an empty last name", async () => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+});
+
+it.each([
+  ["98765432101234", "9876543210"],
+  ["+9198765432", "919876543"],
+  ["98a76-5", "98765"],
+  ["abc", ""],
+])("ADM-CUS-01: the wizard mobile field keeps only numbers and at most 10 of them (%s)", async (typed, shown) => {
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  const field = screen.getByLabelText("Mobile number") as HTMLInputElement;
+  await userEvent.click(field); await userEvent.paste(typed);
+  expect(field.value).toBe(shown);
+});
+
+it("ADM-CUS-24: the edit dialog saves with an empty last name and caps the mobile at 10 numbers", async () => {
+  page("/customers/c1");
+  await userEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  const edit = screen.getByRole("dialog");
+  await userEvent.clear(within(edit).getByLabelText("Last name"));
+  const mobile = within(edit).getByLabelText("Mobile") as HTMLInputElement;
+  await userEvent.clear(mobile); await userEvent.click(mobile); await userEvent.paste("98765432109999");
+  expect(mobile.value).toBe("9876543210");
+  await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
+  await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toMatchObject({ last_name: "", mobile: "9876543210" }));
+});

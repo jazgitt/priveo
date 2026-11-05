@@ -206,6 +206,31 @@ void main() {
     ]);
   });
 
+  testWidgets('edit profile accepts an empty last name and caps the mobile at 10 digits (ACC-06)', (
+    tester,
+  ) async {
+    _tall(tester);
+    final account = FakeAccount();
+    await tester.pumpWidget(_app(const EditProfileScreen(), account));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Last name'), '');
+    await tester.enterText(find.widgetWithText(TextField, 'Mobile number'), '');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Mobile number'),
+      '90a0-0000 0099999',
+    );
+    await tester.pump();
+    final mobile = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'Mobile number'),
+    );
+    expect(mobile.controller!.text, '9000000009');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(account.edits, [
+      {'first': 'Asha', 'last': '', 'mobile': '9000000009'},
+    ]);
+  });
+
   testWidgets('change email asks for the code, then verifies (ACC-08)', (
     tester,
   ) async {

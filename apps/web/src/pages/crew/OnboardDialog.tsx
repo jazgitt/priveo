@@ -7,6 +7,7 @@ import { EVENTS } from "@/analytics/events";
 import { useAppMutation } from "@/blocks/mutation";
 import { useToast } from "@/components";
 import { useSite } from "@/site/SiteContext";
+import { phoneDigits } from "@/lib/utils";
 import { Input } from "@/ui/input";
 
 import {
@@ -60,7 +61,7 @@ export function OnboardDialog({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Name" error={fe.name}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
           <Field label="Mobile number" error={fe.mobile ?? (mobile && !mobileOk ? "Enter 10 digits." : undefined)} hint="10 digits. This is the login ID.">
-            {(p) => <Input {...p} inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} />}
+            {(p) => <Input {...p} inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(phoneDigits(e.target.value))} />}
           </Field>
           <Field label="Society" error={fe.society_id}>
             {(p) => <SelectBox {...p} value={societyId} onChange={(v) => { setSocietyId(v); setMate(""); }}

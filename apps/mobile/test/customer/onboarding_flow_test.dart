@@ -99,6 +99,19 @@ void main() {
     expect(find.text('Saved'), findsOneWidget);
     expect(api.saves.single['first_name'], 'Saved');
   });
+  testWidgets('an empty last name continues and the mobile keeps 10 digits (ONB-01, ONB-02)', (tester) async {
+    final api = _DraftApi();
+    await _pumpReview(tester, api);
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '');
+    await tester.enterText(fields.at(2), '');
+    await tester.enterText(fields.at(2), '90a0-0000 0099999');
+    await tester.pump();
+    expect(tester.widget<TextField>(fields.at(2)).controller!.text, '9000000009');
+    await next(tester);
+    expect(find.text('Step 2 of 7'), findsOneWidget);
+    expect(api.saves.single['last_name'], '');
+  });
   testWidgets('seven review steps save on Continue and put plan before preferences', (tester) async {
     final api = _DraftApi();
     await _pumpReview(tester, api);

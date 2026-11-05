@@ -76,7 +76,7 @@ export function CustomerDetailPage() {
       </>
     );
   }
-  const name = `${c.first_name} ${c.last_name}`;
+  const name = `${c.first_name} ${c.last_name}`.trim();
   const signIn = onboardingState(c);
   const liveVehicles = c.vehicles.filter((v) => v.active !== false);
   const offVehicles = c.vehicles.filter((v) => v.active === false);
@@ -179,7 +179,7 @@ export function CustomerDetailPage() {
           >
             <DetailList columns={2} items={[
               { label: "First name", value: c.first_name },
-              { label: "Last name", value: c.last_name },
+              { label: "Last name", value: c.last_name || "None" },
               { label: "Email", value: <span className="break-all">{c.email ?? "None yet"}</span> },
               { label: "Mobile", value: c.mobile },
               { label: "Flat", value: c.flat },

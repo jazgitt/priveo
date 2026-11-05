@@ -7,6 +7,7 @@ import '../../../core/network/api_failure.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../cust_ui.dart';
+import '../../../core/ui/phone_input.dart';
 import 'account_data.dart';
 import 'account_strings.dart';
 
@@ -94,7 +95,7 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
     if (!_name.hasMatch(_first.text.trim())) {
       errors['first'] = AccountStrings.enterFirstName;
     }
-    if (!_name.hasMatch(_last.text.trim())) {
+    if (_last.text.trim().isNotEmpty && !_name.hasMatch(_last.text.trim())) {
       errors['last'] = AccountStrings.enterLastName;
     }
     final mobile = _mobile.text.trim();
@@ -135,7 +136,9 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   }
 
   Widget _field(String key, String label, TextEditingController c,
-      {TextInputType? keyboard, TextCapitalization cap = TextCapitalization.none}) {
+      {TextInputType? keyboard,
+      List<TextInputFormatter>? formatters,
+      TextCapitalization cap = TextCapitalization.none}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -145,6 +148,7 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
             controller: c,
             enabled: !_busy,
             keyboardType: keyboard,
+            inputFormatters: formatters,
             textCapitalization: cap,
             decoration: InputDecoration(labelText: label),
           ),
@@ -167,7 +171,7 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
         _field('last', AccountStrings.lastName, _last,
             cap: TextCapitalization.words),
         _field('mobile', AccountStrings.mobile, _mobile,
-            keyboard: TextInputType.phone),
+            keyboard: TextInputType.phone, formatters: mobileFormatters),
         Card(
           child: ListTile(
             title: const Text(AccountStrings.email),

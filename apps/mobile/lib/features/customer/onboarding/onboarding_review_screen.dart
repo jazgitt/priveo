@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/ui/phone_input.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -144,7 +146,8 @@ class _ReviewState extends ConsumerState<_Review> {
       if (!_name.hasMatch(_first.text.trim())) {
         errors['first'] = l.enterFirstName;
       }
-      if (!_name.hasMatch(_last.text.trim())) {
+      if (_last.text.trim().isNotEmpty &&
+          !_name.hasMatch(_last.text.trim())) {
         errors['last'] = l.enterLastName;
       }
       final mobile = _mobile.text.trim();
@@ -363,7 +366,8 @@ class _ReviewState extends ConsumerState<_Review> {
       icon: Symbols.verified_rounded,
     ),
     const SizedBox(height: 16),
-    _input('mobile', l.mobileNumber, _mobile, keyboard: TextInputType.phone),
+    _input('mobile', l.mobileNumber, _mobile,
+        keyboard: TextInputType.phone, formatters: mobileFormatters),
   ];
 
   List<Widget> _societyStep(AppLocalizations l) => [
