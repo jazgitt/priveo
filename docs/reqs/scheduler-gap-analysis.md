@@ -186,6 +186,8 @@ These are listed, not edited.
 
 ## 6. Recommended implementation sequence
 
+The step-by-step plan, the test plan and the owner approval gates are in `docs/design/scheduler-implementation-and-test-plan.md`.
+
 | Phase | Content | Gaps | Size | Notes |
 |---|---|---|---|---|
 | 0 | Owner decisions; update the requirement files | all | S | Gate for all other phases. |
