@@ -9,14 +9,16 @@ import { PortalProviders } from "../../test/portal";
 import { FeaturesPage } from "./FeaturesPage";
 
 const fetchMock = vi.fn();
-const feature = (key: string, label: string, group: string, enabled = true) => ({
-  key, label, group, description: "A thing.", audience: "customer", enabled,
+const feature = (key: string, label: string, group: string, enabled = true, audience = "customer") => ({
+  key, label, group, description: "A thing.", audience, enabled,
 });
 
 beforeEach(() => {
   fetchMock.mockImplementation(async () => new Response(JSON.stringify([
     feature("customer.deep_spa", "Deep Spa", "Customer: services"),
-    feature("customer.help", "Help and FAQ", "Customer: support", false)]), { status: 200 }));
+    feature("customer.help", "Help and FAQ", "Customer: support", false),
+    feature("crew.notifications", "Crew notifications", "Crew", true, "crew"),
+    feature("common.push", "Push registration", "Both", false, "both")]), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => { fetchMock.mockReset(); vi.unstubAllGlobals(); });
@@ -51,4 +53,18 @@ it("turns a feature on without asking", async () => {
   await userEvent.click(await screen.findByRole("switch", { name: "Help and FAQ" }));
   await waitFor(() => expect(puts()).toHaveLength(1));
   expect(JSON.parse(puts()[0][1].body)).toEqual({ enabled: true });
+});
+
+it("shows Feature Plugs as tabs by audience with counts, one audience at a time", async () => {
+  renderPage();
+  expect(await screen.findByRole("heading", { name: "Feature Plugs" })).toBeInTheDocument();
+  expect(await screen.findByRole("tab", { name: /Customers/ })).toHaveTextContent("2, 1 off");
+  expect(screen.getByRole("tab", { name: /Crew/ })).toHaveTextContent("1");
+  expect(screen.getByRole("tab", { name: /Both apps/ })).toHaveTextContent("1, 1 off");
+  expect(screen.queryByRole("switch", { name: "Crew notifications" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Crew/ }));
+  expect(await screen.findByRole("switch", { name: "Crew notifications" })).toBeChecked();
+  expect(screen.queryByRole("switch", { name: "Deep Spa" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: /Both apps/ }));
+  expect(await screen.findByRole("switch", { name: "Push registration" })).not.toBeChecked();
 });
