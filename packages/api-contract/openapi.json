@@ -19249,7 +19249,8 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name"
+            "title": "Last Name",
+            "default": ""
           },
           "mobile": {
             "type": "string",
@@ -19259,7 +19260,6 @@
         "type": "object",
         "required": [
           "first_name",
-          "last_name",
           "mobile"
         ],
         "title": "AccountProfileEdit"
@@ -23846,7 +23846,8 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name"
+            "title": "Last Name",
+            "default": ""
           },
           "email": {
             "anyOf": [
@@ -23877,7 +23878,6 @@
         "type": "object",
         "required": [
           "first_name",
-          "last_name",
           "mobile",
           "vehicle"
         ],
@@ -23891,7 +23891,8 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name"
+            "title": "Last Name",
+            "default": ""
           },
           "mobile": {
             "type": "string",
@@ -23944,7 +23945,6 @@
         "type": "object",
         "required": [
           "first_name",
-          "last_name",
           "mobile"
         ],
         "title": "CustomerEdit"
@@ -27468,7 +27468,8 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name"
+            "title": "Last Name",
+            "default": ""
           },
           "mobile": {
             "type": "string",
@@ -27485,7 +27486,6 @@
         "type": "object",
         "required": [
           "first_name",
-          "last_name",
           "mobile",
           "vehicles"
         ],

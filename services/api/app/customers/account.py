@@ -65,7 +65,7 @@ class AccountProfileOut(BaseModel):
 
 class AccountProfileEdit(BaseModel):
     first_name: str
-    last_name: str
+    last_name: str = ""
     mobile: str
 
 
@@ -163,7 +163,7 @@ class AccountService:
         errors: dict[str, str] = {}
         if not _NAME.fullmatch(first):
             errors["first_name"] = "Enter your first name, using letters only."
-        if not _NAME.fullmatch(last):
+        if last and not _NAME.fullmatch(last):
             errors["last_name"] = "Enter your last name, using letters only."
         if mobile != c.mobile:
             # The mobile number is the sign-in ID: only Priveo changes it.
@@ -171,7 +171,7 @@ class AccountService:
         if errors:
             raise ApiError("validation_failed", "Please check the details.", 422, errors)
         c.first_name, c.last_name = first, last
-        self.db.get(Login, c.login_id).display_name = f"{first} {last}"
+        self.db.get(Login, c.login_id).display_name = f"{first} {last}".strip()
         self.db.commit()
         return self.profile(login_id)
 

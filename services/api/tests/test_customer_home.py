@@ -117,6 +117,18 @@ def test_review_draft_restores_position_and_edits_without_confirmation_or_paymen
     assert len(db.scalars(select(Payment)).all()) == before
 
 
+def test_onb_02_an_empty_last_name_is_saved_in_the_draft_and_on_confirm(client, asha):
+    saved = client.patch("/v1/customer/onboarding/draft", headers=asha, json={
+        "step": 1, "first_name": "Asha", "last_name": "  ", "mobile": "9876543210"})
+    assert saved.status_code == 204, saved.text
+    assert client.get("/v1/customer/onboarding", headers=asha).json()["last_name"] == ""
+    wrong = client.patch("/v1/customer/onboarding/draft", headers=asha, json={
+        "step": 1, "last_name": "R4o"})
+    assert wrong.status_code == 422
+    done = confirm(client, asha, answers(client, asha, last_name=""))
+    assert done.status_code in (200, 204), done.text
+
+
 @pytest.mark.parametrize("body", [{"step": 1, "email": "other@example.com"},
                                  {"step": 4, "vehicles": [{"id": "foreign", "parking_number": "9"}]},
                                  {"step": 99}, {"step": -1},
@@ -300,7 +312,7 @@ def test_the_gaps_must_be_filled_before_confirming(client, db, asha):
     r = confirm(client, asha, body)
     assert r.status_code == 422 and r.json()["code"] == "validation_failed"
     assert set(r.json()["fields"]) == {
-        "last_name", "mobile", "vehicles.0.interior_day", "vehicles.1.parking_basement",
+        "mobile", "vehicles.0.interior_day", "vehicles.1.parking_basement",
         "vehicles.1.parking_number", "vehicles.1.cutoff_time", "vehicles.2.parking_number"}
     assert r.json()["fields"]["vehicles.1.cutoff_time"] == (
         "Please select your service cutoff time.")
