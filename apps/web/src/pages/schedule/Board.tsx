@@ -56,17 +56,25 @@ export function statusClass(job: AdminJob): string {
 }
 
 /** Whether a job stays bright for the chosen status and vehicle search. */
-export function matches(job: AdminJob, focus: string, search: string, type = ""): boolean {
+export function matches(job: AdminJob, focus: string, search: string, type = "", flag = ""): boolean {
   if (type && (isSpa(job) ? "SPA" : serviceCode(job.service)) !== type) return false;
+  if (flag === "late" && !job.late) return false;
+  if (flag === "manual" && !job.manual) return false;
   if (focus === PARTIAL) return job.visit_outcome === PARTIAL && matchesSearch(job, search);
   if (focus && job.status !== focus) return false;
   return matchesSearch(job, search);
 }
 
+/**
+ * The search finds a job by vehicle number, parking place, customer, crew member, vehicle model or
+ * service. Several words must all be found, in any of those (ADM-SCH-33).
+ */
 function matchesSearch(job: AdminJob, search: string): boolean {
-  const q = search.replace(/\s/g, "").toUpperCase();
-  return !q || job.registration.replace(/\s/g, "").toUpperCase().includes(q)
-    || (job.parking ?? "").toUpperCase().includes(q);
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const hay = [job.registration, job.registration.replace(/\s/g, ""), job.parking, job.customer_name, job.crew_name, job.vehicle, job.service]
+    .filter(Boolean).join(" ").toLowerCase();
+  return words.every((w) => hay.includes(w));
 }
 
 /**

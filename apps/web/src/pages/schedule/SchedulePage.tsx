@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartGantt, Columns3, Info, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
+import { ChartGantt, Columns3, Info, Rows3, Table2, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -17,10 +17,15 @@ import { Tabs } from "@/components";
 import { cn } from "@/lib/utils";
 import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { isOpen, JobFlags, JobLabel, StatusSummary, TypeKey } from "./Board";
+import { isOpen, JobFlags, JobLabel, matches, StatusSummary, TypeKey } from "./Board";
+import { CrewPicker, FlagKey } from "./BoardFilters";
+import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
@@ -137,6 +142,9 @@ export function SchedulePage() {
 
   const [focusStatus, setFocusStatus] = useState("");
   const [focusType, setFocusType] = useState("");
+  const [focusFlag, setFocusFlag] = useState("");
+  // Which crew members' lanes and rows are shown; none chosen shows everyone.
+  const [crewSel, setCrewSel] = useState<string[]>([]);
   const [density, setDensity] = useDensity();
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
@@ -158,7 +166,11 @@ export function SchedulePage() {
   const jobs = dayJobs.filter((j) => j.status !== "Skipped");
   const skippedCount = dayJobs.length - jobs.length;
   const availability = board?.days.find((d) => d.date === date)?.availability ?? [];
-  const view = params.get("view") === "timeline" ? "timeline" : "cards";
+  const view = params.get("view") === "timeline" ? "timeline" : params.get("view") === "table" ? "table" : "cards";
+  const shownCrew = board && crewSel.length > 0 ? board.crew.filter((c) => crewSel.includes(c.id)) : board?.crew ?? [];
+  // The table lists only what the search and the chips keep; the board dims the rest instead.
+  const tableJobs = jobs.filter((j) => matches(j, focusStatus, search, focusType, focusFlag)
+    && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
 
   // An old link with tab=run opens the board with the Run dialog.
   const tab = params.get("tab") && params.get("tab") !== "run" ? params.get("tab")! : "board";
@@ -284,6 +296,8 @@ export function SchedulePage() {
 
   const hint = view === "timeline"
     ? "View only. Hover a block, or move to it with Tab, for its details. Use Cards to move jobs."
+    : view === "table"
+    ? "Every job of the day with its crew member. Click a heading to sort. Click a row to open the job and move it."
     : schedule?.status === "Frozen"
       ? "This schedule is frozen. Dropping a card on Unscheduled needs no code. Moving or adding work needs the code."
       : "Drag a card onto a free slot to start it where you drop it, or between two cards to take the first free time after the card above. Click a card to set an exact time.";
@@ -364,7 +378,7 @@ export function SchedulePage() {
             {boardQ.isError && <ErrorState message={errorMessage(boardQ.error)} onRetry={() => void boardQ.refetch()} />}
             {schedule && board && (
               <>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="sch-toolbar flex flex-wrap items-center gap-x-2 gap-y-1.5">
                   <div className="sch-views" role="group" aria-label="Board view">
                     <button type="button" aria-pressed={view === "cards"} onClick={() => setParam("view", null)}>
                       <Columns3 aria-hidden /> Cards
@@ -372,21 +386,34 @@ export function SchedulePage() {
                     <button type="button" aria-pressed={view === "timeline"} onClick={() => setParam("view", "timeline")}>
                       <ChartGantt aria-hidden /> Timeline
                     </button>
+                    <button type="button" aria-pressed={view === "table"} onClick={() => setParam("view", "table")}>
+                      <Table2 aria-hidden /> Table
+                    </button>
                   </div>
                   <label className="relative">
-                    <span className="sr-only">Find a vehicle</span>
+                    <span className="sr-only">Find a job</span>
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                    <Input type="search" className="h-8 w-52 pl-8" placeholder="Find a vehicle or parking" value={search}
+                    <Input type="search" className="h-8 w-32 pl-8 transition-[width] focus:w-72" placeholder="Find a job" value={search}
                            onChange={(e) => setSearch(e.target.value)} />
                   </label>
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
                   <TypeKey type={focusType} onType={setFocusType} />
+                  <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
+                  <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} />
                   {view === "cards" && (
-                    <div className="sch-views" role="group" aria-label="Card detail">
-                      {DENSITIES.map(([id, label]) => (
-                        <button key={id} type="button" aria-pressed={density === id} onClick={() => setDensity(id)}>{label}</button>
-                      ))}
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="outline" className="size-8" aria-label={`Card detail: ${density}`} title="How much a card shows">
+                          <Rows3 aria-hidden />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuLabel>Card detail</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
+                          {DENSITIES.map(([id, label]) => <DropdownMenuRadioItem key={id} value={id}>{label}</DropdownMenuRadioItem>)}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   <span className={cn("inline-flex", schedule.status === "Frozen" && view === "cards" && "text-foreground")}
                         role="note" title={hint} aria-label={hint} tabIndex={0}>
@@ -398,12 +425,15 @@ export function SchedulePage() {
                     </Button>
                   )}
                 </div>
-                {view === "cards" ? (
-                  <CardBoard crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
-                             type={focusType} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
+                {view === "table" ? (
+                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen}
+                            fileName={`schedule-${(site.name || "site").replace(/[^A-Za-z0-9]+/g, "-")}-${date}.csv`} />
+                ) : view === "cards" ? (
+                  <CardBoard crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
+                             type={focusType} flag={focusFlag} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
                              onOpen={setOpen} onMove={onMove} />
                 ) : (
-                  <Timeline crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType}
+                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag}
                             now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>

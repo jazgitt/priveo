@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ function slotTime(el: HTMLElement, y: number, duration: number): number {
  * time. A crew member who cannot work that day is greyed out and takes no card
  * (ADM-SCH-32, -33).
  */
-export function CardBoard({ crew, jobs, availability, focus, search, type = "", density = "standard", savingId = null, onOpen, onMove }: {
+export function CardBoard({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, onOpen, onMove }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -58,6 +58,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   search: string;
   /** EXT, INT or SPA keeps only that kind bright; empty shows all. */
   type?: string;
+  /** "late" or "manual" keeps only those jobs bright; empty shows all. */
+  flag?: string;
   density?: Density;
   /** The job whose move is being saved, shown as working. */
   savingId?: string | null;
@@ -69,6 +71,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<Over | null>(null);
   const [blocked, setBlocked] = useState("");
+  const root = useRef<HTMLDivElement>(null);
+  // Searching brings the first match into view, so a car in a long lane is not hunted for.
+  useEffect(() => {
+    if (!search.trim()) return;
+    root.current?.querySelector<HTMLElement>("[data-card]:not(.dim)")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [search]);
 
   if (crew.length === 0) {
     return <p className="text-sm text-muted-foreground">No crew is set up for this site.</p>;
@@ -185,7 +193,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
            aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
            title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}. ${job.status}${job.reason ? `. ${job.reason}` : ""}${open && job.crew_id ? ". Alt and the up or down arrow move it 5 minutes." : ""}`}
            className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
-             !matches(job, focus, search, type) && "dim", dragId === job.id && "dragging", !open && "locked",
+             !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
              savingId === job.id && "saving")}
            onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
            onClick={() => onOpen(job)}
@@ -263,7 +271,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   };
 
   return (
-    <div className="sch-fill">
+    <div className="sch-fill" ref={root}>
       <Scroller wrapClassName="sch-board-wrap" className="sch-board" role="group" aria-label="Day board">
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
                  className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
