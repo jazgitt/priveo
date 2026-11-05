@@ -4,7 +4,7 @@
   "crons": [
     {"path": "/v1/internal/cron/automatic-planning", "schedule": "30 15 * * *"},
     {"path": "/v1/internal/cron/freeze-due", "schedule": "35 14 * * *"},
-    {"path": "/v1/internal/cron/payments-daily", "schedule": "30 20 * * *"},
+    {"path": "/v1/internal/cron/payments-daily", "schedule": "30 7 * * *"},
     {"path": "/v1/internal/cron/renewal-reminders", "schedule": "30 4 * * *"},
     {"path": "/v1/internal/cron/checkin-notify", "schedule": "0 5 * * *"},
     {"path": "/v1/internal/cron/complaints-overdue", "schedule": "30 15 * * *"}
