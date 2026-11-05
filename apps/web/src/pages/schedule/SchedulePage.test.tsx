@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../components";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { CapacityPage } from "../capacity/CapacityPage";
+import { jobsCsv, csvCell } from "./JobTable";
 import { SchedulePage } from "./SchedulePage";
 
 const fetchMock = vi.fn();
@@ -254,16 +255,17 @@ describe("the card board (ADM-SCH-33)", () => {
   });
 
   it("shows more on a card as the detail grows, and remembers it", async () => {
-    localStorage.removeItem("priveo.schedule.card-density");
     server();
     await openDay();
+    await column("c1");
     const card = () => within(screen.getByTestId("col-c1")).getByRole("button", { name: /KA01AB1234/ });
-    await screen.findByRole("group", { name: "Card detail" });
     expect(card()).not.toHaveTextContent("Meena");
-    await userEvent.click(screen.getByRole("button", { name: "Detailed" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Card detail: standard" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Detailed" }));
     expect(card()).toHaveTextContent("Meena");
     expect(localStorage.getItem("priveo.schedule.card-density")).toBe("detailed");
-    await userEvent.click(screen.getByRole("button", { name: "Compact" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Card detail: detailed" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Compact" }));
     expect(card()).toHaveClass("compact");
   });
 
@@ -394,9 +396,134 @@ describe("the card board (ADM-SCH-33)", () => {
     server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", parking: "B2-07" })] });
     await openDay();
     await column("c1");
-    await userEvent.type(screen.getByRole("searchbox", { name: "Find a vehicle" }), "zz00");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a job" }), "zz00");
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
     expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
+  });
+});
+
+describe("search and filters on every view (ADM-SCH-33)", () => {
+  const two = () => server({ jobs: [
+    job({ customer_name: "Meena Rao" }),
+    job({ id: "j2", registration: "KA02ZZ0001", vehicle: "Tata Nexon", customer_name: "Farhan Ali", crew_id: "c2",
+          crew_name: "Ravi", parking: "B2-07", start_minute: 600, start_time: "10:00", end_time: "10:20", late: true }),
+  ] });
+
+  it("finds a job by customer, crew member or vehicle model, and by several words together", async () => {
+    two();
+    await openDay();
+    await column("c1");
+    const find = screen.getByRole("searchbox", { name: "Find a job" });
+    const card1 = screen.getByRole("button", { name: /KA01AB1234/ });
+    const card2 = screen.getByRole("button", { name: /KA02ZZ0001/ });
+    await userEvent.type(find, "farhan");
+    expect(card1).toHaveClass("dim");
+    expect(card2).not.toHaveClass("dim");
+    await userEvent.clear(find);
+    await userEvent.type(find, "ravi nexon");
+    expect(card1).toHaveClass("dim");
+    expect(card2).not.toHaveClass("dim");
+    await userEvent.clear(find);
+    await userEvent.type(find, "asha civic");
+    expect(card1).toHaveClass("dim");
+    expect(card2).toHaveClass("dim");
+  });
+
+  it("keeps only late jobs bright when Late is pressed", async () => {
+    two();
+    await openDay();
+    await column("c1");
+    await userEvent.click(screen.getByRole("button", { name: "Late" }));
+    expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
+    expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
+  });
+
+  it("shows only the crew members chosen in the picker", async () => {
+    two();
+    await openDay();
+    await column("c1");
+    await userEvent.click(screen.getByRole("button", { name: /Crew shown: All crew/ }));
+    await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Ravi" }));
+    await waitFor(() => expect(screen.queryByTestId("col-c1")).not.toBeInTheDocument());
+    expect(screen.getByTestId("col-c2")).toBeInTheDocument();
+    expect(screen.getByTestId("col-unscheduled")).toBeInTheDocument();
+  });
+});
+
+describe("the table view (ADM-SCH-33)", () => {
+  const three = () => server({ jobs: [
+    job({ customer_name: "Meena Rao" }),
+    job({ id: "j2", registration: "KA02ZZ0001", vehicle: "Tata Nexon", customer_name: "Farhan Ali", crew_id: "c2",
+          crew_name: "Ravi", parking: "B2-07", start_minute: 600, start_time: "10:00", end_time: "10:20", late: true }),
+    job({ id: "j3", registration: "KA03UN0003", customer_name: "Zoya", crew_id: null, crew_name: null,
+          start_minute: null, start_time: null, end_time: null, reason: "No crew member is free." }),
+  ] });
+  const rowsOf = () => within(screen.getByRole("region", { name: "Jobs of the day" })).getAllByRole("row").slice(1);
+
+  it("lists every job with its crew member and card details, unassigned first", async () => {
+    three();
+    await openDay("2026-11-08", "&view=table");
+    const region = await screen.findByRole("region", { name: "Jobs of the day" });
+    expect(screen.getByRole("button", { name: /Table/ })).toHaveAttribute("aria-pressed", "true");
+    const heads = within(region).getAllByRole("columnheader").map((h) => h.textContent?.trim());
+    expect(heads).toEqual(["Time", "Crew", "Vehicle", "Customer", "Parking", "Service", "Min", "Finish by", "Status", "Notes"]);
+    const rows = rowsOf();
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent("Unassigned");
+    expect(rows[0]).toHaveTextContent("KA03UN0003");
+    expect(rows[1]).toHaveTextContent("Asha");
+    expect(rows[1]).toHaveTextContent("Honda City");
+    expect(rows[1]).toHaveTextContent("Meena Rao");
+    expect(rows[1]).toHaveTextContent("B1-24");
+    expect(rows[1]).toHaveTextContent("09:00-09:20");
+    expect(rows[2]).toHaveTextContent("Ravi");
+    expect(rows[2]).toHaveTextContent("Late");
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("3 jobs");
+  });
+
+  it("sorts by a column and reverses it on a second click", async () => {
+    three();
+    await openDay("2026-11-08", "&view=table");
+    await screen.findByRole("region", { name: "Jobs of the day" });
+    await userEvent.click(screen.getByRole("button", { name: "Customer" }));
+    expect(rowsOf().map((r) => r.getAttribute("aria-label"))).toEqual(["KA02ZZ0001, Ravi", "KA01AB1234, Asha", "KA03UN0003, Unassigned"]);
+    await userEvent.click(screen.getByRole("button", { name: "Customer" }));
+    expect(rowsOf().map((r) => r.getAttribute("aria-label"))).toEqual(["KA03UN0003, Unassigned", "KA01AB1234, Asha", "KA02ZZ0001, Ravi"]);
+    expect(screen.getByRole("columnheader", { name: "Customer" })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("lists only what the search and the chips keep, and says how many are hidden", async () => {
+    three();
+    await openDay("2026-11-08", "&view=table");
+    await screen.findByRole("region", { name: "Jobs of the day" });
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a job" }), "zoya");
+    expect(rowsOf()).toHaveLength(1);
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("1 of 3 jobs");
+    await userEvent.clear(screen.getByRole("searchbox", { name: "Find a job" }));
+    await userEvent.click(screen.getByRole("button", { name: "Late" }));
+    expect(rowsOf()).toHaveLength(1);
+    expect(rowsOf()[0]).toHaveTextContent("KA02ZZ0001");
+  });
+
+  it("opens the job dialog from a row, where it can be moved", async () => {
+    three();
+    await openDay("2026-11-08", "&view=table");
+    await screen.findByRole("region", { name: "Jobs of the day" });
+    await userEvent.click(screen.getByRole("row", { name: "KA03UN0003, Unassigned" }));
+    expect(await screen.findByRole("dialog", { name: /KA03UN0003/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move here" })).toBeInTheDocument();
+  });
+
+  it("makes a CSV of the rows shown, with formula-looking text defused", () => {
+    const csv = jobsCsv([
+      job({ customer_name: "=HYPERLINK(\"x\")", reason: "Late, sorry" }) as never,
+    ]);
+    const [head, row] = csv.split("\r\n");
+    expect(head).toBe("Time,Crew,Registration,Vehicle,Customer,Parking,Service,Duration (min),Finish by,Status,Late,By hand,Reason");
+    expect(row).toContain("09:00-09:20,Asha,KA01AB1234,Honda City,\"'=HYPERLINK(\"\"x\"\")\",B1-24");
+    expect(row).toContain('"Late, sorry"');
+    expect(csvCell("+1")).toBe("'+1");
+    expect(csvCell(null)).toBe("");
   });
 });
 

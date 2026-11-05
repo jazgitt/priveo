@@ -108,3 +108,26 @@ describe("the kind of work (ADM-SCH-34)", () => {
     expect(matches(of("Deep Spa"), "", "")).toBe(true);
   });
 });
+
+describe("the job search (ADM-SCH-33)", () => {
+  const j = { registration: "KA 01 AB 1234", parking: "B1-24", customer_name: "Meena Rao", crew_name: "Asha",
+    vehicle: "Honda City", service: "Cleaning-External", status: "Scheduled", late: true, manual: false } as AdminJob;
+
+  it("finds by vehicle number with or without spaces, parking, customer, crew, model and service", () => {
+    for (const q of ["ka01ab", "KA 01 AB 1234", "b1-24", "meena", "asha", "honda", "external"]) {
+      expect(matches(j, "", q), q).toBe(true);
+    }
+    expect(matches(j, "", "ravi")).toBe(false);
+  });
+
+  it("needs every word to be found, in any field", () => {
+    expect(matches(j, "", "asha honda")).toBe(true);
+    expect(matches(j, "", "asha nexon")).toBe(false);
+    expect(matches(j, "", "   ")).toBe(true);
+  });
+
+  it("keeps only late or by-hand jobs for a flag", () => {
+    expect(matches(j, "", "", "", "late")).toBe(true);
+    expect(matches(j, "", "", "", "manual")).toBe(false);
+  });
+});

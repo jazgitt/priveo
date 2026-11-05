@@ -52,6 +52,20 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(page.getByRole("button", { name: "Show days" })).toBeVisible();
   });
 
+  test("the Table view lists the jobs with their crew member and finds one by search [ADM-SCH-33]", async ({ page }) => {
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    await page.getByRole("button", { name: /Table/ }).click();
+    const table = page.getByRole("region", { name: "Jobs of the day" });
+    await expect(table.getByRole("columnheader", { name: "Crew" })).toBeVisible();
+    const rows = table.getByRole("row");
+    await expect(rows).toHaveCount(2); // the heading row and the one job of this fixture
+    await expect(rows.nth(1)).toContainText("TEST R06 Member 1");
+    await page.getByRole("searchbox", { name: "Find a job" }).fill("no-such-car");
+    await expect(table.getByText("No job matches the search and filters.")).toBeVisible();
+    await page.getByRole("searchbox", { name: "Find a job" }).fill("member 1");
+    await expect(rows).toHaveCount(2);
+  });
+
   test("a frozen schedule refuses a wrong unfreeze code [ADM-SCH-18]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     const board = page.getByRole("group", { name: "Schedule of this day" });

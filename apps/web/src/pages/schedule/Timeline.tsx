@@ -19,7 +19,7 @@ interface Tip { job: AdminJob; x: number; y: number }
  * as wide as its duration and coloured by its status. Hovering or focusing a
  * block shows its details. Nothing can be moved here (ADM-SCH-33).
  */
-export function Timeline({ crew, jobs, availability, focus, search, type = "", now }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", now }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -27,6 +27,8 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", n
   search: string;
   /** EXT, INT or SPA keeps only that kind bright; empty shows all. */
   type?: string;
+  /** "late" or "manual" keeps only those jobs bright; empty shows all. */
+  flag?: string;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
 }) {
@@ -90,7 +92,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", n
                   <div key={job.id} tabIndex={0} aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
                        aria-describedby={tip?.job.id === job.id ? "sch-tl-tip" : undefined}
                        className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
-                         !matches(job, focus, search, type) && "dim")}
+                         !matches(job, focus, search, type, flag) && "dim")}
                        style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
                        onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
                        onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
