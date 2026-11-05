@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.directory import defaults, lookup, service
@@ -406,6 +406,44 @@ def reactivate_addon(addon_id: uuid.UUID, user: AdminUser, db: Db):
 # ---- audit -----------------------------------------------------------------------
 
 
+def _audit_search(text: str):
+    """One condition: `text` is a substring (any case) of any column of the audit
+    page. Works on SQLite and PostgreSQL. LIKE wildcards in `text` are literal."""
+    from app.platform.clock import IST
+
+    lowered = text.lower()
+    pat = "%" + lowered.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    nodash = lowered.replace("-", "")
+    pat_nodash = "%" + nodash.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+    def has(col):
+        return func.lower(cast(col, String)).like(pat, escape="\\")
+
+    conds = [
+        has(DirectoryAudit.at),  # the date and time as text (UTC, ISO)
+        has(func.replace(DirectoryAudit.entity, "_", " ")),
+        has(DirectoryAudit.entity),
+        has(DirectoryAudit.action),
+        has(DirectoryAudit.admin_login_id),
+        # SQLite keeps ids without dashes, PostgreSQL with them.
+        func.lower(func.replace(cast(DirectoryAudit.admin_login_id, String), "-", "")).like(pat_nodash, escape="\\"),
+        has(DirectoryAudit.detail),
+        has(DirectoryAudit.entity_id),
+    ]
+    # The date as the admin sees it (IST): dd-Mon-yy, dd-Mon-yyyy or yyyy-mm-dd.
+    for fmt in ("%d-%b-%y", "%d-%b-%Y", "%Y-%m-%d"):
+        try:
+            day = datetime.strptime(text, fmt).replace(tzinfo=IST).date()
+        except ValueError:
+            continue
+        conds.append(
+            (DirectoryAudit.at >= datetime.combine(day, time.min, tzinfo=IST))
+            & (DirectoryAudit.at < datetime.combine(day + timedelta(days=1), time.min, tzinfo=IST))
+        )
+        break
+    return or_(*conds)
+
+
 @admin.get("/audit", response_model=s.DirectoryAuditPage)
 def list_audit(
     user: AdminUser,
@@ -413,6 +451,7 @@ def list_audit(
     society_id: uuid.UUID | None = None,
     entity: str | None = None,
     actor_id: uuid.UUID | None = None,
+    q: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -420,7 +459,11 @@ def list_audit(
 ):
     """The audit trail, newest first. With `society_id` that society's changes are
     listed together with those that belong to no society (they apply to all sites;
-    their `society_id` is null). Left out, every change is listed (ADM-SET-09)."""
+    their `society_id` is null). Left out, every change is listed (ADM-SET-09).
+
+    `q` is the general search (ADM-SET-09): at least 3 characters, case-insensitive,
+    a substring of any column the page shows. `actor_id` is kept for other callers;
+    the admin portal no longer sends it."""
     from app.platform.clock import IST
 
     if date_from and date_to and date_from > date_to:
@@ -439,6 +482,10 @@ def list_audit(
         where.append(
             DirectoryAudit.at < datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=IST)
         )
+    if q is not None:
+        if len(q.strip()) < 3:
+            raise ApiError("validation_failed", "Type at least 3 characters to search.", 422)
+        where.append(_audit_search(q.strip()))
     total = db.scalar(select(func.count()).select_from(DirectoryAudit).where(*where)) or 0
     # The id breaks ties so a page never repeats or skips a row.
     rows = db.scalars(

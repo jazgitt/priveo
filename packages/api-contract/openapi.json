@@ -17940,7 +17940,7 @@
           "directory"
         ],
         "summary": "List Audit",
-        "description": "The audit trail, newest first. With `society_id` that society's changes are\nlisted together with those that belong to no society (they apply to all sites;\ntheir `society_id` is null). Left out, every change is listed (ADM-SET-09).",
+        "description": "The audit trail, newest first. With `society_id` that society's changes are\nlisted together with those that belong to no society (they apply to all sites;\ntheir `society_id` is null). Left out, every change is listed (ADM-SET-09).\n\n`q` is the general search (ADM-SET-09): at least 3 characters, case-insensitive,\na substring of any column the page shows. `actor_id` is kept for other callers;\nthe admin portal no longer sends it.",
         "operationId": "list_audit_v1_admin_directory_audit_get",
         "parameters": [
           {
@@ -17991,6 +17991,22 @@
                 }
               ],
               "title": "Actor Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           },
           {
