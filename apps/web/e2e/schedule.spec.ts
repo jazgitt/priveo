@@ -16,6 +16,74 @@ test.describe("Schedule (scenario R06)", () => {
     await page.getByLabel("Day", { exact: true }).fill(date);
   }
 
+  // Real mouse drags (native drag and drop), against the real API. These run before the test that
+  // freezes the draft day, and each puts its card back, so the later tests see the day as they expect.
+  const lane = (page: import("@playwright/test").Page, name: string) => page.getByRole("region", { name, exact: true });
+  const carOf = (page: import("@playwright/test").Page, name: string) => lane(page, name).getByRole("button", { name: /TS35TT0001/ });
+
+  test("dragging a card to another crew member's free slot moves it, and it is still there after a reload [ADM-SCH-33]", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    await expect(carOf(page, "TEST R06 Member 1")).toContainText("06:00-06:20");
+
+    // Drop it at the top of the Manager's free slot: it starts at the slot's start, to the nearest 5 minutes.
+    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:00-14:00"),
+      { targetPosition: { x: 30, y: 2 } });
+    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:0[05]-05:[2][05]/);
+    await expect(carOf(page, "TEST R06 Member 1")).toHaveCount(0);
+    await expect(page.getByText(/moved to TEST R06 Manager 0 at 05:0[05]/)).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("group", { name: "Day board" })).toBeVisible();
+    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:0[05]-05:[2][05]/);
+
+    // And back, by dragging it onto the first lane's free time.
+    await carOf(page, "TEST R06 Manager 0").dragTo(lane(page, "TEST R06 Member 1").getByLabel("Free 05:00-14:00"),
+      { targetPosition: { x: 30, y: 2 } });
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+    await expect(carOf(page, "TEST R06 Manager 0")).toHaveCount(0);
+  });
+
+  test("dragging a card onto Unscheduled asks first, and takes it off its crew member [ADM-SCH-33]", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    const unscheduled = page.getByTestId("col-unscheduled");
+    await carOf(page, "TEST R06 Member 1").dragTo(unscheduled.locator(".sch-col-body"));
+    const ask = page.getByRole("alertdialog");
+    await expect(ask).toContainText("off");
+    // Cancelling leaves the card where it was.
+    await ask.getByRole("button", { name: "Cancel" }).click();
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+
+    await carOf(page, "TEST R06 Member 1").dragTo(unscheduled.locator(".sch-col-body"));
+    await page.getByRole("alertdialog").getByRole("button", { name: "Take off crew member" }).click();
+    await expect(unscheduled.getByRole("button", { name: /TS35TT0001/ })).toBeVisible();
+    await page.reload();
+    await expect(page.getByTestId("col-unscheduled").getByRole("button", { name: /TS35TT0001/ })).toBeVisible();
+
+    // Back onto a crew member: it takes that member's first free time.
+    await page.getByTestId("col-unscheduled").getByRole("button", { name: /TS35TT0001/ })
+      .dragTo(lane(page, "TEST R06 Member 1").locator(".sch-col-body"));
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+    await expect(page.getByTestId("col-unscheduled").getByRole("button", { name: /TS35TT0001/ })).toHaveCount(0);
+  });
+
+  test("a drop on a frozen schedule is refused: the card goes back and the day offers the code [ADM-SCH-33]", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openBoard(page, addDays(scenario("R06").as_of, 3));
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:00-14:00"),
+      { targetPosition: { x: 30, y: 2 } });
+    const alert = page.getByRole("alert").filter({ hasText: /frozen/i });
+    await expect(alert).toBeVisible();
+    await expect(alert.getByRole("button", { name: "Unfreeze with code" })).toBeVisible();
+    // The optimistic move was undone, and the server kept it where it was.
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+    await expect(carOf(page, "TEST R06 Manager 0")).toHaveCount(0);
+    await page.reload();
+    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+  });
+
   test("freezes a draft schedule [ADM-SCH-16]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 1));
     const board = page.getByRole("group", { name: "Schedule of this day" });
