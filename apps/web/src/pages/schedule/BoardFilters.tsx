@@ -20,12 +20,15 @@ export function FlagKey({ flag, onFlag }: { flag: string; onFlag: (flag: string)
 }
 
 /** Chooses which crew members' lanes and rows are shown; none chosen shows everyone. */
-export function CrewPicker({ crew, selected, onChange }: {
+export function CrewPicker({ crew, selected, onChange, hideOff, onHideOff }: {
   crew: SchedulingCrew[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  /** Leave out the crew members who cannot work this day. */
+  hideOff: boolean;
+  onHideOff: (hide: boolean) => void;
 }) {
-  const label = selected.length === 0 ? "All crew" : `${selected.length} of ${crew.length} crew`;
+  const label = selected.length > 0 ? `${selected.length} of ${crew.length} crew` : hideOff ? "Working crew" : "All crew";
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);
   return (
     <DropdownMenu>
@@ -35,6 +38,10 @@ export function CrewPicker({ crew, selected, onChange }: {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuCheckboxItem checked={hideOff} onCheckedChange={onHideOff} onSelect={(e) => e.preventDefault()}>
+          Hide crew who are off today
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
         <DropdownMenuLabel>Show only these crew</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {crew.map((c) => (

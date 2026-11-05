@@ -158,6 +158,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [focusFlag, setFocusFlag] = useState("");
   // Which crew members' lanes and rows are shown; none chosen shows everyone.
   const [crewSel, setCrewSel] = useState<string[]>([]);
+  const [hideOff, setHideOff] = useState(false);
   const [density, setDensity] = useDensity();
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
@@ -180,7 +181,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const skippedCount = dayJobs.length - jobs.length;
   const availability = board?.days.find((d) => d.date === date)?.availability ?? [];
   const view = params.get("view") === "timeline" ? "timeline" : params.get("view") === "table" ? "table" : "cards";
-  const shownCrew = board && crewSel.length > 0 ? board.crew.filter((c) => crewSel.includes(c.id)) : board?.crew ?? [];
+  const isOff = (id: string) => availability.find((a) => a.crew_id === id)?.status === "Off";
+  const shownCrew = (board?.crew ?? []).filter((c) => (crewSel.length === 0 || crewSel.includes(c.id)) && !(hideOff && isOff(c.id)));
   // The table lists only what the search and the chips keep; the board dims the rest instead.
   const tableJobs = jobs.filter((j) => matches(j, focusStatus, search, focusType, focusFlag)
     && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
@@ -370,7 +372,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
                   <TypeKey type={focusType} onType={setFocusType} />
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
-                  <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} />
+                  <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />
                   {view === "cards" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

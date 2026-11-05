@@ -95,8 +95,9 @@ requirement. Where a screen decision fills a gap, it is marked **UI decision** a
 > has no width cap and the Board fills the height under the top bar, so only the lanes scroll. Title, day
 > arrows, date, schedule status and actions share one slim bar; the strip of days folds away (remembered
 > per browser); Run is a button that opens a dialog, not a tab; the how-to-drag line is a note icon.
-> Planned next: type colours that survive status, a Table view, shared search and filters, a full-screen
-> focus mode and the board in its own browser tab (plan in `docs/design/scheduler-board-redesign.md`).
+> Later the same day: cards coloured by kind of work with instant moves and Undo, a Table view, one
+> search with filters, a Focus view and the board in its own browser tab, a pinned Unscheduled column and
+> foldable lanes. The plan and the order are in `docs/design/scheduler-board-redesign.md`.
 
 > **18 Oct 2026, owner:** the page is now led by one chosen day (ADM-SCH-35). A day bar sits above the
 > tabs: arrows, a date field and a strip of days with their schedule status, then the chosen day's
