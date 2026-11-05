@@ -297,7 +297,7 @@ describe("the card board (ADM-SCH-33)", () => {
         "This schedule is frozen. Unfreeze it with the code to move work.")),
     });
     await openDay();
-    expect(await screen.findByText(/This schedule is frozen. Dropping a card on Unscheduled needs no code/)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/This schedule is frozen. Dropping a card on Unscheduled needs no code/)).toBeInTheDocument();
     await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
     await userEvent.click(screen.getByRole("button", { name: "Move here" }));
     const alert = await screen.findByRole("alert");
@@ -372,7 +372,7 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(first).toHaveAttribute("aria-pressed", "true");
     const later = within(days).getByRole("button", { name: /^Sun 15-Nov-26, Frozen/ });
     expect(later).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText(/Part of the schedule for Sun 08-Nov-26 to Sat 14-Nov-26/)).toBeInTheDocument();
+    expect(screen.getByTitle(/Part of the schedule for Sun 08-Nov-26 to Sat 14-Nov-26/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Freeze" })).toBeInTheDocument();
 
     await userEvent.click(later);
@@ -380,10 +380,25 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(first).toHaveAttribute("aria-pressed", "false");
     expect(await screen.findByRole("button", { name: /KA07AA0007/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
-    expect(screen.getByText("A schedule for this day only.")).toBeInTheDocument();
+    expect(screen.getByTitle("A schedule for this day only.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unfreeze" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Freeze" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
+  });
+
+  it("folds the day strip away to give the board room, and remembers it", async () => {
+    localStorage.removeItem("priveo.schedule.days-folded");
+    server();
+    await openDay();
+    expect(await screen.findByRole("group", { name: "Days" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Hide days" }));
+    expect(screen.queryByRole("group", { name: "Days" })).not.toBeInTheDocument();
+    // The arrows and the date field stay, so the day can still be changed.
+    expect(screen.getByRole("button", { name: "Next day" })).toBeInTheDocument();
+    expect(localStorage.getItem("priveo.schedule.days-folded")).toBe("1");
+    await userEvent.click(screen.getByRole("button", { name: "Show days" }));
+    expect(await screen.findByRole("group", { name: "Days" })).toBeInTheDocument();
+    expect(localStorage.getItem("priveo.schedule.days-folded")).toBe("0");
   });
 
   it("steps a day with the arrows and says when a day has no schedule", async () => {
@@ -400,7 +415,8 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
   it("runs the scheduler for the period that contains the chosen day", async () => {
     server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
     await openDay("2026-11-11");
-    // No schedule covers the day, so the page opens on Run.
+    // No schedule covers the day, so the board offers to run the scheduler.
+    await userEvent.click(await screen.findByRole("button", { name: "Run the scheduler" }));
     expect(await screen.findByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
     expect(screen.getByText("Sun 08-Nov-26 to Sat 14-Nov-26")).toBeInTheDocument();
     expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
@@ -551,10 +567,11 @@ describe("schedule tabs and unavailable crew time", () => {
     await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Run", "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements"]));
+      "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements"]));
     expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "Run" }));
+    // Run is a button in the top bar and opens a dialog.
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
     expect(screen.getByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run again" })).toBeInTheDocument();
   });
@@ -634,10 +651,10 @@ describe("long runs, confirmations and the action tabs", () => {
     serverWith({ "/v1/admin/scheduling/run": () => new Promise<Response>((res) => { finish = res; }) as unknown as Response },
       { boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
     await openDay();
+    await userEvent.click(await screen.findByRole("button", { name: "Run the scheduler" }));
     await userEvent.click(await screen.findByRole("button", { name: "Run scheduler" }));
+    // The dialog closes at once; the bar button shows the run and the task tray follows it.
     expect(await screen.findByRole("button", { name: "Running…" })).toBeDisabled();
-    expect(screen.getByText(/You can leave this page/)).toBeInTheDocument();
-    expect(screen.getAllByRole("status").some((s) => s.textContent?.includes("The scheduler is placing the jobs"))).toBe(true);
     finish(json(200, { schedules: [{ schedule_id: "sch1", society_id: SOC, status: "Draft", placed: 3, unscheduled: 1, late: 0 }] }));
     expect((await screen.findAllByText("3 placed, 1 unscheduled, 0 late.")).length).toBeGreaterThan(0);
   });
@@ -645,7 +662,7 @@ describe("long runs, confirmations and the action tabs", () => {
   it("does not change the default period unless asked", async () => {
     server();
     await openDay();
-    await userEvent.click(await screen.findByRole("tab", { name: "Run" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Run" }));
     await choose("Period", "Daily");
     expect(screen.getByText("Period to schedule").nextSibling).toHaveTextContent(/^Sun 08-Nov-26$/);
     expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(false);

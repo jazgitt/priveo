@@ -57,7 +57,7 @@ export function Timeline({ crew, jobs, availability, focus, search, now }: {
   };
 
   return (
-    <div>
+    <div className="sch-fill">
       <Scroller className="sch-tl" role="group" aria-label="Day timeline">
         <div className="sch-tl-row sch-tl-head">
           <div className="sch-tl-name">Crew <span>booked/available</span></div>

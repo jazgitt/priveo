@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartGantt, Columns3, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
+import { ChartGantt, Columns3, Info, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -8,7 +8,7 @@ import { useConfirm } from "@/blocks/confirm";
 import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
-import { DetailList, EmptyState, ErrorState, PageHeader, Panel } from "@/blocks/layout";
+import { DetailList, EmptyState, ErrorState, Panel } from "@/blocks/layout";
 import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
@@ -45,9 +45,8 @@ const DAYS_BACK = 30;
 
 const count = (label: string, n: number) => (n ? `${label} (${n})` : label);
 
-/** The sections of the page, one tab each, all for the chosen day (ADM-SCH-32). */
+/** The sections of the page, one tab each, all for the chosen day (ADM-SCH-32). Run is a button in the top bar. */
 const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) => [
-  { id: "run", label: "Run" },
   { id: "board", label: "Board" },
   { id: "needs", label: count("Needs scheduling", n.needs) },
   { id: "skipped", label: count("Skipped and paused", n.skipped) },
@@ -142,7 +141,9 @@ export function SchedulePage() {
   const availability = board?.days.find((d) => d.date === date)?.availability ?? [];
   const view = params.get("view") === "timeline" ? "timeline" : "cards";
 
-  const tab = params.get("tab") ?? (schedulesQ.isSuccess && !schedule ? "run" : "board");
+  // An old link with tab=run opens the board with the Run dialog.
+  const tab = params.get("tab") && params.get("tab") !== "run" ? params.get("tab")! : "board";
+  const [runOpen, setRunOpen] = useState(params.get("tab") === "run");
   const runLabel = `Scheduler, ${site.name || "site"}`;
   const running = tasks.isRunning(runLabel);
   // Changing the day keeps the tab, so the admin stays on the section they are working in.
@@ -168,6 +169,7 @@ export function SchedulePage() {
   });
 
   const run = () => {
+    setRunOpen(false);
     const start = runStart;
     const day = date;
     void tasks.start({
@@ -228,55 +230,65 @@ export function SchedulePage() {
     })) freeze.mutate(s.id);
   };
 
+  const hint = view === "timeline"
+    ? "View only. Hover a block, or move to it with Tab, for its details. Use Cards to move jobs."
+    : schedule?.status === "Frozen"
+      ? "This schedule is frozen. Dropping a card on Unscheduled needs no code. Moving or adding work needs the code."
+      : "Drag a card onto a free slot to start it where you drop it, or between two cards to take the first free time after the card above. Click a card to set an exact time.";
   const unfreezeTarget = problem ? (schedulesQ.data ?? []).find((s) => s.id === problem.scheduleId) : undefined;
   const from = allDays[0] && allDays[0] < today ? (allDays[0] > addDays(today, -DAYS_BACK) ? allDays[0] : addDays(today, -DAYS_BACK)) : addDays(today, -7);
   const lastDay = allDays[allDays.length - 1];
   const to = lastDay && lastDay > addDays(today, 13) ? lastDay : addDays(today, 13);
 
   return (
-    <>
-      <PageHeader
-        title="Schedule"
-        site={site.name || undefined}
-        description="Choose a day. Every tab works on that day: run the scheduler, arrange its jobs, deal with what needs you, and freeze by 8 PM the day before."
-      />
-
-      {/* The day leads the page: every tab below shows and changes only this day (ADM-SCH-35). */}
-      <DateBar date={date} today={today} from={from} to={to} scheduleOf={scheduleOf} attention={attention} onChange={chooseDate}>
+    <div className="sch-page">
+      {/* One slim bar: title, the day, the schedule of the day and its actions. The day strip folds away (ADM-SCH-35). */}
+      <DateBar title="Schedule" site={site.name || undefined} date={date} today={today} from={from} to={to}
+               scheduleOf={scheduleOf} attention={attention} onChange={chooseDate}>
         {!societyId ? (
-          <p className="m-0 px-5 py-3 text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</p>
-        ) : schedulesQ.isPending ? <div className="px-5 py-3"><Skeleton className="h-6 w-80" /></div>
-          : schedule ? (
-          <div role="group" aria-label="Schedule of this day" className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
-            <StatusBadge status={schedule.status} />
-            <span className="text-sm">
-              {schedule.start_date === schedule.end_date ? "A schedule for this day only."
-                : `Part of the schedule for ${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}. Freezing applies to all its days.`}
-            </span>
-            <span className="text-sm text-muted-foreground">{freezeText(schedule)}</span>
-            <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>
-              {schedule.status === "Draft" ? (
-                <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
-                  <Lock aria-hidden /> Freeze
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
-                  <LockOpen aria-hidden /> Unfreeze
-                </Button>
+          <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
+        ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
+          : (
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+            {schedule ? (
+              <>
+                <StatusBadge status={schedule.status} />
+                <span className="min-w-0 truncate text-sm text-muted-foreground"
+                      title={schedule.start_date === schedule.end_date ? "A schedule for this day only."
+                        : `Part of the schedule for ${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}. Freezing applies to all its days.`}>
+                  {freezeText(schedule)}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <Button size="sm" variant={schedule ? "outline" : "default"} onClick={() => setRunOpen(true)} disabled={running}
+                      aria-busy={running || undefined}>
+                {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
+                {running ? "Running…" : "Run"}
+              </Button>
+              {schedule && (
+                <>
+                  <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>
+                  {schedule.status === "Draft" ? (
+                    <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
+                      <Lock aria-hidden /> Freeze
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
+                      <LockOpen aria-hidden /> Unfreeze
+                    </Button>
+                  )}
+                </>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-3 px-5 py-3">
-            <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
-            {tab !== "run" && <Button size="sm" variant="outline" className="ml-auto" onClick={() => setParam("tab", "run")}>Go to Run</Button>}
           </div>
         )}
       </DateBar>
 
       {problem && (
-        <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div role="alert" className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <span className="flex items-center gap-2"><TriangleAlert className="size-4" aria-hidden />{problem.message}</span>
           {problem.code === "schedule_frozen" && unfreezeTarget && (
             <Button variant="outline" size="sm" onClick={() => setUnfreezing(unfreezeTarget)}>Unfreeze with code</Button>
@@ -286,54 +298,13 @@ export function SchedulePage() {
 
       <Tabs tabs={SCHEDULE_TABS({ needs: needs.length, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
             label="Schedule sections" onChange={(t) => setParam("tab", t)}>
-        {tab === "run" && (
-          <Panel title={`Run the scheduler, ${site.name || "no site chosen"}`}
-                 description="It runs for the chosen site and the period that contains the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member.">
-            <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,1fr)_auto]"
-                  onSubmit={(e) => { e.preventDefault(); if (!running) run(); }}>
-              <Field label="Period">
-                {(p) => <SelectBox {...p} value={period} onChange={(v) => setPeriod(v as Period)} choices={PERIODS} />}
-              </Field>
-              <div className="flex min-h-9 flex-col justify-center text-sm">
-                <span className="text-xs font-medium text-muted-foreground">Period to schedule</span>
-                <span>{runDays === 1 ? dayText(runStart) : `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}`}</span>
-              </div>
-              <Button type="submit" disabled={!societyId || running} aria-busy={running || undefined}>
-                {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
-                {running ? "Running…" : schedule ? "Run again" : "Run scheduler"}
-              </Button>
-            </form>
-            <p className="mt-3 mb-0 text-sm text-muted-foreground">
-              To schedule another period, choose one of its days at the top.
-              {period !== configuredPeriod && (
-                <> This run uses {period}; the default is {configuredPeriod}.{" "}
-                  <Button variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
-                          onClick={() => savePeriod.mutate(period)}>
-                    Make {period} the default
-                  </Button>
-                </>
-              )}
-            </p>
-            {running && (
-              <div role="status" className="mt-4 flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm">
-                <Loader2 className="mt-0.5 size-4 animate-spin text-gold-text" aria-hidden />
-                <span>
-                  The scheduler is placing the jobs. This can take up to a minute.
-                  You can leave this page; the bar at the top shows the progress and you are told when it finishes.
-                </span>
-              </div>
-            )}
-            {preferences.error ? <div className="mt-3"><ErrorState message={errorMessage(preferences.error)} /></div> : null}
-          </Panel>
-        )}
-
         {tab === "board" && (!societyId ? <EmptyState title="Choose a site">Pick a site at the top left to see its board.</EmptyState> : (
-          <div className="flex flex-col gap-4">
+          <div className="flex h-full min-h-0 flex-col gap-2">
             {schedulesQ.isPending && <Skeleton className="h-72 w-full" />}
             {schedulesQ.isError && <ErrorState message={errorMessage(schedulesQ.error)} onRetry={() => void schedulesQ.refetch()} />}
             {schedulesQ.isSuccess && !schedule && (
               <EmptyState title={`No schedule for ${dayText(date)}`}
-                          action={<Button onClick={() => setParam("tab", "run")}>Go to Run</Button>}>
+                          action={<Button onClick={() => setRunOpen(true)}>Run the scheduler</Button>}>
                 Run the scheduler to make a draft for this day, or choose another day at the top.
               </EmptyState>
             )}
@@ -341,7 +312,7 @@ export function SchedulePage() {
             {boardQ.isError && <ErrorState message={errorMessage(boardQ.error)} onRetry={() => void boardQ.refetch()} />}
             {schedule && board && (
               <>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="sch-views" role="group" aria-label="Board view">
                     <button type="button" aria-pressed={view === "cards"} onClick={() => setParam("view", null)}>
                       <Columns3 aria-hidden /> Cards
@@ -357,19 +328,16 @@ export function SchedulePage() {
                            onChange={(e) => setSearch(e.target.value)} />
                   </label>
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
+                  <span className={cn("inline-flex", schedule.status === "Frozen" && view === "cards" && "text-foreground")}
+                        role="note" title={hint} aria-label={hint} tabIndex={0}>
+                    <Info className="size-4 text-muted-foreground" aria-hidden />
+                  </span>
                   {skippedCount > 0 && (
                     <Button size="sm" variant="link" className="ml-auto h-auto p-0" onClick={() => setParam("tab", "skipped")}>
                       {skippedCount} skipped or paused, not shown
                     </Button>
                   )}
                 </div>
-                <p className={cn("m-0 text-sm text-muted-foreground", schedule.status === "Frozen" && view === "cards" && "text-foreground")}>
-                  {view === "timeline"
-                    ? "View only. Hover a block, or move to it with Tab, for its details. Use Cards to move jobs."
-                    : schedule.status === "Frozen"
-                      ? "This schedule is frozen. Dropping a card on Unscheduled needs no code. Moving or adding work needs the code."
-                      : "Drag a card onto a free slot to start it where you drop it, or between two cards to take the first free time after the card above. Click a card to set an exact time."}
-                </p>
                 {view === "cards" ? (
                   <CardBoard crew={board.crew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
                              onOpen={setOpen} onMove={onMove} />
@@ -434,7 +402,35 @@ export function SchedulePage() {
         <UnfreezeDialog schedule={unfreezing} onClose={() => setUnfreezing(null)}
                         onDone={() => { setUnfreezing(null); setProblem(null); void refresh(); }} />
       )}
-    </>
+      {runOpen && (
+        <FormDialog open onOpenChange={(o) => !o && setRunOpen(false)} title={`Run the scheduler, ${site.name || "no site chosen"}`}
+                    description="It runs for the chosen site and the period that contains the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member."
+                    size="lg" submitLabel={schedule ? "Run again" : "Run scheduler"} disabled={!societyId || running}
+                    onSubmit={run}>
+          <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+            <Field label="Period">
+              {(p) => <SelectBox {...p} value={period} onChange={(v) => setPeriod(v as Period)} choices={PERIODS} />}
+            </Field>
+            <div className="flex min-h-9 flex-col justify-center text-sm">
+              <span className="text-xs font-medium text-muted-foreground">Period to schedule</span>
+              <span>{runDays === 1 ? dayText(runStart) : `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}`}</span>
+            </div>
+          </div>
+          <p className="m-0 text-sm text-muted-foreground">
+            To schedule another period, choose one of its days at the top.
+            {period !== configuredPeriod && (
+              <> This run uses {period}; the default is {configuredPeriod}.{" "}
+                <Button type="button" variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
+                        onClick={() => savePeriod.mutate(period)}>
+                  Make {period} the default
+                </Button>
+              </>
+            )}
+          </p>
+          {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
+        </FormDialog>
+      )}
+    </div>
   );
 }
 

@@ -91,6 +91,13 @@ requirement. Where a screen decision fills a gap, it is marked **UI decision** a
 
 ## 4. Schedule (ADM-SCH-01 to ADM-SCH-36)
 
+> **5 Nov 2026, owner (board room):** the Board was cramped, with about 300 px above it. Now the page
+> has no width cap and the Board fills the height under the top bar, so only the lanes scroll. Title, day
+> arrows, date, schedule status and actions share one slim bar; the strip of days folds away (remembered
+> per browser); Run is a button that opens a dialog, not a tab; the how-to-drag line is a note icon.
+> Planned next: type colours that survive status, a Table view, shared search and filters, a full-screen
+> focus mode and the board in its own browser tab (plan in `docs/design/scheduler-board-redesign.md`).
+
 > **18 Oct 2026, owner:** the page is now led by one chosen day (ADM-SCH-35). A day bar sits above the
 > tabs: arrows, a date field and a strip of days with their schedule status, then the chosen day's
 > schedule with Freeze or Unfreeze. Every tab works on that day only; Run schedules the period that
