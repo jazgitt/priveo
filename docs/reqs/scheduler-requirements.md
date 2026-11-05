@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Scheduler Requirements (Scheduling Rules v1.2)
 
-**Status:** Draft v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
+**Status:** Draft v0.4 (worked examples for the weekend cutoff added to section 3, no row changed, 06-Nov-26), v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
 **Scope:** The daily and weekly scheduler for car cleaning (Cleaning-External and Cleaning-Internal): the settings it reads, the rules it applies, the order in which rules win, the entitlement accounting for interior cleaning, and the reports it must give. Deep Spa is outside the sheet and keeps its current behaviour (ADM-ADD, ADM-SCH-30).
 **Platforms:** The rules run in the API (`services/api/app/scheduling`). Settings and reports are shown in the React web portal. The crew app shows the resulting day (crew file).
 **Language:** English only
@@ -175,6 +175,18 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | Early free capacity against an eligible Interior | The Interior takes the free slot. A slot is never kept idle on purpose. |
 | Older service week against a newer one | The older week is placed first. A newer week is placed only in what is left. |
 | Weekend cutoff against the break | The break wins. The Interior runs after the break and is flagged late (owner, 05-Nov-26). |
+
+**Worked examples: weekend cutoff, Exterior first, break.** Customer: Hyundai Creta, Customer cutoff 08:30, Exterior 30 minutes, Interior 30 minutes. They illustrate SCHR-WKE-01 to 03, SCHR-WKE-05, SCHR-CUT-01 to 03, SCHR-BRK-02, SCHR-HIER-05 and SCHR-HIER-07. They are test scenarios S34, S35 and S36 in the test plan.
+
+| Case | Day | Plan | Result |
+|---|---|---|---|
+| 1 | Saturday | Exterior 08:00 to 08:30, Interior 08:30 to 09:00 | Allowed. On a weekend the cutoff is flexible for Exterior and Interior; the Interior ends after 08:30, is flagged late, and the planner still tries to keep lateness as small as it can. |
+| 1b | Thursday (weekday counterpart) | Same plan | Not allowed. Both jobs must finish by 08:30. The Interior is not planned at 08:30 to 09:00; it is deferred or left unassigned with the reason "Customer cutoff" and reported. |
+| 2 | Saturday, all cleaners busy with other mandatory Exteriors, earliest slot 09:00 | Exterior 09:00 to 09:30 | Allowed (weekend, car available, inside the cleaner's shift). |
+| 2a | Same, the cleaner's 09:30 to 10:00 break is not due | Interior 09:30 to 10:00 | Allowed. |
+| 2b | Same, the break is due | Interior in a later slot | The break wins over the Interior. |
+
+"Exterior first" in these examples means the planner allocates an Exterior for every car before it assigns any Interior. It is a planning sequence, not an execution barrier: a cleaner who has finished their own Exteriors may start an Interior while another cleaner is still working on Exteriors.
 
 | ID | Requirement | Status |
 |---|---|---|
