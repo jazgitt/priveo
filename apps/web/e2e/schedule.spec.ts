@@ -29,6 +29,29 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(board.getByRole("button", { name: "Unfreeze" })).toBeVisible();
   });
 
+  test("the board fills the window and the day strip folds away [ADM-SCH-33]", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await openBoard(page, addDays(scenario("R06").as_of, 1));
+    const board = page.getByRole("group", { name: "Day board" });
+    await expect(board).toBeVisible();
+    const fits = async () => {
+      const box = (await board.boundingBox())!;
+      const doc = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+      return { height: box.height, bottom: box.y + box.height, overflow: doc };
+    };
+    const open = await fits();
+    expect(open.bottom).toBeLessThanOrEqual(768);
+    expect(open.overflow).toBeLessThanOrEqual(0);
+    expect(open.height).toBeGreaterThan(300);
+
+    await page.getByRole("button", { name: "Hide days" }).click();
+    const folded = await fits();
+    expect(folded.height).toBeGreaterThan(open.height);
+    expect(folded.overflow).toBeLessThanOrEqual(0);
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Show days" })).toBeVisible();
+  });
+
   test("a frozen schedule refuses a wrong unfreeze code [ADM-SCH-18]", async ({ page }) => {
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     const board = page.getByRole("group", { name: "Schedule of this day" });

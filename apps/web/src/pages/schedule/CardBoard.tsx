@@ -213,7 +213,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, onOpen, onM
   };
 
   return (
-    <div>
+    <div className="sch-fill">
       <Scroller wrapClassName="sch-board-wrap" className="sch-board" role="group" aria-label="Day board">
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
                  className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over")}>

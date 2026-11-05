@@ -4,7 +4,7 @@ import {
   Menu, UserRound, Wrench, type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useManiAccess } from "./api/mani";
 import { useAuth } from "./auth/AuthContext";
@@ -123,6 +123,7 @@ function SidebarBody({ navLabel, onNavigate }: { navLabel: string; onNavigate?: 
 function Frame() {
   // Below 1024 px (an iPad in portrait, a phone) the areas open from a menu button.
   const [menuOpen, setMenuOpen] = useState(false);
+  const wide = useLocation().pathname === "/schedule";
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)] lg:bg-[linear-gradient(to_right,var(--sidebar)_15rem,transparent_15rem)]">
@@ -144,7 +145,8 @@ function Frame() {
           <div className="mr-auto min-w-0"><TaskTray /></div>
           <AlertBell />
         </div>
-        <main className="w-full max-w-[90rem] min-w-0 px-4 py-6 md:px-8">
+        {/* The Schedule board needs the whole window (ADM-SCH-33), so it has no width cap and little padding. */}
+        <main className={cn("w-full min-w-0", wide ? "px-3 py-3 md:px-4" : "max-w-[90rem] px-4 py-6 md:px-8")}>
           <Outlet />
         </main>
       </div>
