@@ -119,3 +119,32 @@ def run_week(api, admin, world):
 
 
 __all__ = ["SUNDAY", "World", "time"]
+
+
+# ---- SCHS-07: scenario fixtures ----------------------------------------------
+
+
+@pytest.fixture
+def site_cfg(world):
+    """Set the test site's scheduler settings through the site settings layer
+    (SCHS-02): `site_cfg({"site.break_start_minute": 600})` or
+    `site_cfg(site_break_start_minute=600)`. Own values are restored when the
+    test ends."""
+    from tests.scheduling import builders
+
+    saved: dict = {}
+
+    def _set(values=None, **kw):
+        values = {**(values or {}), **{builders._key(k): v for k, v in kw.items()}}
+        before = builders.set_site_values(world.db, world.society.id, values)
+        for key, old in before.items():
+            saved.setdefault(key, old)
+
+    yield _set
+    builders.restore_site_values(world.db, world.society.id, saved)
+
+
+@pytest.fixture
+def rules_v2(site_cfg):
+    """Flip the test site's scheduler.rules_version to 2 for this test."""
+    site_cfg({"scheduler.rules_version": 2})
