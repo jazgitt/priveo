@@ -3372,6 +3372,54 @@ class CrewSocietyStay {
       };
 }
 
+class CrewTimesIn {
+  const CrewTimesIn({
+    required this.reportingMinute,
+    required this.firstJobMinute,
+  });
+
+  final int? reportingMinute;
+  final int? firstJobMinute;
+
+  factory CrewTimesIn.fromJson(Map<String, dynamic> j) => CrewTimesIn(
+        reportingMinute: j['reporting_minute'] == null ? null : j['reporting_minute'] as int,
+        firstJobMinute: j['first_job_minute'] == null ? null : j['first_job_minute'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'reporting_minute': reportingMinute,
+        'first_job_minute': firstJobMinute,
+      };
+}
+
+class CrewTimesOut {
+  const CrewTimesOut({
+    required this.reportingMinute,
+    required this.firstJobMinute,
+    required this.siteReportingMinute,
+    required this.siteFirstJobMinute,
+  });
+
+  final int? reportingMinute;
+  final int? firstJobMinute;
+  final int siteReportingMinute;
+  final int siteFirstJobMinute;
+
+  factory CrewTimesOut.fromJson(Map<String, dynamic> j) => CrewTimesOut(
+        reportingMinute: j['reporting_minute'] == null ? null : j['reporting_minute'] as int,
+        firstJobMinute: j['first_job_minute'] == null ? null : j['first_job_minute'] as int,
+        siteReportingMinute: j['site_reporting_minute'] as int,
+        siteFirstJobMinute: j['site_first_job_minute'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'reporting_minute': reportingMinute,
+        'first_job_minute': firstJobMinute,
+        'site_reporting_minute': siteReportingMinute,
+        'site_first_job_minute': siteFirstJobMinute,
+      };
+}
+
 class CronJobOut {
   const CronJobOut({
     required this.job,
