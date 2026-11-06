@@ -24,9 +24,9 @@ from app.directory.models import (
 
 def add_default_slots(db: Session, society: Society) -> int:
     """The default working slots of a new society (ADM-SVS-05, ADM-SVS-06)."""
-    for service, (start, end) in defaults.DEFAULT_SLOT_WINDOWS.items():
+    for service, (start, end, days) in defaults.DEFAULT_SLOT_WINDOWS.items():
         db.add(WorkingSlot(society_id=society.id, service=service, start_minute=start,
-                           end_minute=end, days=list(range(7))))
+                           end_minute=end, days=list(days)))
     return len(defaults.DEFAULT_SLOT_WINDOWS)
 
 
