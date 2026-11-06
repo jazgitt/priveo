@@ -13,15 +13,9 @@ if TYPE_CHECKING:
 NAME = "base"
 PRIORITY = 0
 
-STEP = 5  # Start times fall on a grid of 5 minutes.
-
 _PLACED = 1_000_000_000  # per minute of work placed: capacity use comes first
 _LATE = 10_000_000  # then meeting the cutoff times
 _EARLY = 1  # then earlier starts
-
-MAX_SECONDS = 10.0
-WORKERS = 1
-SEED = 7
 
 
 def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:
@@ -34,5 +28,5 @@ def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:
     if job.finish_by is not None:
         late = model.NewBoolVar(f"late_{job.key}")
         ctx.late_vars[job.key] = late
-        model.Add(start + dur <= job.finish_by // STEP).OnlyEnforceIf(late.Not())
+        model.Add(start + dur <= job.finish_by // ctx.params.step).OnlyEnforceIf(late.Not())
         ctx.objective.append(-_LATE * late)

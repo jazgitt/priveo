@@ -18,7 +18,7 @@ from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, Visit
-from app.scheduling.solver import SolverJob, solve_day
+from app.scheduling.solver import SolverJob, SolverParams, solve_day
 
 router = APIRouter(prefix="/v1/admin/scheduling", tags=["scheduling"])
 
@@ -130,7 +130,7 @@ def preview(db, schedule):
                     else service.service_windows(db, schedule.society_id, job.service, day),
                 )
             )
-        result = solve_day(service.solver_crews(windows), jobs)
+        result = solve_day(service.solver_crews(windows), jobs, SolverParams.load(db))
         for job, visit in rows:
             proposed = result.placed.get(str(job.id))
             if proposed:

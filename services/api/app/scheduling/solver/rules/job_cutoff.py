@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.scheduling.solver.rules.base import STEP
-
 if TYPE_CHECKING:
     from app.scheduling.solver.core import ModelContext, SolverJob
 
@@ -30,7 +28,7 @@ def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:
     if not job.hard_cutoff or job.finish_by is None:
         return
     ctx.model.Add(
-        ctx.start_vars[job.key] + ctx.durations[job.key] <= job.finish_by // STEP
+        ctx.start_vars[job.key] + ctx.durations[job.key] <= job.finish_by // ctx.params.step
     ).OnlyEnforceIf(ctx.placed_vars[job.key])
 
 
