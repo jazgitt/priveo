@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from ortools.sat.python import cp_model
 
+from app.scheduling.codes import ReasonCode
 from app.scheduling.solver.registry import discover
 from app.scheduling.solver.rules.base import MAX_SECONDS, SEED, STEP, WORKERS
 
@@ -40,8 +41,14 @@ class SolverJob:
 @dataclass
 class SolverResult:
     placed: dict[str, tuple[str, int]] = field(default_factory=dict)
-    unplaced: dict[str, str] = field(default_factory=dict)
+    unplaced: dict[str, str] = field(default_factory=dict)  # job key -> human text
+    unplaced_codes: dict[str, ReasonCode] = field(default_factory=dict)  # job key -> code
     late: set[str] = field(default_factory=set)
+
+
+def _unplace(result: SolverResult, key: str, code: ReasonCode) -> None:
+    result.unplaced[key] = code.text
+    result.unplaced_codes[key] = code
 
 
 @dataclass
@@ -83,7 +90,8 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
     if not free:
         return result
     if not crew:
-        result.unplaced = {j.key: "No crew member works that day." for j in free}
+        for j in free:
+            _unplace(result, j.key, ReasonCode.NO_CLEANER)
         return result
 
     model = cp_model.CpModel()
@@ -104,13 +112,13 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
         allowed = job.windows if job.windows is not None else ((0, 1440),)
         domains = [[_up(s), e // STEP - dur] for s, e in allowed if _up(s) + dur <= e // STEP]
         if not domains:
-            result.unplaced[job.key] = "No working slot allows this service that day."
+            _unplace(result, job.key, ReasonCode.NO_SLOT)
             continue
         fits = [
             c for c in crew if any(max(_up(c.start), lo) + dur <= min(c.end // STEP, hi + dur) for lo, hi in domains)
         ]
         if not fits:
-            result.unplaced[job.key] = "No crew member's hours are long enough for this job."
+            _unplace(result, job.key, ReasonCode.SHIFT_TOO_SHORT)
             continue
         start = model.NewIntVarFromDomain(cp_model.Domain.FromIntervals(domains), f"s_{job.key}")
         ctx.start_vars[job.key] = start
@@ -148,14 +156,15 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
     status = solver.Solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         for job in free:
-            result.unplaced.setdefault(job.key, "The scheduler found no plan.")
+            if job.key not in result.unplaced:
+                _unplace(result, job.key, ReasonCode.NO_PLAN)
         return result
 
     for job in free:
         if job.key in result.unplaced:
             continue
         if not solver.Value(ctx.placed_vars[job.key]):
-            result.unplaced[job.key] = "Capacity is short for that day."
+            _unplace(result, job.key, ReasonCode.CAPACITY_SHORT)
             continue
         crew_key = next(
             c.key for c in crew if (job.key, c.key) in ctx.presence and solver.Value(ctx.presence[(job.key, c.key)])
