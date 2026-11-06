@@ -18,6 +18,16 @@ from tests.test_api import auth, login
 BASE = "/v1/admin/scheduling"
 
 
+def pin_cleaning_to_20(world):
+    """These tests are about capacity and times, not the default length."""
+    seed_defaults(world.db)
+    world.db.query(DirectoryService).filter(
+        DirectoryService.name.in_(("Cleaning-External", "Cleaning-Internal"))
+    ).update({"duration_minutes": 20})
+    world.db.flush()
+    lookup.invalidate()
+
+
 def board(api, admin, schedule_id):
     r = api.get(f"{BASE}/board", headers=admin, params={"schedule_id": schedule_id})
     assert r.status_code == 200, r.text
@@ -25,6 +35,7 @@ def board(api, admin, schedule_id):
 
 
 def test_a_run_makes_a_draft_and_respects_capacity(api, admin, world, run_week):
+    pin_cleaning_to_20(world)
     # Two crew members with 60 minutes each fit six 20-minute cleans a day.
     world.add_crew()
     world.add_crew()
@@ -136,6 +147,7 @@ def test_inactive_and_trainee_do_not_count(api, admin, world, run_week):
 
 
 def test_capacity_days_break_down_crew_hours_and_demand(api, admin, world, run_week):
+    pin_cleaning_to_20(world)
     # The Capacity page shows these lines on hover (ADM-CAP-01).
     world.add_crew()
     world.add_crew()
@@ -260,6 +272,7 @@ def test_the_freeze_cutoff_time_freezes_drafts(api, admin, world, run_week, engi
 
 def test_the_crew_day_shows_only_frozen_work_and_no_customer_details(
         api, world, admin, run_week):
+    pin_cleaning_to_20(world)
     crew_login = db_login(world, "crew")
     world.add_crew(login_id=crew_login.id, end=480)
     world.add_vehicle(cutoff=time(8, 0))

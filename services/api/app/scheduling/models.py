@@ -21,8 +21,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.platform.db import Base, UtcDateTime, utcnow
 
 SERVICES = ("Cleaning-External", "Cleaning-Internal", "Deep Spa")
-# Minutes of crew time each job takes (ADM-SVS-09).
-DURATIONS = {"Cleaning-External": 20, "Cleaning-Internal": 20, "Deep Spa": 120}
 JOB_STATUSES = ("Scheduled", "In progress", "Completed", "Skipped", "Could not complete")
 CREW_ROLES = ("Member", "Trainee", "Manager")
 

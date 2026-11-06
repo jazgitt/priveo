@@ -6,7 +6,7 @@ SERVICES = ("Cleaning-External", "Cleaning-Internal", "Deep Spa")
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 # ADM-SVS-09: planning durations in minutes.
-DURATIONS = {"Cleaning-External": 20, "Cleaning-Internal": 20, "Deep Spa": 120}
+DURATIONS = {"Cleaning-External": 30, "Cleaning-Internal": 30, "Deep Spa": 120}
 # DERIVED. (photos, videos) the crew must upload before "Mark complete"
 # (ADM-CHK-06). The owner has not given the numbers.
 PROOF_MINIMUMS = {"Cleaning-External": (2, 1), "Cleaning-Internal": (2, 1), "Deep Spa": (2, 1)}
@@ -89,7 +89,8 @@ ADDON = {
 EXTRA_ADDONS = (
     {
         "name": "Extra interior cleaning", "service": "Cleaning-Internal",
-        "price_rupees": 0, "list_price_rupees": None, "duration_minutes": 20,
+        "price_rupees": 0, "list_price_rupees": None,
+        "duration_minutes": DURATIONS["Cleaning-Internal"],
         "active": False, "sort_order": 10,
         "description": (
             "An extra interior clean, on top of your plan.\n"
@@ -99,7 +100,8 @@ EXTRA_ADDONS = (
     },
     {
         "name": "Special exterior cleaning", "service": "Cleaning-External",
-        "price_rupees": 0, "list_price_rupees": None, "duration_minutes": 20,
+        "price_rupees": 0, "list_price_rupees": None,
+        "duration_minutes": DURATIONS["Cleaning-External"],
         "active": False, "sort_order": 20,
         "description": (
             "A special exterior clean, on top of your plan.\n"
