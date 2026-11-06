@@ -13,6 +13,7 @@ from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling import queue, service
 from app.scheduling.models import Job, Schedule
+from app.scheduling.post_solve import reasons
 from app.scheduling.schemas import (
     AdminJob,
     Board,
@@ -101,7 +102,10 @@ def run(
     body: RunRequest, user: User = Depends(require_role("admin")), db: Session = Depends(get_db)
 ):
     done = service.run(db, body.society_id, body.start_date, body.days, user.id)
-    return {"schedules": [RunResult(**vars(s)) for s in done]}
+    schedules = {s.id: s for s in db.scalars(
+        select(Schedule).where(Schedule.id.in_([d.schedule_id for d in done])))}
+    return {"schedules": [
+        RunResult(**vars(s), **reasons.run_shortfall(db, schedules[s.schedule_id])) for s in done]}
 
 
 @admin.get("/schedules", response_model=list[ScheduleOut])
@@ -147,7 +151,8 @@ def move_job(
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id)
+    job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id,
+                           override=body.override)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
 

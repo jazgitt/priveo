@@ -203,6 +203,31 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(await screen.findByText("KA01AB1234 moved to Ravi at 08:00.")).toBeInTheDocument();
   });
 
+  it("SCHS-22: a drop that breaks a rule shows what is breached and moves the job only after a confirm", async () => {
+    let calls = 0;
+    server({ moveReply: () => (++calls === 1
+      ? json(409, { code: "placement_warning", message: "This placement breaks a rule. Confirm to place it anyway.",
+          fields: { overlap: "That time overlaps another job." } })
+      : json(200, job())) });
+    await openDay();
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("That time overlaps another job.");
+    expect(callsTo("/move")).toHaveLength(1);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Place anyway" }));
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(2));
+    expect(JSON.parse(callsTo("/move")[1][1].body)).toEqual({ crew_id: "c2", start_minute: 480, override: true });
+  });
+
+  it("SCHS-22: cancelling the warning leaves the job where it was", async () => {
+    server({ moveReply: () => json(409, { code: "placement_warning", message: "Confirm.", fields: { overlap: "Overlap." } }) });
+    await openDay();
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(callsTo("/move")).toHaveLength(1);
+    expect(await within(await column("c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
+  });
+
   it("shows the move at once, before the server answers, and puts the card back if it is refused", async () => {
     let answer: (r: Response) => void = () => {};
     server({ moveReply: () => new Promise<Response>((res) => { answer = res; }) as unknown as Response });

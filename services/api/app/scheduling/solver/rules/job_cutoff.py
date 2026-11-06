@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.scheduling.solver.rules.weekend_late import is_flexible_day
+
 if TYPE_CHECKING:
     from app.scheduling.solver.core import ModelContext, SolverJob
 
@@ -18,10 +20,13 @@ PRIORITY = 40
 
 def is_strict_day(ctx, day) -> bool:
     """True when the cutoff is a hard limit on `day`: the site is on version 2,
-    the setting is on and the weekday is not a weekend day."""
+    the setting is on and the day is a weekday, or a weekend day whose cutoff is
+    not flexible (`site.weekend_cutoff_flexible` off; owner, 06-Nov-26)."""
     if not ctx.active or not ctx.setting("site.weekday_cutoff_hard"):
         return False
-    return day.weekday() not in set(ctx.setting("site.weekend_weekdays"))
+    if day.weekday() not in set(ctx.setting("site.weekend_weekdays")):
+        return True
+    return not is_flexible_day(ctx, day)
 
 
 def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:

@@ -284,9 +284,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
   const boardKey = ["board", "id", schedule?.id];
-  const move = useAppMutation<{ job: AdminJob; crewId: string | null; startMinute: number | null }, AdminJob>({
+  const move = useAppMutation<{ job: AdminJob; crewId: string | null; startMinute: number | null; override?: boolean }, AdminJob>({
     mutationFn: (v) => api(`/v1/admin/scheduling/jobs/${v.job.id}/move`, {
-      method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute },
+      method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute, ...(v.override ? { override: true } : {}) },
     }),
     pending: false,
     optimistic: async (v) => {
@@ -319,6 +319,19 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     onSuccess: () => { setProblem(null); void refreshAfterMove(); },
     onError: (e, v) => {
       setOpen(null);
+      // SCHS-22: a placement against a rule is allowed once the admin has seen what it breaks.
+      if (e instanceof ApiError && e.code === "placement_warning") {
+        void confirm({
+          title: `Place ${v.job.registration} against the rules?`,
+          description: (
+            <ul className="list-disc pl-5">
+              {Object.entries(e.fields).map(([code, message]) => <li key={code}>{message}</li>)}
+            </ul>
+          ),
+          confirmLabel: "Place anyway",
+        }).then((ok) => { if (ok) move.mutate({ ...v, override: true }); });
+        return;
+      }
       if (e instanceof ApiError && e.code === "schedule_frozen") {
         setProblem({ code: e.code, message: e.message, scheduleId: v.job.schedule_id });
       }

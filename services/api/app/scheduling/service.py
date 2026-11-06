@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import hooks, queue, rules, run_context
+from app.scheduling import hand_placement, hooks, queue, rules, run_context
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -729,10 +729,17 @@ def move_job(
     start_minute: int | None,
     admin_id: uuid.UUID | None,
     commit: bool = True,
+    override: bool | None = None,
 ) -> Job:
     """Place a job by hand, or take it off its crew member (ADM-SCH-13).
     On a Frozen schedule only taking it off is allowed (ADM-SCH-29); adding or
-    moving needs the schedule unfrozen with the code (ADM-SCH-17)."""
+    moving needs the schedule unfrozen with the code (ADM-SCH-17).
+
+    `override` is None for the bulk tools: a placement against a rule is refused
+    as it always was. The Board passes True or False (SCHS-22): on a site at
+    rules version 2 a placement against a rule is then answered with a
+    `placement_warning` (409) until it is repeated with `override` True, and each
+    breach is stored as a finding (`hand_placement`)."""
     job = db.get(Job, job_id)
     if job is None:
         raise ApiError("not_found", "That job does not exist.", 404)
@@ -748,6 +755,7 @@ def move_job(
         queue.resequence_all(db, {(previous_crew_id, visit.date)})
         job.manual = True
         job.note = "Taken off the schedule by the admin."
+        hand_placement.clear(db, job.id)
         record(db, schedule.id, admin_id, "move", f"job {job.id} taken off", {
             "job": str(job.id), "crew_id": [_s(before[0]), None],
             "start_minute": [before[1], None]})
@@ -771,16 +779,24 @@ def move_job(
     member = crew.get(crew_id)
     if member is None:
         raise ApiError("crew_not_found", "That crew member is not in this society.", 404)
+    warn = override is not None and hooks._version(db, schedule.society_id) == 2
+    breaches: list[hand_placement.Breach] = []
+
+    def breach(code: str, message: str) -> None:
+        if not warn:
+            raise ApiError(code, message, 409)
+        breaches.append((code, message))
+
     windows = availability(db, {crew_id: member}, [visit.date])[visit.date].get(crew_id)
     if not windows:
-        raise ApiError("crew_unavailable", "That crew member is not working that day.", 409)
-    if not fits_a_window(windows, start_minute, job.duration_minutes):
-        raise ApiError("outside_hours", "That time is outside the crew member's hours.", 409)
+        breach("crew_unavailable", "That crew member is not working that day.")
+    elif not fits_a_window(windows, start_minute, job.duration_minutes):
+        breach("outside_hours", "That time is outside the crew member's hours.")
     if not any(
         s <= start_minute and start_minute + job.duration_minutes <= e
         for s, e in service_windows(db, schedule.society_id, job.service, visit.date)
     ):
-        raise ApiError("outside_slot", "That time is outside this service's working slots.", 409)
+        breach("outside_slot", "That time is outside this service's working slots.")
     end = start_minute + job.duration_minutes
     others = db.execute(
         select(Job, Visit)
@@ -798,7 +814,15 @@ def move_job(
             continue
         o_start = other.start_minute or 0
         if start_minute < o_start + other.duration_minutes and o_start < end:
-            raise ApiError("overlap", "That time overlaps another job.", 409)
+            breach("overlap", "That time overlaps another job.")
+            break
+    if warn and job.finish_by_minute is not None and end > job.finish_by_minute and is_strict_day(
+            run_context.start(db, schedule, admin_id), visit.date):
+        breaches.append(("customer_cutoff", "The job ends after the Customer cutoff."))
+    if breaches and not override:
+        raise ApiError(hand_placement.WARNING_CODE,
+                       "This placement breaks a rule. Confirm to place it anyway.", 409,
+                       {code: message for code, message in breaches})
     before = (job.crew_id, job.start_minute)
     old_crew_id = job.crew_id
     job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
@@ -806,6 +830,8 @@ def move_job(
     job.queue_unlocked = False
     # The moved job takes its place by start time on its new day (Derived).
     queue.resequence_all(db, {(crew_id, visit.date), (old_crew_id, visit.date)})
+    if warn:
+        hand_placement.record(db, schedule.id, job.id, breaches)
     record(db, schedule.id, admin_id, "move", f"job {job.id} to {rules.hhmm(start_minute)}", {
         "job": str(job.id), "crew_id": [_s(before[0]), str(crew_id)],
         "start_minute": [before[1], start_minute]})
@@ -933,6 +959,7 @@ def _job_dict(
         "late": job.late,
         "manual": job.manual,
         "reason": job.note,
+        "reason_code": job.reason_code,
         "sequence": job.sequence,
         "queue_unlocked": job.queue_unlocked,
         "visit_outcome": "Scheduled",
