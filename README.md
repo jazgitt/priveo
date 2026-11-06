@@ -38,7 +38,7 @@ The requirements follow the prototype, except where the owner has decided otherw
 | Prototype shows | Requirements say |
 |---|---|
 | UPI AutoPay and a "Renew automatically" switch | Every payment is manual: the customer pays by UPI QR or UPI ID and taps "I've paid", then the admin confirms |
-| A "Crew rest day" | There is no rest day. Every day is open |
+| A "Crew rest day" | Each site has a weekly-off weekday, Wednesday by default, closed for all services (SCHR-PAR-03; specified 5 Nov 2026, not built). Every other day is open |
 | A 2-hour cleaning slot picker | The customer sets a service cutoff time, in 30-minute steps. The admin assigns the slot |
 | The monthly full spa on the interior day | Deep Spa is 2 hours and bought separately: as an add-on by a subscriber, who proposes one date and a finish-by time, or as a standalone service by a customer without a subscription |
 | One crew card with a crew rating | One crew card for each job, and no crew rating. Ratings are general |

@@ -6,7 +6,7 @@
 
 Demand includes daily exterior work, eligible weekly interior work, add-on requests and allowed missed-job retries. Availability comes from crew hours, attendance exceptions, society assignments and service working slots. Trainees contribute no independent capacity.[^1]
 
-Default planning durations are 20 minutes for exterior and interior cleaning and 120 minutes for Deep Spa. Default cleaning slots are 5–11 AM; Deep Spa can use any time of day. Services and slots are editable, and every day is open in principle. A weekday with no working slot for a service is a day off for it: demand is 0, the day is not over capacity and the scheduler plans nothing (ADM-CAP-08).[^1]
+Default planning durations are 20 minutes for exterior and interior cleaning and 120 minutes for Deep Spa. Default cleaning slots are 5–11 AM; Deep Spa can use any time of day. Services and slots are editable, and every day is open in principle. The planned rules below change the defaults to 30 minutes and a Wednesday weekly off for new sites. A weekday with no working slot for a service is a day off for it: demand is 0, the day is not over capacity and the scheduler plans nothing (ADM-CAP-08).[^1]
 
 The customer supplies a finish-by cutoff in 30-minute steps. A cutoff outside available slots is accepted as a preference; infeasibility is surfaced to administrators rather than rejected in customer onboarding.[^1][^3]
 
@@ -18,13 +18,24 @@ The solver works one society/day at a time. Fixed placements consume capacity. U
 
 The portal Board has a Cards editing view and a read-only Timeline. Cards group unassigned work and each crew member's jobs/free slots, with utilization and vehicle/parking details. Dragging places work on a five-minute grid where it fits; an exact-placement dialog is also available. The Timeline presents a compact Gantt-style view, and both views support vehicle/parking search. These are the current ADM-SCH-33 interaction requirements.[^1]
 
+## Planned scheduling rules v1.2
+
+On 5 November the owner approved a new rule set, written as SCHR rows in the scheduler requirements.[^7] It is specified and not built or live in this article's evidence. The planned changes are:
+
+- **Weekly off.** Wednesday is closed for all three services, by default for new sites. Existing sites change only through the working slots or an approved data update. Default job length is 30 minutes for exterior and interior, and Deep Spa stays 120.
+- **Two passes.** Every active car gets one exterior each working day first (Pass A). Interiors are planned after that in the gaps (Pass B). The conflict order and ordered objectives are SCHR-HIER.
+- **Interior entitlement.** Each subscription with interior care is owed one interior for each service week, Monday to Sunday. The customer's interior day is a preference. A missed interior carries forward, oldest week first, and is credited to its original week.
+- **Cutoffs.** On Monday, Tuesday, Thursday and Friday the customer cutoff is a hard limit. On Saturday and Sunday it is flexible. An interior starts no earlier than 07:00, and a cleaner's first job starts no earlier than 05:30.
+- **Zones and break.** Each cleaner has a home zone that is filled first, and spare capacity can serve other zones with a recorded reason. A 09:30 to 10:00 break wins over an interior.
+- **No hardcoding.** Every value is read from configuration, and each run records the values it used.
+
 ## Freeze and late changes
 
 The default freeze deadline is 8 PM IST on the day before the period starts. Crew visibility follows freeze. Adding or moving work manually in a frozen schedule requires the configured unfreeze-code workflow, followed by review and freeze again.[^1]
 
 Removing work is exempt: customer skips/pauses, operational skips, crew exceptions and deactivation can remove work directly. A Manager's permitted society reassignment is another explicit exception. Eligible late additions and retries can be assigned automatically to available crew; otherwise they enter Needs scheduling.[^1][^4]
 
-The customer's default deadline is later, at 9 PM the preceding day. A permitted skip between freeze and the customer deadline therefore removes frozen work automatically. A cutoff change can instead require an administrative request and replanning.[^1]
+The customer's change deadline is later, at 9 PM the preceding day. A permitted skip between freeze and the customer deadline therefore removes frozen work automatically. A cutoff change can instead require an administrative request and replanning.[^1]
 
 ## Needs scheduling
 
@@ -45,10 +56,11 @@ Billing period, deadlines and unfreeze policies are configurable; the times and 
 ## References
 
 [^1]: [Admin requirements](../docs/reqs/admin-functional-requirements.md), ADM-SVS, ADM-CAP and ADM-SCH.
-[^2]: [Solver](../services/api/app/scheduling/solver.py), placement inputs and outputs.
+[^2]: [Solver](../services/api/app/scheduling/solver/core.py), placement inputs and outputs.
 [^3]: [Customer requirements](../docs/reqs/customer-app-functional-requirements.md), ONB-16–18.
 [^4]: [Crew requirements](../docs/reqs/crew-functional-requirements.md), CRW-MGR-03.
 [^5]: [Owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md), decisions 5 and 7.
+[^7]: [Scheduler requirements](../docs/reqs/scheduler-requirements.md), SCHR rows and the owner decisions of 5 November; [gap analysis](../docs/reqs/scheduler-gap-analysis.md).
 [^6]: [Automatic planner](../services/api/app/scheduling/automatic.py); [cron jobs](../services/api/app/notifications/cron.py).
 
 ---

@@ -19,9 +19,13 @@ Plan IDs use sequences such as `PLN-0001`; add-on IDs use `ADN-0001`. The identi
 
 ## Services and checklists
 
-Exterior cleaning, interior cleaning and Deep Spa are separate service definitions. Slots belong to a society and service and may vary by weekday. Defaults are editable, so the product should not infer capacity from hard-coded start/end times alone.[^1]
+Exterior cleaning, interior cleaning and Deep Spa are separate service definitions. Slots belong to a society and service and may vary by weekday. Defaults are editable, so the product should not infer capacity from hard-coded start/end times alone.[^1] A weekday with no slot is the site's weekly off. The planned scheduling rules v1.2 make Wednesday the default weekly off for new sites and set 30-minute default durations.[^4]
 
 Administrators can add, rename, reorder and deactivate checklist items and set minimum photo/video counts. Crew consume these checklists without editing their definitions. The approved interior and Spa samples each contain five steps and may be changed in the portal.[^1][^2]
+
+## Planned scheduling settings
+
+The scheduling rules v1.2 add site-level values: reporting and first-job times, the earliest interior start, the break, the cutoff policy, the weekend days and cross-zone help. They also add a home zone for each cleaner and global values such as the service week start and solver limits. Every value is administrator-editable and audited, and a site without its own value uses the global default. These are specified and not built or live.[^4]
 
 ## Settings
 
@@ -49,6 +53,7 @@ A society cannot be deactivated while it still has active subscriptions or activ
 
 [^1]: [Admin requirements](../docs/reqs/admin-functional-requirements.md), ADM-REF, ADM-SET, ADM-SVS, ADM-CHK, ADM-FDB and ADM-ADD.
 [^2]: [Owner decisions, 13 October](../docs/reqs/owner-decisions-2026-10-13.md), samples, tax, policies and history.
+[^4]: [Scheduler requirements](../docs/reqs/scheduler-requirements.md), configuration table and SCHR-CFG.
 [^3]: [Directory service](../services/api/app/directory/service.py); [settings registry](../services/api/app/directory/settings_registry.py).
 
 ---
