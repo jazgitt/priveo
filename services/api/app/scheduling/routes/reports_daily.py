@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,7 @@ class DailyJob(BaseModel):
 class DailyCleaner(BaseModel):
     cleaner_id: uuid.UUID
     name: str
-    break_: dict | None = Field(default=None, serialization_alias="break")
+    break_window: dict | None = None
     free_slots: list[dict] | None = None
     jobs: list[DailyJob]
 
@@ -50,7 +50,7 @@ class DailyView(BaseModel):
     cleaners: list[DailyCleaner]
 
 
-@router.get("/daily", response_model=DailyView, response_model_by_alias=True)
+@router.get("/daily", response_model=DailyView)
 def daily_cleaner_view(
     society_id: uuid.UUID,
     date: date,

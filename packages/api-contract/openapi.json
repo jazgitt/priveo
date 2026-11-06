@@ -7124,6 +7124,134 @@
         }
       }
     },
+    "/v1/admin/crew/{crew_id}/times": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Times",
+        "description": "The cleaner's overrides and the site values they fall back to.",
+        "operationId": "get_times_v1_admin_crew__crew_id__times_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewTimesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Put Times",
+        "description": "Sets both overrides (null clears one) and audits what changed.",
+        "operationId": "put_times_v1_admin_crew__crew_id__times_put",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrewTimesIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewTimesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/reports/daily": {
       "get": {
         "tags": [
@@ -23752,6 +23880,81 @@
         "title": "CrewSocietyStay",
         "description": "One stay in a society. `effective_to` is empty for the current or the\nlast stay. `pending` is true for a move that has not happened yet."
       },
+      "CrewTimesIn": {
+        "properties": {
+          "reporting_minute": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1439.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Minute"
+          },
+          "first_job_minute": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1439.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Job Minute"
+          }
+        },
+        "type": "object",
+        "title": "CrewTimesIn",
+        "description": "Minutes after midnight. null clears the override."
+      },
+      "CrewTimesOut": {
+        "properties": {
+          "reporting_minute": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Minute"
+          },
+          "first_job_minute": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Job Minute"
+          },
+          "site_reporting_minute": {
+            "type": "integer",
+            "title": "Site Reporting Minute"
+          },
+          "site_first_job_minute": {
+            "type": "integer",
+            "title": "Site First Job Minute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reporting_minute",
+          "first_job_minute",
+          "site_reporting_minute",
+          "site_first_job_minute"
+        ],
+        "title": "CrewTimesOut"
+      },
       "CronJobOut": {
         "properties": {
           "job": {
@@ -24214,7 +24417,7 @@
             "type": "string",
             "title": "Name"
           },
-          "break": {
+          "break_window": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -24224,7 +24427,7 @@
                 "type": "null"
               }
             ],
-            "title": "Break"
+            "title": "Break Window"
           },
           "free_slots": {
             "anyOf": [

@@ -1403,6 +1403,16 @@
     "effective_to": "2026-10-20",
     "pending": true
   },
+  "CrewTimesIn": {
+    "reporting_minute": 1,
+    "first_job_minute": 1
+  },
+  "CrewTimesOut": {
+    "reporting_minute": 1,
+    "first_job_minute": 1,
+    "site_reporting_minute": 1,
+    "site_first_job_minute": 1
+  },
   "CronJobOut": {
     "job": "wire-value",
     "label": "wire-value",
@@ -1547,7 +1557,7 @@
   "DailyCleaner": {
     "cleaner_id": "11111111-1111-1111-1111-111111111111",
     "name": "wire-value",
-    "break": {},
+    "break_window": {},
     "free_slots": [
       {}
     ],
@@ -1599,7 +1609,7 @@
       {
         "cleaner_id": "11111111-1111-1111-1111-111111111111",
         "name": "wire-value",
-        "break": {},
+        "break_window": {},
         "free_slots": [
           {}
         ],

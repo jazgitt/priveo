@@ -31,6 +31,7 @@ REASON_TEXT: dict[ReasonCode, str] = {
     ReasonCode.NO_CLEANER: "No crew member works that day.",
     ReasonCode.NO_SLOT: "No working slot allows this service that day.",
     ReasonCode.SHIFT_TOO_SHORT: "No crew member's hours are long enough for this job.",
+    ReasonCode.CUSTOMER_CUTOFF: "The job cannot finish before the customer cutoff.",
     ReasonCode.NO_PLAN: "The scheduler found no plan.",
     ReasonCode.CAPACITY_SHORT: "Capacity is short for that day.",
 }

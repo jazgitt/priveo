@@ -26,7 +26,7 @@ def test_SCHR_OUT_01_row_has_the_sheet_fields(api, world):
     body = r.json()
     assert [c["name"] for c in body["cleaners"]] == ["Ravi"]
     cleaner = body["cleaners"][0]
-    assert cleaner["break"] is None and cleaner["free_slots"] is None
+    assert cleaner["break_window"] is None and cleaner["free_slots"] is None
     job = cleaner["jobs"][0]
     assert job["vehicle_id"] == str(car.id) and job["zone"] == "A"
     assert job["type"] == "Exterior"

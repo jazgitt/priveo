@@ -196,7 +196,7 @@ def test_a_module_dropped_in_the_folder_is_used(tmp_path):
     )
     try:
         names = [r.name for r in registry.discover()]
-        assert names == ["base", "zz_temp"]
+        assert names == ["base", "job_cutoff", "zz_temp"]
         crew = [SolverCrew("a", 360, 600)]
         result = solve_day(crew, [SolverJob("j", "v", 20)])
         assert result.placed["j"] == ("a", 420)
@@ -204,7 +204,7 @@ def test_a_module_dropped_in_the_folder_is_used(tmp_path):
     finally:
         path.unlink(missing_ok=True)
         sys.modules.pop("app.scheduling.solver.rules.zz_temp_rule", None)
-    assert [r.name for r in registry.discover()] == ["base"]
+    assert [r.name for r in registry.discover()] == ["base", "job_cutoff"]
     assert solve_day(crew, [SolverJob("j", "v", 20)]).placed["j"] == ("a", 360)
 
 
@@ -213,7 +213,7 @@ def test_underscore_modules_are_ignored():
     path = folder / "_ignored.py"
     path.write_text("raise RuntimeError('must not be imported')\n")
     try:
-        assert [r.name for r in registry.discover()] == ["base"]
+        assert [r.name for r in registry.discover()] == ["base", "job_cutoff"]
     finally:
         path.unlink(missing_ok=True)
 
@@ -226,7 +226,7 @@ def test_order_is_by_priority_then_name():
             p = folder / f"{name}.py"
             p.write_text(f"PRIORITY = {prio}\n")
             made.append((p, name))
-        assert [r.name for r in registry.discover()] == ["base", "zz_c", "zz_a", "zz_b"]
+        assert [r.name for r in registry.discover()] == ["base", "zz_c", "zz_a", "zz_b", "job_cutoff"]
     finally:
         for p, name in made:
             p.unlink(missing_ok=True)
