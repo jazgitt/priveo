@@ -95,7 +95,7 @@ def test_society_create_list_update(client, admin, engine):
     assert {s["service"] for s in slots} == set(defaults.SERVICES)
     external = next(s for s in slots if s["service"] == "Cleaning-External")
     assert (external["start"], external["end"]) == ("05:00", "11:00")
-    assert len(external["days"]) == 7
+    assert len(external["days"]) == 6  # the weekly-off Wednesday is left out (SCHR-PAR-03)
     spa = next(s for s in slots if s["service"] == "Deep Spa")
     assert (spa["start"], spa["end"]) == ("00:00", "24:00")
 
