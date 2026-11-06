@@ -8,7 +8,7 @@ admin creates the real ones on prod."""
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.directory import defaults, lookup, settings_registry
+from app.directory import defaults, lookup, rule_seed, settings_registry
 from app.directory.models import (
     AddonCatalogueItem,
     ChecklistItem,
@@ -62,6 +62,9 @@ def seed_defaults(db: Session, starter_data: bool = True) -> dict[str, int]:
             db.add(SystemSetting(key=definition.key,
                                  value=settings_registry.default_for(definition.key)))
             added["settings"] += 1
+
+    # Scheduler rule keys (SCHS-02): add the ones with no row, change none.
+    added["settings"] += rule_seed.seed_rule_keys(db)
 
     # The invoice seller values belong to the admin (ADM-SET-04). Seed one only
     # while it has no value; a value that is there is never replaced.
