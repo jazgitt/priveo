@@ -64,12 +64,15 @@ def _names(folder):
 
 @pytest.mark.parametrize("folder", FOLDERS)
 def test_schr_cfg_07_a_file_dropped_in_a_folder_is_found_in_order(folder):
-    assert _names(folder) == []
+    base = _names(folder)  # real modules of the folder; later stories add to it
     body = "ORDER = {}\n"
     with dropped(folder, "zz_late", body.format(5)), dropped(folder, "aa_early", body.format(9)), \
             dropped(folder, "_skipped", body.format(1)):
-        assert _names(folder) == ["zz_late", "aa_early"]  # ORDER first, then name
-    assert _names(folder) == []
+        found = _names(folder)
+        added = [n for n in found if n not in base]
+        assert added == ["zz_late", "aa_early"]  # ORDER first, then name
+        assert [n for n in found if n in base] == base
+    assert _names(folder) == base
 
 
 def test_schr_cfg_07_a_route_module_is_included_by_register(api):
