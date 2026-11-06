@@ -1,7 +1,6 @@
 """SCHS-42: among plans with the same coverage, more usable early capacity wins."""
 from app.scheduling import passes
 from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
-from app.scheduling.solver.rules import early_capacity
 
 EXT, INT = passes.EXTERIOR, "Cleaning-Internal"
 CREW = [SolverCrew("a", 330, 600)]  # 05:30 to 10:00
@@ -40,7 +39,9 @@ def test_schr_ext_05_without_the_objective_the_exteriors_run_one_after_another()
 
 def test_schr_ext_05_free_time_after_the_last_pending_cutoff_is_not_counted():
     result = solve_day(CREW, _exteriors(), _params(), "exterior", _pending(cutoff=480))
-    assert _starts(result) == [330, 360, 390, 480, 510]
+    starts = _starts(result)
+    assert starts[:3] == [330, 360, 390]
+    assert all(t + 15 >= 480 for t in starts[3:])  # the cost is charged on the job's middle
 
 
 def test_schr_ext_05_no_pending_interior_adds_no_objective():
@@ -72,9 +73,3 @@ def test_schr_ext_07_an_eligible_interior_takes_the_free_slot():
     assert not result.unplaced
     start = result.placed["i"][1]
     assert start >= 420 and start + 60 <= 600
-
-
-def test_cost_table_is_zero_before_the_earliest_start_and_falls_to_the_end():
-    table = early_capacity.cost_table(420, 600, duration=6, step=5, size=289)
-    assert table[66] == 0  # 05:30: all before 07:00
-    assert table[84] > table[96] > table[108] > 0 and table[120] == 0

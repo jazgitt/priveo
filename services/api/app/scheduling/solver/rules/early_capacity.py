@@ -12,7 +12,9 @@ is where Exteriors go. The objective ranks below coverage and lateness in
 (SCHR-EXT-06). The weight is `scheduler.weight_early_capacity`. The Interior pass
 then fills the free slots (SCHR-EXT-07), since placed minutes come first there.
 
-Derived: the cost falls in a straight line towards the end of the range.
+Derived: the cost falls in a straight line towards the end of the range. It is
+charged on the middle of the job, so a job that starts before the range is free
+even if it ends inside it.
 The range ends at the latest cutoff of the pending Interiors, or at the end of the
 last shift when one of them has no cutoff. Nothing is added when no Interior is
 pending, or when the run carries no Interior-earliest time (version 1).
@@ -42,26 +44,25 @@ def usable_range(ctx: ModelContext) -> tuple[int, int] | None:
     return (int(earliest), min(end, shift_end)) if end > int(earliest) else None
 
 
-def cost_table(first: int, end: int, duration: int, step: int, size: int) -> list[int]:
-    """Cost of a job of `duration` grid steps that starts at each grid step."""
-    lo, hi = -(-first // step), end // step
-    weight = [max(hi - t, 0) if t >= lo else 0 for t in range(size + duration + 1)]
-    return [sum(weight[s : s + duration]) for s in range(size)]
-
-
 def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:
     span = usable_range(ctx)
     if span is None:
         return
     model, step = ctx.model, ctx.params.step
-    size = 1440 // step + 1
-    table = cost_table(*span, ctx.durations[job.key], step, size)
-    if not any(table):
+    first, end = -(-span[0] // step), span[1] // step
+    dur = ctx.durations[job.key]
+    start, placed = ctx.start_vars[job.key], ctx.placed_vars[job.key]
+    if end <= first:
         return
-    cost = model.NewIntVar(0, max(table), f"ec_{job.key}")
-    model.AddElement(ctx.start_vars[job.key], table, cost)
-    charged = model.NewIntVar(0, max(table), f"ecg_{job.key}")
-    placed = ctx.placed_vars[job.key]
-    model.Add(charged == cost).OnlyEnforceIf(placed)
-    model.Add(charged == 0).OnlyEnforceIf(placed.Not())
+    # Cost of a job that starts in the range: its length times the distance of
+    # its middle to the end of the range (doubled to stay whole). A job that
+    # starts before the range costs nothing: it uses the unusable early band.
+    inside = model.NewBoolVar(f"ec_in_{job.key}")
+    model.Add(start >= first).OnlyEnforceIf(inside)
+    model.Add(start <= first - 1).OnlyEnforceIf(inside.Not())
+    top = dur * (2 * end)
+    distance = model.NewIntVar(0, top, f"ec_d_{job.key}")
+    model.AddMaxEquality(distance, [0, dur * (2 * end - 2 * start - dur)])
+    charged = model.NewIntVar(0, top, f"ec_c_{job.key}")
+    model.Add(charged >= distance).OnlyEnforceIf([inside, placed])
     ctx.add_term("early_capacity", -charged)
