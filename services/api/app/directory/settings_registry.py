@@ -84,8 +84,12 @@ DEFINITIONS: tuple[SettingDef, ...] = (
 # defaults (rule_seed) and `directory/site_settings.py` reads and writes the
 # per-site values. Minutes are minutes after midnight. Weekdays are numbers,
 # Monday 0 to Sunday 6, in a comma separated list.
-# Not defined yet, as the requirements table gives no value: scheduler.objective_order
-# and the weights of the new objectives (zone, break, FIFO).
+# The objectives the solver orders (SCHS-33), highest first in the default order
+# (Derived from SCHR-HIER-04 and SCHR-HIER-05). Each has a `scheduler.weight_<name>`.
+OBJECTIVE_NAMES: tuple[str, ...] = (
+    "placed", "zone", "break", "fifo", "late", "early_capacity", "early",
+)
+DEFAULT_OBJECTIVE_ORDER = ",".join(OBJECTIVE_NAMES)
 RULE_DEFINITIONS: tuple[SettingDef, ...] = (
     # Kill switch (build stories, rule 7): behaviour of v2 runs only at 2.
     SettingDef("scheduler.rules_version", "int", "Scheduling rules version (1 old, 2 new)",
@@ -104,6 +108,18 @@ RULE_DEFINITIONS: tuple[SettingDef, ...] = (
                "scheduler", 10_000_000, minimum=0, maximum=1_000_000_000_000),
     SettingDef("scheduler.weight_early", "int", "Weight of each minute earlier a job starts",
                "scheduler", 1, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.objective_order", "text",
+               "Order of the planning objectives, highest first (comma separated)",
+               "scheduler", DEFAULT_OBJECTIVE_ORDER, max_length=200),
+    SettingDef("scheduler.weight_zone", "int", "Weight of the home-zone objective",
+               "scheduler", 1_000_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_break", "int", "Weight of each cleaner break kept",
+               "scheduler", 1_000_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_fifo", "int", "Weight of the oldest-first Interior objective",
+               "scheduler", 1_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_early_capacity", "int",
+               "Weight of each usable early free minute", "scheduler", 1_000,
+               minimum=0, maximum=1_000_000_000_000),
     SettingDef("scheduler.retry_minutes_running", "int",
                "Minutes before an automatic planning run that did not finish is tried again",
                "schedule", 30, minimum=1, maximum=1440),
@@ -206,6 +222,11 @@ def parse(definition: SettingDef, raw: Any) -> str:
     if not isinstance(raw, str):
         raise ValueError("Enter text.")
     text = raw.strip()
+    if definition.key == "scheduler.objective_order":
+        names = [p.strip() for p in text.split(",") if p.strip()]
+        if not names or len(set(names)) != len(names) or any(n not in OBJECTIVE_NAMES for n in names):
+            raise ValueError("List each objective once, from: " + ", ".join(OBJECTIVE_NAMES) + ".")
+        return ",".join(names)
     if definition.key == "schedule.period" and text not in ("Daily", "Weekly", "Monthly"):
         raise ValueError("Choose Daily, Weekly or Monthly.")
     if not text:
