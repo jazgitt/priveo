@@ -32,6 +32,7 @@ from app.scheduling.models import (
     Visit,
 )
 from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
+from app.scheduling.solver.rules.job_cutoff import is_strict_day
 
 DAY_DONE = ("Completed", "Skipped")
 
@@ -623,6 +624,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     job.finish_by_minute,
                     fixed,
                     slots,
+                    hard_cutoff=is_strict_day(ctx, day),
                 )
             )
         if not solver_jobs:
