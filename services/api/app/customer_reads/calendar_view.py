@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.changes.cycle import paused_days
 from app.changes.models import ScheduleChange
-from app.changes.projection import day_services, renewals_between
+from app.changes.projection import day_services, interior_this_week, renewals_between
 from app.changes.rules import is_open, today_of
 from app.customer_reads.repository import (
     TERMINAL_VISIT_STATUSES,
@@ -263,7 +263,10 @@ class CalendarView:
             vehicle, sub = owned[vid]
             ctx = self._ctx(vehicle, sub, first, last)
             planned: set[date] = set()
+            interior_planned: list[date] = []  # days with an Interior job (SCHS-38)
             for v in (x for x in visits if x.vehicle_id == vid):
+                if any(j.service == "Cleaning-Internal" and j.status != "Skipped" for j in jobs[v.id]):
+                    interior_planned.append(v.date)
                 if not jobs[v.id] or not all(j.service == "Deep Spa" for j in jobs[v.id]):
                     planned.add(v.date)
                 out.append(
@@ -273,10 +276,20 @@ class CalendarView:
                 continue
             # Dates the scheduler has not planned: from the subscription.
             day = max(first, today + timedelta(days=1))
+            said_weeks: set[date] = set()
             while day <= last:
                 services = day_services(sub, day)
                 if day not in planned and services:
-                    out.append(self._day(ctx, day, None, [], services, now))
+                    item = self._day(ctx, day, None, [], services, now)
+                    # Once a week, on its first open day: the Interior is owed but not planned.
+                    week = day - timedelta(days=(day.weekday() - lookup.setting(
+                        self._db, "schedule.service_week_start")) % 7)
+                    if (item.status == "Projected" and week not in said_weeks
+                            and not any(week <= d < week + timedelta(days=7) for d in interior_planned)
+                            and interior_this_week(sub, day)):
+                        item.interior_this_week = True
+                        said_weeks.add(week)
+                    out.append(item)
                 day += timedelta(days=1)
             renewals.extend(
                 CalendarRenewal(vehicle_id=vid, date=d)

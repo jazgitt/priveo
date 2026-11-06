@@ -76,6 +76,17 @@ def _owes(db: Session, sub: Subscription, week: date) -> bool:
                for i in range((week + timedelta(days=7) - first).days))
 
 
+def owes(db: Session, sub: Subscription, week: date) -> bool:
+    """Whether the plan owes an Interior for the service week (read by the customer calendar)."""
+    return _owes(db, sub, week)
+
+
+def rows_for_week(db: Session, vehicle_id: uuid.UUID, week: date) -> list[InteriorEntitlement]:
+    return list(db.scalars(select(InteriorEntitlement).where(
+        InteriorEntitlement.vehicle_id == vehicle_id,
+        InteriorEntitlement.service_week_start == week).order_by(InteriorEntitlement.seq)))
+
+
 # ---- creation (SCHR-INT-19) -----------------------------------------------
 
 def ensure(db: Session, sub: Subscription, through: date) -> list[InteriorEntitlement]:

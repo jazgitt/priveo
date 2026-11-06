@@ -96,6 +96,7 @@ CalendarVisit visit(
   DateTime? coveredOn,
   DateTime? rescheduledOn,
   String? crew,
+  bool interiorThisWeek = false,
 }) => CalendarVisit(
   visitId: source == 'visit' ? 'v-$day' : null,
   vehicleId: 'v1',
@@ -114,6 +115,7 @@ CalendarVisit visit(
   crewName: crew,
   startTime: crew == null ? null : '07:00',
   endTime: crew == null ? null : '07:20',
+  interiorThisWeek: interiorThisWeek,
 );
 
 Future<void> pumpWith(
@@ -199,6 +201,41 @@ void main() {
       await tester.tap(find.text('Skip this date'));
       await tester.pumpAndSettle();
       expect(actions.calls, ['skip 12']);
+    });
+
+    testWidgets('a projected day says Interior this week until it is planned (SCHS-38)',
+        (tester) async {
+      await pumpWith(
+        tester,
+        calendar(),
+        reads: _Reads([visit(12, interiorThisWeek: true), visit(13)]),
+        actions: _Actions(),
+      );
+      await tester.tap(find.bySemanticsLabel('12-Nov-26'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Interior cleaning this week. The day is set when the week is planned.',
+        ),
+        findsOneWidget,
+      );
+      // Another day of the week carries no note, and never a weekday promise.
+      await tester.tap(find.bySemanticsLabel('13-Nov-26'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Interior cleaning this week'), findsNothing);
+    });
+
+    testWidgets('the parsed calendar day carries the Interior note flag', (tester) async {
+      final v = CalendarVisit.fromJson({
+        'vehicle_id': 'v1', 'date': '2026-11-12', 'status': 'Projected',
+        'services': ['Cleaning-External'], 'interior_this_week': true,
+      });
+      expect(v.interiorThisWeek, isTrue);
+      final old = CalendarVisit.fromJson({
+        'vehicle_id': 'v1', 'date': '2026-11-12', 'status': 'Projected',
+        'services': ['Cleaning-External'],
+      });
+      expect(old.interiorThisWeek, isFalse);
     });
 
     testWidgets('change cutoff time picks a time and sends it', (tester) async {

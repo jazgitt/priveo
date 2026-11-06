@@ -9,6 +9,8 @@ class CalStrings {
   static const pausedChip = 'Paused';
   static const expectedNote =
       'Expected visit. It is confirmed when the week is planned.';
+  static const interiorThisWeek =
+      'Interior cleaning this week. The day is set when the week is planned.';
   static const pausedNote = 'Your service is paused on this date.';
   static const changeRequested = 'Change requested, awaiting Priveo';
 
