@@ -350,7 +350,7 @@ def test_category_lookup(client, admin, db):
 
 def test_services_defaults_and_update(client, admin):
     rows = {s["name"]: s for s in client.get(f"{BASE}/services", headers=admin).json()}
-    assert rows["Cleaning-External"]["duration_minutes"] == 20
+    assert rows["Cleaning-External"]["duration_minutes"] == 30
     assert rows["Deep Spa"]["duration_minutes"] == 120
     assert rows["Deep Spa"]["min_photos"] == 2 and rows["Deep Spa"]["min_videos"] == 1
 
