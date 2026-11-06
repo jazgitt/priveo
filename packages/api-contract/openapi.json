@@ -88,13 +88,55 @@
         }
       }
     },
+    "/v1/auth/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start",
+        "description": "Says what to ask for next: the password, or the code just emailed.",
+        "operationId": "start_v1_auth_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/code": {
       "post": {
         "tags": [
           "auth"
         ],
         "summary": "Send Code",
-        "description": "Emails a customer a code to the email on file: \"resend\" and \"forgot MPIN\".",
+        "description": "Emails a customer a new code: \"resend\" and \"forgot password\".",
         "operationId": "send_code_v1_auth_code_post",
         "requestBody": {
           "content": {
@@ -171,19 +213,19 @@
         }
       }
     },
-    "/v1/auth/mpin": {
+    "/v1/auth/password": {
       "post": {
         "tags": [
           "auth"
         ],
-        "summary": "Set Mpin",
-        "description": "Sets a new MPIN after a correct code and signs the customer in.",
-        "operationId": "set_mpin_v1_auth_mpin_post",
+        "summary": "Set Password",
+        "description": "Sets the password after a correct code and signs the customer in.",
+        "operationId": "set_password_v1_auth_password_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetMpinRequest"
+                "$ref": "#/components/schemas/SetPasswordRequest"
               }
             }
           },
@@ -669,15 +711,14 @@
         }
       }
     },
-    "/v1/customer/mpin": {
+    "/v1/customer/password": {
       "post": {
         "tags": [
           "customer",
           "customer"
         ],
-        "summary": "Change Mpin",
-        "description": "Changes the MPIN. It works while the customer still has the MPIN the\nadmin gave; every other customer endpoint refuses until it is changed.",
-        "operationId": "change_mpin_v1_customer_mpin_post",
+        "summary": "Change Password",
+        "operationId": "change_password_v1_customer_password_post",
         "parameters": [
           {
             "name": "authorization",
@@ -701,7 +742,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AccountMpinChange"
+                "$ref": "#/components/schemas/AccountPasswordChange"
               }
             }
           }
@@ -1926,14 +1967,13 @@
         }
       }
     },
-    "/v1/admin/customers/{customer_id}/reset-mpin": {
+    "/v1/admin/customers/{customer_id}/reset-password": {
       "post": {
         "tags": [
           "customer-administration"
         ],
-        "summary": "Reset Mpin Route",
-        "description": "Gives the customer the first MPIN again (the last 6 digits of the mobile\nnumber). They must choose a new one at the next sign-in.",
-        "operationId": "reset_mpin_route_v1_admin_customers__customer_id__reset_mpin_post",
+        "summary": "Reset Password",
+        "operationId": "reset_password_v1_admin_customers__customer_id__reset_password_post",
         "parameters": [
           {
             "name": "customer_id",
@@ -8301,201 +8341,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/operations/cron": {
-      "get": {
-        "tags": [
-          "operations"
-        ],
-        "summary": "List Jobs",
-        "operationId": "list_jobs_v1_admin_operations_cron_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CronJobOut"
-                  },
-                  "title": "Response List Jobs V1 Admin Operations Cron Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/operations/cron/{job}/runs": {
-      "get": {
-        "tags": [
-          "operations"
-        ],
-        "summary": "Job Runs",
-        "operationId": "job_runs_v1_admin_operations_cron__job__runs_get",
-        "parameters": [
-          {
-            "name": "job",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CronRunOut"
-                  },
-                  "title": "Response Job Runs V1 Admin Operations Cron  Job  Runs Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/operations/cron/{job}": {
-      "put": {
-        "tags": [
-          "operations"
-        ],
-        "summary": "Switch Job",
-        "operationId": "switch_job_v1_admin_operations_cron__job__put",
-        "parameters": [
-          {
-            "name": "job",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Job"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CronSwitch"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CronJobOut"
-                }
-              }
-            }
           },
           "422": {
             "description": "Validation Error",
@@ -17940,26 +17785,8 @@
           "directory"
         ],
         "summary": "List Audit",
-        "description": "The audit trail, newest first. With `society_id` that society's changes are\nlisted together with those that belong to no society (they apply to all sites;\ntheir `society_id` is null). Left out, every change is listed (ADM-SET-09).\n\n`q` is the general search (ADM-SET-09): at least 3 characters, case-insensitive,\na substring of any column the page shows. `actor_id` is kept for other callers;\nthe admin portal no longer sends it.",
         "operationId": "list_audit_v1_admin_directory_audit_get",
         "parameters": [
-          {
-            "name": "society_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Society Id"
-            }
-          },
           {
             "name": "entity",
             "in": "query",
@@ -17991,22 +17818,6 @@
                 }
               ],
               "title": "Actor Id"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Q"
             }
           },
           {
@@ -18049,21 +17860,10 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 200,
+              "maximum": 1000,
               "minimum": 1,
-              "default": 50,
+              "default": 100,
               "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
             }
           },
           {
@@ -18089,7 +17889,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DirectoryAuditPage"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DirectoryAuditOut"
+                  },
+                  "title": "Response List Audit V1 Admin Directory Audit Get"
                 }
               }
             }
@@ -19223,23 +19027,23 @@
         ],
         "title": "AccountEmailCodeSent"
       },
-      "AccountMpinChange": {
+      "AccountPasswordChange": {
         "properties": {
-          "current_mpin": {
+          "current_password": {
             "type": "string",
-            "title": "Current Mpin"
+            "title": "Current Password"
           },
-          "new_mpin": {
+          "new_password": {
             "type": "string",
-            "title": "New Mpin"
+            "title": "New Password"
           }
         },
         "type": "object",
         "required": [
-          "current_mpin",
-          "new_mpin"
+          "current_password",
+          "new_password"
         ],
-        "title": "AccountMpinChange"
+        "title": "AccountPasswordChange"
       },
       "AccountProfileEdit": {
         "properties": {
@@ -19249,8 +19053,7 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name",
-            "default": ""
+            "title": "Last Name"
           },
           "mobile": {
             "type": "string",
@@ -19260,6 +19063,7 @@
         "type": "object",
         "required": [
           "first_name",
+          "last_name",
           "mobile"
         ],
         "title": "AccountProfileEdit"
@@ -19275,14 +19079,7 @@
             "title": "Last Name"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Email"
           },
           "mobile": {
@@ -19329,6 +19126,7 @@
         "required": [
           "first_name",
           "last_name",
+          "email",
           "mobile",
           "society",
           "flat",
@@ -20587,11 +20385,6 @@
             "title": "Parking",
             "default": ""
           },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
-          },
           "customer_name": {
             "type": "string",
             "title": "Customer Name"
@@ -20806,15 +20599,8 @@
             "title": "Amount Rupees"
           },
           "due_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "Due Date"
           },
           "cycle_start": {
@@ -20838,7 +20624,8 @@
         "type": "object",
         "required": [
           "vehicle_id",
-          "amount_rupees"
+          "amount_rupees",
+          "due_date"
         ],
         "title": "AdminPaymentIn",
         "description": "Record a payment for a customer, for example one made in person\n(ADM-PAY-04) or the first payment of a new subscription (ADM-CUS-06)."
@@ -20864,21 +20651,6 @@
           "status": {
             "type": "string",
             "title": "Status"
-          },
-          "days_to_due": {
-            "type": "integer",
-            "title": "Days To Due",
-            "default": 0
-          },
-          "status_message": {
-            "type": "string",
-            "title": "Status Message",
-            "default": ""
-          },
-          "last_payment_failed": {
-            "type": "boolean",
-            "title": "Last Payment Failed",
-            "default": false
           },
           "due_date": {
             "type": "string",
@@ -21156,6 +20928,11 @@
       },
       "AutomaticPlanningSettings": {
         "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
           "time_ist": {
             "type": "string",
             "title": "Time Ist",
@@ -21163,8 +20940,7 @@
           }
         },
         "type": "object",
-        "title": "AutomaticPlanningSettings",
-        "description": "The planning time only. On or off is the `automatic-planning` switch on the\nScheduled jobs page (ADM-OPS-05)."
+        "title": "AutomaticPlanningSettings"
       },
       "Board": {
         "properties": {
@@ -22049,14 +21825,14 @@
       },
       "CodeRequest": {
         "properties": {
-          "mobile": {
+          "email": {
             "type": "string",
-            "title": "Mobile"
+            "title": "Email"
           }
         },
         "type": "object",
         "required": [
-          "mobile"
+          "email"
         ],
         "title": "CodeRequest"
       },
@@ -22075,14 +21851,14 @@
       },
       "CodeVerified": {
         "properties": {
-          "mpin_token": {
+          "password_token": {
             "type": "string",
-            "title": "Mpin Token"
+            "title": "Password Token"
           }
         },
         "type": "object",
         "required": [
-          "mpin_token"
+          "password_token"
         ],
         "title": "CodeVerified"
       },
@@ -22582,11 +22358,6 @@
             "type": "string",
             "title": "Parking Number"
           },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
-          },
           "society": {
             "type": "string",
             "title": "Society"
@@ -22952,11 +22723,6 @@
           "parking": {
             "type": "string",
             "title": "Parking"
-          },
-          "zone": {
-            "type": "string",
-            "title": "Zone",
-            "default": ""
           },
           "start_time": {
             "anyOf": [
@@ -23683,161 +23449,6 @@
         "title": "CrewSocietyStay",
         "description": "One stay in a society. `effective_to` is empty for the current or the\nlast stay. `pending` is true for a move that has not happened yet."
       },
-      "CronJobOut": {
-        "properties": {
-          "job": {
-            "type": "string",
-            "title": "Job"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "purpose": {
-            "type": "string",
-            "title": "Purpose"
-          },
-          "schedule_utc": {
-            "type": "string",
-            "title": "Schedule Utc"
-          },
-          "schedule_ist": {
-            "type": "string",
-            "title": "Schedule Ist"
-          },
-          "scheduled_on_vercel": {
-            "type": "boolean",
-            "title": "Scheduled On Vercel"
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "last_run": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CronRunOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "purpose_achieved": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Purpose Achieved"
-          },
-          "purpose_achieved_text": {
-            "type": "string",
-            "title": "Purpose Achieved Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "job",
-          "label",
-          "purpose",
-          "schedule_utc",
-          "schedule_ist",
-          "scheduled_on_vercel",
-          "enabled",
-          "status",
-          "last_run",
-          "purpose_achieved",
-          "purpose_achieved_text"
-        ],
-        "title": "CronJobOut"
-      },
-      "CronRunOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "trigger": {
-            "type": "string",
-            "title": "Trigger"
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Started At"
-          },
-          "finished_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "what_it_did": {
-            "type": "string",
-            "title": "What It Did"
-          },
-          "error": {
-            "type": "string",
-            "title": "Error"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "trigger",
-          "started_at",
-          "finished_at",
-          "status",
-          "duration_ms",
-          "what_it_did",
-          "error"
-        ],
-        "title": "CronRunOut"
-      },
-      "CronSwitch": {
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "enabled"
-        ],
-        "title": "CronSwitch"
-      },
       "CustomerCreate": {
         "properties": {
           "first_name": {
@@ -23846,18 +23457,10 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name",
-            "default": ""
+            "title": "Last Name"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Email"
           },
           "mobile": {
@@ -23878,6 +23481,8 @@
         "type": "object",
         "required": [
           "first_name",
+          "last_name",
+          "email",
           "mobile",
           "vehicle"
         ],
@@ -23891,8 +23496,7 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name",
-            "default": ""
+            "title": "Last Name"
           },
           "mobile": {
             "type": "string",
@@ -23927,24 +23531,13 @@
               }
             ],
             "title": "Society Id"
-          },
-          "alternate_names": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 500
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Alternate Names"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "first_name",
+          "last_name",
           "mobile"
         ],
         "title": "CustomerEdit"
@@ -24656,18 +24249,6 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Detail"
-          },
-          "society_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Society Id"
           }
         },
         "type": "object",
@@ -24681,38 +24262,6 @@
           "detail"
         ],
         "title": "DirectoryAuditOut"
-      },
-      "DirectoryAuditPage": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/DirectoryAuditOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "DirectoryAuditPage",
-        "description": "One page of the audit trail, newest first, with the count of all matches."
       },
       "DirectoryChecklistItemCreate": {
         "properties": {
@@ -26720,17 +26269,6 @@
           "password": {
             "type": "string",
             "title": "Password"
-          },
-          "role": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Role"
           }
         },
         "type": "object",
@@ -26761,11 +26299,6 @@
           "expires_in": {
             "type": "integer",
             "title": "Expires In"
-          },
-          "must_change_mpin": {
-            "type": "boolean",
-            "title": "Must Change Mpin",
-            "default": false
           }
         },
         "type": "object",
@@ -27468,8 +27001,7 @@
           },
           "last_name": {
             "type": "string",
-            "title": "Last Name",
-            "default": ""
+            "title": "Last Name"
           },
           "mobile": {
             "type": "string",
@@ -27486,6 +27018,7 @@
         "type": "object",
         "required": [
           "first_name",
+          "last_name",
           "mobile",
           "vehicles"
         ],
@@ -27858,12 +27391,11 @@
         "properties": {
           "basement": {
             "type": "string",
-            "title": "Basement",
-            "default": ""
+            "title": "Basement"
           },
           "number": {
             "type": "string",
-            "maxLength": 80,
+            "maxLength": 20,
             "minLength": 1,
             "title": "Number"
           },
@@ -27894,6 +27426,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "basement",
           "number",
           "from_date"
         ],
@@ -28136,21 +27669,6 @@
           "status": {
             "type": "string",
             "title": "Status"
-          },
-          "days_to_due": {
-            "type": "integer",
-            "title": "Days To Due",
-            "default": 0
-          },
-          "status_message": {
-            "type": "string",
-            "title": "Status Message",
-            "default": ""
-          },
-          "last_payment_failed": {
-            "type": "boolean",
-            "title": "Last Payment Failed",
-            "default": false
           },
           "due_date": {
             "type": "string",
@@ -29105,23 +28623,23 @@
         ],
         "title": "SessionDevice"
       },
-      "SetMpinRequest": {
+      "SetPasswordRequest": {
         "properties": {
-          "mpin_token": {
+          "password_token": {
             "type": "string",
-            "title": "Mpin Token"
+            "title": "Password Token"
           },
-          "mpin": {
+          "password": {
             "type": "string",
-            "title": "Mpin"
+            "title": "Password"
           }
         },
         "type": "object",
         "required": [
-          "mpin_token",
-          "mpin"
+          "password_token",
+          "password"
         ],
-        "title": "SetMpinRequest"
+        "title": "SetPasswordRequest"
       },
       "SkipIn": {
         "properties": {
@@ -29288,6 +28806,37 @@
         ],
         "title": "StandaloneIn",
         "description": "Owner decision: an owned no-subscription vehicle uses the Spa rules."
+      },
+      "StartRequest": {
+        "properties": {
+          "login_id": {
+            "type": "string",
+            "title": "Login Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_id"
+        ],
+        "title": "StartRequest"
+      },
+      "StartResult": {
+        "properties": {
+          "next": {
+            "type": "string",
+            "title": "Next"
+          },
+          "resend_in_seconds": {
+            "type": "integer",
+            "title": "Resend In Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "next",
+          "resend_in_seconds"
+        ],
+        "title": "StartResult"
       },
       "StatusChange": {
         "properties": {
@@ -29616,6 +29165,11 @@
               }
             ],
             "title": "First Service Date"
+          },
+          "first_payment_status": {
+            "type": "string",
+            "title": "First Payment Status",
+            "default": "Due"
           }
         },
         "additionalProperties": false,
@@ -29782,27 +29336,13 @@
             "title": "Cycle Start"
           },
           "renewal_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "Renewal Date"
           },
           "expires_on": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "format": "date",
             "title": "Expires On"
           },
           "cycle_days": {
@@ -29810,70 +29350,8 @@
             "title": "Cycle Days"
           },
           "days_left": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days Left"
-          },
-          "cycle_end": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cycle End"
-          },
-          "inactive_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inactive By"
-          },
-          "payment_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payment Id"
-          },
-          "payment_status": {
-            "type": "string",
-            "title": "Payment Status",
-            "default": "Not Due"
-          },
-          "days_to_due": {
             "type": "integer",
-            "title": "Days To Due",
-            "default": 0
-          },
-          "status_message": {
-            "type": "string",
-            "title": "Status Message",
-            "default": ""
-          },
-          "last_payment_failed": {
-            "type": "boolean",
-            "title": "Last Payment Failed",
-            "default": false
+            "title": "Days Left"
           },
           "latest_payment": {
             "anyOf": [
@@ -29905,7 +29383,10 @@
           "interior_day",
           "start_date",
           "cycle_start",
+          "renewal_date",
+          "expires_on",
           "cycle_days",
+          "days_left",
           "latest_payment",
           "can_pay_next"
         ],
@@ -30709,51 +30190,6 @@
             ],
             "title": "Expires On"
           },
-          "cycle_end": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cycle End"
-          },
-          "inactive_by": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inactive By"
-          },
-          "payment_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payment Status"
-          },
-          "status_message": {
-            "type": "string",
-            "title": "Status Message",
-            "default": ""
-          },
-          "last_payment_failed": {
-            "type": "boolean",
-            "title": "Last Payment Failed",
-            "default": false
-          },
           "cutoff_time": {
             "anyOf": [
               {
@@ -30922,6 +30358,11 @@
               }
             ],
             "title": "Rc Upload Id"
+          },
+          "first_payment_status": {
+            "type": "string",
+            "title": "First Payment Status",
+            "default": "Due"
           }
         },
         "additionalProperties": false,
@@ -31340,9 +30781,9 @@
       },
       "VerifyCodeRequest": {
         "properties": {
-          "mobile": {
+          "email": {
             "type": "string",
-            "title": "Mobile"
+            "title": "Email"
           },
           "code": {
             "type": "string",
@@ -31351,7 +30792,7 @@
         },
         "type": "object",
         "required": [
-          "mobile",
+          "email",
           "code"
         ],
         "title": "VerifyCodeRequest"
