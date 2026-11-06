@@ -55,7 +55,9 @@ def optimise(ctx: ModelContext):
         solver.parameters.max_time_in_seconds = params.max_seconds
         return solver.Solve(model), solver
     remaining = float(params.max_seconds)
-    status = cp_model.UNKNOWN
+    _greedy_hint(ctx)
+    solver.parameters.repair_hint = True
+    best = None
     for i, name in enumerate(names):
         stage = sum(ctx.weight(name) * t for t in ctx.terms[name])
         model.Maximize(stage)
@@ -64,11 +66,65 @@ def optimise(ctx: ModelContext):
         status = solver.Solve(model)
         remaining -= solver.WallTime()
         if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            return status, solver
+            # A later stage that finds no plan in its time keeps the plan of the
+            # stage before; only the first stage can leave the day without a plan.
+            return (cp_model.FEASIBLE, best) if best is not None else (status, solver)
+        best = _Plan(ctx, solver)
         if i + 1 < len(names):
             model.Add(stage >= round(solver.ObjectiveValue()))
             model.ClearHints()
-            for group in (ctx.start_vars, ctx.placed_vars, ctx.presence):
-                for var in group.values():
-                    model.AddHint(var, solver.Value(var))
-    return status, solver
+            for var, value in best.pairs:
+                model.AddHint(var, value)
+    return cp_model.FEASIBLE, best
+
+
+class _Plan:
+    """The values a stage found for the variables the core reads back, so a
+    later stage that runs out of time cannot take the plan away."""
+
+    def __init__(self, ctx: ModelContext, solver) -> None:
+        groups = (ctx.start_vars, ctx.placed_vars, ctx.presence)
+        self.pairs = [(v, solver.Value(v)) for g in groups for v in g.values()]
+        self._by_id = {id(v): x for v, x in self.pairs}
+
+    def Value(self, var) -> int:  # the solver's method name, as the core calls it
+        return self._by_id[id(var)]
+
+
+def _greedy_hint(ctx: ModelContext) -> None:
+    """A first full plan for the solver to start from: each job, longest first,
+    on the cleaner who is free earliest, at the first start its domain allows.
+    Without it the first stage can spend its whole slice finding any plan on a
+    day with many equal jobs. A hint never changes what is allowed."""
+    step = ctx.params.step
+    free_at = {c.key: -(-c.start // step) for c in ctx.crew}
+    ends = {c.key: c.end // step for c in ctx.crew}
+    for job in sorted(ctx.free, key=lambda j: (-ctx.durations.get(j.key, 0), j.key)):
+        if job.key not in ctx.start_vars:
+            continue
+        dur = ctx.durations[job.key]
+        allowed = job.windows if job.windows is not None else ((0, 1440),)
+        domain: list[int] = []
+        for s0, e0 in allowed:
+            lo, hi = -(-s0 // step), e0 // step - dur
+            if lo <= hi:
+                domain += [lo, hi]
+        if not domain:
+            continue
+        best = None  # (start, crew key)
+        for c in ctx.crew:
+            if (job.key, c.key) not in ctx.presence:
+                continue
+            for lo, hi in zip(domain[::2], domain[1::2], strict=True):
+                begin = max(free_at[c.key], lo)
+                if begin <= hi and begin + dur <= ends[c.key]:
+                    if best is None or begin < best[0]:
+                        best = (begin, c.key)
+                    break
+        for c in ctx.crew:
+            if (job.key, c.key) in ctx.presence:
+                ctx.model.AddHint(ctx.presence[(job.key, c.key)], int(best is not None and best[1] == c.key))
+        ctx.model.AddHint(ctx.placed_vars[job.key], int(best is not None))
+        ctx.model.AddHint(ctx.start_vars[job.key], best[0] if best else domain[0])
+        if best is not None:
+            free_at[best[1]] = best[0] + dur
