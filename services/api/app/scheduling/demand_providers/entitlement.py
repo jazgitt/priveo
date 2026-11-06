@@ -15,7 +15,8 @@ ledger, not from the customer's interior care weekday:
   first feasible day (INT-13). Among the days of the row's own week, the car's
   preferred day (the interior care day, or the Interior days of a Weekly or
   Cycle pattern, INT-05, INT-26) is chosen if it is feasible; otherwise the
-  first feasible day. The preference never removes the entitlement.
+  first feasible day. The preference never removes the entitlement. Weekdays
+  come before the weekend when the preference does not decide (SCHS-46).
 * A day is feasible when the car is served that day (not before its first
   service date, not skipped or paused), the site has a working slot for the
   Interior that weekday and the car has no other Interior that day (HARD-11).
@@ -83,6 +84,7 @@ def provide(ctx, demand: list):
                    Job.addon_request_id.is_(None), Job.addon_booking_id.is_(None))):
         jobs.setdefault(visit.vehicle_id, []).append((job, visit.date))
 
+    weekend = {int(d) for d in ctx.setting("site.weekend_weekdays")}
     extra = []
     cars = db.execute(
         select(Subscription, Vehicle)
@@ -153,7 +155,12 @@ def provide(ctx, demand: list):
                 continue
             own = [d for d in feasible if entitlements.week_start(db, d) == row.service_week_start]
             pool = own or feasible
-            day = next((d for d in pool if _prefers(db, sub, pattern, d)), pool[0])
+            # Weekdays before the weekend (INT-10), Derived: the weekend is the
+            # fallback. An overdue row (no day of its own week) takes the first
+            # feasible weekday and ignores the car's preferred day (INT-13).
+            first = next((d for d in pool if d.weekday() not in weekend), pool[0])
+            day = first if not own else next(
+                (d for d in pool if _prefers(db, sub, pattern, d)), first)
             used.add(day)
             ctx.interior_rows[(vehicle.id, day)] = row.id
             extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
