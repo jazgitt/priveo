@@ -47,7 +47,7 @@ def test_seed_creates_both_rows_inactive_at_zero_and_is_repeatable(money):
     assert set(rows) == set(EXTRAS)
     for name, row in rows.items():
         assert (row.service, row.price_rupees, row.active, row.duration_minutes) == (
-            EXTRAS[name], 0, False, 20)
+            EXTRAS[name], 0, False, 30)
     codes = [r.code for r in money.db.scalars(select(AddonCatalogueItem))]
     assert sorted(codes) == ["ADN-0001", "ADN-0002", "ADN-0003"]
     assert len(defaults.EXTRA_ADDONS) == 2

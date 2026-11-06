@@ -4,7 +4,7 @@ import json
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, select
 
 from app.changes.models import ScheduleChange
 from app.mani.contracts import ToolError, ToolResult
@@ -286,6 +286,17 @@ def test_capacity_tight_over_and_ok(db):
     w.exception("Crew Ok Z", TODAY + timedelta(days=1), "Sick")
     db.add(ScheduleChange(customer_id=owner.id, vehicle_id=skipped_vehicle, kind="skip", start_date=TODAY,
                           end_date=TODAY, status="Active", actor="customer"))
+    # This test is not about the default length: pin both cleans to 20 minutes.
+    from app.directory import lookup
+    from app.directory.models import DirectoryService
+    for order, name in enumerate(("Cleaning-External", "Cleaning-Internal")):
+        row = db.scalar(select(DirectoryService).where(DirectoryService.name == name))
+        if row is None:
+            db.add(DirectoryService(name=name, duration_minutes=20, min_photos=2,
+                                    min_videos=1, sort_order=order))
+        else:
+            row.duration_minutes = 20
+    lookup.invalidate()
     db.commit()
     forbid_writes(db)
     r = run(db, "crew_capacity_outlook")
