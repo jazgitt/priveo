@@ -18,6 +18,7 @@ WEEK = [SUNDAY + timedelta(days=i) for i in range(7)]
 def _slots(world, closed_weekday, services=SERVICES):
     days = [d for d in range(7) if d != closed_weekday]
     for name in services:
+        world.drop_slots(name)
         world.db.add(WorkingSlot(society_id=world.society.id, service=name,
                                  start_minute=300, end_minute=660, days=days))
 
@@ -93,6 +94,7 @@ def test_schr_par_02_the_closed_weekday_is_not_hardcoded(world):
 
 def test_schr_par_02_a_service_slot_on_the_day_keeps_it_open(world):
     crew = _site(world, services=SERVICES[:2])
+    world.drop_slots("Deep Spa")
     world.db.add(WorkingSlot(society_id=world.society.id, service="Deep Spa",
                              start_minute=0, end_minute=1440, days=list(range(7))))
     world.db.commit()
@@ -119,3 +121,17 @@ def test_schr_par_02_without_the_version_setting_nothing_changes(world):
     world.db.commit()
     crew = service.load_crew(world.db, world.society.id)
     assert service.availability(world.db, crew, WEEK)[WEDNESDAY]
+
+
+def test_schr_par_16_a_site_with_no_slots_plans_no_work(world, rules_v2):
+    # Option A (owner, 06-Nov-26): no slot means no work. The old 05:00 to 11:00
+    # fallback no longer gives a site without slots any window.
+    from tests.scheduling.builders import Scenario
+
+    world.drop_slots()
+    sc = Scenario(world)
+    sc.cleaner("Ravi", shift=(300, 660))
+    sc.car(interior=True)
+    res = sc.run(SUNDAY, days=2)
+    assert not res.placed
+    assert res.unassigned  # the car is reported, not hidden

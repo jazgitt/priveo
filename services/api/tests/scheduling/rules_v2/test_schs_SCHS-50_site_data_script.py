@@ -42,7 +42,8 @@ def site(engine):
             login = Login(role="crew", login_id=f"9111{n:06d}", display_name=f"C{n}")
             db.add(login)
             db.flush()
-            db.add(SchedulingCrew(login_id=login.id, society_id=s.id, working_hours=hours))
+            db.add(SchedulingCrew(login_id=login.id, society_id=s.id, working_hours=hours,
+                                  start_minute=360, end_minute=660))
         seed_defaults(db)
         for svc in db.query(DirectoryService).filter(DirectoryService.name != "Deep Spa"):
             svc.duration_minutes = 20

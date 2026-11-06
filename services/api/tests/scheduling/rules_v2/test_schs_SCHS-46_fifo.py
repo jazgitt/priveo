@@ -12,6 +12,8 @@ from tests.scheduling.builders import INTERNAL, Scenario
 INT = "Cleaning-Internal"
 ORDER = "placed,zone,break,fifo,late,early_capacity,early"
 WEEK1 = date(2026, 11, 2)  # Monday
+SUNDAY = WEEK1 - timedelta(days=1)
+THURSDAY = WEEK1 + timedelta(days=3)
 WEEK2 = WEEK1 + timedelta(days=7)
 WEEK3 = WEEK2 + timedelta(days=7)
 
@@ -139,3 +141,46 @@ def test_schr_int_10_a_row_of_the_current_week_prefers_its_own_day_over_a_weekda
         select(Visit.date).join(Job, Job.visit_id == Visit.id)
         .where(Job.service == INTERNAL, Job.status != "Skipped"))]
     assert days == [WEEK1 + timedelta(days=5)]
+
+
+# ---- SCHR-INT-13: the FIFO inputs of a day (gap check) -----------------------
+
+
+class _Db:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def get(self, model, row_id):
+        return self._rows.get(row_id)
+
+
+def _run_ctx(rows, chosen, active=True):
+    from types import SimpleNamespace
+    return SimpleNamespace(active=active, db=_Db(rows), interior_rows=chosen)
+
+
+def test_schr_int_13_no_fifo_inputs_when_the_run_is_not_version_2():
+    assert fifo.day_inputs(_run_ctx({}, {}, active=False), SUNDAY, []) is None
+
+
+def test_schr_int_13_no_fifo_inputs_when_no_car_has_an_interior_that_day():
+    assert fifo.day_inputs(_run_ctx({}, {}), SUNDAY, []) is None
+
+
+def test_schr_int_13_a_car_whose_ledger_row_is_gone_has_no_week_or_age():
+    chosen = {("car-1", SUNDAY): "row-1"}
+    assert fifo.day_inputs(_run_ctx({}, chosen), SUNDAY, []) == {"weeks": {}, "created": {}}
+
+
+def test_schr_int_13_the_week_and_age_of_the_chosen_row_are_read():
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+    row = SimpleNamespace(service_week_start=WEEK1,
+                          created_at=datetime(2026, 11, 2, tzinfo=UTC))
+    no_age = SimpleNamespace(service_week_start=WEEK1, created_at=None)
+    chosen = {("car-1", SUNDAY): "row-1", ("car-2", SUNDAY): "row-2",
+              ("car-3", THURSDAY): "row-3"}  # another day: not read
+    out = fifo.day_inputs(_run_ctx({"row-1": row, "row-2": no_age}, chosen), SUNDAY, [])
+    assert out["weeks"] == {"car-1": WEEK1, "car-2": WEEK1}
+    assert out["created"]["car-1"] == row.created_at.timestamp()
+    assert out["created"]["car-2"] == 0.0

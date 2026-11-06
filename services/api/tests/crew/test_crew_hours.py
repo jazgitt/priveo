@@ -3,7 +3,7 @@ slots (ADM-CRW-25)."""
 from sqlalchemy import select
 
 from app.directory.models import WorkingSlot
-from tests.crew.test_crew import DAYS, HOURS, auth, body, create, login
+from tests.crew.test_crew import HOURS, auth, body, create, login
 
 
 def admin(client):
@@ -78,15 +78,11 @@ def test_overlapping_society_slots_are_joined_and_a_day_without_slots_is_off(cli
     assert days["Tuesday"]["working"] is False
 
 
-def test_a_new_crew_member_without_hours_gets_the_societys_slots(client, db, society):
-    for slot in db.scalars(select(WorkingSlot).where(WorkingSlot.society_id == society.id)):
-        db.delete(slot)
-    db.commit()
+def test_a_new_crew_member_without_hours_is_refused(client, db, society):
+    # Hours are mandatory: nothing is copied from the society's slots (owner, 06-Nov-26).
     add_slot(db, society, "Cleaning-External", 360, 720, [0, 1, 2, 3, 4, 5, 6])  # 06:00-12:00
     data = body(society)
     data.pop("working_hours")
     r = client.post("/v1/admin/crew", json=data, headers=admin(client))
-    assert r.status_code == 201, r.text
-    hours = r.json()["crew"]["working_hours"]
-    assert [h["day"] for h in hours] == DAYS
-    assert all((h["start"], h["end"]) == ("06:00", "12:00") for h in hours)
+    assert r.status_code == 422, r.text
+    assert "working hours" in r.text

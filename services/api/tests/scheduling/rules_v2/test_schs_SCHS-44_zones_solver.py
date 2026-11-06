@@ -132,3 +132,34 @@ def test_schr_zone_11_a_site_with_no_home_zones_records_no_cross_zone_job(world,
     res = sc.run(MONDAY)
     assert len(res.placed) == 1
     assert res.summary.cross_zone_jobs == 0
+
+
+# ---- SCHR-ZONE-02 and SCHR-HIER-04 (gap check, 06-Nov-26) --------------------
+
+
+def test_schr_zone_02_a_kept_job_in_another_zone_counts_as_that_zone():
+    # The kept job is in Z2 and fixes the cleaner's first 30 minutes. The free
+    # Z1 job takes the time after it: one zone at a time, no overlap.
+    crew = [SolverCrew("a", 360, 480)]
+    kept = SolverJob("k", "vk", 30, service=EXT, fixed=("a", 360))
+    free = SolverJob("f", "vf", 30, service=EXT)
+    data = {"home": {"a": "Z1"}, "vehicle_zone": {"vk": "Z2", "vf": "Z1"},
+            "owned": ["Z1"], "cross_allowed": True}
+    result = solve_day(crew, [kept, free], _params(), "exterior", {"zones": data})
+    assert result.placed["k"] == ("a", 360)
+    assert result.placed["f"] == ("a", 390)
+
+
+def test_schr_hier_04_placing_a_job_ranks_above_zone_in_the_seeded_order():
+    # The only job is in Z2 and the cleaner's home is Z1. Taking it means a cross-zone
+    # assignment. The seeded order places work first, so the job is done.
+    # Put zone first and the cross-zone assignment is refused, so the job stays out.
+    crew = [SolverCrew("a", 360, 390)]
+    specs = [SolverJob("j", "vj", 30, service=EXT)]
+    data = {"home": {"a": "Z1"}, "vehicle_zone": {"vj": "Z2"}, "owned": ["Z1"], "cross_allowed": True}
+    seeded = solve_day(crew, specs, _params(), "exterior", {"zones": data})
+    zone_order = "zone,placed,break,fifo,late,early_capacity,early"
+    zone_first = solve_day(crew, specs, SolverParams(settings={"scheduler.objective_order": zone_order}),
+                           "exterior", {"zones": data})
+    assert set(seeded.placed) == {"j"}
+    assert not zone_first.placed

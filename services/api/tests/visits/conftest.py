@@ -35,6 +35,13 @@ def world(db: Session) -> World:
     society = Society(name="Green Meadows")
     db.add(society)
     db.flush()
+    # Standard working slots on every day (ADM-SVS-05), as for the scheduler tests.
+    from app.directory import defaults
+    from app.directory.models import WorkingSlot
+    for service, (begin, finish, _days) in defaults.DEFAULT_SLOT_WINDOWS.items():
+        db.add(WorkingSlot(society_id=society.id, service=service, start_minute=begin,
+                           end_minute=finish, days=list(range(7))))
+    db.flush()
     owner = Login(role="customer", login_id="9123456789", display_name="Secret Name")
     db.add(owner)
     db.flush()
@@ -67,7 +74,8 @@ def make_crew(db: Session, world: World):
         db.add(login)
         db.flush()
         crew = SchedulingCrew(login_id=login.id, society_id=(society or world.society).id,
-                              role=role, paired_member_id=member.id if member else None)
+                              role=role, start_minute=360, end_minute=660,
+                              paired_member_id=member.id if member else None)
         db.add(crew)
         db.commit()
         return crew

@@ -11,6 +11,7 @@ MONDAY = SUNDAY + timedelta(days=1)
 
 
 def slot(world, service, days, start=300, end=660):
+    world.drop_slots(service)
     world.db.add(WorkingSlot(society_id=world.society.id, service=service,
                              start_minute=start, end_minute=end, days=days))
 

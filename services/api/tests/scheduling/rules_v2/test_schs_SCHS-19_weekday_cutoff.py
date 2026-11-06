@@ -1,6 +1,10 @@
 """SCHS-19: the Customer cutoff is a hard end limit on strict weekdays."""
 from datetime import time, timedelta
 
+import pytest
+
+from app.customers.service import read_cutoff
+from app.scheduling import passes
 from app.scheduling.codes import ReasonCode
 from app.scheduling.solver import SolverCrew, SolverJob, solve_day
 from tests.scheduling.builders import INTERNAL, Scenario
@@ -96,3 +100,39 @@ def test_kill_switch_version_1_keeps_the_soft_cutoff(world, site_cfg):
     sc, car = _thursday(world, site_cfg, version=1)
     res = sc.run(THURSDAY)
     assert len(res.placed) == 2 and [p.late for p in res.placed].count(True) == 1
+
+
+# ---- SCHR-CUT-03 and SCHR-CUT-07 (gap check, 06-Nov-26) --------------------
+
+
+def test_schr_cut_03_an_interior_that_misses_its_cutoff_is_left_out_and_the_exterior_keeps_its_place():
+    # Room for one 30 minute job before the 08:30 cutoff. The Exterior is planned
+    # first (Pass A), so the Interior is the one that cannot fit and stays out.
+    crew = [SolverCrew("a", 480, 510)]
+    exterior = SolverJob("e", "ve", 30, service=passes.EXTERIOR, finish_by=510, hard_cutoff=True)
+    interior = SolverJob("i", "vi", 30, service=INTERNAL, finish_by=510, hard_cutoff=True,
+                         interior=True)
+    for jobs in ([interior, exterior], [exterior, interior]):  # list order must not matter
+        result = passes.solve_passes(crew, jobs)
+        assert set(result.placed) == {"e"}
+        assert set(result.unplaced) == {"i"}
+        assert result.unplaced_codes["i"] in {ReasonCode.CUSTOMER_CUTOFF, ReasonCode.CAPACITY_SHORT}
+
+
+@pytest.mark.parametrize("hour, minute", [(h, m) for h in range(24) for m in (0, 30)])
+def test_schr_cut_07_every_half_hour_step_is_a_cutoff_the_customer_can_choose(hour, minute):
+    assert read_cutoff(f"{hour:02d}:{minute:02d}") == time(hour, minute)
+
+
+@pytest.mark.parametrize("text", ["08:15", "08:45", "8:30", "24:00", "soon"])
+def test_schr_cut_07_other_times_are_not_a_cutoff_choice(text):
+    assert read_cutoff(text) is None
+
+
+def test_schr_cut_07_a_cutoff_before_the_first_job_plus_duration_is_unassigned_and_reported():
+    # The first job starts at 05:30 and takes 30 minutes, so it cannot finish by
+    # the 05:30 cutoff. Nothing warns the customer; the planner reports the car.
+    crew = [SolverCrew("a", 330, 600)]
+    result = solve_day(crew, [SolverJob("e", "ve", 30, finish_by=330, hard_cutoff=True)])
+    assert not result.placed
+    assert result.unplaced_codes["e"] == ReasonCode.CUSTOMER_CUTOFF

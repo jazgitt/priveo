@@ -107,3 +107,39 @@ def test_schr_zone_06_the_board_and_the_daily_view_carry_the_reason(api, world, 
     schedule = sc.db.scalar(select(Schedule).where(Schedule.society_id == world.society.id))
     rows = service.board(sc.db, schedule)["jobs"]
     assert [r["cross_zone_reason"] for r in rows] == [zone_reason.ABSENT]
+
+
+# ---- SCHR-ZONE-06: the reason helpers (gap check, 06-Nov-26) -----------------
+
+
+def test_schr_zone_06_room_is_found_in_a_gap_between_busy_spans_and_checked_against_the_cutoff():
+    from app.scheduling.post_solve import zone_reason
+
+    windows = [(480, 600)]
+    busy = [(540, 600)]  # the cleaner is busy from 09:00 to the end
+    # 30 minutes fit at 08:00, which is before a 08:50 cutoff.
+    assert zone_reason._fits(windows, busy, 30, 530) == (True, True)
+    # The same gap is found, but no cutoff can be met before 08:20.
+    assert zone_reason._fits(windows, busy, 30, 500) == (True, False)
+    # No gap of 30 minutes at all.
+    assert zone_reason._fits([(480, 500)], [(490, 500)], 30, None) == (False, False)
+    # No cutoff: any room counts as in time.
+    assert zone_reason._fits(windows, [], 30, None) == (True, True)
+
+
+def test_schr_zone_06_a_skipped_job_is_given_no_reason():
+    import uuid
+    from types import SimpleNamespace
+
+    from app.scheduling.post_solve import zone_reason
+
+    cleaner, vehicle = uuid.uuid4(), uuid.uuid4()
+    key = f"{cleaner}|a"
+    job = SimpleNamespace(crew_id=cleaner, start_minute=480, duration_minutes=30,
+                          finish_by_minute=None, status="Skipped", cross_zone_reason="old")
+    visit = SimpleNamespace(vehicle_id=vehicle)
+    ctx = SimpleNamespace(zone_days={SUNDAY: {
+        "home": {key: "Z1"}, "vehicle_zone": {str(vehicle): "Z2"},
+        "crew": {key: [(360, 600)]}}})
+    zone_reason.after_solve(ctx, SUNDAY, [(job, visit)], None)
+    assert job.cross_zone_reason is None

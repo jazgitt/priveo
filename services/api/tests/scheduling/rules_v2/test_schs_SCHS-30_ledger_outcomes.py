@@ -2,7 +2,9 @@
 from datetime import date, timedelta
 
 import pytest
+from sqlalchemy import func, select
 
+from app.customers.models import Subscription
 from app.scheduling import entitlements, service
 from app.scheduling.models import InteriorEntitlement, Job, Visit
 from tests.scheduling.builders import INTERNAL, Scenario
@@ -113,3 +115,84 @@ def test_schs_30_version_1_leaves_the_ledger_alone(world):
     row, job = _planned(sc, car, WEEK1, WEEK1)
     _status(sc, job, "Completed")
     assert sc.db.get(InteriorEntitlement, row.id).status == "Planned"
+
+
+# ---- ledger and link paths (gap check, 06-Nov-26) ---------------------------
+
+
+def _unplanned_interior(sc, car, day, status="Scheduled"):
+    visit = Visit(schedule_id=service.get_or_create_schedule(sc.db, sc.site.id, day, 1).id,
+                  vehicle_id=car.id, date=day)
+    sc.db.add(visit)
+    sc.db.flush()
+    job = Job(visit_id=visit.id, service=INTERNAL, duration_minutes=30, status=status)
+    sc.db.add(job)
+    sc.db.flush()
+    return visit, job
+
+
+def test_schr_int_24_a_completed_interior_with_nothing_owed_is_not_against_the_ledger(sc):
+    car = sc.car()
+    _visit, job = _unplanned_interior(sc, car, WEEK1)
+    sc.db.commit()
+    _status(sc, job, "Completed")  # the car owes nothing: no row is made for it
+    assert sc.db.scalar(select(func.count()).select_from(InteriorEntitlement)
+                        .where(InteriorEntitlement.vehicle_id == car.id)) == 0
+
+
+def test_schr_int_24_a_planned_interior_that_is_skipped_returns_its_row_to_pending(sc):
+    car = sc.car()
+    row, job = _planned(sc, car, WEEK1, WEEK1)
+    _status(sc, job, "Skipped")
+    row = sc.db.get(InteriorEntitlement, row.id)
+    assert (row.status, row.job_id) == (entitlements.PENDING, None)
+
+
+def test_schr_int_14_the_link_falls_back_to_the_oldest_owed_row_when_the_chosen_row_is_not_pending(sc):
+    from types import SimpleNamespace
+
+    from app.scheduling.post_solve import entitlement_link
+
+    car = sc.car()
+    done = sc.entitlement(car, WEEK1, status="Completed")  # chosen, but already used
+    owed = sc.entitlement(car, WEEK2)                      # the oldest row still owed
+    visit, job = _unplanned_interior(sc, car, WEEK2 + timedelta(days=1))
+    sc.db.commit()
+    ctx = SimpleNamespace(db=sc.db, interior_rows={(car.id, visit.date): done.id})
+    entitlement_link.after_solve(ctx, visit.date, [(job, visit)], None)
+    sc.db.expire_all()
+    assert sc.db.get(InteriorEntitlement, owed.id).job_id == job.id
+    assert sc.db.get(InteriorEntitlement, done.id).job_id is None
+
+
+def test_schr_int_12_the_owed_check_and_the_week_rows_read_the_ledger(sc):
+    car = sc.car(interior=True)  # an Exterior-only car owes no Interior
+    row = sc.entitlement(car, WEEK1)
+    sub = sc.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id))
+    assert entitlements.owes(sc.db, sub, WEEK1) is True
+    assert [r.id for r in entitlements.rows_for_week(sc.db, car.id, WEEK1)] == [row.id]
+    assert entitlements.rows_for_week(sc.db, car.id, WEEK2) == []
+
+
+def test_schr_int_08_a_job_with_no_visit_on_record_runs_under_the_old_rules():
+    import uuid
+    from types import SimpleNamespace
+
+    from app.scheduling import hooks
+
+    class _NoRows:
+        def scalar(self, _query):
+            return None
+
+    job = SimpleNamespace(visit_id=uuid.uuid4())
+    assert hooks.job_rules_version(_NoRows(), job) == 1
+
+
+def test_schr_dur_01_a_service_without_a_configured_duration_keeps_its_own(world):
+    from types import SimpleNamespace
+
+    from app.scheduling.job_sync import duration
+
+    job = SimpleNamespace(status="Scheduled", service="No such service", duration_minutes=45)
+    duration.sync(SimpleNamespace(frozen=False, db=world.db), job, None)
+    assert job.duration_minutes == 45
