@@ -3756,6 +3756,134 @@ class CutoffChangeIn {
       };
 }
 
+class DailyCleaner {
+  const DailyCleaner({
+    required this.cleanerId,
+    required this.name,
+    required this.breakWindow,
+    required this.freeSlots,
+    required this.jobs,
+  });
+
+  final String cleanerId;
+  final String name;
+  final Map<String, dynamic>? breakWindow;
+  final List<Map<String, dynamic>>? freeSlots;
+  final List<DailyJob> jobs;
+
+  factory DailyCleaner.fromJson(Map<String, dynamic> j) => DailyCleaner(
+        cleanerId: j['cleaner_id'] as String,
+        name: j['name'] as String,
+        breakWindow: j['break_window'] == null ? null : j['break_window'] as Map<String, dynamic>,
+        freeSlots: j['free_slots'] == null ? null : [for (final x in j['free_slots'] as List) x as Map<String, dynamic>],
+        jobs: [for (final x in j['jobs'] as List) DailyJob.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'cleaner_id': cleanerId,
+        'name': name,
+        'break_window': breakWindow,
+        'free_slots': freeSlots == null ? null : [for (final x in freeSlots!) x],
+        'jobs': [for (final x in jobs) x.toJson()],
+      };
+}
+
+class DailyException {
+  const DailyException({
+    required this.code,
+    this.detail,
+  });
+
+  final String code;
+  final String? detail;
+
+  factory DailyException.fromJson(Map<String, dynamic> j) => DailyException(
+        code: j['code'] as String,
+        detail: j['detail'] == null ? null : j['detail'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'detail': detail,
+      };
+}
+
+class DailyJob {
+  const DailyJob({
+    required this.jobId,
+    required this.vehicleId,
+    required this.registration,
+    required this.zone,
+    required this.type,
+    required this.startTime,
+    required this.endTime,
+    required this.cutoff,
+    required this.exceptions,
+    required this.crossZoneReason,
+  });
+
+  final String jobId;
+  final String vehicleId;
+  final String registration;
+  final String zone;
+  final String type;
+  final String startTime;
+  final String endTime;
+  final String cutoff;
+  final List<DailyException> exceptions;
+  final String? crossZoneReason;
+
+  factory DailyJob.fromJson(Map<String, dynamic> j) => DailyJob(
+        jobId: j['job_id'] as String,
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        zone: j['zone'] as String,
+        type: j['type'] as String,
+        startTime: j['start_time'] as String,
+        endTime: j['end_time'] as String,
+        cutoff: j['cutoff'] as String,
+        exceptions: [for (final x in j['exceptions'] as List) DailyException.fromJson(x as Map<String, dynamic>)],
+        crossZoneReason: j['cross_zone_reason'] == null ? null : j['cross_zone_reason'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'zone': zone,
+        'type': type,
+        'start_time': startTime,
+        'end_time': endTime,
+        'cutoff': cutoff,
+        'exceptions': [for (final x in exceptions) x.toJson()],
+        'cross_zone_reason': crossZoneReason,
+      };
+}
+
+class DailyView {
+  const DailyView({
+    required this.societyId,
+    required this.date,
+    required this.cleaners,
+  });
+
+  final String societyId;
+  final DateTime date;
+  final List<DailyCleaner> cleaners;
+
+  factory DailyView.fromJson(Map<String, dynamic> j) => DailyView(
+        societyId: j['society_id'] as String,
+        date: DateTime.parse(j['date'] as String),
+        cleaners: [for (final x in j['cleaners'] as List) DailyCleaner.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'date': _date(date),
+        'cleaners': [for (final x in cleaners) x.toJson()],
+      };
+}
+
 class DayCapacity {
   const DayCapacity({
     required this.date,

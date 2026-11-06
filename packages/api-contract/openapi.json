@@ -7252,6 +7252,75 @@
         }
       }
     },
+    "/v1/admin/scheduling/reports/daily": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Daily Cleaner View",
+        "operationId": "daily_cleaner_view_v1_admin_scheduling_reports_daily_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/calendar": {
       "get": {
         "tags": [
@@ -24336,6 +24405,175 @@
           "cutoff_time"
         ],
         "title": "CutoffChangeIn"
+      },
+      "DailyCleaner": {
+        "properties": {
+          "cleaner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Cleaner Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "break_window": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Window"
+          },
+          "free_slots": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Slots"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/DailyJob"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cleaner_id",
+          "name",
+          "jobs"
+        ],
+        "title": "DailyCleaner"
+      },
+      "DailyException": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "DailyException"
+      },
+      "DailyJob": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "zone": {
+            "type": "string",
+            "title": "Zone"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time"
+          },
+          "cutoff": {
+            "type": "string",
+            "title": "Cutoff"
+          },
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/DailyException"
+            },
+            "type": "array",
+            "title": "Exceptions"
+          },
+          "cross_zone_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Zone Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "vehicle_id",
+          "registration",
+          "zone",
+          "type",
+          "start_time",
+          "end_time",
+          "cutoff",
+          "exceptions"
+        ],
+        "title": "DailyJob"
+      },
+      "DailyView": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "cleaners": {
+            "items": {
+              "$ref": "#/components/schemas/DailyCleaner"
+            },
+            "type": "array",
+            "title": "Cleaners"
+          }
+        },
+        "type": "object",
+        "required": [
+          "society_id",
+          "date",
+          "cleaners"
+        ],
+        "title": "DailyView"
       },
       "DayCapacity": {
         "properties": {
