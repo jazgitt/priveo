@@ -87,6 +87,8 @@ export interface AdminJob {
   /** Place in the crew member's day, and whether the admin unlocked it (S-13, C-04). */
   sequence?: number | null;
   queue_unlocked?: boolean;
+  /** Rules version 2: why the job sits outside its cleaner's home zone (SCHR-ZONE-06). */
+  cross_zone_reason?: string | null;
 }
 
 export interface Board {
