@@ -3,13 +3,14 @@
 come from the window rules and the rules may add lines (see window_rules)."""
 import uuid
 from datetime import date
+from types import SimpleNamespace
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.directory import lookup
 from app.identity.models import Login
-from app.scheduling import service
+from app.scheduling import capacity_lines, service
 from app.scheduling import windows as windows_module
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
 
@@ -55,21 +56,34 @@ def capacity(
             line[0] += extra["jobs"]
             line[1] += extra["minutes"]
             demand_minutes[day] += extra["minutes"]
+    # What capacity counts: the windows minus the break (SCHR-BRK-08, version 2 only).
+    usable = {
+        day: {cid: wins for cid, wins in
+              ((cid, windows_module.capacity_windows(db, crew[cid], day, w))
+               for cid, w in windows[day].items()) if wins}
+        for day in days
+    }
     scheduled = dict.fromkeys(days, 0)
+    busy: dict[date, dict[uuid.UUID, list[tuple[int, int]]]] = {day: {} for day in days}
     if schedule is not None:
         rows = db.execute(
-            select(Visit.date, Job.duration_minutes)
+            select(Visit.date, Job.duration_minutes, Job.crew_id, Job.start_minute)
             .join(Job, Job.visit_id == Visit.id)
             .where(
                 Visit.schedule_id == schedule.id, Job.crew_id.is_not(None), Job.status != "Skipped"
             )
         ).all()
-        for day, minutes in rows:
+        for day, minutes, crew_id, start in rows:
             if day in scheduled:
                 scheduled[day] += minutes
+                if start is not None:
+                    busy[day].setdefault(crew_id, []).append((start, start + minutes))
     out = []
     for day in days:
-        cap = sum(e - s for wins in windows[day].values() for s, e in wins)
+        cap = sum(e - s for wins in usable[day].values() for s, e in wins)
+        break_minutes = (sum(e - s for wins in windows[day].values() for s, e in wins) - cap)
+        extra = capacity_lines.day_fields(
+            db, society_id, day, SimpleNamespace(crew=crew, windows=usable[day], busy=busy[day]))
         crew_lines = [
             {
                 "name": names.get(crew[cid].login_id, ""),
@@ -78,8 +92,7 @@ def capacity(
                 "slots": ", ".join(f"{s // 60:02d}:{s % 60:02d}-{e // 60:02d}:{e % 60:02d}"
                                    for s, e in wins),
             }
-            for cid, wins in windows[day].items()
-            if wins
+            for cid, wins in usable[day].items()
         ]
         crew_lines.sort(key=lambda c: c["name"])
         out.append(
@@ -95,6 +108,8 @@ def capacity(
                 "demand_minutes": demand_minutes[day],
                 "scheduled_minutes": scheduled[day],
                 "over_capacity": demand_minutes[day] > cap,
+                "break_minutes": break_minutes,
+                "early_band_free_minutes": extra.get("early_band_free_minutes", 0),
             }
         )
     return out

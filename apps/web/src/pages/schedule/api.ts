@@ -34,6 +34,9 @@ export interface DayCapacity {
   demand_minutes: number;
   scheduled_minutes: number;
   over_capacity: boolean;
+  /** Version 2 sites: the break taken out of capacity, and the free early band (SCHS-34). */
+  break_minutes?: number;
+  early_band_free_minutes?: number;
 }
 
 export interface SchedulingCrew {

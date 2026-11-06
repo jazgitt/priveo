@@ -94,6 +94,10 @@ class DayCapacity(BaseModel):
     demand_minutes: int
     scheduled_minutes: int
     over_capacity: bool
+    # Version 2 sites (SCHS-34): the break taken out of capacity, and the free
+    # minutes of the early band, available for onboarding.
+    break_minutes: int = 0
+    early_band_free_minutes: int = 0
     crew: list[CrewCapacityLine] = []
     demand: list[DemandLine] = []
     availability: list[CrewDayAvailability] = []
