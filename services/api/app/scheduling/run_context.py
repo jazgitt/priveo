@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from app.scheduling import hooks
+from app.scheduling import hand_placement, hooks
 from app.scheduling.models import Schedule, ScheduleFinding, ScheduleRunConfig
 
 
@@ -63,7 +63,10 @@ class RunContext:
             return
         self.db.add(ScheduleRunConfig(schedule_id=self.schedule.id, values=dict(self.settings)))
         # The findings describe the plan as this run left it.
-        self.db.execute(delete(ScheduleFinding).where(ScheduleFinding.schedule_id == self.schedule.id))
+        # Breaches of a hand placement stay: the placement is kept by a re-run (SCHS-22).
+        self.db.execute(delete(ScheduleFinding).where(
+            ScheduleFinding.schedule_id == self.schedule.id,
+            ~ScheduleFinding.code.like(hand_placement.PREFIX + "%")))
         for item in self.findings:
             self.db.add(ScheduleFinding(schedule_id=self.schedule.id, job_id=item["job_id"],
                                         code=item["code"], detail=item["detail"]))

@@ -151,7 +151,8 @@ def move_job(
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id)
+    job = service.move_job(db, job_id, body.crew_id, body.start_minute, user.id,
+                           override=body.override)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
 

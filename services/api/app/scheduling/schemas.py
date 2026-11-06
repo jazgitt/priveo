@@ -35,6 +35,9 @@ class MoveRequest(BaseModel):
     crew_id: uuid.UUID | None = None
     # Minutes after midnight.
     start_minute: int | None = Field(default=None, ge=0, lt=1440)
+    # Rules version 2 (SCHS-22): place the job although it breaks a rule. Without
+    # it a breach is answered with a placement_warning that lists the breaches.
+    override: bool = False
 
 
 class UnfreezeRequest(BaseModel):
