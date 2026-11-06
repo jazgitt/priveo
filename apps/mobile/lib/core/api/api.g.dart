@@ -1026,6 +1026,7 @@ class AdminJob {
     this.deliveredServices,
     required this.sequence,
     this.queueUnlocked,
+    required this.reasonCode,
   });
 
   final String id;
@@ -1060,6 +1061,7 @@ class AdminJob {
   final List<String>? deliveredServices;
   final int? sequence;
   final bool? queueUnlocked;
+  final String? reasonCode;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1094,6 +1096,7 @@ class AdminJob {
         deliveredServices: j['delivered_services'] == null ? null : [for (final x in j['delivered_services'] as List) x as String],
         sequence: j['sequence'] == null ? null : j['sequence'] as int,
         queueUnlocked: j['queue_unlocked'] == null ? null : j['queue_unlocked'] as bool,
+        reasonCode: j['reason_code'] == null ? null : j['reason_code'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1129,6 +1132,7 @@ class AdminJob {
         'delivered_services': deliveredServices == null ? null : [for (final x in deliveredServices!) x],
         'sequence': sequence,
         'queue_unlocked': queueUnlocked,
+        'reason_code': reasonCode,
       };
 }
 
@@ -5248,6 +5252,102 @@ class EmailCorrection {
       };
 }
 
+class ExceptionKind {
+  const ExceptionKind({
+    required this.kind,
+    required this.label,
+    required this.rows,
+  });
+
+  final String kind;
+  final String label;
+  final List<ExceptionRow> rows;
+
+  factory ExceptionKind.fromJson(Map<String, dynamic> j) => ExceptionKind(
+        kind: j['kind'] as String,
+        label: j['label'] as String,
+        rows: [for (final x in j['rows'] as List) ExceptionRow.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind,
+        'label': label,
+        'rows': [for (final x in rows) x.toJson()],
+      };
+}
+
+class ExceptionReport {
+  const ExceptionReport({
+    required this.societyId,
+    required this.startDate,
+    required this.endDate,
+    required this.kinds,
+  });
+
+  final String societyId;
+  final DateTime startDate;
+  final DateTime endDate;
+  final List<ExceptionKind> kinds;
+
+  factory ExceptionReport.fromJson(Map<String, dynamic> j) => ExceptionReport(
+        societyId: j['society_id'] as String,
+        startDate: DateTime.parse(j['start_date'] as String),
+        endDate: DateTime.parse(j['end_date'] as String),
+        kinds: [for (final x in j['kinds'] as List) ExceptionKind.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'start_date': _date(startDate),
+        'end_date': _date(endDate),
+        'kinds': [for (final x in kinds) x.toJson()],
+      };
+}
+
+class ExceptionRow {
+  const ExceptionRow({
+    required this.date,
+    required this.jobId,
+    required this.vehicleId,
+    required this.registration,
+    required this.cleanerId,
+    required this.cleanerName,
+    required this.code,
+    this.detail,
+  });
+
+  final DateTime? date;
+  final String? jobId;
+  final String? vehicleId;
+  final String registration;
+  final String? cleanerId;
+  final String cleanerName;
+  final String code;
+  final String? detail;
+
+  factory ExceptionRow.fromJson(Map<String, dynamic> j) => ExceptionRow(
+        date: j['date'] == null ? null : DateTime.parse(j['date'] as String),
+        jobId: j['job_id'] == null ? null : j['job_id'] as String,
+        vehicleId: j['vehicle_id'] == null ? null : j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        cleanerId: j['cleaner_id'] == null ? null : j['cleaner_id'] as String,
+        cleanerName: j['cleaner_name'] as String,
+        code: j['code'] as String,
+        detail: j['detail'] == null ? null : j['detail'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'date': date == null ? null : _date(date!),
+        'job_id': jobId,
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'cleaner_id': cleanerId,
+        'cleaner_name': cleanerName,
+        'code': code,
+        'detail': detail,
+      };
+}
+
 class FeatureOut {
   const FeatureOut({
     required this.key,
@@ -6004,19 +6104,23 @@ class MoveRequest {
   const MoveRequest({
     required this.crewId,
     required this.startMinute,
+    this.override,
   });
 
   final String? crewId;
   final int? startMinute;
+  final bool? override;
 
   factory MoveRequest.fromJson(Map<String, dynamic> j) => MoveRequest(
         crewId: j['crew_id'] == null ? null : j['crew_id'] as String,
         startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+        override: j['override'] == null ? null : j['override'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
         'crew_id': crewId,
         'start_minute': startMinute,
+        'override': override,
       };
 }
 
@@ -7472,6 +7576,9 @@ class RunResult {
     required this.placed,
     required this.unscheduled,
     required this.late,
+    required this.unassignedExteriors,
+    required this.shortfallCars,
+    required this.shortfallMinutes,
   });
 
   final String scheduleId;
@@ -7480,6 +7587,9 @@ class RunResult {
   final int placed;
   final int unscheduled;
   final int late;
+  final int? unassignedExteriors;
+  final int? shortfallCars;
+  final int? shortfallMinutes;
 
   factory RunResult.fromJson(Map<String, dynamic> j) => RunResult(
         scheduleId: j['schedule_id'] as String,
@@ -7488,6 +7598,9 @@ class RunResult {
         placed: j['placed'] as int,
         unscheduled: j['unscheduled'] as int,
         late: j['late'] as int,
+        unassignedExteriors: j['unassigned_exteriors'] == null ? null : j['unassigned_exteriors'] as int,
+        shortfallCars: j['shortfall_cars'] == null ? null : j['shortfall_cars'] as int,
+        shortfallMinutes: j['shortfall_minutes'] == null ? null : j['shortfall_minutes'] as int,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7497,6 +7610,9 @@ class RunResult {
         'placed': placed,
         'unscheduled': unscheduled,
         'late': late,
+        'unassigned_exteriors': unassignedExteriors,
+        'shortfall_cars': shortfallCars,
+        'shortfall_minutes': shortfallMinutes,
       };
 }
 
@@ -7633,6 +7749,70 @@ class SetMpinRequest {
   Map<String, dynamic> toJson() => {
         'mpin_token': mpinToken,
         'mpin': mpin,
+      };
+}
+
+class SiteSettingIn {
+  const SiteSettingIn({
+    required this.societyId,
+    required this.value,
+  });
+
+  final String societyId;
+  final String value;
+
+  factory SiteSettingIn.fromJson(Map<String, dynamic> j) => SiteSettingIn(
+        societyId: j['society_id'] as String,
+        value: j['value'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'value': value,
+      };
+}
+
+class SiteSettingOut {
+  const SiteSettingOut({
+    required this.key,
+    required this.label,
+    required this.kind,
+    required this.defaultValue,
+    required this.siteValue,
+    required this.value,
+    required this.minimum,
+    required this.maximum,
+  });
+
+  final String key;
+  final String label;
+  final String kind;
+  final String defaultValue;
+  final String? siteValue;
+  final String value;
+  final int? minimum;
+  final int? maximum;
+
+  factory SiteSettingOut.fromJson(Map<String, dynamic> j) => SiteSettingOut(
+        key: j['key'] as String,
+        label: j['label'] as String,
+        kind: j['kind'] as String,
+        defaultValue: j['default_value'] as String,
+        siteValue: j['site_value'] == null ? null : j['site_value'] as String,
+        value: j['value'] as String,
+        minimum: j['minimum'] == null ? null : j['minimum'] as int,
+        maximum: j['maximum'] == null ? null : j['maximum'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'label': label,
+        'kind': kind,
+        'default_value': defaultValue,
+        'site_value': siteValue,
+        'value': value,
+        'minimum': minimum,
+        'maximum': maximum,
       };
 }
 

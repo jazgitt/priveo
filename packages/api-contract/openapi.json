@@ -7321,6 +7321,218 @@
         }
       }
     },
+    "/v1/admin/scheduling/reports/exceptions": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Exception Report",
+        "operationId": "exception_report_v1_admin_scheduling_reports_exceptions_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "End Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/site-settings": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "List Site Settings",
+        "description": "Every per-site scheduling value with its default, the site's own value and its range.",
+        "operationId": "list_site_settings_v1_admin_scheduling_site_settings_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteSettingOut"
+                  },
+                  "title": "Response List Site Settings V1 Admin Scheduling Site Settings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/site-settings/{key}": {
+      "put": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Put Site Setting",
+        "description": "Saves the site's own value. A value outside the rules is refused with the message to show.",
+        "operationId": "put_site_setting_v1_admin_scheduling_site_settings__key__put",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteSettingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteSettingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/customer/calendar": {
       "get": {
         "tags": [
@@ -20954,6 +21166,17 @@
             "type": "boolean",
             "title": "Queue Unlocked",
             "default": false
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
           }
         },
         "type": "object",
@@ -26469,6 +26692,146 @@
         ],
         "title": "EmailCorrection"
       },
+      "ExceptionKind": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ExceptionRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "label",
+          "rows"
+        ],
+        "title": "ExceptionKind"
+      },
+      "ExceptionReport": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/ExceptionKind"
+            },
+            "type": "array",
+            "title": "Kinds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "society_id",
+          "start_date",
+          "end_date",
+          "kinds"
+        ],
+        "title": "ExceptionReport"
+      },
+      "ExceptionRow": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "vehicle_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "cleaner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleaner Id"
+          },
+          "cleaner_name": {
+            "type": "string",
+            "title": "Cleaner Name"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "job_id",
+          "vehicle_id",
+          "registration",
+          "cleaner_id",
+          "cleaner_name",
+          "code"
+        ],
+        "title": "ExceptionRow"
+      },
       "FeatureOut": {
         "properties": {
           "key": {
@@ -27488,6 +27851,11 @@
               }
             ],
             "title": "Start Minute"
+          },
+          "override": {
+            "type": "boolean",
+            "title": "Override",
+            "default": false
           }
         },
         "type": "object",
@@ -29396,6 +29764,39 @@
           "late": {
             "type": "integer",
             "title": "Late"
+          },
+          "unassigned_exteriors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unassigned Exteriors"
+          },
+          "shortfall_cars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortfall Cars"
+          },
+          "shortfall_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortfall Minutes"
           }
         },
         "type": "object",
@@ -29563,6 +29964,92 @@
           "mpin"
         ],
         "title": "SetMpinRequest"
+      },
+      "SiteSettingIn": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "society_id",
+          "value"
+        ],
+        "title": "SiteSettingIn"
+      },
+      "SiteSettingOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "default_value": {
+            "type": "string",
+            "title": "Default Value"
+          },
+          "site_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Value"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "minimum": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum"
+          },
+          "maximum": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "kind",
+          "default_value",
+          "site_value",
+          "value"
+        ],
+        "title": "SiteSettingOut"
       },
       "SkipIn": {
         "properties": {
