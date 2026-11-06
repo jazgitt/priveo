@@ -597,7 +597,7 @@ def all_reasons(db: Session) -> list[CncReason]:
     return list(db.scalars(select(CncReason).order_by(CncReason.sort_order, CncReason.key)))
 
 
-def add_reason(db: Session, admin_id, label: str) -> CncReason:
+def add_reason(db: Session, admin_id, label: str, defers: bool = False) -> CncReason:
     label = label.strip()
     if not label:
         raise invalid("label", "Enter the reason.")
@@ -610,7 +610,7 @@ def add_reason(db: Session, admin_id, label: str) -> CncReason:
     while key in taken:
         key = f"{base}_{n}"
         n += 1
-    reason = CncReason(key=key, label=label,
+    reason = CncReason(key=key, label=label, defers=defers,
                        sort_order=max((r.sort_order for r in rows), default=-1) + 1)
     db.add(reason)
     db.flush()
@@ -619,12 +619,16 @@ def add_reason(db: Session, admin_id, label: str) -> CncReason:
     return reason
 
 
-def rename_reason(db: Session, admin_id, reason_id: uuid.UUID, label: str) -> CncReason:
+def rename_reason(db: Session, admin_id, reason_id: uuid.UUID, label: str,
+                  defers: bool | None = None) -> CncReason:
     reason = _get(db, CncReason, reason_id, "reason")
     label = label.strip()
     if not label:
         raise invalid("label", "Enter the reason.")
-    apply(db, admin_id, "reason", reason, {"label": label})
+    changes = {"label": label}
+    if defers is not None:
+        changes["defers"] = defers
+    apply(db, admin_id, "reason", reason, changes)
     db.commit()
     return reason
 

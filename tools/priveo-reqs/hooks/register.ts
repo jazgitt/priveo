@@ -6,6 +6,7 @@ const REQS = [
   'docs/reqs/customer-app-functional-requirements.md',
   'docs/reqs/admin-functional-requirements.md',
   'docs/reqs/crew-functional-requirements.md',
+  'docs/reqs/scheduler-requirements.md',
 ]
 const ID = /\b[A-Z]{2,6}(?:-[A-Z]{2,6})?-\d{2,3}\b/g
 const ROW = /^\|\s*([A-Z]{2,6}(?:-[A-Z]{2,6})?-\d{2,3})\s*\|/
@@ -14,7 +15,8 @@ const PROTOTYPE = /(^|\/)docs\/prototype\//
 const ENV_FILE = /(^|\/)\.env(\.(?!example$|sample$|template$)[^/]*)?$/
 
 const norm = (p: string) => p.replace(/\\/g, '/')
-const short = (p: string) => p.replace('docs/reqs/', '').replace('-functional-requirements.md', '')
+const short = (p: string) =>
+  p.replace('docs/reqs/', '').replace('-functional-requirements.md', '').replace('-requirements.md', '')
 
 type Row = { id: string; line: number; text: string; status: string; raw: string }
 type Parsed = { file: string; rows: Row[]; cites: { id: string; line: number }[]; lines: string[] }

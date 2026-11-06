@@ -59,7 +59,7 @@ Mobile queueing protects crew evidence during poor connectivity. Customers and a
 [^2]: [Application composition root](../services/api/app/main.py).
 [^3]: [Test report, 20 October](../docs/testing/test-report-2026-10-20.md), integration and refresh work.
 [^4]: [Owner decisions, 19 October](../docs/reqs/owner-decisions-2026-10-19.md), hosting choice; [test report](../docs/testing/test-report-2026-10-20.md).
-[^5]: [Solver](../services/api/app/scheduling/solver.py); [change rules](../services/api/app/changes/rules.py).
+[^5]: [Solver](../services/api/app/scheduling/solver/core.py); [change rules](../services/api/app/changes/rules.py).
 [^6]: [Mobile manifest](../apps/mobile/pubspec.yaml); [web package](../apps/web/package.json); [API project](../services/api/pyproject.toml).
 [^7]: [Object stores](../services/api/app/media/store.py); [cron router](../services/api/app/notifications/cron.py).
 

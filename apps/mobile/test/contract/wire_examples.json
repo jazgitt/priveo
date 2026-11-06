@@ -343,7 +343,8 @@
     ],
     "sequence": 1,
     "queue_unlocked": true,
-    "reason_code": "wire-value"
+    "reason_code": "wire-value",
+    "cross_zone_reason": "wire-value"
   },
   "AdminPaymentIn": {
     "vehicle_id": "wire-value",
@@ -438,6 +439,8 @@
         "demand_minutes": 1,
         "scheduled_minutes": 1,
         "over_capacity": true,
+        "break_minutes": 1,
+        "early_band_free_minutes": 1,
         "crew": [
           {
             "name": "wire-value",
@@ -464,7 +467,9 @@
                 "end": 1
               }
             ],
-            "reason": "wire-value"
+            "reason": "wire-value",
+            "break_start": 1,
+            "break_end": 1
           }
         ]
       }
@@ -516,7 +521,8 @@
         ],
         "sequence": 1,
         "queue_unlocked": true,
-        "reason_code": "wire-value"
+        "reason_code": "wire-value",
+        "cross_zone_reason": "wire-value"
       }
     ]
   },
@@ -618,7 +624,8 @@
         ],
         "crew_name": "wire-value",
         "start_time": "wire-value",
-        "end_time": "wire-value"
+        "end_time": "wire-value",
+        "interior_this_week": true
       }
     ],
     "renewals": [
@@ -664,7 +671,12 @@
     ],
     "crew_name": "wire-value",
     "start_time": "wire-value",
-    "end_time": "wire-value"
+    "end_time": "wire-value",
+    "interior_this_week": true
+  },
+  "CarryOver": {
+    "carried_in": 1,
+    "still_owed": 1
   },
   "ChangeOut": {
     "id": "wire-value",
@@ -903,6 +915,22 @@
     "note": "wire-value",
     "upload_id": "wire-value"
   },
+  "CrewBreakRules": {
+    "scheduling_crew_id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "rules": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "society_id": "11111111-1111-1111-1111-111111111111",
+        "crew_id": "11111111-1111-1111-1111-111111111111",
+        "start_date": "2026-10-20",
+        "end_date": "2026-10-20",
+        "start_minute": 1,
+        "end_minute": 1,
+        "enabled": true
+      }
+    ]
+  },
   "CrewCapacityLine": {
     "name": "wire-value",
     "role": "wire-value",
@@ -982,7 +1010,11 @@
         "locked": true,
         "current": true
       }
-    ]
+    ],
+    "day_break": {
+      "start_time": "wire-value",
+      "end_time": "wire-value"
+    }
   },
   "CrewDayAvailability": {
     "crew_id": "11111111-1111-1111-1111-111111111111",
@@ -993,7 +1025,13 @@
         "end": 1
       }
     ],
-    "reason": "wire-value"
+    "reason": "wire-value",
+    "break_start": 1,
+    "break_end": 1
+  },
+  "CrewDayBreak": {
+    "start_time": "wire-value",
+    "end_time": "wire-value"
   },
   "CrewDayJob": {
     "id": "11111111-1111-1111-1111-111111111111",
@@ -1669,6 +1707,8 @@
     "demand_minutes": 1,
     "scheduled_minutes": 1,
     "over_capacity": true,
+    "break_minutes": 1,
+    "early_band_free_minutes": 1,
     "crew": [
       {
         "name": "wire-value",
@@ -1695,9 +1735,15 @@
             "end": 1
           }
         ],
-        "reason": "wire-value"
+        "reason": "wire-value",
+        "break_start": 1,
+        "break_end": 1
       }
     ]
+  },
+  "DayCounts": {
+    "weekday": 1,
+    "weekend": 1
   },
   "DayHours": {
     "day": "wire-value",
@@ -2018,17 +2064,20 @@
     "clear_vehicle_category": true
   },
   "DirectoryReasonCreate": {
-    "label": "wire-value"
+    "label": "wire-value",
+    "defers": true
   },
   "DirectoryReasonOut": {
     "id": "11111111-1111-1111-1111-111111111111",
     "key": "wire-value",
     "label": "wire-value",
     "sort_order": 1,
-    "active": true
+    "active": true,
+    "defers": true
   },
   "DirectoryReasonUpdate": {
-    "label": "wire-value"
+    "label": "wire-value",
+    "defers": true
   },
   "DirectoryServiceOut": {
     "name": "wire-value",
@@ -2203,6 +2252,12 @@
     "code": "wire-value",
     "detail": "wire-value"
   },
+  "ExteriorTotals": {
+    "due": 1,
+    "completed": 1,
+    "missed": 1,
+    "open": 1
+  },
   "FeatureOut": {
     "key": "wire-value",
     "label": "wire-value",
@@ -2290,6 +2345,20 @@
     "latest_month": "wire-value",
     "earliest_month": "wire-value"
   },
+  "HomeZoneIn": {
+    "home_zone_id": "11111111-1111-1111-1111-111111111111"
+  },
+  "HomeZoneOut": {
+    "home_zone_id": "wire-value",
+    "follows_member": "wire-value",
+    "editable": true,
+    "zones": [
+      {
+        "id": "wire-value",
+        "name": "wire-value"
+      }
+    ]
+  },
   "Inbox": {
     "unread_count": 1,
     "items": [
@@ -2305,6 +2374,15 @@
         "read": true
       }
     ]
+  },
+  "InteriorLine": {
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "service_week_start": "2026-10-20",
+    "status": "wire-value",
+    "completed_on": "2026-10-20",
+    "overdue_days": 1,
+    "catch_up": true
   },
   "InvoiceOut": {
     "number": "wire-value",
@@ -2620,7 +2698,8 @@
       ],
       "sequence": 1,
       "queue_unlocked": true,
-      "reason_code": "wire-value"
+      "reason_code": "wire-value",
+      "cross_zone_reason": "wire-value"
     },
     "moved": {
       "id": "11111111-1111-1111-1111-111111111111",
@@ -2659,7 +2738,8 @@
       ],
       "sequence": 1,
       "queue_unlocked": true,
-      "reason_code": "wire-value"
+      "reason_code": "wire-value",
+      "cross_zone_reason": "wire-value"
     }
   },
   "MoveRequest": {
@@ -2706,7 +2786,8 @@
         ],
         "sequence": 1,
         "queue_unlocked": true,
-        "reason_code": "wire-value"
+        "reason_code": "wire-value",
+        "cross_zone_reason": "wire-value"
       }
     ],
     "pending_addons": [
@@ -3147,7 +3228,10 @@
         "late": 1,
         "unassigned_exteriors": 1,
         "shortfall_cars": 1,
-        "shortfall_minutes": 1
+        "shortfall_minutes": 1,
+        "deferred_interiors": 1,
+        "cross_zone_jobs": 1,
+        "missed_breaks": 1
       }
     ]
   },
@@ -3160,7 +3244,10 @@
     "late": 1,
     "unassigned_exteriors": 1,
     "shortfall_cars": 1,
-    "shortfall_minutes": 1
+    "shortfall_minutes": 1,
+    "deferred_interiors": 1,
+    "cross_zone_jobs": 1,
+    "missed_breaks": 1
   },
   "ScheduleOut": {
     "id": "11111111-1111-1111-1111-111111111111",
@@ -3789,5 +3876,52 @@
     "user_id": "11111111-1111-1111-1111-111111111111",
     "role": "wire-value",
     "display_name": "wire-value"
+  },
+  "WeeklySummary": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "week_start": "2026-10-20",
+    "week_end": "2026-10-20",
+    "exteriors": {
+      "due": 1,
+      "completed": 1,
+      "missed": 1,
+      "open": 1
+    },
+    "interiors_by_service_week": [
+      {
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "service_week_start": "2026-10-20",
+        "status": "wire-value",
+        "completed_on": "2026-10-20",
+        "overdue_days": 1,
+        "catch_up": true
+      }
+    ],
+    "interiors_completed_in_week": [
+      {
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "service_week_start": "2026-10-20",
+        "status": "wire-value",
+        "completed_on": "2026-10-20",
+        "overdue_days": 1,
+        "catch_up": true
+      }
+    ],
+    "completions": {
+      "weekday": 1,
+      "weekend": 1
+    },
+    "catch_up_services": 1,
+    "carry_over": {
+      "carried_in": 1,
+      "still_owed": 1
+    },
+    "missed_breaks": 1
+  },
+  "ZoneChoice": {
+    "id": "wire-value",
+    "name": "wire-value"
   }
 }

@@ -23,6 +23,9 @@ export interface CrewDayAvailability {
   status: "Working" | "Partial" | "Off";
   windows: { start: number; end: number }[];
   reason: string;
+  /** The break to draw, in minutes after midnight. Version 2 sites only (SCHS-35). */
+  break_start?: number | null;
+  break_end?: number | null;
 }
 
 export interface DayCapacity {
@@ -34,6 +37,9 @@ export interface DayCapacity {
   demand_minutes: number;
   scheduled_minutes: number;
   over_capacity: boolean;
+  /** Version 2 sites: the break taken out of capacity, and the free early band (SCHS-34). */
+  break_minutes?: number;
+  early_band_free_minutes?: number;
 }
 
 export interface SchedulingCrew {
@@ -81,6 +87,8 @@ export interface AdminJob {
   /** Place in the crew member's day, and whether the admin unlocked it (S-13, C-04). */
   sequence?: number | null;
   queue_unlocked?: boolean;
+  /** Rules version 2: why the job sits outside its cleaner's home zone (SCHR-ZONE-06). */
+  cross_zone_reason?: string | null;
 }
 
 export interface Board {

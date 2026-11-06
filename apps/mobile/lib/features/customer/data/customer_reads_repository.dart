@@ -63,6 +63,7 @@ class CalendarVisit {
     this.crewName,
     this.startTime,
     this.endTime,
+    this.interiorThisWeek = false,
   });
 
   /// Empty for a projected day: the scheduler has not planned it yet.
@@ -95,6 +96,10 @@ class CalendarVisit {
   final String? startTime;
   final String? endTime;
 
+  /// A projected day only: this week's Interior is owed but not planned yet,
+  /// so the day says "Interior this week" instead of a weekday (SCHS-38).
+  final bool interiorThisWeek;
+
   bool get projected => source == 'projected';
   String get shownState => state ?? status;
 
@@ -125,6 +130,7 @@ class CalendarVisit {
     crewName: j['crew_name'] as String?,
     startTime: j['start_time'] as String?,
     endTime: j['end_time'] as String?,
+    interiorThisWeek: (j['interior_this_week'] as bool?) ?? false,
   );
 }
 

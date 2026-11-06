@@ -101,6 +101,9 @@ class CalendarVisit(BaseModel):
     crew_name: str | None = None
     start_time: str | None = None
     end_time: str | None = None
+    # Version 2 sites, projected days only: the week's Interior is owed but not planned
+    # yet, so the day says "Interior this week" instead of a weekday (SCHS-38).
+    interior_this_week: bool = False
 
 
 class CalendarRenewal(BaseModel):

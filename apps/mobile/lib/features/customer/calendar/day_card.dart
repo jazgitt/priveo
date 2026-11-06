@@ -234,6 +234,13 @@ class _DayVisitTileState extends ConsumerState<DayVisitTile> {
                 ),
                 const SizedBox(height: 4),
                 Text(_note, style: text.bodyMedium?.copyWith(color: b.mute)),
+                if (v.interiorThisWeek) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    CalStrings.interiorThisWeek,
+                    style: text.bodyMedium?.copyWith(color: b.mute),
+                  ),
+                ],
               ],
             ),
           ),

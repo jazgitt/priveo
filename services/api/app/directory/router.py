@@ -318,7 +318,7 @@ def list_reasons(user: AdminUser, db: Db):
 
 @admin.post("/reasons", response_model=s.DirectoryReasonOut, status_code=201)
 def add_reason(body: s.DirectoryReasonCreate, user: AdminUser, db: Db):
-    return service.add_reason(db, user.id, body.label)
+    return service.add_reason(db, user.id, body.label, body.defers)
 
 
 @admin.put("/reasons/order", response_model=list[s.DirectoryReasonOut])
@@ -329,7 +329,7 @@ def reorder_reasons(body: s.DirectoryOrder, user: AdminUser, db: Db):
 
 @admin.patch("/reasons/{reason_id}", response_model=s.DirectoryReasonOut)
 def rename_reason(reason_id: uuid.UUID, body: s.DirectoryReasonUpdate, user: AdminUser, db: Db):
-    return service.rename_reason(db, user.id, reason_id, body.label)
+    return service.rename_reason(db, user.id, reason_id, body.label, body.defers)
 
 
 @admin.post("/reasons/{reason_id}/deactivate", response_model=s.DirectoryReasonOut)

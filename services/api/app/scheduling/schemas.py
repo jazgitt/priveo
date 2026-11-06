@@ -24,6 +24,11 @@ class RunResult(BaseModel):
     unassigned_exteriors: int | None = None
     shortfall_cars: int | None = None
     shortfall_minutes: int | None = None
+    # Rules version 2 (SCHS-40): Interiors deferred or not planned, jobs placed
+    # outside the cleaner's home zone, and missed breaks. 0 on a site on version 1.
+    deferred_interiors: int = 0
+    cross_zone_jobs: int = 0
+    missed_breaks: int = 0
 
 
 class RunResponse(BaseModel):
@@ -86,6 +91,9 @@ class CrewDayAvailability(BaseModel):
     status: str  # "Working", "Partial" (late start) or "Off"
     windows: list[CrewDayWindow]
     reason: str
+    # The break to draw on the Board, in minutes after midnight (SCHS-35). Version 2 sites only.
+    break_start: int | None = None
+    break_end: int | None = None
 
 
 class DayCapacity(BaseModel):
@@ -94,6 +102,10 @@ class DayCapacity(BaseModel):
     demand_minutes: int
     scheduled_minutes: int
     over_capacity: bool
+    # Version 2 sites (SCHS-34): the break taken out of capacity, and the free
+    # minutes of the early band, available for onboarding.
+    break_minutes: int = 0
+    early_band_free_minutes: int = 0
     crew: list[CrewCapacityLine] = []
     demand: list[DemandLine] = []
     availability: list[CrewDayAvailability] = []
@@ -151,6 +163,8 @@ class AdminJob(BaseModel):
     queue_unlocked: bool = False
     # Rules version 2 only (SCHS-21): the code of the reason an unassigned job has no place.
     reason_code: str | None = None
+    # Rules version 2 only (SCHS-45): why the job sits outside its cleaner's home zone.
+    cross_zone_reason: str | None = None
 
 
 class Board(BaseModel):
@@ -212,6 +226,11 @@ class CrewDayJob(BaseModel):
     current: bool = False
 
 
+class CrewDayBreak(BaseModel):
+    start_time: str  # HH:MM
+    end_time: str
+
+
 class CrewDay(BaseModel):
     date: date
     society: str
@@ -219,6 +238,8 @@ class CrewDay(BaseModel):
     done: int
     left: int
     jobs: list[CrewDayJob]
+    # The break, shown as a block that holds no job (SCHS-35). Version 2 sites only.
+    day_break: CrewDayBreak | None = None
 
 
 class QueueReorder(BaseModel):

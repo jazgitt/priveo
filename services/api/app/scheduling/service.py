@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import hand_placement, hooks, queue, rules, run_context
+from app.scheduling import entitlements, hand_placement, hooks, passes, queue, rules, run_context, run_counts
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -64,6 +64,10 @@ class RunSummary:
     placed: int
     unscheduled: int
     late: int
+    # Rules version 2 (SCHS-40); 0 at version 1.
+    deferred_interiors: int = 0
+    cross_zone_jobs: int = 0
+    missed_breaks: int = 0
 
 
 def daterange(start: date, end: date) -> list[date]:
@@ -471,6 +475,7 @@ def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
             b.status = {
                 "Completed": "Completed",
                 "Could not complete": "Missed",
+                "Deferred": "Missed",
                 "Skipped": "Missed",
             }.get(
                 job.status,
@@ -625,11 +630,17 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     fixed,
                     slots,
                     hard_cutoff=is_strict_day(ctx, day),
+                    interior=ctx.active and entitlements.uses_entitlement(job),
+                    week=job.service_week_start,
+                    service=job.service,
                 )
             )
         if not solver_jobs:
             continue
-        result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
+        if ctx.active:  # two passes, Exterior then Interior (SCHS-32)
+            result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
+        else:
+            result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
@@ -665,13 +676,15 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
         placed=sum(1 for j in all_jobs if j.crew_id is not None and j.status != "Skipped"),
         unscheduled=sum(1 for j in all_jobs if j.crew_id is None and j.status == "Scheduled"),
         late=sum(1 for j in all_jobs if j.late),
+        **run_counts.counts(ctx, all_jobs),
     )
     record(
         db,
         schedule.id,
         admin_id,
         "assign-late" if frozen else "rerun",
-        f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}",
+        f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}"
+        + run_counts.detail(ctx, vars(summary), all_jobs),
     )
     ctx.save()
     db.commit()
@@ -960,6 +973,7 @@ def _job_dict(
         "manual": job.manual,
         "reason": job.note,
         "reason_code": job.reason_code,
+        "cross_zone_reason": job.cross_zone_reason,
         "sequence": job.sequence,
         "queue_unlocked": job.queue_unlocked,
         "visit_outcome": "Scheduled",
@@ -1161,7 +1175,8 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
     me = db.execute(
         select(SchedulingCrew).where(SchedulingCrew.login_id == login_id)
     ).scalar_one_or_none()
-    empty = {"date": day, "society": "", "total": 0, "done": 0, "left": 0, "jobs": []}
+    empty = {"date": day, "society": "", "total": 0, "done": 0, "left": 0, "jobs": [],
+             "day_break": None}
     if me is None:
         return empty
     society = db.get(Society, me.society_id)
@@ -1178,6 +1193,14 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
         .join(Vehicle, Visit.vehicle_id == Vehicle.id)
         .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
     ).all()
+    # The break of the Member whose jobs are shown, as a block that holds no job
+    # (SCHR-BRK-09, version 2 only).
+    from app.scheduling.window_rules import capacity_break
+
+    target_crew = me if target == me.id else db.get(SchedulingCrew, target)
+    brk = capacity_break.visible_break(db, target_crew, day) if target_crew else None
+    if brk is not None:
+        empty["day_break"] = {"start_time": rules.hhmm(brk[0]), "end_time": rules.hhmm(brk[1])}
     rows.sort(key=lambda r: queue._order_key((r[0], r[1])))
     states = queue.states_for(db, [r[0] for r in rows])
     jobs = []

@@ -42,3 +42,12 @@ test('breakdown names the areas and groups them by role', () => {
   expect(areas.find(a => a.area === 'ADM-PAY')!.name).toBe('Payments')
   expect(roleLine(areas)).toBe('Customer 3, Crew 1, Admin 1')
 })
+
+test('the scheduler requirements file is tracked: SCHR rows are defined and counted as Scheduler', () => {
+  const sch = parse('docs/reqs/scheduler-requirements.md', '| SCHR-CFG-01 | x, see SCHR-PAR-01 | Owner |\n| SCHR-PAR-01 | y | Owner |')
+  expect(integrity([sch]).missing).toEqual([])
+  expect(integrity([sch]).defs.size).toBe(2)
+  const areas = breakdown({ 'SCHR-CFG-01': {}, 'SCHR-PAR-01': {}, 'AUTH-01': {} })
+  expect(areas.map(a => a.role)).toEqual(['Customer', 'Scheduler', 'Scheduler'])
+  expect(roleLine(areas)).toBe('Customer 1, Crew 0, Admin 0, Scheduler 2')
+})

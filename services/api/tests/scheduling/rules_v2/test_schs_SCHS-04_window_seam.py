@@ -86,6 +86,9 @@ def _snapshot(world, sites):
         cap = json.loads(json.dumps(service.capacity(db, site.id, week[0], week[-1]), default=str))
         by_id = {str(k): v for k, v in names.items()}
         for day in cap:  # crew ids are random: name them and sort
+            # Fields added later (SCHS-34) are zero at version 1 and tested in their own file.
+            day.pop("break_minutes", None)
+            day.pop("early_band_free_minutes", None)
             for row in day["availability"]:
                 row["crew_id"] = by_id[row["crew_id"]]
             day["availability"].sort(key=lambda r: r["crew_id"])

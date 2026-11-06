@@ -23,7 +23,7 @@ from app.platform.errors import ApiError
 from app.scheduling.models import Job, SchedulingCrew, Visit
 
 FLAG = "crew.sequential_queue"
-DISPOSITIONED = ("Completed", "Could not complete", "Skipped")
+DISPOSITIONED = ("Completed", "Could not complete", "Deferred", "Skipped")
 
 
 @dataclass

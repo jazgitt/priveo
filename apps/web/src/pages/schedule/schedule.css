@@ -125,6 +125,7 @@
   .sch-slot.over { border-style: solid; border-color: var(--c-gold); background: #fbf3dd; color: var(--c-gold-text); font-weight: 600; }
   .sch-break { flex: 0 0 auto; padding: 0.25rem 0.55rem; border-radius: 6px; font-size: 0.6875rem; color: var(--c-mute);
     background: repeating-linear-gradient(135deg, #f1ece3 0 4px, #e9e3d7 4px 8px); font-variant-numeric: tabular-nums; }
+  .sch-break-rest { font-weight: 600; color: var(--c-gold-text); text-align: center; }
   .sch-col-empty { margin: 0; padding: 1rem 0.5rem; border: 1px dashed #d8cfbf; border-radius: 8px;
     text-align: center; font-size: 0.75rem; color: var(--c-mute); }
   .sch-drop-line { flex: 0 0 auto; height: 3px; margin: -0.1rem 0; border-radius: 999px; background: var(--c-gold); }

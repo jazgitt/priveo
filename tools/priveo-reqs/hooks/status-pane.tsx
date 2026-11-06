@@ -17,11 +17,16 @@ const AREA_NAMES: Record<string, string> = {
   'ADM-OPS': 'Visits skipped by operations', 'ADM-CNC': 'Visits crew could not complete',
   'ADM-FDB': 'Feedback, ratings and check-ins', 'ADM-REF': 'Reference data', 'ADM-SET': 'Settings',
   'ADM-CHK': 'Service checklists and proof minimums', 'ADM-ADD': 'Add-ons',
+  'SCHR-PAR': 'Scheduler parameters', 'SCHR-CFG': 'No hardcoding', 'SCHR-HIER': 'Rule hierarchy',
+  'SCHR-HARD': 'Hard constraints', 'SCHR-EXT': 'Exterior pass', 'SCHR-INT': 'Interior pass and entitlement',
+  'SCHR-CUT': 'Cutoff policy', 'SCHR-WKE': 'Weekend handling', 'SCHR-ZONE': 'Zones', 'SCHR-BRK': 'Break',
+  'SCHR-OUT': 'Scheduler outputs', 'SCHR-DEF': 'Deferral at execution',
   'CRW-ACC': 'Access and login', 'CRW-PRF': 'Profile', 'CRW-SCH': 'My schedule', 'CRW-MGR': 'Manager features',
   'CRW-SVC': 'Performing a service', 'CRW-CNC': 'Could not complete', 'CRW-RAT': 'Ratings received', 'CRW-NOT': 'Notifications',
 }
-const ROLES = ['Customer', 'Crew', 'Admin']
-const roleOf = (area: string) => (area.startsWith('ADM-') ? 'Admin' : area.startsWith('CRW-') ? 'Crew' : 'Customer')
+const ROLES = ['Customer', 'Crew', 'Admin', 'Scheduler']
+const roleOf = (area: string) =>
+  area.startsWith('ADM-') ? 'Admin' : area.startsWith('CRW-') ? 'Crew' : area.startsWith('SCHR-') ? 'Scheduler' : 'Customer'
 
 type Area = { role: string; area: string; name: string; total: number; bugs: number }
 export const breakdown = (features: Record<string, { bugs?: number }>): Area[] => {
@@ -37,7 +42,10 @@ export const breakdown = (features: Record<string, { bugs?: number }>): Area[] =
   )
 }
 export const roleLine = (areas: Area[]) =>
-  ROLES.map(r => `${r} ${areas.filter(a => a.role === r).reduce((n, a) => n + a.total, 0)}`).join(', ')
+  ROLES.map(r => [r, areas.filter(a => a.role === r).reduce((n, a) => n + a.total, 0)] as const)
+    .filter(([r, n]) => n > 0 || r !== 'Scheduler')
+    .map(([r, n]) => `${r} ${n}`)
+    .join(', ')
 
 type Tally = { by: Record<string, number>; bugs: number }
 type Deps = {

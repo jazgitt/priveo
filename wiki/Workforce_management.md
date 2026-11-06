@@ -6,13 +6,17 @@
 
 Administrators create crew with name, unique mobile number, society, role and working hours. Account creation generates a password shown once to the administrator for handover outside the app. Administrators can reset passwords, clear blocks, manage sessions and deactivate crew while preserving history.[^1]
 
-Weekly hours specify working/off status and start/end time for each day. Exceptions cover Sick, Leave and Late start over applicable dates. Managers can edit hours and exceptions for crew in their own society; administrator-only account and role powers remain restricted.[^1][^2]
+Weekly hours specify working/off status and start/end time for each day. A site's weekly-off weekday is a day off for every crew member. Exceptions cover Sick, Leave and Late start over applicable dates. Managers can edit hours and exceptions for crew in their own society; administrator-only account and role powers remain restricted.[^1][^2]
 
 An exception affecting scheduled jobs releases or reassigns work under the scheduling rules. A crew member's absence must reduce real capacity rather than merely adding an attendance label.[^1]
 
 ## Trainees
 
 Trainees contribute zero independent capacity and receive their paired Member's work. Every Trainee has one Member in the same society; a Member can have multiple Trainees. Pairing must be corrected before incompatible role changes. Trainees do not become independent substitutes when their Member is absent.[^1]
+
+## Planned crew settings
+
+Under the scheduling rules v1.2 each crew member also has a reporting time and a first-job time that follow the site value until the admin sets one, a home zone for Members and Managers, and optional break overrides for one crew member or a date range. A Trainee follows the paired Member's jobs and home zone. These are specified and not built or live.[^4]
 
 ## Dated society transfers
 
@@ -38,6 +42,7 @@ Members and Managers contribute working capacity; Trainees do not. Capacity is l
 
 [^1]: [Admin requirements](../docs/reqs/admin-functional-requirements.md), ADM-CRW and ADM-CAP, especially ADM-CRW-22–23 revised 18 October.
 [^2]: [Crew requirements](../docs/reqs/crew-functional-requirements.md), CRW-MGR-04–05.
+[^4]: [Scheduler requirements](../docs/reqs/scheduler-requirements.md), SCHR-PAR-04, SCHR-PAR-05, SCHR-ZONE and SCHR-BRK.
 [^3]: [Society-move implementation](../services/api/app/crew/society_moves.py), dated history and due application.
 
 ---

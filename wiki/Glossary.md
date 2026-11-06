@@ -10,8 +10,8 @@ This **glossary** defines Priveo product terms used across the wiki. Domain mean
 | Active | Subscription state eligible for recurring service |
 | Activating | Subscription awaiting administrator-selected start/activation |
 | Billing cycle | Default 30-calendar-day period, adjusted by eligible extensions |
-| Cleaning-External | Exterior-cleaning service; default planned duration 20 minutes |
-| Cleaning-Internal | Interior-cleaning service; default planned duration 20 minutes |
+| Cleaning-External | Exterior-cleaning service; default planned duration 20 minutes (30 minutes planned under scheduling rules v1.2) |
+| Cleaning-Internal | Interior-cleaning service; default planned duration 20 minutes (30 minutes planned under scheduling rules v1.2) |
 | Could not complete | Crew action recording a failed job with a reason |
 | Covered | Missed work accounted for by the designated subsequent service |
 | Cutoff time | Customer's finish-by preference, not a reserved start slot |
@@ -34,6 +34,11 @@ These definitions summarize the requirements; [Subscriptions](Subscriptions.md),
 
 | Term | Meaning |
 |---|---|
+| Customer cutoff | The time by which a car's clean must be finished; the scheduler's deadline. Distinct from the Freeze (8 PM) and the 9 PM rule |
+| Entitlement | One interior cleaning owed to a subscription for each service week; carried forward if missed (planned) |
+| Home zone | The zone a cleaner serves first; other zones use spare capacity (planned) |
+| Service week | Monday to Sunday week that the interior entitlement counts in; separate from the planning period (planned) |
+| Weekly off | The weekday a site is closed for all services; Wednesday by default (planned) |
 | Capacity | Available productive crew time subject to society/service constraints |
 | Draft | Reviewable schedule before freeze |
 | Exception | Sick, Leave or Late-start change to crew availability |
