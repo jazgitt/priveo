@@ -180,8 +180,17 @@ def test_base_rule_is_found_first_and_order_is_deterministic():
     assert names == [r.name for r in registry.discover()]
 
 
+def _expected(baseline, *dropped):
+    """The folder's real modules plus the dropped (name, priority) ones, ordered
+    by priority then name, so a new rule module does not break these tests."""
+    prio = {r.name: r.priority for r in registry.discover() if r.name in baseline}
+    items = [(p, n) for n, p in prio.items()] + [(p, n) for n, p in dropped]
+    return [n for _, n in sorted(items)]
+
+
 def test_a_module_dropped_in_the_folder_is_used(tmp_path):
     folder = Path(rules.__path__[0])
+    baseline = [r.name for r in registry.discover()]
     path = folder / "zz_temp_rule.py"
     path.write_text(
         "NAME = 'zz_temp'\n"
@@ -196,7 +205,7 @@ def test_a_module_dropped_in_the_folder_is_used(tmp_path):
     )
     try:
         names = [r.name for r in registry.discover()]
-        assert names == ["base", "job_cutoff", "zz_temp"]
+        assert names == _expected(baseline, ("zz_temp", 50))
         crew = [SolverCrew("a", 360, 600)]
         result = solve_day(crew, [SolverJob("j", "v", 20)])
         assert result.placed["j"] == ("a", 420)
@@ -204,29 +213,32 @@ def test_a_module_dropped_in_the_folder_is_used(tmp_path):
     finally:
         path.unlink(missing_ok=True)
         sys.modules.pop("app.scheduling.solver.rules.zz_temp_rule", None)
-    assert [r.name for r in registry.discover()] == ["base", "job_cutoff"]
+    assert [r.name for r in registry.discover()] == baseline
     assert solve_day(crew, [SolverJob("j", "v", 20)]).placed["j"] == ("a", 360)
 
 
 def test_underscore_modules_are_ignored():
     folder = Path(rules.__path__[0])
+    baseline = [r.name for r in registry.discover()]
     path = folder / "_ignored.py"
     path.write_text("raise RuntimeError('must not be imported')\n")
     try:
-        assert [r.name for r in registry.discover()] == ["base", "job_cutoff"]
+        assert [r.name for r in registry.discover()] == baseline
     finally:
         path.unlink(missing_ok=True)
 
 
 def test_order_is_by_priority_then_name():
     folder = Path(rules.__path__[0])
+    baseline = [r.name for r in registry.discover()]
     made = []
     try:
         for name, prio in (("zz_b", 10), ("zz_a", 10), ("zz_c", 5)):
             p = folder / f"{name}.py"
             p.write_text(f"PRIORITY = {prio}\n")
             made.append((p, name))
-        assert [r.name for r in registry.discover()] == ["base", "zz_c", "zz_a", "zz_b", "job_cutoff"]
+        dropped = [(n, p) for n, p in (("zz_c", 5), ("zz_a", 10), ("zz_b", 10))]
+        assert [r.name for r in registry.discover()] == _expected(baseline, *dropped)
     finally:
         for p, name in made:
             p.unlink(missing_ok=True)
