@@ -933,6 +933,7 @@ def _job_dict(
         "late": job.late,
         "manual": job.manual,
         "reason": job.note,
+        "reason_code": job.reason_code,
         "sequence": job.sequence,
         "queue_unlocked": job.queue_unlocked,
         "visit_outcome": "Scheduled",

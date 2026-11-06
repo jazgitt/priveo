@@ -19,6 +19,11 @@ class RunResult(BaseModel):
     placed: int
     unscheduled: int
     late: int
+    # Rules version 2 only (SCHS-21): unassigned Exteriors, the cars they belong
+    # to and their minutes. Null on a site still on version 1.
+    unassigned_exteriors: int | None = None
+    shortfall_cars: int | None = None
+    shortfall_minutes: int | None = None
 
 
 class RunResponse(BaseModel):
@@ -141,6 +146,8 @@ class AdminJob(BaseModel):
     # Place in the crew member's day, and whether the admin unlocked it (S-13, C-04).
     sequence: int | None = None
     queue_unlocked: bool = False
+    # Rules version 2 only (SCHS-21): the code of the reason an unassigned job has no place.
+    reason_code: str | None = None
 
 
 class Board(BaseModel):
