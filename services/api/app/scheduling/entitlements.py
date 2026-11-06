@@ -78,17 +78,19 @@ def _owes(db: Session, sub: Subscription, week: date) -> bool:
 
 # ---- creation (SCHR-INT-19) -----------------------------------------------
 
-def ensure(db: Session, sub: Subscription, through: date) -> list[InteriorEntitlement]:
+def ensure(db: Session, sub: Subscription, through: date,
+           since: date | None = None) -> list[InteriorEntitlement]:
     """Create the missing rows for each service week from the week of the first
-    service date to the week of `through`. Repeatable: a second run adds
-    nothing. Returns the rows it created."""
+    service date (or of `since`, when it is later: no debt for weeks before it)
+    to the week of `through`. Repeatable: a second run adds nothing. Returns the
+    rows it created."""
     if sub.status != "Active":
         return []
     count = lookup.setting(db, "schedule.interior_entitlement_per_week")
     have = {(r.service_week_start, r.seq) for r in db.scalars(
         select(InteriorEntitlement).where(InteriorEntitlement.vehicle_id == sub.vehicle_id))}
     created = []
-    for week in _weeks(db, sub.first_service_date, through):
+    for week in _weeks(db, max(sub.first_service_date, since or sub.first_service_date), through):
         if not _owes(db, sub, week):
             continue
         for seq in range(1, count + 1):

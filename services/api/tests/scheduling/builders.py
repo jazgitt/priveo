@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.customers.models import Subscription, Vehicle
 from app.directory import defaults, lookup, settings_registry, site_settings
-from app.directory.models import Society, WorkingSlot, Zone
+from app.directory.models import Plan, Society, WorkingSlot, Zone
 from app.scheduling import service
 from app.scheduling.models import (
     BreakRule,
@@ -201,13 +201,28 @@ class Scenario:
     # ---- cars and entitlements ---------------------------------------
 
     def car(self, zone=None, cutoff: time | None = None, interior_day=None,
-            status="Active") -> Vehicle:
-        """A subscribed car. `zone` is a zone name of the site."""
+            status="Active", interior=None) -> Vehicle:
+        """A subscribed car. `zone` is a zone name of the site. At rules version 2
+        every plan with Interior care owes an Interior each service week (SCHS-36),
+        so a car is on an Exterior-only plan unless it names an `interior_day` or
+        `interior=True`; scenarios about Exteriors then see no Interior."""
         vehicle = self.world.add_vehicle(cutoff=cutoff, interior_day=interior_day, status=status)
+        if not (interior if interior is not None else interior_day):
+            self._exterior_only(vehicle)
         if zone:
             vehicle.zone_id = self.zone(zone).id
         self.db.flush()
         return vehicle
+
+    def _exterior_only(self, vehicle: Vehicle) -> None:
+        plan = self.db.scalar(select(Plan).where(Plan.name == "Exterior only (test)"))
+        if plan is None:
+            plan = Plan(name="Exterior only (test)", monthly_price_rupees=999,
+                        includes_interior=False)
+            self.db.add(plan)
+            self.db.flush()
+        sub = self.db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
+        sub.plan_id = plan.id
 
     def cars(self, n: int, **kw) -> list[Vehicle]:
         return [self.car(**kw) for _ in range(n)]
