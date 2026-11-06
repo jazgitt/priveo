@@ -31,7 +31,7 @@ from app.scheduling.models import (
     SchedulingEvent,
     Visit,
 )
-from app.scheduling.solver import SolverCrew, SolverJob, solve_day
+from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
 
 DAY_DONE = ("Completed", "Skipped")
 
@@ -582,6 +582,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     # Where each job sits now, to renumber only the crew days that change (S-13).
     before_place = {job.id: (job.crew_id, job.start_minute, visit.date) for job, visit in rows}
 
+    solver_params = SolverParams.load(db)
     for day, items in by_day.items():
         day_windows = windows.get(day, {})
         free: list[tuple[Job, Visit]] = []
@@ -626,7 +627,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             )
         if not solver_jobs:
             continue
-        result = solve_day(solver_crews(day_windows), solver_jobs)
+        result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
