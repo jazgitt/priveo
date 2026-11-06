@@ -1161,7 +1161,8 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
     me = db.execute(
         select(SchedulingCrew).where(SchedulingCrew.login_id == login_id)
     ).scalar_one_or_none()
-    empty = {"date": day, "society": "", "total": 0, "done": 0, "left": 0, "jobs": []}
+    empty = {"date": day, "society": "", "total": 0, "done": 0, "left": 0, "jobs": [],
+             "day_break": None}
     if me is None:
         return empty
     society = db.get(Society, me.society_id)
@@ -1178,6 +1179,14 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
         .join(Vehicle, Visit.vehicle_id == Vehicle.id)
         .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
     ).all()
+    # The break of the Member whose jobs are shown, as a block that holds no job
+    # (SCHR-BRK-09, version 2 only).
+    from app.scheduling.window_rules import capacity_break
+
+    target_crew = me if target == me.id else db.get(SchedulingCrew, target)
+    brk = capacity_break.visible_break(db, target_crew, day) if target_crew else None
+    if brk is not None:
+        empty["day_break"] = {"start_time": rules.hhmm(brk[0]), "end_time": rules.hhmm(brk[1])}
     rows.sort(key=lambda r: queue._order_key((r[0], r[1])))
     states = queue.states_for(db, [r[0] for r in rows])
     jobs = []

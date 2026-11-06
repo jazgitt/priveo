@@ -23,6 +23,9 @@ export interface CrewDayAvailability {
   status: "Working" | "Partial" | "Off";
   windows: { start: number; end: number }[];
   reason: string;
+  /** The break to draw, in minutes after midnight. Version 2 sites only (SCHS-35). */
+  break_start?: number | null;
+  break_end?: number | null;
 }
 
 export interface DayCapacity {

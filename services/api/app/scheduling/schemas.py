@@ -86,6 +86,9 @@ class CrewDayAvailability(BaseModel):
     status: str  # "Working", "Partial" (late start) or "Off"
     windows: list[CrewDayWindow]
     reason: str
+    # The break to draw on the Board, in minutes after midnight (SCHS-35). Version 2 sites only.
+    break_start: int | None = None
+    break_end: int | None = None
 
 
 class DayCapacity(BaseModel):
@@ -216,6 +219,11 @@ class CrewDayJob(BaseModel):
     current: bool = False
 
 
+class CrewDayBreak(BaseModel):
+    start_time: str  # HH:MM
+    end_time: str
+
+
 class CrewDay(BaseModel):
     date: date
     society: str
@@ -223,6 +231,8 @@ class CrewDay(BaseModel):
     done: int
     left: int
     jobs: list[CrewDayJob]
+    # The break, shown as a block that holds no job (SCHS-35). Version 2 sites only.
+    day_break: CrewDayBreak | None = None
 
 
 class QueueReorder(BaseModel):

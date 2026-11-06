@@ -32,3 +32,13 @@ def capacity_windows(db, crew, day, windows):
         if e > found.end_minute:
             out.append((found.end_minute, e))
     return out
+
+
+def visible_break(db, crew, day):
+    """The (start, end) minutes of the break to draw for the cleaner on `day`,
+    or None: no break, the cleaner's day does not cover it, or the site is not
+    at version 2 (SCHR-BRK-09, SCHS-35)."""
+    if not _active(db, crew.society_id):
+        return None
+    found = breaks.effective_break(db, crew, day)
+    return None if found is None else (found.start_minute, found.end_minute)

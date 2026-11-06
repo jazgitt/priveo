@@ -13,6 +13,18 @@ from app.identity.models import Login
 from app.scheduling import capacity_lines, service
 from app.scheduling import windows as windows_module
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
+from app.scheduling.window_rules import capacity_break
+
+
+def _with_breaks(db: Session, crew, day: date, rows: list[dict]) -> list[dict]:
+    """Adds the break to each working cleaner's availability row (SCHS-35)."""
+    for row in rows:
+        if row["status"] == "Off":
+            continue
+        found = capacity_break.visible_break(db, crew[row["crew_id"]], day)
+        if found is not None:
+            row["break_start"], row["break_end"] = found
+    return rows
 
 
 def capacity(
@@ -99,7 +111,8 @@ def capacity(
             {
                 "date": day,
                 "crew": crew_lines,
-                "availability": service.day_availability(crew, windows[day], day_exceptions[day], day),
+                "availability": _with_breaks(
+                    db, crew, day, service.day_availability(crew, windows[day], day_exceptions[day], day)),
                 "demand": [
                     {"service": svc_name, "source": source, "jobs": n, "minutes": m}
                     for (svc_name, source), (n, m) in sorted(lines[day].items())
