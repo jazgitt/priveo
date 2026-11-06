@@ -98,7 +98,7 @@ describe("WeeklySection", () => {
     expect(screen.getByText("40")).toBeInTheDocument();
     expect(screen.getByText("01-Nov-26")).toBeInTheDocument();
     expect(screen.getByText("09-Nov-26")).toBeInTheDocument();
-    expect(fetchMock.mock.calls[0][0]).toBe("/v1/admin/scheduling/reports/weekly?society_id=s1&start_date=2026-11-08");
+    expect(fetchMock.mock.calls[0][0]).toBe("/v1/admin/scheduling/reports/weekly?society_id=s1&week_start=2026-11-08");
   });
 
   it("shows an empty state when the week has nothing", async () => {

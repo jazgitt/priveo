@@ -63,7 +63,7 @@ export function WeeklySection({ societyId, date }: ReportProps) {
   const start = weekStartOf(date);
   const q = useQuery({
     queryKey: ["report-weekly", societyId, start],
-    queryFn: () => api<Json>(`/v1/admin/scheduling/reports/weekly?society_id=${societyId}&start_date=${start}`),
+    queryFn: () => api<Json>(`/v1/admin/scheduling/reports/weekly?society_id=${societyId}&week_start=${start}`),
     retry: false,
   });
   if (q.error instanceof ApiError && q.error.status === 404) {
