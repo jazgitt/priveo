@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.changes.gateway import ServiceDay
+from app.scheduling import hooks as scheduling_hooks
 from app.scheduling.models import Job, Schedule, Visit
 from app.scheduling.rules import visit_status
 
@@ -57,6 +58,7 @@ class SqlScheduleChangeGateway:
             for job in self._jobs(visit.id):
                 if job.status == frm:
                     job.status = to
+                    scheduling_hooks.job_status_changed(self.db, job, "customer_change")
                     touched = True
             if touched:
                 self._refresh(visit)

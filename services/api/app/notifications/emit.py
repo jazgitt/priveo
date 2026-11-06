@@ -407,6 +407,7 @@ def addon_cancelled(db: Session, booking) -> None:
     cards. Works on the job an add-on request created, if the scheduler made
     one; an add-on that was never scheduled changes nothing here."""
     from app.customers.models import Vehicle
+    from app.scheduling import hooks
     from app.scheduling.models import Job, Schedule, Visit
     from app.scheduling.service import refresh_visit_status
 
@@ -417,6 +418,7 @@ def addon_cancelled(db: Session, booking) -> None:
     for job, visit, schedule in rows:
         vehicle = db.get(Vehicle, visit.vehicle_id)
         job.status = "Skipped"
+        hooks.job_status_changed(db, job, "addon_cancel")
         db.commit()
         refresh_visit_status(db, visit.id)
         db.commit()

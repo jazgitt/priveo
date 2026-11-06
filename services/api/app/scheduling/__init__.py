@@ -15,8 +15,10 @@ from app.scheduling.models import (  # noqa: F401
 
 
 def register(app: FastAPI) -> None:
-    from app.scheduling import router
+    from app.scheduling import router, routes
 
     app.include_router(router.customer)
     app.include_router(router.crew)
     app.include_router(router.admin)
+    for extra in routes.routers():
+        app.include_router(extra)

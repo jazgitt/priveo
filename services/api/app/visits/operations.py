@@ -24,6 +24,7 @@ from app.platform.clock import today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
+from app.scheduling import hooks as scheduling_hooks
 from app.scheduling import service as scheduling
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.outcomes import customer_summary, outcome_of_visit, visit_outcomes
@@ -129,6 +130,7 @@ def skip_job(db, job, body, actor, commit=True):
     if not db.scalar(select(JobOutcome.id).where(JobOutcome.job_id == job.id)):
         db.add(JobOutcome(job_id=job.id, kind="skipped", note=body.note.strip(), by_login_id=actor))
     job.status = "Skipped"
+    scheduling_hooks.job_status_changed(db, job, "visit_skip")
     db.flush()
     scheduling.refresh_visit_status(db, job.visit_id)
     if job.addon_booking_id:
