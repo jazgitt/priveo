@@ -1544,6 +1544,87 @@
     "date": "2026-10-20",
     "cutoff_time": "wire-value"
   },
+  "DailyCleaner": {
+    "cleaner_id": "11111111-1111-1111-1111-111111111111",
+    "name": "wire-value",
+    "break": {},
+    "free_slots": [
+      {}
+    ],
+    "jobs": [
+      {
+        "job_id": "11111111-1111-1111-1111-111111111111",
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "zone": "wire-value",
+        "type": "wire-value",
+        "start_time": "wire-value",
+        "end_time": "wire-value",
+        "cutoff": "wire-value",
+        "exceptions": [
+          {
+            "code": "wire-value",
+            "detail": "wire-value"
+          }
+        ],
+        "cross_zone_reason": "wire-value"
+      }
+    ]
+  },
+  "DailyException": {
+    "code": "wire-value",
+    "detail": "wire-value"
+  },
+  "DailyJob": {
+    "job_id": "11111111-1111-1111-1111-111111111111",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "zone": "wire-value",
+    "type": "wire-value",
+    "start_time": "wire-value",
+    "end_time": "wire-value",
+    "cutoff": "wire-value",
+    "exceptions": [
+      {
+        "code": "wire-value",
+        "detail": "wire-value"
+      }
+    ],
+    "cross_zone_reason": "wire-value"
+  },
+  "DailyView": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "date": "2026-10-20",
+    "cleaners": [
+      {
+        "cleaner_id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value",
+        "break": {},
+        "free_slots": [
+          {}
+        ],
+        "jobs": [
+          {
+            "job_id": "11111111-1111-1111-1111-111111111111",
+            "vehicle_id": "11111111-1111-1111-1111-111111111111",
+            "registration": "wire-value",
+            "zone": "wire-value",
+            "type": "wire-value",
+            "start_time": "wire-value",
+            "end_time": "wire-value",
+            "cutoff": "wire-value",
+            "exceptions": [
+              {
+                "code": "wire-value",
+                "detail": "wire-value"
+              }
+            ],
+            "cross_zone_reason": "wire-value"
+          }
+        ]
+      }
+    ]
+  },
   "DayCapacity": {
     "date": "2026-10-20",
     "capacity_minutes": 1,

@@ -875,6 +875,38 @@ void main() {
     final input = jsonDecode('{"date":"2026-10-20","cutoff_time":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CutoffChangeIn.fromJson(input).toJson(), equals(input));
   });
+  test('DailyCleaner preserves populated wire fields', () {
+    final input = jsonDecode('{"cleaner_id":"11111111-1111-1111-1111-111111111111","name":"wire-value","break":{},"free_slots":[{}],"jobs":[{"job_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","zone":"wire-value","type":"wire-value","start_time":"wire-value","end_time":"wire-value","cutoff":"wire-value","exceptions":[{"code":"wire-value","detail":"wire-value"}],"cross_zone_reason":"wire-value"}]}') as Map<String, dynamic>;
+    expect(wire.DailyCleaner.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyCleaner preserves nullable wire fields', () {
+    final input = jsonDecode('{"cleaner_id":"11111111-1111-1111-1111-111111111111","name":"wire-value","break":null,"free_slots":null,"jobs":[]}') as Map<String, dynamic>;
+    expect(wire.DailyCleaner.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyException preserves populated wire fields', () {
+    final input = jsonDecode('{"code":"wire-value","detail":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.DailyException.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyException preserves nullable wire fields', () {
+    final input = jsonDecode('{"code":"wire-value","detail":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.DailyException.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyJob preserves populated wire fields', () {
+    final input = jsonDecode('{"job_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","zone":"wire-value","type":"wire-value","start_time":"wire-value","end_time":"wire-value","cutoff":"wire-value","exceptions":[{"code":"wire-value","detail":"wire-value"}],"cross_zone_reason":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.DailyJob.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyJob preserves nullable wire fields', () {
+    final input = jsonDecode('{"job_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","zone":"wire-value","type":"wire-value","start_time":"wire-value","end_time":"wire-value","cutoff":"wire-value","exceptions":[],"cross_zone_reason":null}') as Map<String, dynamic>;
+    expect(wire.DailyJob.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyView preserves populated wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","date":"2026-10-20","cleaners":[{"cleaner_id":"11111111-1111-1111-1111-111111111111","name":"wire-value","break":{},"free_slots":[{}],"jobs":[{"job_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","zone":"wire-value","type":"wire-value","start_time":"wire-value","end_time":"wire-value","cutoff":"wire-value","exceptions":[{"code":"wire-value","detail":"wire-value"}],"cross_zone_reason":"wire-value"}]}]}') as Map<String, dynamic>;
+    expect(wire.DailyView.fromJson(input).toJson(), equals(input));
+  });
+  test('DailyView preserves nullable wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","date":"2026-10-20","cleaners":[]}') as Map<String, dynamic>;
+    expect(wire.DailyView.fromJson(input).toJson(), equals(input));
+  });
   test('DayCapacity preserves populated wire fields', () {
     final input = jsonDecode('{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":true,"crew":[{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}],"demand":[{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}],"availability":[{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value"}]}') as Map<String, dynamic>;
     expect(wire.DayCapacity.fromJson(input).toJson(), equals(input));
