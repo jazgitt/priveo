@@ -56,7 +56,8 @@ def run_due(db, now):
             db.rollback()
             continue
         row.status, row.attempts = "Running", row.attempts + 1
-        row.next_attempt_at = now + timedelta(minutes=30)
+        row.next_attempt_at = now + timedelta(
+            minutes=lookup.setting(db, "scheduler.retry_minutes_running"))
         rid = row.id
         db.commit()
         try:
@@ -84,7 +85,8 @@ def run_due(db, now):
             db.rollback()
             row = db.get(AutomaticPlanningRun, rid)
             row.status, row.error = "Error", type(exc).__name__
-            row.next_attempt_at = now + timedelta(minutes=5)
+            row.next_attempt_at = now + timedelta(
+                minutes=lookup.setting(db, "scheduler.retry_minutes_error"))
             db.commit()
             log.exception("automatic planning failed for society %s", sid)
             alerts.raise_alert(db, "planning_error", "Automatic planning failed",
