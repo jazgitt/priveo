@@ -819,6 +819,22 @@ void main() {
     final input = jsonDecode('{"id":"wire-value","society_id":"wire-value","society":"wire-value","effective_from":"2026-10-20","effective_to":null,"pending":false}') as Map<String, dynamic>;
     expect(wire.CrewSocietyStay.fromJson(input).toJson(), equals(input));
   });
+  test('CrewTimesIn preserves populated wire fields', () {
+    final input = jsonDecode('{"reporting_minute":1,"first_job_minute":1}') as Map<String, dynamic>;
+    expect(wire.CrewTimesIn.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewTimesIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"reporting_minute":null,"first_job_minute":null}') as Map<String, dynamic>;
+    expect(wire.CrewTimesIn.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewTimesOut preserves populated wire fields', () {
+    final input = jsonDecode('{"reporting_minute":1,"first_job_minute":1,"site_reporting_minute":1,"site_first_job_minute":1}') as Map<String, dynamic>;
+    expect(wire.CrewTimesOut.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewTimesOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"reporting_minute":null,"first_job_minute":null,"site_reporting_minute":1,"site_first_job_minute":1}') as Map<String, dynamic>;
+    expect(wire.CrewTimesOut.fromJson(input).toJson(), equals(input));
+  });
   test('CronJobOut preserves populated wire fields', () {
     final input = jsonDecode('{"job":"wire-value","label":"wire-value","purpose":"wire-value","schedule_utc":"wire-value","schedule_ist":"wire-value","scheduled_on_vercel":true,"enabled":true,"status":"wire-value","last_run":{"id":"11111111-1111-1111-1111-111111111111","trigger":"wire-value","started_at":"2026-10-20T07:30:00+00:00","finished_at":"2026-10-20T07:30:00+00:00","status":"wire-value","duration_ms":1,"what_it_did":"wire-value","error":"wire-value"},"purpose_achieved":true,"purpose_achieved_text":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CronJobOut.fromJson(input).toJson(), equals(input));

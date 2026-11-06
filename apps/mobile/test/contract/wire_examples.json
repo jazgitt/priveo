@@ -1429,6 +1429,16 @@
     "effective_to": "2026-10-20",
     "pending": true
   },
+  "CrewTimesIn": {
+    "reporting_minute": 1,
+    "first_job_minute": 1
+  },
+  "CrewTimesOut": {
+    "reporting_minute": 1,
+    "first_job_minute": 1,
+    "site_reporting_minute": 1,
+    "site_first_job_minute": 1
+  },
   "CronJobOut": {
     "job": "wire-value",
     "label": "wire-value",
