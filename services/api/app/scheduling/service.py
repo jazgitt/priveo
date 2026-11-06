@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import entitlements, hand_placement, hooks, queue, rules, run_context
+from app.scheduling import entitlements, hand_placement, hooks, queue, rules, run_context, run_counts
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -64,6 +64,10 @@ class RunSummary:
     placed: int
     unscheduled: int
     late: int
+    # Rules version 2 (SCHS-40); 0 at version 1.
+    deferred_interiors: int = 0
+    cross_zone_jobs: int = 0
+    missed_breaks: int = 0
 
 
 def daterange(start: date, end: date) -> list[date]:
@@ -668,13 +672,15 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
         placed=sum(1 for j in all_jobs if j.crew_id is not None and j.status != "Skipped"),
         unscheduled=sum(1 for j in all_jobs if j.crew_id is None and j.status == "Scheduled"),
         late=sum(1 for j in all_jobs if j.late),
+        **run_counts.counts(ctx, all_jobs),
     )
     record(
         db,
         schedule.id,
         admin_id,
         "assign-late" if frozen else "rerun",
-        f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}",
+        f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}"
+        + run_counts.detail(ctx, vars(summary), all_jobs),
     )
     ctx.save()
     db.commit()

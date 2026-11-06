@@ -24,6 +24,11 @@ class RunResult(BaseModel):
     unassigned_exteriors: int | None = None
     shortfall_cars: int | None = None
     shortfall_minutes: int | None = None
+    # Rules version 2 (SCHS-40): Interiors deferred or not planned, jobs placed
+    # outside the cleaner's home zone, and missed breaks. 0 on a site on version 1.
+    deferred_interiors: int = 0
+    cross_zone_jobs: int = 0
+    missed_breaks: int = 0
 
 
 class RunResponse(BaseModel):
