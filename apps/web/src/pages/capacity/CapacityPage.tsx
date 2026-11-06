@@ -83,6 +83,9 @@ export function CapacityPage() {
                      rows={(d.demand ?? []).map((l) => ({
                        key: l.service + l.source, left: `${l.service}${l.source === "Add-on" ? " (add-on)" : ""}`,
                        right: fmtHours(l.minutes), note: `${l.jobs} ${l.jobs === 1 ? "job" : "jobs"}` }))} />) },
+              { key: "b", header: "Break not counted", width: "9rem", align: "right", cell: (d) => (d.break_minutes ? fmtHours(d.break_minutes) : "-") },
+              { key: "e", header: "Early band free", width: "9rem", align: "right", cell: (d) => (
+                d.early_band_free_minutes ? <span title="Free time before the Interior-earliest time, available for onboarding">{fmtHours(d.early_band_free_minutes)}</span> : "-") },
               { key: "s", header: "Scheduled", width: "8rem", align: "right", cell: (d) => fmtHours(d.scheduled_minutes) },
               { key: "u", header: "Use", cell: (d) => {
                 const pct = d.capacity_minutes > 0 ? Math.min(100, Math.round((d.demand_minutes / d.capacity_minutes) * 100)) : d.demand_minutes > 0 ? 100 : 0;

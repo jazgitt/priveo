@@ -9,6 +9,7 @@ import {
   fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa, isUnplaced, jobLabel, matches, minutesOf, Reasoning,
   serviceCode, SNAP, statusClass, typeClass, windowsOf,
 } from "./Board";
+import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
@@ -267,10 +268,10 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   };
 
   /** A member's day in time order: cards, free slots and the time between slots. */
-  const lane = (member: SchedulingCrew, mine: AdminJob[], wins: { start: number; end: number }[]) => {
+  const lane = (member: SchedulingCrew, mine: AdminJob[], wins: { start: number; end: number }[], brk: { start: number; end: number } | null) => {
     const items: { start: number; node: () => ReactNode; card?: AdminJob }[] = [
       ...mine.map((j) => ({ start: j.start_minute!, card: j, node: () => card(j) })),
-      ...freeSlots(wins, mine).map((g) => ({ start: g.start, node: () => {
+      ...freeSlots(aroundBreak(wins, brk), mine).map((g) => ({ start: g.start, node: () => {
         const here = over?.col === member.id && over.gap === g.start;
         const tight = here && dragged !== null && g.end - g.start < dragged.duration_minutes;
         return (
@@ -282,6 +283,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           </div>
         );
       } })),
+      // The break holds no job: a block at the cleaner's break time (SCHR-BRK-09).
+      ...(brk ? [{ start: brk.start, node: () => <BreakBlock key="break" start={brk.start} end={brk.end} /> }] : []),
       ...(wins.length ? gaps(wins, Math.min(...wins.map((w) => w.start)), Math.max(...wins.map((w) => w.end))) : [])
         .map((g) => ({ start: g.start, node: () => (
           <div key={`off-${g.start}`} className="sch-break">Not working {hhmm(g.start)}-{hhmm(g.end)}</div>
@@ -331,7 +334,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           const closed = avail?.status === "Off";
           const wins = windowsOf(member, avail);
           const mine = jobs.filter((j) => j.crew_id === member.id && j.start_minute !== null).sort(byStart);
-          const available = minutesOf(wins);
+          const brk = breakOf(avail);
+          const available = minutesOf(aroundBreak(wins, brk));
           const booked = mine.reduce((n, j) => n + j.duration_minutes, 0);
           const pct = available ? Math.round((booked / available) * 100) : 0;
           const fold = folded.has(member.id);
@@ -387,7 +391,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
               <Scroller axis="y" wrapClassName="sch-col-scroll" className="sch-col-body"
                         onDragOver={dragOver(member.id)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(member)(e)}>
                 {closed ? <p className="sch-col-empty">{avail?.reason || "Cannot take work this day."}</p>
-                  : lane(member, mine, wins)}
+                  : lane(member, mine, wins, brk)}
               </Scroller>
             </section>
           );

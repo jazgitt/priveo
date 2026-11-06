@@ -16,7 +16,7 @@ from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
-from app.scheduling import crew_rules
+from app.scheduling import crew_rules, home_zone
 from app.scheduling.models import SchedulingCrew
 
 router = APIRouter(prefix="/v1/admin/crew", tags=["admin"])
@@ -78,3 +78,55 @@ def put_times(crew_id: uuid.UUID, body: CrewTimesIn, user: User = Depends(requir
         audit(db, user.id, "crew", member.id, "update", diff)
     db.commit()
     return _out(db, sc)
+
+
+class ZoneChoice(BaseModel):
+    id: str
+    name: str
+
+
+class HomeZoneIn(BaseModel):
+    """null clears the home zone."""
+    home_zone_id: uuid.UUID | None = None
+
+
+class HomeZoneOut(BaseModel):
+    home_zone_id: str | None  # the zone in force; a Trainee shows the Member's
+    follows_member: str | None  # the Member's name when a Trainee follows one
+    editable: bool
+    zones: list[ZoneChoice]
+
+
+def _zone_out(db: Session, sc: SchedulingCrew) -> HomeZoneOut:
+    mate = home_zone.paired_member(db, sc)
+    mate_name = None
+    if mate is not None:
+        mate_member = db.scalar(select(CrewMember).where(CrewMember.login_id == mate.login_id))
+        mate_name = mate_member.name if mate_member else None
+    zone_id = home_zone.effective_zone_id(db, sc)
+    return HomeZoneOut(
+        home_zone_id=str(zone_id) if zone_id else None,
+        follows_member=mate_name, editable=sc.role != "Trainee",
+        zones=[ZoneChoice(id=str(z.id), name=z.name) for z in home_zone.zones_of(db, sc.society_id)])
+
+
+@router.get("/{crew_id}/home-zone", response_model=HomeZoneOut)
+def get_home_zone(crew_id: uuid.UUID, _: User = Depends(require_role("admin")),
+                  db: Session = Depends(get_db)):
+    """The home zone in force and the zones of the cleaner's society to pick from."""
+    return _zone_out(db, _load(db, crew_id)[1])
+
+
+@router.put("/{crew_id}/home-zone", response_model=HomeZoneOut)
+def put_home_zone(crew_id: uuid.UUID, body: HomeZoneIn, user: User = Depends(require_role("admin")),
+                  db: Session = Depends(get_db)):
+    """Sets or clears the home zone (SCHR-ZONE-07) and audits the change."""
+    member, sc = _load(db, crew_id)
+    old = sc.home_zone_id
+    home_zone.set_home_zone(db, sc, body.home_zone_id)
+    if old != sc.home_zone_id:
+        audit(db, user.id, "crew", member.id, "update",
+              {"home_zone_id": [str(old) if old else None,
+                                str(sc.home_zone_id) if sc.home_zone_id else None]})
+    db.commit()
+    return _zone_out(db, sc)

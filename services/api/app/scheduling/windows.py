@@ -53,3 +53,12 @@ def capacity_lines(db, society_id, day) -> list[dict]:
         if hasattr(m, "capacity_lines"):
             out.extend(m.capacity_lines(db, society_id, day) or [])
     return out
+
+
+def capacity_windows(db, crew, day, windows):
+    """A cleaner's windows as capacity counts them: the rules may take time out
+    (the break, SCHS-34). The planner does not use this."""
+    for m in window_rules.discover():
+        if hasattr(m, "capacity_windows"):
+            windows = m.capacity_windows(db, crew, day, windows)
+    return windows
