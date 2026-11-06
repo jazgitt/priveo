@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import queue, rules
+from app.scheduling import hooks, queue, rules, run_context
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     DURATIONS,
@@ -493,9 +493,11 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     nothing moves: only jobs without a crew member are placed, without
     unfreezing (ADM-SCH-27)."""
     frozen = schedule.status == "Frozen"
+    ctx = run_context.start(db, schedule, admin_id)
     before = emit.assignment_snapshot(db, schedule)  # notify hook
     days = daterange(schedule.start_date, schedule.end_date)
     demand = build_demand(db, schedule.society_id, days)
+    demand = hooks.demand_providers(ctx, demand)
     durations = lookup.durations(db)
 
     visits = {
@@ -559,6 +561,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             )
         elif not frozen or job.crew_id is None:
             job.finish_by_minute = item.finish_by
+            hooks.sync_existing_job(ctx, job, item)
     # Work that is no longer due (a vehicle made Inactive, an add-on moved):
     # removing it needs no code (ADM-SCH-29).
     for key, job in existing.items():
@@ -637,6 +640,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 job.crew_id, job.start_minute = None, None
                 job.note = result.unplaced[key]
             job.late = key in result.late
+        hooks.after_solve(ctx, day, items, result)
     db.flush()
     touched: set = set()
     for job, visit in rows:
@@ -668,6 +672,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
         "assign-late" if frozen else "rerun",
         f"placed {summary.placed}, unscheduled {summary.unscheduled}, late {summary.late}",
     )
+    ctx.save()
     db.commit()
     emit.late_assignments(db, schedule, before)  # notify hook
     return summary
@@ -880,6 +885,7 @@ def set_job_status(db: Session, job_id: uuid.UUID, status: str) -> Job:
     job.status = status
     db.flush()
     refresh_visit_status(db, job.visit_id)
+    hooks.job_status_changed(db, job, "crew")
     db.commit()
     emit.job_status_changed(db, job)  # notify hook
     return job
