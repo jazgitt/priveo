@@ -163,6 +163,8 @@ class AdminJob(BaseModel):
     queue_unlocked: bool = False
     # Rules version 2 only (SCHS-21): the code of the reason an unassigned job has no place.
     reason_code: str | None = None
+    # Rules version 2 only (SCHS-45): why the job sits outside its cleaner's home zone.
+    cross_zone_reason: str | None = None
 
 
 class Board(BaseModel):

@@ -262,6 +262,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           <span className="sch-card-who">{job.customer_name} · {job.vehicle}</span>
         )}
         {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
+        {job.crew_id && job.cross_zone_reason && density !== "compact" && <span className="sch-why">Cross-zone: {job.cross_zone_reason}</span>}
         {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
       </div>
     );
