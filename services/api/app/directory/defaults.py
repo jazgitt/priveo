@@ -11,11 +11,14 @@ DURATIONS = {"Cleaning-External": 30, "Cleaning-Internal": 30, "Deep Spa": 120}
 # (ADM-CHK-06). The owner has not given the numbers.
 PROOF_MINIMUMS = {"Cleaning-External": (2, 1), "Cleaning-Internal": (2, 1), "Deep Spa": (2, 1)}
 
-# ADM-SVS-05: (start, end) in minutes after midnight, on every day of the week.
+# ADM-SVS-05, SCHR-PAR-03: (start, end, open weekdays). Monday is 0. The weekly-off
+# weekday (Wednesday, 2, the owner's default of 05-Nov-26) is left out for all three
+# services, so the site is closed that day. The settings registry has no weekly-off
+# key yet, so the default lives here.
 DEFAULT_SLOT_WINDOWS = {
-    "Cleaning-External": (5 * 60, 11 * 60),
-    "Cleaning-Internal": (5 * 60, 11 * 60),
-    "Deep Spa": (0, 1440),
+    "Cleaning-External": (5 * 60, 11 * 60, [0, 1, 3, 4, 5, 6]),
+    "Cleaning-Internal": (5 * 60, 11 * 60, [0, 1, 3, 4, 5, 6]),
+    "Deep Spa": (0, 1440, [0, 1, 3, 4, 5, 6]),
 }
 
 # ADM-CHK-07. Cleaning-External is the prototype's list. The other two are

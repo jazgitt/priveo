@@ -136,7 +136,7 @@ class Scenario:
         site = site or self.site
         days = [d for d in ALL_DAYS if d not in off]
         for service_name in services:
-            s, e = defaults.DEFAULT_SLOT_WINDOWS[service_name]
+            s, e, _days = defaults.DEFAULT_SLOT_WINDOWS[service_name]
             self.db.add(WorkingSlot(society_id=site.id, service=service_name,
                                     start_minute=s if start is None else start,
                                     end_minute=e if end is None else end, days=days))
