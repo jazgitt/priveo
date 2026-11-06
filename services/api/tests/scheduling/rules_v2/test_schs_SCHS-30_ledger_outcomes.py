@@ -196,3 +196,17 @@ def test_schr_dur_01_a_service_without_a_configured_duration_keeps_its_own(world
     job = SimpleNamespace(status="Scheduled", service="No such service", duration_minutes=45)
     duration.sync(SimpleNamespace(frozen=False, db=world.db), job, None)
     assert job.duration_minutes == 45
+
+
+def test_schr_int_16_a_planned_interior_whose_job_is_gone_goes_back_to_pending(sc):
+    # The planner finds the row planned but holds no job for it. The row is put
+    # back to pending and planned again in the same run: it is not lost.
+    car = sc.car(interior=True)
+    row, _job = _planned(sc, car, WEEK1, WEEK1)
+    sc.db.commit()
+    row = sc.db.get(InteriorEntitlement, row.id)
+    row.job_id = None
+    sc.db.commit()
+    sc.run(WEEK1, days=7)
+    row = sc.db.get(InteriorEntitlement, row.id)
+    assert row.status == entitlements.PLANNED and row.job_id is not None

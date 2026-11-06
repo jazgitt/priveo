@@ -1616,7 +1616,7 @@ void main() {
     expect(wire.NewCrew.fromJson(input).toJson(), equals(input));
   });
   test('NewCrew preserves nullable wire fields', () {
-    final input = jsonDecode('{"name":"wire-value","mobile":"wire-value","society_id":"11111111-1111-1111-1111-111111111111","role":"wire-value","working_hours":null,"paired_member_id":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"name":"wire-value","mobile":"wire-value","society_id":"11111111-1111-1111-1111-111111111111","role":"wire-value","working_hours":[],"paired_member_id":null}') as Map<String, dynamic>;
     expect(wire.NewCrew.fromJson(input).toJson(), equals(input));
   });
   test('NextService preserves populated wire fields', () {

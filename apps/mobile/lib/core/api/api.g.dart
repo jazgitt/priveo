@@ -6542,7 +6542,7 @@ class NewCrew {
   final String mobile;
   final String societyId;
   final String role;
-  final List<DayHours>? workingHours;
+  final List<DayHours> workingHours;
   final String? pairedMemberId;
 
   factory NewCrew.fromJson(Map<String, dynamic> j) => NewCrew(
@@ -6550,7 +6550,7 @@ class NewCrew {
         mobile: j['mobile'] as String,
         societyId: j['society_id'] as String,
         role: j['role'] as String,
-        workingHours: j['working_hours'] == null ? null : [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
+        workingHours: [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
         pairedMemberId: j['paired_member_id'] == null ? null : j['paired_member_id'] as String,
       );
 
@@ -6559,7 +6559,7 @@ class NewCrew {
         'mobile': mobile,
         'society_id': societyId,
         'role': role,
-        'working_hours': workingHours == null ? null : [for (final x in workingHours!) x.toJson()],
+        'working_hours': [for (final x in workingHours) x.toJson()],
         'paired_member_id': pairedMemberId,
       };
 }

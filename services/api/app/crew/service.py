@@ -63,8 +63,8 @@ class NewCrew(BaseModel):
     mobile: str
     society_id: uuid.UUID
     role: str
-    # Left out, the hours come from the society's working slots (ADM-CRW-25).
-    working_hours: list[DayHours] | None = None
+    # Mandatory: the admin enters the hours of every crew member (ADM-CRW-04, ADM-CRW-25).
+    working_hours: list[DayHours]
     # A Trainee is onboarded with the Member they are paired with (ADM-CRW-19).
     paired_member_id: uuid.UUID | None = None
 
@@ -539,12 +539,7 @@ class CrewService:
         society = self._db.get(Society, body.society_id)
         if society is None:
             raise _problem("Choose a society.", society_id="Choose a society.")
-        if body.working_hours is None:
-            # Hours are mandatory: nothing is copied or assumed (owner, 06-Nov-26).
-            raise _problem(
-                "Give the working hours for each day.",
-                working_hours="Give all seven days.")
-        hours = check_hours(body.working_hours)
+        hours = check_hours(body.working_hours)  # mandatory; nothing is copied or assumed
         mate_sc = None
         if body.role == "Trainee":
             if body.paired_member_id is None:

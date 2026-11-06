@@ -85,4 +85,4 @@ def test_a_new_crew_member_without_hours_is_refused(client, db, society):
     data.pop("working_hours")
     r = client.post("/v1/admin/crew", json=data, headers=admin(client))
     assert r.status_code == 422, r.text
-    assert "working hours" in r.text
+    assert "working_hours" in r.text
