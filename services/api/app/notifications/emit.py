@@ -141,9 +141,9 @@ def job_status_changed(db: Session, job) -> None:
         _service_completed(db, job)
     elif job.status == "Skipped":
         _skipped_by_operations(db, job)
-    elif job.status == "Could not complete":
+    elif job.status in ("Could not complete", "Deferred"):
         _job_missed(db, job)
-    if job.status in ("Completed", "Could not complete"):
+    if job.status in ("Completed", "Could not complete", "Deferred"):
         _visit_partly_done(db, job)
 
 

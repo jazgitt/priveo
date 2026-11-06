@@ -31,6 +31,9 @@ SHORT_NAME = {
     "Deep Spa": "Deep Spa",
 }
 _OPEN = ("Scheduled", "In progress")
+# A job that was not done: missed, or deferred because the car or keys were not
+# available (SCHS-31). Either way the visit is never Completed.
+NOT_DONE = ("Could not complete", "Deferred")
 
 
 def outcome_of(
@@ -47,7 +50,7 @@ def outcome_of(
         return "Scheduled"
     if all(s == "Skipped" for s in statuses):
         return "Cancelled"
-    missed = any(s == "Could not complete" for s in statuses)
+    missed = any(s in NOT_DONE for s in statuses)
     if not missed:
         return "Completed"
     if any(s == "Completed" for s in statuses):
@@ -124,7 +127,7 @@ def visit_outcomes(db: Session, visit_ids: Iterable[uuid.UUID]) -> dict[uuid.UUI
     out = {}
     for vid, rows in by_visit.items():
         rows.sort(key=lambda j: (SERVICE_ORDER.get(j.service, len(SERVICE_ORDER)), str(j.id)))
-        missed_rows = [j for j in rows if j.status == "Could not complete"]
+        missed_rows = [j for j in rows if j.status in NOT_DONE]
         rescheduled = bool(missed_rows) and all(j.id in followed for j in missed_rows)
         cancelled = bool(rows) and all(j.addon_booking_id in cancelled_bookings for j in rows)
         o = VisitOutcome(

@@ -76,12 +76,8 @@ def after_solve(ctx, day, items, result) -> None:
         fn(ctx, day, items, result)
 
 
-def job_status_changed(db, job, source: str) -> None:
-    """Nothing is read from the database unless a handler exists and the job's
-    site is on rules version 2."""
-    handlers = list(_each("hook_handlers", "on_status_change"))
-    if not handlers:
-        return
+def job_rules_version(db, job) -> int:
+    """The rules version of the site a job belongs to (1 when unknown)."""
     from sqlalchemy import select
 
     from app.scheduling.models import Schedule, Visit
@@ -89,7 +85,16 @@ def job_status_changed(db, job, source: str) -> None:
     society_id = db.scalar(
         select(Schedule.society_id).join(Visit, Visit.schedule_id == Schedule.id)
         .where(Visit.id == job.visit_id))
-    if society_id is None or _version(db, society_id) != 2:
+    return 1 if society_id is None else _version(db, society_id)
+
+
+def job_status_changed(db, job, source: str) -> None:
+    """Nothing is read from the database unless a handler exists and the job's
+    site is on rules version 2."""
+    handlers = list(_each("hook_handlers", "on_status_change"))
+    if not handlers:
+        return
+    if job_rules_version(db, job) != 2:
         return
     for fn in handlers:
         fn(db, job, source)

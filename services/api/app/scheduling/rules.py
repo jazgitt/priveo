@@ -37,7 +37,9 @@ def customer_can_change(day: date, now: datetime, hour: int | None = None) -> bo
 
 
 def visit_status(job_statuses: Iterable[str]) -> str:
-    """A visit is Completed only when all its jobs are done or skipped."""
+    """A visit is Completed only when all its jobs are done or skipped. A Deferred
+    job (SCHS-31) is not done, so it keeps the visit from Completed and the visit
+    reads Could not complete, as for any job that was not done."""
     statuses = list(job_statuses)
     if not statuses:
         return "Scheduled"

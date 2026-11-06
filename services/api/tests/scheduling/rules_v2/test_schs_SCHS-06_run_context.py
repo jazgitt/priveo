@@ -138,7 +138,10 @@ def test_schr_cfg_08_version_2_run_stores_the_values_it_used(world, api, calls):
     assert len(rows) == 2
     assert rows[0].values == lookup.site_settings_all(world.db, world.society.id)
     findings = list(world.db.scalars(select(ScheduleFinding)))
-    assert [f.code for f in findings] == ["T"] * len(findings) and findings  # last run only
+    # Last run only: one finding of each kind and job. The Interior the ledger now
+    # plans (SCHS-36) can add an unassigned-reason finding of its own.
+    mine = [f for f in findings if f.code == "T"]
+    assert mine and len({(f.code, f.job_id) for f in findings}) == len(findings)
     assert len({f.id for f in findings}) == len(findings)
 
 
@@ -183,9 +186,15 @@ def test_schr_cfg_08_status_hook_needs_a_handler_and_version_2(world, api, calls
 def test_schr_cfg_07_no_handlers_means_no_change_to_the_plan(world, api):
     schedule = _plan(world)
     service.run_schedule(world.db, schedule, None)
-    before = {j.id: (j.crew_id, j.start_minute, j.status) for j in world.db.scalars(select(Job))}
+    # Version 2 now plans Interiors from the ledger (SCHS-36), so only the
+    # Exterior jobs are compared: the handlers change none of them.
+    def plan():
+        return {j.id: (j.crew_id, j.start_minute, j.status) for j in world.db.scalars(
+            select(Job).where(Job.service == "Cleaning-External"))}
+
+    before = plan()
     _version(world, 2)
     service.run_schedule(world.db, schedule, None)
     world.db.expire_all()
-    assert {j.id: (j.crew_id, j.start_minute, j.status) for j in world.db.scalars(select(Job))} == before
+    assert plan() == before
     assert run_context.RunContext  # the context is part of the public seam

@@ -210,10 +210,14 @@ class DirectorySlotOut(BaseModel):
 
 class DirectoryReasonCreate(BaseModel):
     label: str = Field(min_length=1, max_length=120)
+    # Rules version 2 (SCHS-31): the reason defers the job instead of ending it.
+    defers: bool = False
 
 
 class DirectoryReasonUpdate(BaseModel):
     label: str = Field(min_length=1, max_length=120)
+    # Left out, the setting is not changed.
+    defers: bool | None = None
 
 
 class DirectoryReasonOut(BaseModel):
@@ -222,6 +226,7 @@ class DirectoryReasonOut(BaseModel):
     label: str
     sort_order: int
     active: bool
+    defers: bool = False
 
 
 # ---- settings --------------------------------------------------------------------
