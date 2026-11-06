@@ -78,6 +78,6 @@ def daily_cleaner_view(
         cleaner.jobs.append(DailyJob(
             job_id=r["id"], vehicle_id=r["vehicle_id"], registration=r["registration"],
             zone=r["zone"], type=SHORT_NAME.get(r["service"], r["service"]),
-            start_time=r["start_time"], end_time=r["end_time"], cutoff=r["finish_by"],
+            start_time=r["start_time"], end_time=r["end_time"], cutoff=r["finish_by"] or "",
             exceptions=findings.get(r["id"], []), cross_zone_reason=reasons.get(r["id"])))
     return DailyView(society_id=society_id, date=date, cleaners=list(cleaners.values()))
