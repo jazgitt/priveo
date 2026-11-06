@@ -518,6 +518,32 @@
       }
     ]
   },
+  "BreakRuleIn": {
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "start_minute": 1,
+    "end_minute": 1,
+    "enabled": true
+  },
+  "BreakRuleOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "start_minute": 1,
+    "end_minute": 1,
+    "enabled": true
+  },
+  "BreakRuleUpdate": {
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "start_minute": 1,
+    "end_minute": 1,
+    "enabled": true
+  },
   "BulkReassign": {
     "job_ids": [
       "11111111-1111-1111-1111-111111111111"
@@ -2024,6 +2050,13 @@
   },
   "DirectoryZoneUpdate": {
     "name": "wire-value"
+  },
+  "EffectiveBreak": {
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "date": "2026-10-20",
+    "start_minute": 1,
+    "end_minute": 1,
+    "source": "wire-value"
   },
   "EmailCorrection": {
     "email": "wire-value"

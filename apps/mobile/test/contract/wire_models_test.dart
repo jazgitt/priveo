@@ -299,6 +299,30 @@ void main() {
     final input = jsonDecode('{"schedule":{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","society_name":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","status":"wire-value","frozen_at":null,"freeze_deadline":"2026-10-20T07:30:00+00:00"},"days":[],"crew":[],"jobs":[]}') as Map<String, dynamic>;
     expect(wire.Board.fromJson(input).toJson(), equals(input));
   });
+  test('BreakRuleIn preserves populated wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","crew_id":"11111111-1111-1111-1111-111111111111","start_date":"2026-10-20","end_date":"2026-10-20","start_minute":1,"end_minute":1,"enabled":true}') as Map<String, dynamic>;
+    expect(wire.BreakRuleIn.fromJson(input).toJson(), equals(input));
+  });
+  test('BreakRuleIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","crew_id":null,"start_date":null,"end_date":null,"start_minute":null,"end_minute":null,"enabled":false}') as Map<String, dynamic>;
+    expect(wire.BreakRuleIn.fromJson(input).toJson(), equals(input));
+  });
+  test('BreakRuleOut preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","crew_id":"11111111-1111-1111-1111-111111111111","start_date":"2026-10-20","end_date":"2026-10-20","start_minute":1,"end_minute":1,"enabled":true}') as Map<String, dynamic>;
+    expect(wire.BreakRuleOut.fromJson(input).toJson(), equals(input));
+  });
+  test('BreakRuleOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","crew_id":null,"start_date":null,"end_date":null,"start_minute":null,"end_minute":null,"enabled":false}') as Map<String, dynamic>;
+    expect(wire.BreakRuleOut.fromJson(input).toJson(), equals(input));
+  });
+  test('BreakRuleUpdate preserves populated wire fields', () {
+    final input = jsonDecode('{"start_date":"2026-10-20","end_date":"2026-10-20","start_minute":1,"end_minute":1,"enabled":true}') as Map<String, dynamic>;
+    expect(wire.BreakRuleUpdate.fromJson(input).toJson(), equals(input));
+  });
+  test('BreakRuleUpdate preserves nullable wire fields', () {
+    final input = jsonDecode('{"start_date":null,"end_date":null,"start_minute":null,"end_minute":null,"enabled":null}') as Map<String, dynamic>;
+    expect(wire.BreakRuleUpdate.fromJson(input).toJson(), equals(input));
+  });
   test('BulkReassign preserves populated wire fields', () {
     final input = jsonDecode('{"job_ids":["11111111-1111-1111-1111-111111111111"],"from_crew_id":"11111111-1111-1111-1111-111111111111","date":"2026-10-20","to_crew_id":"11111111-1111-1111-1111-111111111111","reason":"wire-value"}') as Map<String, dynamic>;
     expect(wire.BulkReassign.fromJson(input).toJson(), equals(input));
@@ -1218,6 +1242,14 @@ void main() {
   test('DirectoryZoneUpdate preserves nullable wire fields', () {
     final input = jsonDecode('{"name":"wire-value"}') as Map<String, dynamic>;
     expect(wire.DirectoryZoneUpdate.fromJson(input).toJson(), equals(input));
+  });
+  test('EffectiveBreak preserves populated wire fields', () {
+    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","date":"2026-10-20","start_minute":1,"end_minute":1,"source":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.EffectiveBreak.fromJson(input).toJson(), equals(input));
+  });
+  test('EffectiveBreak preserves nullable wire fields', () {
+    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","date":"2026-10-20","start_minute":null,"end_minute":null,"source":null}') as Map<String, dynamic>;
+    expect(wire.EffectiveBreak.fromJson(input).toJson(), equals(input));
   });
   test('EmailCorrection preserves populated wire fields', () {
     final input = jsonDecode('{"email":"wire-value"}') as Map<String, dynamic>;

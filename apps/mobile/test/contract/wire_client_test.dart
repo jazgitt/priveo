@@ -315,6 +315,14 @@ void main() {
     http.status=409;
     await expectLater(api.freezeDue(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('POST /v1/admin/scheduling/break-rules uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.createRule(wire.BreakRuleIn.fromJson((http.examples['BreakRuleIn'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/scheduling/break-rules'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['BreakRuleIn']);
+    http.status=409;
+    await expectLater(api.createRule(wire.BreakRuleIn.fromJson((http.examples['BreakRuleIn'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
   test('POST /v1/customer/notifications/read-all uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
     await api.readAll();
