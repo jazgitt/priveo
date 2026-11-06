@@ -50,6 +50,13 @@ def test_each_service_follows_its_own_slots(world):
 
 
 def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world, run_week):
+    from app.directory import lookup
+    from app.directory.models import DirectoryService
+    for order, name in enumerate(("Cleaning-External", "Cleaning-Internal")):
+        # This test is not about the default length: pin both cleans to 20.
+        world.db.add(DirectoryService(name=name, duration_minutes=20, min_photos=2,
+                                      min_videos=1, sort_order=order))
+    lookup.invalidate()
     world.add_crew()
     for _ in range(3):
         world.add_vehicle(cutoff=time(8, 0))

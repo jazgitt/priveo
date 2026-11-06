@@ -340,12 +340,12 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 60,
+   "demand_minutes": 90,
    "over_capacity": false,
    "scheduled_minutes": 0
   },
@@ -416,18 +416,18 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     },
     {
      "jobs": 1,
-     "minutes": 20,
+     "minutes": 30,
      "service": "Cleaning-Internal",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 80,
+   "demand_minutes": 120,
    "over_capacity": false,
    "scheduled_minutes": 0
   },
@@ -487,12 +487,12 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 60,
+   "demand_minutes": 90,
    "over_capacity": false,
    "scheduled_minutes": 0
   },
@@ -563,12 +563,12 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 60,
+   "demand_minutes": 90,
    "over_capacity": false,
    "scheduled_minutes": 0
   },
@@ -639,12 +639,12 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 60,
+   "demand_minutes": 90,
    "over_capacity": false,
    "scheduled_minutes": 0
   },
@@ -715,12 +715,12 @@
    "demand": [
     {
      "jobs": 3,
-     "minutes": 60,
+     "minutes": 90,
      "service": "Cleaning-External",
      "source": "Subscription"
     }
    ],
-   "demand_minutes": 60,
+   "demand_minutes": 90,
    "over_capacity": false,
    "scheduled_minutes": 0
   }
