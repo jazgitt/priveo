@@ -1452,6 +1452,122 @@ class Board {
       };
 }
 
+class BreakRuleIn {
+  const BreakRuleIn({
+    required this.societyId,
+    required this.crewId,
+    required this.startDate,
+    required this.endDate,
+    required this.startMinute,
+    required this.endMinute,
+    this.enabled,
+  });
+
+  final String societyId;
+  final String? crewId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int? startMinute;
+  final int? endMinute;
+  final bool? enabled;
+
+  factory BreakRuleIn.fromJson(Map<String, dynamic> j) => BreakRuleIn(
+        societyId: j['society_id'] as String,
+        crewId: j['crew_id'] == null ? null : j['crew_id'] as String,
+        startDate: j['start_date'] == null ? null : DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+        startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+        endMinute: j['end_minute'] == null ? null : j['end_minute'] as int,
+        enabled: j['enabled'] == null ? null : j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'crew_id': crewId,
+        'start_date': startDate == null ? null : _date(startDate!),
+        'end_date': endDate == null ? null : _date(endDate!),
+        'start_minute': startMinute,
+        'end_minute': endMinute,
+        'enabled': enabled,
+      };
+}
+
+class BreakRuleOut {
+  const BreakRuleOut({
+    required this.id,
+    required this.societyId,
+    required this.crewId,
+    required this.startDate,
+    required this.endDate,
+    required this.startMinute,
+    required this.endMinute,
+    required this.enabled,
+  });
+
+  final String id;
+  final String societyId;
+  final String? crewId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int? startMinute;
+  final int? endMinute;
+  final bool enabled;
+
+  factory BreakRuleOut.fromJson(Map<String, dynamic> j) => BreakRuleOut(
+        id: j['id'] as String,
+        societyId: j['society_id'] as String,
+        crewId: j['crew_id'] == null ? null : j['crew_id'] as String,
+        startDate: j['start_date'] == null ? null : DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+        startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+        endMinute: j['end_minute'] == null ? null : j['end_minute'] as int,
+        enabled: j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'society_id': societyId,
+        'crew_id': crewId,
+        'start_date': startDate == null ? null : _date(startDate!),
+        'end_date': endDate == null ? null : _date(endDate!),
+        'start_minute': startMinute,
+        'end_minute': endMinute,
+        'enabled': enabled,
+      };
+}
+
+class BreakRuleUpdate {
+  const BreakRuleUpdate({
+    required this.startDate,
+    required this.endDate,
+    required this.startMinute,
+    required this.endMinute,
+    required this.enabled,
+  });
+
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final int? startMinute;
+  final int? endMinute;
+  final bool? enabled;
+
+  factory BreakRuleUpdate.fromJson(Map<String, dynamic> j) => BreakRuleUpdate(
+        startDate: j['start_date'] == null ? null : DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+        startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+        endMinute: j['end_minute'] == null ? null : j['end_minute'] as int,
+        enabled: j['enabled'] == null ? null : j['enabled'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start_date': startDate == null ? null : _date(startDate!),
+        'end_date': endDate == null ? null : _date(endDate!),
+        'start_minute': startMinute,
+        'end_minute': endMinute,
+        'enabled': enabled,
+      };
+}
+
 class BulkReassign {
   const BulkReassign({
     required this.jobIds,
@@ -5229,6 +5345,38 @@ class DirectoryZoneUpdate {
 
   Map<String, dynamic> toJson() => {
         'name': name,
+      };
+}
+
+class EffectiveBreak {
+  const EffectiveBreak({
+    required this.crewId,
+    required this.date,
+    required this.startMinute,
+    required this.endMinute,
+    required this.source,
+  });
+
+  final String crewId;
+  final DateTime date;
+  final int? startMinute;
+  final int? endMinute;
+  final String? source;
+
+  factory EffectiveBreak.fromJson(Map<String, dynamic> j) => EffectiveBreak(
+        crewId: j['crew_id'] as String,
+        date: DateTime.parse(j['date'] as String),
+        startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+        endMinute: j['end_minute'] == null ? null : j['end_minute'] as int,
+        source: j['source'] == null ? null : j['source'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'crew_id': crewId,
+        'date': _date(date),
+        'start_minute': startMinute,
+        'end_minute': endMinute,
+        'source': source,
       };
 }
 
@@ -9740,6 +9888,16 @@ class PriveoApi {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/freeze-due');
       return FreezeDue.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Create Rule
+  Future<BreakRuleOut> createRule(BreakRuleIn body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/break-rules', data: body.toJson());
+      return BreakRuleOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }
