@@ -24,7 +24,6 @@ from app.platform.errors import ApiError
 from app.scheduling import hooks, queue, rules, run_context
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
-    DURATIONS,
     Job,
     Schedule,
     SchedulingCrew,
@@ -52,9 +51,8 @@ class Demand:
     addon_booking_id: uuid.UUID | None = None
     source_job_id: uuid.UUID | None = None
 
-    @property
-    def duration(self) -> int:
-        return DURATIONS[self.service]
+    # Filled from the service table (lookup.durations) when the job is created.
+    duration: int = 0
 
 
 @dataclass
