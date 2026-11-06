@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import hand_placement, hooks, queue, rules, run_context
+from app.scheduling import hand_placement, hooks, passes, queue, rules, run_context
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -625,11 +625,15 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     fixed,
                     slots,
                     hard_cutoff=is_strict_day(ctx, day),
+                    service=job.service,
                 )
             )
         if not solver_jobs:
             continue
-        result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
+        if ctx.active:  # two passes, Exterior then Interior (SCHS-32)
+            result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
+        else:
+            result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
