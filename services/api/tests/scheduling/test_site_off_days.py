@@ -65,3 +65,20 @@ def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world, run_week):
     assert off["demand_minutes"] == 0 and not off["over_capacity"] and off["demand"] == []
     assert by_day[SUNDAY.isoformat()]["demand_minutes"] == 60
     assert all(j["date"] != MONDAY.isoformat() for j in b["jobs"])
+
+
+def test_a_closed_weekday_gives_no_cleaner_window_only_at_rules_version_2(world):
+    from app.directory import lookup, rule_seed, site_settings
+    from app.scheduling import service
+
+    world.add_crew()
+    for name in ("Cleaning-External", "Cleaning-Internal", "Deep Spa"):
+        slot(world, name, [0, 1, 3, 4, 5, 6])  # Wednesday off
+    world.db.commit()
+    crew = service.load_crew(world.db, world.society.id)
+    wednesday = SUNDAY + timedelta(days=3)
+    assert service.availability(world.db, crew, [wednesday])[wednesday]  # version 1: as before
+    rule_seed.seed_rule_keys(world.db)
+    site_settings.write(world.db, world.society.id, "scheduler.rules_version", 2, None)
+    lookup.invalidate()
+    assert service.availability(world.db, crew, [wednesday])[wednesday] == {}
