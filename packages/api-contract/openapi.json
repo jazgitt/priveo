@@ -7449,6 +7449,65 @@
         }
       }
     },
+    "/v1/admin/crew/{crew_id}/break-rules": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Crew Break Rules",
+        "operationId": "crew_break_rules_v1_admin_crew__crew_id__break_rules_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewBreakRules"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/crew/{crew_id}/times": {
       "get": {
         "tags": [
@@ -7560,6 +7619,134 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CrewTimesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/crew/{crew_id}/home-zone": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Home Zone",
+        "description": "The home zone in force and the zones of the cleaner's society to pick from.",
+        "operationId": "get_home_zone_v1_admin_crew__crew_id__home_zone_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeZoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Put Home Zone",
+        "description": "Sets or clears the home zone (SCHR-ZONE-07) and audits the change.",
+        "operationId": "put_home_zone_v1_admin_crew__crew_id__home_zone_put",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeZoneIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeZoneOut"
                 }
               }
             }
@@ -7708,6 +7895,176 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExceptionReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/reports/weekly/export": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Export Weekly",
+        "operationId": "export_weekly_v1_admin_scheduling_reports_weekly_export_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "week_start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Week Start"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/reports/weekly": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Weekly",
+        "operationId": "weekly_v1_admin_scheduling_reports_weekly_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "week_start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Week Start"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklySummary"
                 }
               }
             }
@@ -21502,6 +21859,17 @@
               }
             ],
             "title": "Reason Code"
+          },
+          "cross_zone_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Zone Reason"
           }
         },
         "type": "object",
@@ -22607,6 +22975,11 @@
               }
             ],
             "title": "End Time"
+          },
+          "interior_this_week": {
+            "type": "boolean",
+            "title": "Interior This Week",
+            "default": false
           }
         },
         "type": "object",
@@ -22618,6 +22991,24 @@
           "services"
         ],
         "title": "CalendarVisit"
+      },
+      "CarryOver": {
+        "properties": {
+          "carried_in": {
+            "type": "integer",
+            "title": "Carried In"
+          },
+          "still_owed": {
+            "type": "integer",
+            "title": "Still Owed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "carried_in",
+          "still_owed"
+        ],
+        "title": "CarryOver"
       },
       "ChangeOut": {
         "properties": {
@@ -23389,6 +23780,34 @@
         ],
         "title": "CouldNotComplete"
       },
+      "CrewBreakRules": {
+        "properties": {
+          "scheduling_crew_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Scheduling Crew Id"
+          },
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/BreakRuleOut"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduling_crew_id",
+          "society_id",
+          "rules"
+        ],
+        "title": "CrewBreakRules"
+      },
       "CrewCapacityLine": {
         "properties": {
           "name": {
@@ -23468,6 +23887,16 @@
             },
             "type": "array",
             "title": "Jobs"
+          },
+          "day_break": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrewDayBreak"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -23502,6 +23931,28 @@
           "reason": {
             "type": "string",
             "title": "Reason"
+          },
+          "break_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Start"
+          },
+          "break_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break End"
           }
         },
         "type": "object",
@@ -23513,6 +23964,24 @@
         ],
         "title": "CrewDayAvailability",
         "description": "Whether a crew member can take work on a day, and why (ADM-SCH-32)."
+      },
+      "CrewDayBreak": {
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "end_time"
+        ],
+        "title": "CrewDayBreak"
       },
       "CrewDayJob": {
         "properties": {
@@ -25374,6 +25843,16 @@
             "type": "boolean",
             "title": "Over Capacity"
           },
+          "break_minutes": {
+            "type": "integer",
+            "title": "Break Minutes",
+            "default": 0
+          },
+          "early_band_free_minutes": {
+            "type": "integer",
+            "title": "Early Band Free Minutes",
+            "default": 0
+          },
           "crew": {
             "items": {
               "$ref": "#/components/schemas/CrewCapacityLine"
@@ -25408,6 +25887,24 @@
           "over_capacity"
         ],
         "title": "DayCapacity"
+      },
+      "DayCounts": {
+        "properties": {
+          "weekday": {
+            "type": "integer",
+            "title": "Weekday"
+          },
+          "weekend": {
+            "type": "integer",
+            "title": "Weekend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekday",
+          "weekend"
+        ],
+        "title": "DayCounts"
       },
       "DayHours": {
         "properties": {
@@ -26539,6 +27036,11 @@
             "maxLength": 120,
             "minLength": 1,
             "title": "Label"
+          },
+          "defers": {
+            "type": "boolean",
+            "title": "Defers",
+            "default": false
           }
         },
         "type": "object",
@@ -26569,6 +27071,11 @@
           "active": {
             "type": "boolean",
             "title": "Active"
+          },
+          "defers": {
+            "type": "boolean",
+            "title": "Defers",
+            "default": false
           }
         },
         "type": "object",
@@ -26588,6 +27095,17 @@
             "maxLength": 120,
             "minLength": 1,
             "title": "Label"
+          },
+          "defers": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defers"
           }
         },
         "type": "object",
@@ -27441,6 +27959,34 @@
         ],
         "title": "ExceptionRow"
       },
+      "ExteriorTotals": {
+        "properties": {
+          "due": {
+            "type": "integer",
+            "title": "Due"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "missed": {
+            "type": "integer",
+            "title": "Missed"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          }
+        },
+        "type": "object",
+        "required": [
+          "due",
+          "completed",
+          "missed",
+          "open"
+        ],
+        "title": "ExteriorTotals"
+      },
       "FeatureOut": {
         "properties": {
           "key": {
@@ -27816,6 +28362,70 @@
         "title": "HistoryMetaOut",
         "description": "What the history footer and month paging need (HIST-02)."
       },
+      "HomeZoneIn": {
+        "properties": {
+          "home_zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Zone Id"
+          }
+        },
+        "type": "object",
+        "title": "HomeZoneIn",
+        "description": "null clears the home zone."
+      },
+      "HomeZoneOut": {
+        "properties": {
+          "home_zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Zone Id"
+          },
+          "follows_member": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Member"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneChoice"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "home_zone_id",
+          "follows_member",
+          "editable",
+          "zones"
+        ],
+        "title": "HomeZoneOut"
+      },
       "Inbox": {
         "properties": {
           "unread_count": {
@@ -27836,6 +28446,59 @@
           "items"
         ],
         "title": "Inbox"
+      },
+      "InteriorLine": {
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "service_week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Service Week Start"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "completed_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed On"
+          },
+          "overdue_days": {
+            "type": "integer",
+            "title": "Overdue Days"
+          },
+          "catch_up": {
+            "type": "boolean",
+            "title": "Catch Up"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vehicle_id",
+          "registration",
+          "service_week_start",
+          "status",
+          "completed_on",
+          "overdue_days",
+          "catch_up"
+        ],
+        "title": "InteriorLine"
       },
       "InvoiceOut": {
         "properties": {
@@ -30406,6 +31069,21 @@
               }
             ],
             "title": "Shortfall Minutes"
+          },
+          "deferred_interiors": {
+            "type": "integer",
+            "title": "Deferred Interiors",
+            "default": 0
+          },
+          "cross_zone_jobs": {
+            "type": "integer",
+            "title": "Cross Zone Jobs",
+            "default": 0
+          },
+          "missed_breaks": {
+            "type": "integer",
+            "title": "Missed Breaks",
+            "default": 0
           }
         },
         "type": "object",
@@ -33137,6 +33815,88 @@
           "display_name"
         ],
         "title": "WebAuthProfile"
+      },
+      "WeeklySummary": {
+        "properties": {
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "exteriors": {
+            "$ref": "#/components/schemas/ExteriorTotals"
+          },
+          "interiors_by_service_week": {
+            "items": {
+              "$ref": "#/components/schemas/InteriorLine"
+            },
+            "type": "array",
+            "title": "Interiors By Service Week"
+          },
+          "interiors_completed_in_week": {
+            "items": {
+              "$ref": "#/components/schemas/InteriorLine"
+            },
+            "type": "array",
+            "title": "Interiors Completed In Week"
+          },
+          "completions": {
+            "$ref": "#/components/schemas/DayCounts"
+          },
+          "catch_up_services": {
+            "type": "integer",
+            "title": "Catch Up Services"
+          },
+          "carry_over": {
+            "$ref": "#/components/schemas/CarryOver"
+          },
+          "missed_breaks": {
+            "type": "integer",
+            "title": "Missed Breaks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "society_id",
+          "week_start",
+          "week_end",
+          "exteriors",
+          "interiors_by_service_week",
+          "interiors_completed_in_week",
+          "completions",
+          "catch_up_services",
+          "carry_over",
+          "missed_breaks"
+        ],
+        "title": "WeeklySummary"
+      },
+      "ZoneChoice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ZoneChoice"
       }
     }
   }

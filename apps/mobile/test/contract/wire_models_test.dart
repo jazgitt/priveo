@@ -212,11 +212,11 @@ void main() {
     expect(wire.AdminHomeSociety.fromJson(input).toJson(), equals(input));
   });
   test('AdminJob preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value","cross_zone_reason":"wire-value"}') as Map<String, dynamic>;
     expect(wire.AdminJob.fromJson(input).toJson(), equals(input));
   });
   test('AdminJob preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null,"cross_zone_reason":null}') as Map<String, dynamic>;
     expect(wire.AdminJob.fromJson(input).toJson(), equals(input));
   });
   test('AdminPaymentIn preserves populated wire fields', () {
@@ -292,7 +292,7 @@ void main() {
     expect(wire.AutomaticPlanningSettings.fromJson(input).toJson(), equals(input));
   });
   test('Board preserves populated wire fields', () {
-    final input = jsonDecode('{"schedule":{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","society_name":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","status":"wire-value","frozen_at":"2026-10-20T07:30:00+00:00","freeze_deadline":"2026-10-20T07:30:00+00:00"},"days":[{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":true,"crew":[{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}],"demand":[{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}],"availability":[{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value"}]}],"crew":[{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","role":"wire-value","start_minute":1,"end_minute":1}],"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value"}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"schedule":{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","society_name":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","status":"wire-value","frozen_at":"2026-10-20T07:30:00+00:00","freeze_deadline":"2026-10-20T07:30:00+00:00"},"days":[{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":true,"break_minutes":1,"early_band_free_minutes":1,"crew":[{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}],"demand":[{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}],"availability":[{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value","break_start":1,"break_end":1}]}],"crew":[{"id":"11111111-1111-1111-1111-111111111111","name":"wire-value","role":"wire-value","start_minute":1,"end_minute":1}],"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value","cross_zone_reason":"wire-value"}]}') as Map<String, dynamic>;
     expect(wire.Board.fromJson(input).toJson(), equals(input));
   });
   test('Board preserves nullable wire fields', () {
@@ -356,7 +356,7 @@ void main() {
     expect(wire.CalendarJob.fromJson(input).toJson(), equals(input));
   });
   test('CalendarMonth preserves populated wire fields', () {
-    final input = jsonDecode('{"month":"wire-value","visits":[{"finished_at":"2026-10-20T07:30:00+00:00","checklist_done":1,"checklist_total":1,"visit_id":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":["wire-value"],"source":"visit","state":"Scheduled","cutoff_time":"wire-value","change_requested":true,"requested_cutoff_time":"wire-value","skip_id":"wire-value","can_change":true,"frozen":true,"covered_on":"2026-10-20","rescheduled_on":"2026-10-20","jobs":[{"service":"wire-value","status":"wire-value","crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}],"crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}],"renewals":[{"vehicle_id":"wire-value","date":"2026-10-20"}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"month":"wire-value","visits":[{"finished_at":"2026-10-20T07:30:00+00:00","checklist_done":1,"checklist_total":1,"visit_id":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":["wire-value"],"source":"visit","state":"Scheduled","cutoff_time":"wire-value","change_requested":true,"requested_cutoff_time":"wire-value","skip_id":"wire-value","can_change":true,"frozen":true,"covered_on":"2026-10-20","rescheduled_on":"2026-10-20","jobs":[{"service":"wire-value","status":"wire-value","crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}],"crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value","interior_this_week":true}],"renewals":[{"vehicle_id":"wire-value","date":"2026-10-20"}]}') as Map<String, dynamic>;
     expect(wire.CalendarMonth.fromJson(input).toJson(), equals(input));
   });
   test('CalendarMonth preserves nullable wire fields', () {
@@ -372,12 +372,20 @@ void main() {
     expect(wire.CalendarRenewal.fromJson(input).toJson(), equals(input));
   });
   test('CalendarVisit preserves populated wire fields', () {
-    final input = jsonDecode('{"finished_at":"2026-10-20T07:30:00+00:00","checklist_done":1,"checklist_total":1,"visit_id":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":["wire-value"],"source":"visit","state":"Scheduled","cutoff_time":"wire-value","change_requested":true,"requested_cutoff_time":"wire-value","skip_id":"wire-value","can_change":true,"frozen":true,"covered_on":"2026-10-20","rescheduled_on":"2026-10-20","jobs":[{"service":"wire-value","status":"wire-value","crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}],"crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"finished_at":"2026-10-20T07:30:00+00:00","checklist_done":1,"checklist_total":1,"visit_id":"wire-value","vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":["wire-value"],"source":"visit","state":"Scheduled","cutoff_time":"wire-value","change_requested":true,"requested_cutoff_time":"wire-value","skip_id":"wire-value","can_change":true,"frozen":true,"covered_on":"2026-10-20","rescheduled_on":"2026-10-20","jobs":[{"service":"wire-value","status":"wire-value","crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value"}],"crew_name":"wire-value","start_time":"wire-value","end_time":"wire-value","interior_this_week":true}') as Map<String, dynamic>;
     expect(wire.CalendarVisit.fromJson(input).toJson(), equals(input));
   });
   test('CalendarVisit preserves nullable wire fields', () {
-    final input = jsonDecode('{"finished_at":null,"checklist_done":1,"checklist_total":1,"visit_id":null,"vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":[],"source":"visit","state":"Scheduled","cutoff_time":null,"change_requested":false,"requested_cutoff_time":null,"skip_id":null,"can_change":false,"frozen":false,"covered_on":null,"rescheduled_on":null,"jobs":[],"crew_name":null,"start_time":null,"end_time":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"finished_at":null,"checklist_done":1,"checklist_total":1,"visit_id":null,"vehicle_id":"wire-value","date":"2026-10-20","status":"wire-value","services":[],"source":"visit","state":"Scheduled","cutoff_time":null,"change_requested":false,"requested_cutoff_time":null,"skip_id":null,"can_change":false,"frozen":false,"covered_on":null,"rescheduled_on":null,"jobs":[],"crew_name":null,"start_time":null,"end_time":null,"interior_this_week":false}') as Map<String, dynamic>;
     expect(wire.CalendarVisit.fromJson(input).toJson(), equals(input));
+  });
+  test('CarryOver preserves populated wire fields', () {
+    final input = jsonDecode('{"carried_in":1,"still_owed":1}') as Map<String, dynamic>;
+    expect(wire.CarryOver.fromJson(input).toJson(), equals(input));
+  });
+  test('CarryOver preserves nullable wire fields', () {
+    final input = jsonDecode('{"carried_in":1,"still_owed":1}') as Map<String, dynamic>;
+    expect(wire.CarryOver.fromJson(input).toJson(), equals(input));
   });
   test('ChangeOut preserves populated wire fields', () {
     final input = jsonDecode('{"id":"wire-value","vehicle_id":"wire-value","kind":"wire-value","status":"wire-value","start_date":"2026-10-20","end_date":"2026-10-20","days":1,"cutoff_time":"wire-value","actor":"wire-value","visits_paused":1,"renewal_date":"2026-10-20","created_at":"2026-10-20T07:30:00+00:00"}') as Map<String, dynamic>;
@@ -539,6 +547,14 @@ void main() {
     final input = jsonDecode('{"reason_key":"wire-value","note":"wire-value","upload_id":null}') as Map<String, dynamic>;
     expect(wire.CouldNotComplete.fromJson(input).toJson(), equals(input));
   });
+  test('CrewBreakRules preserves populated wire fields', () {
+    final input = jsonDecode('{"scheduling_crew_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","rules":[{"id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","crew_id":"11111111-1111-1111-1111-111111111111","start_date":"2026-10-20","end_date":"2026-10-20","start_minute":1,"end_minute":1,"enabled":true}]}') as Map<String, dynamic>;
+    expect(wire.CrewBreakRules.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewBreakRules preserves nullable wire fields', () {
+    final input = jsonDecode('{"scheduling_crew_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","rules":[]}') as Map<String, dynamic>;
+    expect(wire.CrewBreakRules.fromJson(input).toJson(), equals(input));
+  });
   test('CrewCapacityLine preserves populated wire fields', () {
     final input = jsonDecode('{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}') as Map<String, dynamic>;
     expect(wire.CrewCapacityLine.fromJson(input).toJson(), equals(input));
@@ -556,20 +572,28 @@ void main() {
     expect(wire.CrewChange.fromJson(input).toJson(), equals(input));
   });
   test('CrewDay preserves populated wire fields', () {
-    final input = jsonDecode('{"date":"2026-10-20","society":"wire-value","total":1,"done":1,"left":1,"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","make":"wire-value","model":"wire-value","category":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone":"wire-value","society":"wire-value","service":"wire-value","status":"wire-value","start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","sequence":1,"locked":true,"current":true}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"date":"2026-10-20","society":"wire-value","total":1,"done":1,"left":1,"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","make":"wire-value","model":"wire-value","category":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone":"wire-value","society":"wire-value","service":"wire-value","status":"wire-value","start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","sequence":1,"locked":true,"current":true}],"day_break":{"start_time":"wire-value","end_time":"wire-value"}}') as Map<String, dynamic>;
     expect(wire.CrewDay.fromJson(input).toJson(), equals(input));
   });
   test('CrewDay preserves nullable wire fields', () {
-    final input = jsonDecode('{"date":"2026-10-20","society":"wire-value","total":1,"done":1,"left":1,"jobs":[]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"date":"2026-10-20","society":"wire-value","total":1,"done":1,"left":1,"jobs":[],"day_break":null}') as Map<String, dynamic>;
     expect(wire.CrewDay.fromJson(input).toJson(), equals(input));
   });
   test('CrewDayAvailability preserves populated wire fields', () {
-    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value","break_start":1,"break_end":1}') as Map<String, dynamic>;
     expect(wire.CrewDayAvailability.fromJson(input).toJson(), equals(input));
   });
   test('CrewDayAvailability preserves nullable wire fields', () {
-    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[],"reason":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[],"reason":"wire-value","break_start":null,"break_end":null}') as Map<String, dynamic>;
     expect(wire.CrewDayAvailability.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewDayBreak preserves populated wire fields', () {
+    final input = jsonDecode('{"start_time":"wire-value","end_time":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CrewDayBreak.fromJson(input).toJson(), equals(input));
+  });
+  test('CrewDayBreak preserves nullable wire fields', () {
+    final input = jsonDecode('{"start_time":"wire-value","end_time":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.CrewDayBreak.fromJson(input).toJson(), equals(input));
   });
   test('CrewDayJob preserves populated wire fields', () {
     final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","make":"wire-value","model":"wire-value","category":"wire-value","parking_basement":"wire-value","parking_number":"wire-value","zone":"wire-value","society":"wire-value","service":"wire-value","status":"wire-value","start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","sequence":1,"locked":true,"current":true}') as Map<String, dynamic>;
@@ -948,12 +972,20 @@ void main() {
     expect(wire.DailyView.fromJson(input).toJson(), equals(input));
   });
   test('DayCapacity preserves populated wire fields', () {
-    final input = jsonDecode('{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":true,"crew":[{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}],"demand":[{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}],"availability":[{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value"}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":true,"break_minutes":1,"early_band_free_minutes":1,"crew":[{"name":"wire-value","role":"wire-value","minutes":1,"slots":"wire-value"}],"demand":[{"service":"wire-value","source":"wire-value","jobs":1,"minutes":1}],"availability":[{"crew_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","windows":[{"start":1,"end":1}],"reason":"wire-value","break_start":1,"break_end":1}]}') as Map<String, dynamic>;
     expect(wire.DayCapacity.fromJson(input).toJson(), equals(input));
   });
   test('DayCapacity preserves nullable wire fields', () {
-    final input = jsonDecode('{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":false,"crew":[],"demand":[],"availability":[]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"date":"2026-10-20","capacity_minutes":1,"demand_minutes":1,"scheduled_minutes":1,"over_capacity":false,"break_minutes":1,"early_band_free_minutes":1,"crew":[],"demand":[],"availability":[]}') as Map<String, dynamic>;
     expect(wire.DayCapacity.fromJson(input).toJson(), equals(input));
+  });
+  test('DayCounts preserves populated wire fields', () {
+    final input = jsonDecode('{"weekday":1,"weekend":1}') as Map<String, dynamic>;
+    expect(wire.DayCounts.fromJson(input).toJson(), equals(input));
+  });
+  test('DayCounts preserves nullable wire fields', () {
+    final input = jsonDecode('{"weekday":1,"weekend":1}') as Map<String, dynamic>;
+    expect(wire.DayCounts.fromJson(input).toJson(), equals(input));
   });
   test('DayHours preserves populated wire fields', () {
     final input = jsonDecode('{"day":"wire-value","working":true,"start":"wire-value","end":"wire-value","extra_slots":[{"start":"wire-value","end":"wire-value"}]}') as Map<String, dynamic>;
@@ -1148,27 +1180,27 @@ void main() {
     expect(wire.DirectoryPlanUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonCreate preserves populated wire fields', () {
-    final input = jsonDecode('{"label":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"label":"wire-value","defers":true}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonCreate preserves nullable wire fields', () {
-    final input = jsonDecode('{"label":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"label":"wire-value","defers":false}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonCreate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonOut preserves populated wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","key":"wire-value","label":"wire-value","sort_order":1,"active":true}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","key":"wire-value","label":"wire-value","sort_order":1,"active":true,"defers":true}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonOut preserves nullable wire fields', () {
-    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","key":"wire-value","label":"wire-value","sort_order":1,"active":false}') as Map<String, dynamic>;
+    final input = jsonDecode('{"id":"11111111-1111-1111-1111-111111111111","key":"wire-value","label":"wire-value","sort_order":1,"active":false,"defers":false}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonOut.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonUpdate preserves populated wire fields', () {
-    final input = jsonDecode('{"label":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"label":"wire-value","defers":true}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryReasonUpdate preserves nullable wire fields', () {
-    final input = jsonDecode('{"label":"wire-value"}') as Map<String, dynamic>;
+    final input = jsonDecode('{"label":"wire-value","defers":null}') as Map<String, dynamic>;
     expect(wire.DirectoryReasonUpdate.fromJson(input).toJson(), equals(input));
   });
   test('DirectoryServiceOut preserves populated wire fields', () {
@@ -1331,6 +1363,14 @@ void main() {
     final input = jsonDecode('{"date":null,"job_id":null,"vehicle_id":null,"registration":"wire-value","cleaner_id":null,"cleaner_name":"wire-value","code":"wire-value","detail":"wire-value"}') as Map<String, dynamic>;
     expect(wire.ExceptionRow.fromJson(input).toJson(), equals(input));
   });
+  test('ExteriorTotals preserves populated wire fields', () {
+    final input = jsonDecode('{"due":1,"completed":1,"missed":1,"open":1}') as Map<String, dynamic>;
+    expect(wire.ExteriorTotals.fromJson(input).toJson(), equals(input));
+  });
+  test('ExteriorTotals preserves nullable wire fields', () {
+    final input = jsonDecode('{"due":1,"completed":1,"missed":1,"open":1}') as Map<String, dynamic>;
+    expect(wire.ExteriorTotals.fromJson(input).toJson(), equals(input));
+  });
   test('FeatureOut preserves populated wire fields', () {
     final input = jsonDecode('{"key":"wire-value","label":"wire-value","description":"wire-value","group":"wire-value","audience":"wire-value","enabled":true}') as Map<String, dynamic>;
     expect(wire.FeatureOut.fromJson(input).toJson(), equals(input));
@@ -1403,6 +1443,22 @@ void main() {
     final input = jsonDecode('{"member_since":null,"latest_month":null,"earliest_month":null}') as Map<String, dynamic>;
     expect(wire.HistoryMetaOut.fromJson(input).toJson(), equals(input));
   });
+  test('HomeZoneIn preserves populated wire fields', () {
+    final input = jsonDecode('{"home_zone_id":"11111111-1111-1111-1111-111111111111"}') as Map<String, dynamic>;
+    expect(wire.HomeZoneIn.fromJson(input).toJson(), equals(input));
+  });
+  test('HomeZoneIn preserves nullable wire fields', () {
+    final input = jsonDecode('{"home_zone_id":null}') as Map<String, dynamic>;
+    expect(wire.HomeZoneIn.fromJson(input).toJson(), equals(input));
+  });
+  test('HomeZoneOut preserves populated wire fields', () {
+    final input = jsonDecode('{"home_zone_id":"wire-value","follows_member":"wire-value","editable":true,"zones":[{"id":"wire-value","name":"wire-value"}]}') as Map<String, dynamic>;
+    expect(wire.HomeZoneOut.fromJson(input).toJson(), equals(input));
+  });
+  test('HomeZoneOut preserves nullable wire fields', () {
+    final input = jsonDecode('{"home_zone_id":null,"follows_member":null,"editable":false,"zones":[]}') as Map<String, dynamic>;
+    expect(wire.HomeZoneOut.fromJson(input).toJson(), equals(input));
+  });
   test('Inbox preserves populated wire fields', () {
     final input = jsonDecode('{"unread_count":1,"items":[{"id":"wire-value","event":"wire-value","title":"wire-value","body":"wire-value","visit_id":"wire-value","ref_type":"wire-value","ref_id":"wire-value","created_at":"2026-10-20T07:30:00+00:00","read":true}]}') as Map<String, dynamic>;
     expect(wire.Inbox.fromJson(input).toJson(), equals(input));
@@ -1410,6 +1466,14 @@ void main() {
   test('Inbox preserves nullable wire fields', () {
     final input = jsonDecode('{"unread_count":1,"items":[]}') as Map<String, dynamic>;
     expect(wire.Inbox.fromJson(input).toJson(), equals(input));
+  });
+  test('InteriorLine preserves populated wire fields', () {
+    final input = jsonDecode('{"vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","service_week_start":"2026-10-20","status":"wire-value","completed_on":"2026-10-20","overdue_days":1,"catch_up":true}') as Map<String, dynamic>;
+    expect(wire.InteriorLine.fromJson(input).toJson(), equals(input));
+  });
+  test('InteriorLine preserves nullable wire fields', () {
+    final input = jsonDecode('{"vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","service_week_start":"2026-10-20","status":"wire-value","completed_on":null,"overdue_days":1,"catch_up":false}') as Map<String, dynamic>;
+    expect(wire.InteriorLine.fromJson(input).toJson(), equals(input));
   });
   test('InvoiceOut preserves populated wire fields', () {
     final input = jsonDecode('{"number":"wire-value","issued_on":"2026-10-20","amount_rupees":1,"description":"wire-value","customer_name":"wire-value","vehicle":"wire-value","gst_included":true,"seller_name":"wire-value","seller_address":"wire-value","seller_gstin":"wire-value","tax_details":{}}') as Map<String, dynamic>;
@@ -1524,11 +1588,11 @@ void main() {
     expect(wire.MoveDate.fromJson(input).toJson(), equals(input));
   });
   test('MoveDateResult preserves populated wire fields', () {
-    final input = jsonDecode('{"original":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value"},"moved":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value"}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"original":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value","cross_zone_reason":"wire-value"},"moved":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value","cross_zone_reason":"wire-value"}}') as Map<String, dynamic>;
     expect(wire.MoveDateResult.fromJson(input).toJson(), equals(input));
   });
   test('MoveDateResult preserves nullable wire fields', () {
-    final input = jsonDecode('{"original":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null},"moved":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null}}') as Map<String, dynamic>;
+    final input = jsonDecode('{"original":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null,"cross_zone_reason":null},"moved":{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":null,"crew_name":null,"start_minute":null,"start_time":null,"end_time":null,"finish_by":null,"late":false,"manual":false,"reason":"wire-value","moved_to_date":null,"moved_from_date":null,"skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":[],"delivered_services":[],"sequence":null,"queue_unlocked":false,"reason_code":null,"cross_zone_reason":null}}') as Map<String, dynamic>;
     expect(wire.MoveDateResult.fromJson(input).toJson(), equals(input));
   });
   test('MoveRequest preserves populated wire fields', () {
@@ -1540,7 +1604,7 @@ void main() {
     expect(wire.MoveRequest.fromJson(input).toJson(), equals(input));
   });
   test('NeedsScheduling preserves populated wire fields', () {
-    final input = jsonDecode('{"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value"}],"pending_addons":[{}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"jobs":[{"id":"11111111-1111-1111-1111-111111111111","visit_id":"11111111-1111-1111-1111-111111111111","schedule_id":"11111111-1111-1111-1111-111111111111","schedule_status":"wire-value","date":"2026-10-20","vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","vehicle":"wire-value","parking":"wire-value","zone":"wire-value","customer_name":"wire-value","service":"wire-value","status":"wire-value","duration_minutes":1,"crew_id":"11111111-1111-1111-1111-111111111111","crew_name":"wire-value","start_minute":1,"start_time":"wire-value","end_time":"wire-value","finish_by":"wire-value","late":true,"manual":true,"reason":"wire-value","moved_to_date":"2026-10-20","moved_from_date":"2026-10-20","skip_kind":"wire-value","skip_reason":"wire-value","visit_outcome":"Scheduled","planned_services":["wire-value"],"delivered_services":["wire-value"],"sequence":1,"queue_unlocked":true,"reason_code":"wire-value","cross_zone_reason":"wire-value"}],"pending_addons":[{}]}') as Map<String, dynamic>;
     expect(wire.NeedsScheduling.fromJson(input).toJson(), equals(input));
   });
   test('NeedsScheduling preserves nullable wire fields', () {
@@ -1924,7 +1988,7 @@ void main() {
     expect(wire.RunRequest.fromJson(input).toJson(), equals(input));
   });
   test('RunResponse preserves populated wire fields', () {
-    final input = jsonDecode('{"schedules":[{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":1,"shortfall_cars":1,"shortfall_minutes":1}]}') as Map<String, dynamic>;
+    final input = jsonDecode('{"schedules":[{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":1,"shortfall_cars":1,"shortfall_minutes":1,"deferred_interiors":1,"cross_zone_jobs":1,"missed_breaks":1}]}') as Map<String, dynamic>;
     expect(wire.RunResponse.fromJson(input).toJson(), equals(input));
   });
   test('RunResponse preserves nullable wire fields', () {
@@ -1932,11 +1996,11 @@ void main() {
     expect(wire.RunResponse.fromJson(input).toJson(), equals(input));
   });
   test('RunResult preserves populated wire fields', () {
-    final input = jsonDecode('{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":1,"shortfall_cars":1,"shortfall_minutes":1}') as Map<String, dynamic>;
+    final input = jsonDecode('{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":1,"shortfall_cars":1,"shortfall_minutes":1,"deferred_interiors":1,"cross_zone_jobs":1,"missed_breaks":1}') as Map<String, dynamic>;
     expect(wire.RunResult.fromJson(input).toJson(), equals(input));
   });
   test('RunResult preserves nullable wire fields', () {
-    final input = jsonDecode('{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":null,"shortfall_cars":null,"shortfall_minutes":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"schedule_id":"11111111-1111-1111-1111-111111111111","society_id":"11111111-1111-1111-1111-111111111111","status":"wire-value","placed":1,"unscheduled":1,"late":1,"unassigned_exteriors":null,"shortfall_cars":null,"shortfall_minutes":null,"deferred_interiors":1,"cross_zone_jobs":1,"missed_breaks":1}') as Map<String, dynamic>;
     expect(wire.RunResult.fromJson(input).toJson(), equals(input));
   });
   test('ScheduleOut preserves populated wire fields', () {
@@ -2386,5 +2450,21 @@ void main() {
   test('WebAuthProfile preserves nullable wire fields', () {
     final input = jsonDecode('{"user_id":"11111111-1111-1111-1111-111111111111","role":"wire-value","display_name":"wire-value"}') as Map<String, dynamic>;
     expect(wire.WebAuthProfile.fromJson(input).toJson(), equals(input));
+  });
+  test('WeeklySummary preserves populated wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","week_start":"2026-10-20","week_end":"2026-10-20","exteriors":{"due":1,"completed":1,"missed":1,"open":1},"interiors_by_service_week":[{"vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","service_week_start":"2026-10-20","status":"wire-value","completed_on":"2026-10-20","overdue_days":1,"catch_up":true}],"interiors_completed_in_week":[{"vehicle_id":"11111111-1111-1111-1111-111111111111","registration":"wire-value","service_week_start":"2026-10-20","status":"wire-value","completed_on":"2026-10-20","overdue_days":1,"catch_up":true}],"completions":{"weekday":1,"weekend":1},"catch_up_services":1,"carry_over":{"carried_in":1,"still_owed":1},"missed_breaks":1}') as Map<String, dynamic>;
+    expect(wire.WeeklySummary.fromJson(input).toJson(), equals(input));
+  });
+  test('WeeklySummary preserves nullable wire fields', () {
+    final input = jsonDecode('{"society_id":"11111111-1111-1111-1111-111111111111","week_start":"2026-10-20","week_end":"2026-10-20","exteriors":{"due":1,"completed":1,"missed":1,"open":1},"interiors_by_service_week":[],"interiors_completed_in_week":[],"completions":{"weekday":1,"weekend":1},"catch_up_services":1,"carry_over":{"carried_in":1,"still_owed":1},"missed_breaks":1}') as Map<String, dynamic>;
+    expect(wire.WeeklySummary.fromJson(input).toJson(), equals(input));
+  });
+  test('ZoneChoice preserves populated wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","name":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.ZoneChoice.fromJson(input).toJson(), equals(input));
+  });
+  test('ZoneChoice preserves nullable wire fields', () {
+    final input = jsonDecode('{"id":"wire-value","name":"wire-value"}') as Map<String, dynamic>;
+    expect(wire.ZoneChoice.fromJson(input).toJson(), equals(input));
   });
 }

@@ -1027,6 +1027,7 @@ class AdminJob {
     required this.sequence,
     this.queueUnlocked,
     required this.reasonCode,
+    required this.crossZoneReason,
   });
 
   final String id;
@@ -1062,6 +1063,7 @@ class AdminJob {
   final int? sequence;
   final bool? queueUnlocked;
   final String? reasonCode;
+  final String? crossZoneReason;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1097,6 +1099,7 @@ class AdminJob {
         sequence: j['sequence'] == null ? null : j['sequence'] as int,
         queueUnlocked: j['queue_unlocked'] == null ? null : j['queue_unlocked'] as bool,
         reasonCode: j['reason_code'] == null ? null : j['reason_code'] as String,
+        crossZoneReason: j['cross_zone_reason'] == null ? null : j['cross_zone_reason'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1133,6 +1136,7 @@ class AdminJob {
         'sequence': sequence,
         'queue_unlocked': queueUnlocked,
         'reason_code': reasonCode,
+        'cross_zone_reason': crossZoneReason,
       };
 }
 
@@ -1760,6 +1764,7 @@ class CalendarVisit {
     required this.crewName,
     required this.startTime,
     required this.endTime,
+    this.interiorThisWeek,
   });
 
   final String? finishedAt;
@@ -1784,6 +1789,7 @@ class CalendarVisit {
   final String? crewName;
   final String? startTime;
   final String? endTime;
+  final bool? interiorThisWeek;
 
   factory CalendarVisit.fromJson(Map<String, dynamic> j) => CalendarVisit(
         finishedAt: j['finished_at'] == null ? null : j['finished_at'] as String,
@@ -1808,6 +1814,7 @@ class CalendarVisit {
         crewName: j['crew_name'] == null ? null : j['crew_name'] as String,
         startTime: j['start_time'] == null ? null : j['start_time'] as String,
         endTime: j['end_time'] == null ? null : j['end_time'] as String,
+        interiorThisWeek: j['interior_this_week'] == null ? null : j['interior_this_week'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1833,6 +1840,27 @@ class CalendarVisit {
         'crew_name': crewName,
         'start_time': startTime,
         'end_time': endTime,
+        'interior_this_week': interiorThisWeek,
+      };
+}
+
+class CarryOver {
+  const CarryOver({
+    required this.carriedIn,
+    required this.stillOwed,
+  });
+
+  final int carriedIn;
+  final int stillOwed;
+
+  factory CarryOver.fromJson(Map<String, dynamic> j) => CarryOver(
+        carriedIn: j['carried_in'] as int,
+        stillOwed: j['still_owed'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'carried_in': carriedIn,
+        'still_owed': stillOwed,
       };
 }
 
@@ -2428,6 +2456,30 @@ class CouldNotComplete {
       };
 }
 
+class CrewBreakRules {
+  const CrewBreakRules({
+    required this.schedulingCrewId,
+    required this.societyId,
+    required this.rules,
+  });
+
+  final String schedulingCrewId;
+  final String societyId;
+  final List<BreakRuleOut> rules;
+
+  factory CrewBreakRules.fromJson(Map<String, dynamic> j) => CrewBreakRules(
+        schedulingCrewId: j['scheduling_crew_id'] as String,
+        societyId: j['society_id'] as String,
+        rules: [for (final x in j['rules'] as List) BreakRuleOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'scheduling_crew_id': schedulingCrewId,
+        'society_id': societyId,
+        'rules': [for (final x in rules) x.toJson()],
+      };
+}
+
 class CrewCapacityLine {
   const CrewCapacityLine({
     required this.name,
@@ -2484,6 +2536,7 @@ class CrewDay {
     required this.done,
     required this.left,
     required this.jobs,
+    required this.dayBreak,
   });
 
   final DateTime date;
@@ -2492,6 +2545,7 @@ class CrewDay {
   final int done;
   final int left;
   final List<CrewDayJob> jobs;
+  final CrewDayBreak? dayBreak;
 
   factory CrewDay.fromJson(Map<String, dynamic> j) => CrewDay(
         date: DateTime.parse(j['date'] as String),
@@ -2500,6 +2554,7 @@ class CrewDay {
         done: j['done'] as int,
         left: j['left'] as int,
         jobs: [for (final x in j['jobs'] as List) CrewDayJob.fromJson(x as Map<String, dynamic>)],
+        dayBreak: j['day_break'] == null ? null : CrewDayBreak.fromJson(j['day_break'] as Map<String, dynamic>),
       );
 
   Map<String, dynamic> toJson() => {
@@ -2509,6 +2564,7 @@ class CrewDay {
         'done': done,
         'left': left,
         'jobs': [for (final x in jobs) x.toJson()],
+        'day_break': dayBreak?.toJson(),
       };
 }
 
@@ -2518,18 +2574,24 @@ class CrewDayAvailability {
     required this.status,
     required this.windows,
     required this.reason,
+    required this.breakStart,
+    required this.breakEnd,
   });
 
   final String crewId;
   final String status;
   final List<CrewDayWindow> windows;
   final String reason;
+  final int? breakStart;
+  final int? breakEnd;
 
   factory CrewDayAvailability.fromJson(Map<String, dynamic> j) => CrewDayAvailability(
         crewId: j['crew_id'] as String,
         status: j['status'] as String,
         windows: [for (final x in j['windows'] as List) CrewDayWindow.fromJson(x as Map<String, dynamic>)],
         reason: j['reason'] as String,
+        breakStart: j['break_start'] == null ? null : j['break_start'] as int,
+        breakEnd: j['break_end'] == null ? null : j['break_end'] as int,
       );
 
   Map<String, dynamic> toJson() => {
@@ -2537,6 +2599,28 @@ class CrewDayAvailability {
         'status': status,
         'windows': [for (final x in windows) x.toJson()],
         'reason': reason,
+        'break_start': breakStart,
+        'break_end': breakEnd,
+      };
+}
+
+class CrewDayBreak {
+  const CrewDayBreak({
+    required this.startTime,
+    required this.endTime,
+  });
+
+  final String startTime;
+  final String endTime;
+
+  factory CrewDayBreak.fromJson(Map<String, dynamic> j) => CrewDayBreak(
+        startTime: j['start_time'] as String,
+        endTime: j['end_time'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start_time': startTime,
+        'end_time': endTime,
       };
 }
 
@@ -4011,6 +4095,8 @@ class DayCapacity {
     required this.demandMinutes,
     required this.scheduledMinutes,
     required this.overCapacity,
+    this.breakMinutes,
+    this.earlyBandFreeMinutes,
     this.crew,
     this.demand,
     this.availability,
@@ -4021,6 +4107,8 @@ class DayCapacity {
   final int demandMinutes;
   final int scheduledMinutes;
   final bool overCapacity;
+  final int? breakMinutes;
+  final int? earlyBandFreeMinutes;
   final List<CrewCapacityLine>? crew;
   final List<DemandLine>? demand;
   final List<CrewDayAvailability>? availability;
@@ -4031,6 +4119,8 @@ class DayCapacity {
         demandMinutes: j['demand_minutes'] as int,
         scheduledMinutes: j['scheduled_minutes'] as int,
         overCapacity: j['over_capacity'] as bool,
+        breakMinutes: j['break_minutes'] == null ? null : j['break_minutes'] as int,
+        earlyBandFreeMinutes: j['early_band_free_minutes'] == null ? null : j['early_band_free_minutes'] as int,
         crew: j['crew'] == null ? null : [for (final x in j['crew'] as List) CrewCapacityLine.fromJson(x as Map<String, dynamic>)],
         demand: j['demand'] == null ? null : [for (final x in j['demand'] as List) DemandLine.fromJson(x as Map<String, dynamic>)],
         availability: j['availability'] == null ? null : [for (final x in j['availability'] as List) CrewDayAvailability.fromJson(x as Map<String, dynamic>)],
@@ -4042,9 +4132,31 @@ class DayCapacity {
         'demand_minutes': demandMinutes,
         'scheduled_minutes': scheduledMinutes,
         'over_capacity': overCapacity,
+        'break_minutes': breakMinutes,
+        'early_band_free_minutes': earlyBandFreeMinutes,
         'crew': crew == null ? null : [for (final x in crew!) x.toJson()],
         'demand': demand == null ? null : [for (final x in demand!) x.toJson()],
         'availability': availability == null ? null : [for (final x in availability!) x.toJson()],
+      };
+}
+
+class DayCounts {
+  const DayCounts({
+    required this.weekday,
+    required this.weekend,
+  });
+
+  final int weekday;
+  final int weekend;
+
+  factory DayCounts.fromJson(Map<String, dynamic> j) => DayCounts(
+        weekday: j['weekday'] as int,
+        weekend: j['weekend'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'weekday': weekday,
+        'weekend': weekend,
       };
 }
 
@@ -4875,16 +4987,20 @@ class DirectoryPlanUpdate {
 class DirectoryReasonCreate {
   const DirectoryReasonCreate({
     required this.label,
+    this.defers,
   });
 
   final String label;
+  final bool? defers;
 
   factory DirectoryReasonCreate.fromJson(Map<String, dynamic> j) => DirectoryReasonCreate(
         label: j['label'] as String,
+        defers: j['defers'] == null ? null : j['defers'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
         'label': label,
+        'defers': defers,
       };
 }
 
@@ -4895,6 +5011,7 @@ class DirectoryReasonOut {
     required this.label,
     required this.sortOrder,
     required this.active,
+    this.defers,
   });
 
   final String id;
@@ -4902,6 +5019,7 @@ class DirectoryReasonOut {
   final String label;
   final int sortOrder;
   final bool active;
+  final bool? defers;
 
   factory DirectoryReasonOut.fromJson(Map<String, dynamic> j) => DirectoryReasonOut(
         id: j['id'] as String,
@@ -4909,6 +5027,7 @@ class DirectoryReasonOut {
         label: j['label'] as String,
         sortOrder: j['sort_order'] as int,
         active: j['active'] as bool,
+        defers: j['defers'] == null ? null : j['defers'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -4917,22 +5036,27 @@ class DirectoryReasonOut {
         'label': label,
         'sort_order': sortOrder,
         'active': active,
+        'defers': defers,
       };
 }
 
 class DirectoryReasonUpdate {
   const DirectoryReasonUpdate({
     required this.label,
+    required this.defers,
   });
 
   final String label;
+  final bool? defers;
 
   factory DirectoryReasonUpdate.fromJson(Map<String, dynamic> j) => DirectoryReasonUpdate(
         label: j['label'] as String,
+        defers: j['defers'] == null ? null : j['defers'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
         'label': label,
+        'defers': defers,
       };
 }
 
@@ -5496,6 +5620,34 @@ class ExceptionRow {
       };
 }
 
+class ExteriorTotals {
+  const ExteriorTotals({
+    required this.due,
+    required this.completed,
+    required this.missed,
+    required this.open,
+  });
+
+  final int due;
+  final int completed;
+  final int missed;
+  final int open;
+
+  factory ExteriorTotals.fromJson(Map<String, dynamic> j) => ExteriorTotals(
+        due: j['due'] as int,
+        completed: j['completed'] as int,
+        missed: j['missed'] as int,
+        open: j['open'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'due': due,
+        'completed': completed,
+        'missed': missed,
+        'open': open,
+      };
+}
+
 class FeatureOut {
   const FeatureOut({
     required this.key,
@@ -5768,6 +5920,50 @@ class HistoryMetaOut {
       };
 }
 
+class HomeZoneIn {
+  const HomeZoneIn({
+    required this.homeZoneId,
+  });
+
+  final String? homeZoneId;
+
+  factory HomeZoneIn.fromJson(Map<String, dynamic> j) => HomeZoneIn(
+        homeZoneId: j['home_zone_id'] == null ? null : j['home_zone_id'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'home_zone_id': homeZoneId,
+      };
+}
+
+class HomeZoneOut {
+  const HomeZoneOut({
+    required this.homeZoneId,
+    required this.followsMember,
+    required this.editable,
+    required this.zones,
+  });
+
+  final String? homeZoneId;
+  final String? followsMember;
+  final bool editable;
+  final List<ZoneChoice> zones;
+
+  factory HomeZoneOut.fromJson(Map<String, dynamic> j) => HomeZoneOut(
+        homeZoneId: j['home_zone_id'] == null ? null : j['home_zone_id'] as String,
+        followsMember: j['follows_member'] == null ? null : j['follows_member'] as String,
+        editable: j['editable'] as bool,
+        zones: [for (final x in j['zones'] as List) ZoneChoice.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'home_zone_id': homeZoneId,
+        'follows_member': followsMember,
+        'editable': editable,
+        'zones': [for (final x in zones) x.toJson()],
+      };
+}
+
 class Inbox {
   const Inbox({
     required this.unreadCount,
@@ -5785,6 +5981,46 @@ class Inbox {
   Map<String, dynamic> toJson() => {
         'unread_count': unreadCount,
         'items': [for (final x in items) x.toJson()],
+      };
+}
+
+class InteriorLine {
+  const InteriorLine({
+    required this.vehicleId,
+    required this.registration,
+    required this.serviceWeekStart,
+    required this.status,
+    required this.completedOn,
+    required this.overdueDays,
+    required this.catchUp,
+  });
+
+  final String vehicleId;
+  final String registration;
+  final DateTime serviceWeekStart;
+  final String status;
+  final DateTime? completedOn;
+  final int overdueDays;
+  final bool catchUp;
+
+  factory InteriorLine.fromJson(Map<String, dynamic> j) => InteriorLine(
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        serviceWeekStart: DateTime.parse(j['service_week_start'] as String),
+        status: j['status'] as String,
+        completedOn: j['completed_on'] == null ? null : DateTime.parse(j['completed_on'] as String),
+        overdueDays: j['overdue_days'] as int,
+        catchUp: j['catch_up'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'service_week_start': _date(serviceWeekStart),
+        'status': status,
+        'completed_on': completedOn == null ? null : _date(completedOn!),
+        'overdue_days': overdueDays,
+        'catch_up': catchUp,
       };
 }
 
@@ -7727,6 +7963,9 @@ class RunResult {
     required this.unassignedExteriors,
     required this.shortfallCars,
     required this.shortfallMinutes,
+    this.deferredInteriors,
+    this.crossZoneJobs,
+    this.missedBreaks,
   });
 
   final String scheduleId;
@@ -7738,6 +7977,9 @@ class RunResult {
   final int? unassignedExteriors;
   final int? shortfallCars;
   final int? shortfallMinutes;
+  final int? deferredInteriors;
+  final int? crossZoneJobs;
+  final int? missedBreaks;
 
   factory RunResult.fromJson(Map<String, dynamic> j) => RunResult(
         scheduleId: j['schedule_id'] as String,
@@ -7749,6 +7991,9 @@ class RunResult {
         unassignedExteriors: j['unassigned_exteriors'] == null ? null : j['unassigned_exteriors'] as int,
         shortfallCars: j['shortfall_cars'] == null ? null : j['shortfall_cars'] as int,
         shortfallMinutes: j['shortfall_minutes'] == null ? null : j['shortfall_minutes'] as int,
+        deferredInteriors: j['deferred_interiors'] == null ? null : j['deferred_interiors'] as int,
+        crossZoneJobs: j['cross_zone_jobs'] == null ? null : j['cross_zone_jobs'] as int,
+        missedBreaks: j['missed_breaks'] == null ? null : j['missed_breaks'] as int,
       );
 
   Map<String, dynamic> toJson() => {
@@ -7761,6 +8006,9 @@ class RunResult {
         'unassigned_exteriors': unassignedExteriors,
         'shortfall_cars': shortfallCars,
         'shortfall_minutes': shortfallMinutes,
+        'deferred_interiors': deferredInteriors,
+        'cross_zone_jobs': crossZoneJobs,
+        'missed_breaks': missedBreaks,
       };
 }
 
@@ -9669,6 +9917,78 @@ class WebAuthProfile {
         'user_id': userId,
         'role': role,
         'display_name': displayName,
+      };
+}
+
+class WeeklySummary {
+  const WeeklySummary({
+    required this.societyId,
+    required this.weekStart,
+    required this.weekEnd,
+    required this.exteriors,
+    required this.interiorsByServiceWeek,
+    required this.interiorsCompletedInWeek,
+    required this.completions,
+    required this.catchUpServices,
+    required this.carryOver,
+    required this.missedBreaks,
+  });
+
+  final String societyId;
+  final DateTime weekStart;
+  final DateTime weekEnd;
+  final ExteriorTotals exteriors;
+  final List<InteriorLine> interiorsByServiceWeek;
+  final List<InteriorLine> interiorsCompletedInWeek;
+  final DayCounts completions;
+  final int catchUpServices;
+  final CarryOver carryOver;
+  final int missedBreaks;
+
+  factory WeeklySummary.fromJson(Map<String, dynamic> j) => WeeklySummary(
+        societyId: j['society_id'] as String,
+        weekStart: DateTime.parse(j['week_start'] as String),
+        weekEnd: DateTime.parse(j['week_end'] as String),
+        exteriors: ExteriorTotals.fromJson(j['exteriors'] as Map<String, dynamic>),
+        interiorsByServiceWeek: [for (final x in j['interiors_by_service_week'] as List) InteriorLine.fromJson(x as Map<String, dynamic>)],
+        interiorsCompletedInWeek: [for (final x in j['interiors_completed_in_week'] as List) InteriorLine.fromJson(x as Map<String, dynamic>)],
+        completions: DayCounts.fromJson(j['completions'] as Map<String, dynamic>),
+        catchUpServices: j['catch_up_services'] as int,
+        carryOver: CarryOver.fromJson(j['carry_over'] as Map<String, dynamic>),
+        missedBreaks: j['missed_breaks'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'society_id': societyId,
+        'week_start': _date(weekStart),
+        'week_end': _date(weekEnd),
+        'exteriors': exteriors.toJson(),
+        'interiors_by_service_week': [for (final x in interiorsByServiceWeek) x.toJson()],
+        'interiors_completed_in_week': [for (final x in interiorsCompletedInWeek) x.toJson()],
+        'completions': completions.toJson(),
+        'catch_up_services': catchUpServices,
+        'carry_over': carryOver.toJson(),
+        'missed_breaks': missedBreaks,
+      };
+}
+
+class ZoneChoice {
+  const ZoneChoice({
+    required this.id,
+    required this.name,
+  });
+
+  final String id;
+  final String name;
+
+  factory ZoneChoice.fromJson(Map<String, dynamic> j) => ZoneChoice(
+        id: j['id'] as String,
+        name: j['name'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
       };
 }
 
