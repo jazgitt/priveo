@@ -20,7 +20,7 @@ MONDAY = SUNDAY + timedelta(days=1)
 def _no_overlap(placed):
     """True when no two of these placements share a minute."""
     spans = sorted((p.start, p.start + p.duration) for p in placed)
-    return all(a_end <= b_start for (_, a_end), (b_start, _) in zip(spans, spans[1:]))
+    return all(a_end <= b_start for (_, a_end), (b_start, _) in zip(spans, spans[1:], strict=False))
 
 
 def _external_minutes(world):
