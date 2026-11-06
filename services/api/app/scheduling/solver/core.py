@@ -19,6 +19,7 @@ from ortools.sat.python import cp_model
 from app.scheduling.codes import ReasonCode
 from app.scheduling.solver.registry import discover
 from app.scheduling.solver.rules.base import MAX_SECONDS, SEED, STEP, WORKERS
+from app.scheduling.solver.rules.job_cutoff import cutoff_blocks
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class SolverJob:
     finish_by: int | None = None
     fixed: tuple[str, int] | None = None  # (crew key, start minute)
     windows: tuple[tuple[int, int], ...] | None = None
+    hard_cutoff: bool = False  # finish_by is a hard limit (SCHS-19)
 
 
 @dataclass
@@ -164,7 +166,7 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
         if job.key in result.unplaced:
             continue
         if not solver.Value(ctx.placed_vars[job.key]):
-            _unplace(result, job.key, ReasonCode.CAPACITY_SHORT)
+            _unplace(result, job.key, ReasonCode.CUSTOMER_CUTOFF if cutoff_blocks(job) else ReasonCode.CAPACITY_SHORT)
             continue
         crew_key = next(
             c.key for c in crew if (job.key, c.key) in ctx.presence and solver.Value(ctx.presence[(job.key, c.key)])
