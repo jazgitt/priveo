@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:priveo/core/auth/session.dart';
 import 'package:priveo/features/customer/home/car_illustration.dart';
 import 'package:priveo/features/customer/home/customer_home_data.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart' show homeNowProvider;
 import 'package:priveo/features/customer/onboarding/onboarding_review_screen.dart';
 import 'package:priveo/core/routing/router.dart';
 import 'package:priveo/features/support/feedback_tab.dart';
@@ -27,6 +28,10 @@ Future<FakePriveoApi> openAsCustomer(
   final api = FakePriveoApi(onboardingConfirmed: confirmed);
   await pumpApp(
     tester,
+    // The fake next service is 07-Nov-26; pin "now" so the label is the plain date.
+    overrides: [
+      homeNowProvider.overrideWithValue(() => DateTime(2026, 11, 4, 9, 30)),
+    ],
     store: store,
     api: api,
     account: PhotoAccount(hasPhoto: hasPhoto),

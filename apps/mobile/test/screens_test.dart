@@ -1,6 +1,7 @@
 import 'package:priveo/features/customer/calendar/calendar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:priveo/features/customer/home/home_schedule.dart' show homeNowProvider;
 import 'package:priveo/features/auth/presentation/login_screen.dart';
 import 'package:priveo/features/crew/home/crew_home_screen.dart';
 
@@ -186,7 +187,10 @@ void main() {
     tester.view.physicalSize = const Size(800, 2400);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
-    await pumpApp(tester);
+    // The fake next service is 07-Nov-26; pin "now" so the label is the plain date.
+    await pumpApp(tester, overrides: [
+      homeNowProvider.overrideWithValue(() => DateTime(2026, 11, 4, 9, 30)),
+    ]);
     await passSplash(tester);
     await signIn(tester, FakeAuthRepository.customerId, FakeAuthRepository.mpin);
     expect(find.textContaining(RegExp(r'^Good (morning|afternoon|evening),$')), findsOneWidget);
