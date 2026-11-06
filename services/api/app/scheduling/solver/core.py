@@ -16,9 +16,36 @@ from dataclasses import dataclass, field
 
 from ortools.sat.python import cp_model
 
+from app.directory import settings_registry
 from app.scheduling.codes import ReasonCode
 from app.scheduling.solver.registry import discover
-from app.scheduling.solver.rules.base import MAX_SECONDS, SEED, STEP, WORKERS
+
+
+def _default(key: str) -> int:
+    return int(settings_registry.default_for(key))
+
+
+@dataclass(frozen=True)
+class SolverParams:
+    """Grid step, time limit, seed and workers (SCHS-25). The defaults are the
+    registry defaults, so a caller that passes nothing plans as before."""
+
+    step: int = field(default_factory=lambda: _default("scheduler.grid_minutes"))
+    max_seconds: float = field(default_factory=lambda: float(_default("scheduler.solve_seconds")))
+    seed: int = field(default_factory=lambda: _default("scheduler.seed"))
+    workers: int = field(default_factory=lambda: _default("scheduler.workers"))
+
+    @classmethod
+    def load(cls, db) -> SolverParams:
+        """The global settings, read through the lookup."""
+        from app.directory import lookup
+
+        return cls(
+            step=int(lookup.setting(db, "scheduler.grid_minutes")),
+            max_seconds=float(lookup.setting(db, "scheduler.solve_seconds")),
+            seed=int(lookup.setting(db, "scheduler.seed")),
+            workers=int(lookup.setting(db, "scheduler.workers")),
+        )
 
 
 @dataclass(frozen=True)
@@ -67,13 +94,16 @@ class ModelContext:
     late_vars: dict[str, object] = field(default_factory=dict)
     presence: dict[tuple[str, str], object] = field(default_factory=dict)
     durations: dict[str, int] = field(default_factory=dict)  # in grid steps
+    params: SolverParams = field(default_factory=SolverParams)
 
 
-def _up(minutes: int) -> int:
-    return -(-minutes // STEP)
+def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], params: SolverParams | None = None) -> SolverResult:
+    params = params or SolverParams()
+    STEP = params.step
 
+    def _up(minutes: int) -> int:
+        return -(-minutes // STEP)
 
-def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float = MAX_SECONDS) -> SolverResult:
     result = SolverResult()
     crew_by_key = {c.key: c for c in crew}
     free: list[SolverJob] = []
@@ -95,7 +125,7 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
         return result
 
     model = cp_model.CpModel()
-    ctx = ModelContext(model=model, crew=crew, free=free, kept=kept)
+    ctx = ModelContext(model=model, crew=crew, free=free, kept=kept, params=params)
     ctx.per_crew = {c.key: [] for c in crew}
     per_crew = ctx.per_crew
     per_vehicle = ctx.per_vehicle
@@ -150,9 +180,9 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], max_seconds: float 
     model.Maximize(sum(ctx.objective))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = max_seconds
-    solver.parameters.num_workers = WORKERS
-    solver.parameters.random_seed = SEED
+    solver.parameters.max_time_in_seconds = params.max_seconds
+    solver.parameters.num_workers = params.workers
+    solver.parameters.random_seed = params.seed
     status = solver.Solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         for job in free:
