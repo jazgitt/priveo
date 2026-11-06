@@ -28,6 +28,7 @@ _JOB_STATUS = {
     "Completed": "Done",
     "Skipped": "Skipped",
     "Could not complete": "Missed",
+    "Deferred": "Missed",
 }
 _VISIT_STATUS = {"Could not complete": "Missed"}
 

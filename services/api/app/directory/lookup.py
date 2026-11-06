@@ -172,6 +172,13 @@ def reason_keys(db: Session) -> set[str]:
     return {r.key for r in reasons(db)}
 
 
+def reason_defers(db: Session, key: str) -> bool:
+    """True when the reason defers the job (car or keys not available) instead of
+    ending it (SCHR-DEF-01, DEF-04). Read from the table; no reason is listed in code."""
+    row = db.scalar(select(CncReason).where(CncReason.key == key))
+    return bool(row is not None and row.defers)
+
+
 def reason_label(db: Session, key: str) -> str | None:
     """The label of a reason, active or not (past records keep it)."""
     row = db.scalar(select(CncReason).where(CncReason.key == key))

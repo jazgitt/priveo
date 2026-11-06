@@ -471,6 +471,7 @@ def refresh_visit_status(db: Session, visit_id: uuid.UUID) -> None:
             b.status = {
                 "Completed": "Completed",
                 "Could not complete": "Missed",
+                "Deferred": "Missed",
                 "Skipped": "Missed",
             }.get(
                 job.status,
