@@ -13,6 +13,7 @@ the rule modules in `solver/rules/`, found by `solver.registry`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from ortools.sat.python import cp_model
 
@@ -65,6 +66,10 @@ class SolverJob:
     fixed: tuple[str, int] | None = None  # (crew key, start minute)
     windows: tuple[tuple[int, int], ...] | None = None
     hard_cutoff: bool = False  # finish_by is a hard limit (SCHS-19)
+    # The plan's own Interior, set by the caller only at version 2: at most one a
+    # day for a car, and one for a service week (SCHS-37).
+    interior: bool = False
+    week: date | None = None  # the service week it counts against, when known
 
 
 @dataclass
@@ -97,6 +102,8 @@ class ModelContext:
     presence: dict[tuple[str, str], object] = field(default_factory=dict)
     durations: dict[str, int] = field(default_factory=dict)  # in grid steps
     params: SolverParams = field(default_factory=SolverParams)
+    # A rule that makes a job unplaceable names the reason here (SCHS-37).
+    reasons: dict[str, ReasonCode] = field(default_factory=dict)
 
 
 def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], params: SolverParams | None = None) -> SolverResult:
@@ -196,7 +203,10 @@ def solve_day(crew: list[SolverCrew], jobs: list[SolverJob], params: SolverParam
         if job.key in result.unplaced:
             continue
         if not solver.Value(ctx.placed_vars[job.key]):
-            _unplace(result, job.key, ReasonCode.CUSTOMER_CUTOFF if cutoff_blocks(job) else ReasonCode.CAPACITY_SHORT)
+            _unplace(
+                result, job.key,
+                ctx.reasons.get(job.key)
+                or (ReasonCode.CUSTOMER_CUTOFF if cutoff_blocks(job) else ReasonCode.CAPACITY_SHORT))
             continue
         crew_key = next(
             c.key for c in crew if (job.key, c.key) in ctx.presence and solver.Value(ctx.presence[(job.key, c.key)])

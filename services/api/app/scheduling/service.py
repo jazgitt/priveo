@@ -21,7 +21,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import hand_placement, hooks, queue, rules, run_context
+from app.scheduling import entitlements, hand_placement, hooks, queue, rules, run_context
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -626,6 +626,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     fixed,
                     slots,
                     hard_cutoff=is_strict_day(ctx, day),
+                    interior=ctx.active and entitlements.uses_entitlement(job),
+                    week=job.service_week_start,
                 )
             )
         if not solver_jobs:
