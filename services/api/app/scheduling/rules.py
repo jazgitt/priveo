@@ -4,29 +4,35 @@ and working windows. No database here."""
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
 
+from app.directory import settings_registry
 from app.platform.clock import IST
 
-# Starting values. The admin sets the live ones (ADM-SET-*, `schedule.*`),
-# read through `app.directory.lookup`.
-# ADM-SCH-18: the secret code that unfreezes a schedule is the word "unfreeze".
-UNFREEZE_CODE = "unfreeze"
 
-FREEZE_HOUR = 20  # ADM-SCH-25: 8 PM the day before the first day.
-CUSTOMER_HOUR = 21  # SCHED-01: customers change by 9 PM the previous day.
+def _hour(key: str, hour: int | None) -> int:
+    """The hour passed by a caller that read the live setting, else the seeded
+    registry value (ADM-SET-*, `schedule.*`, read through `app.directory.lookup`)."""
+    if hour is not None:
+        return hour
+    definition = settings_registry.BY_KEY[key]
+    return settings_registry.typed(definition, settings_registry.default_for(key))
 
 
-def freeze_deadline(first_day: date, hour: int = FREEZE_HOUR) -> datetime:
-    """8 PM (IST) the day before the first day of the schedule's period."""
+def freeze_deadline(first_day: date, hour: int | None = None) -> datetime:
+    """The freeze hour (`schedule.freeze_hour`, ADM-SCH-25) the day before the
+    first day of the schedule's period."""
+    hour = _hour("schedule.freeze_hour", hour)
     return datetime.combine(first_day - timedelta(days=1), time(hour), tzinfo=IST)
 
 
-def customer_deadline(day: date, hour: int = CUSTOMER_HOUR) -> datetime:
-    """The last moment a customer can change that date's schedule. The admin
-    is not bound by it (ADM-CUS-11)."""
+def customer_deadline(day: date, hour: int | None = None) -> datetime:
+    """The last moment a customer can change that date's schedule
+    (`schedule.customer_change_hour`, SCHED-01). The admin is not bound by it
+    (ADM-CUS-11)."""
+    hour = _hour("schedule.customer_change_hour", hour)
     return datetime.combine(day - timedelta(days=1), time(hour), tzinfo=IST)
 
 
-def customer_can_change(day: date, now: datetime, hour: int = CUSTOMER_HOUR) -> bool:
+def customer_can_change(day: date, now: datetime, hour: int | None = None) -> bool:
     return now < customer_deadline(day, hour)
 
 

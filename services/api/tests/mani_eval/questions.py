@@ -127,7 +127,7 @@ QUESTIONS: tuple[Question, ...] = (
        "Where are the 8 PM freeze and the 9 PM customer cutoff set?",
        "code", "phrases", needs_citation=True,
        params={"phrases_all": [r"8 ?PM", r"9 ?PM", r"skip|pause", r"schedul"]},
-       gold=(r"FREEZE_HOUR = 20", r"CUTOFF_HOUR = 21",),
+       gold=(r"schedule\.freeze_hour", r"schedule\.customer_change_hour",),
        dropped=True),
     _q(13, CODE,
        "What are the upload size limits for media?",
