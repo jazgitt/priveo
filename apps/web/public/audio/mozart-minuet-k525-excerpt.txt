@@ -1,0 +1,9 @@
+Audio: mozart-minuet-k525-excerpt.mp3 (first 75 seconds, faded out)
+
+Composer: Wolfgang Amadeus Mozart (1756-1791)
+Work: Eine kleine Nachtmusik, K. 525 (Serenade No. 13 in G major), third movement, Minuet (Allegretto)
+Recording: Musopen (nonprofit) release, uploaded to Wikimedia Commons by user Guy vandegrift, 18 March 2024. The Commons file page lists the performer as "European Archive", which the uploader says does not make sense; the performing ensemble is not confirmed.
+Source URL: https://commons.wikimedia.org/wiki/File:Mozart_K525_Serenade_in_G_Major_3_-_Minuet.ogg
+Licence stated on the file page: "Public domain" (template name on the page). The page adds that it is public domain in the United States and might not be outside the US. The composer died in 1791, so the composition itself is public domain.
+Excerpt: the first 75 seconds of the 2 min 3 s Ogg file, re-encoded as MP3 (96 kbps, mono) with a 0.8 s fade-in and a 2.5 s fade-out. Size about 0.9 MB.
+Caveat: the recording's licence rests on the uploader's "Public domain" declaration, not on a CC0 mark. Check before any public release.

@@ -931,6 +931,10 @@ describe("skipped and finished jobs cannot be placed or moved", () => {
   });
 });
 
+// The run plays its music (ux9, item 4), and jsdom has no media element to play it: stub play and pause.
+HTMLMediaElement.prototype.play = () => Promise.resolve();
+HTMLMediaElement.prototype.pause = () => {};
+
 describe("schedule tabs and unavailable crew time", () => {
   const avail = [
     { crew_id: "c1", status: "Partial", windows: [{ start: 480, end: 600 }],

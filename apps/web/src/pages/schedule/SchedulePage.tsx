@@ -39,6 +39,7 @@ import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
 import { Fireworks } from "./RunFireworks";
+import { isRunMusicMuted, setRunMusicMuted, startRunMusic, stopRunMusic } from "./runMusic";
 import {
   datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
   useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
@@ -191,6 +192,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [density, setDensity] = useDensity();
   // The result of the last run, shown as a celebration until it ends.
   const [celebration, setCelebration] = useState<string | null>(null);
+  // The run music (ux9): it starts from the Run click and stops when the celebration ends or the run fails.
+  const [musicMuted, setMusicMuted] = useState(isRunMusicMuted);
+  useEffect(() => () => stopRunMusic(), []);
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
@@ -270,7 +274,15 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     invalidate: [["admin-settings"]],
   });
 
+  const toggleMusic = () => {
+    const next = !musicMuted;
+    setRunMusicMuted(next);
+    setMusicMuted(next);
+  };
+
   const run = () => {
+    // Called from the click, so the browser allows the sound to start.
+    startRunMusic();
     setRunOpen(false);
     setCelebration(null);
     const start = runStart;
@@ -293,7 +305,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       setProblem(null);
       setParams({ date: day, tab: "board" }, { replace: true });
       setCelebration(runSummary(r));
-    }, () => { /* The task tray and a toast say why it failed. */ });
+    }, () => { stopRunMusic(); /* The task tray and a toast say why it failed. */ });
   };
 
   // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
@@ -613,8 +625,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       {/* Last in the page, so it never takes the first child's place in the focus view. Under an open focus
           view the rain falls on that view instead, so it is not drawn twice. */}
       <NameRain names={rainNames} active={running && !focusOpen} />
-      {running && <Fireworks mode="running" />}
-      {celebration && <Fireworks mode="celebrate" message={celebration} onEnd={() => setCelebration(null)} />}
+      {running && <Fireworks mode="running" muted={musicMuted} onToggleMute={toggleMusic} />}
+      {celebration && <Fireworks mode="celebrate" message={celebration} muted={musicMuted} onToggleMute={toggleMusic}
+                                 onEnd={() => { stopRunMusic(); setCelebration(null); }} />}
     </div>
   );
 }
