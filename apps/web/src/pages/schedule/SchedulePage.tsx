@@ -117,13 +117,13 @@ function periodStart(period: Period, date: string, weekStart: number): string {
 }
 
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
-const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** The result of a run in words: "12 placed, 1 unscheduled, 0 late." */
 const runSummary = (r: { schedules: RunResult[] }) => {
   const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
   return `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`;
 };
+const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** A draft's freeze time, only while "Freeze by itself" is on (scheduler.auto_freeze). */
 function freezeText(s: ScheduleOut, autoFreeze: boolean): string {
