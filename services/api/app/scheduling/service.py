@@ -17,6 +17,7 @@ from app.customers.parking_rules import with_zone, zone_names
 from app.customers.schedule_pattern import day_flags, patterns_for
 from app.directory import lookup
 from app.directory.models import Plan, Society
+from app.features import service as features
 from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
@@ -902,8 +903,11 @@ def unfreeze(db: Session, schedule: Schedule, code: str, admin_id: uuid.UUID | N
 
 
 def freeze_due(db: Session, now: datetime) -> list[uuid.UUID]:
-    """Freeze every Draft whose freeze cutoff time has passed (ADM-SCH-25)."""
+    """Freeze every Draft whose freeze cutoff time has passed (ADM-SCH-25).
+    Only while the admin's "Freeze by itself" feature is on; it is off by default."""
     frozen = []
+    if not features.is_enabled(db, "scheduler.auto_freeze"):
+        return frozen
     hour = lookup.setting(db, "schedule.freeze_hour")
     drafts = db.execute(select(Schedule).where(Schedule.status == "Draft")).scalars().all()
     for schedule in drafts:

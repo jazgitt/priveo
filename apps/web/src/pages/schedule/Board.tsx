@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { StatusBadge } from "@/blocks/status";
 
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
@@ -12,6 +14,34 @@ const CODES: Record<string, string> = {
 /** EXT, INT or SPA for a service. */
 export function serviceCode(service: string): string {
   return CODES[service] ?? service.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+}
+
+/** The short form of a zone: "Zone 3" is "Z3". Any other name keeps its first letters. */
+export function zoneShort(zone: string): string {
+  const m = /^\s*zone\s*(.+)$/i.exec(zone);
+  return m ? `Z${m[1].trim()}` : zone.trim().slice(0, 4);
+}
+
+/** The zones of the jobs shown, in order: Zone 2 before Zone 10. */
+export function zonesOf(jobs: AdminJob[]): string[] {
+  const names = new Set(jobs.map((j) => j.zone).filter((z): z is string => Boolean(z)));
+  return [...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+/**
+ * The label colour of a zone: a shade from white (the first zone) to near black
+ * (the last), spread over the zones shown. Every job of a zone has the same
+ * shade. Undefined when the job has no zone.
+ */
+export function zoneStyle(zone: string, zones: string[]): CSSProperties | undefined {
+  const i = zones.indexOf(zone);
+  if (!zone || i < 0) return undefined;
+  const light = zones.length === 1 ? 50 : 97 - (i * 79) / (zones.length - 1);
+  return {
+    background: `hsl(0 0% ${Math.round(light)}%)`,
+    color: light < 55 ? "#ffffff" : "#16151a",
+    boxShadow: "inset 0 0 0 1px rgba(22, 21, 26, 0.18)",
+  };
 }
 
 /** "EXT,HR26AB2324,B1-24": service code, vehicle number and parking place. */

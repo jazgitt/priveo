@@ -22,6 +22,7 @@ from app.scheduling import service as scheduling
 from app.scheduling.models import Job, Schedule
 from app.support.models import AdminAlert
 from tests.customer_reads.conftest import add_customer, api, headers_for, repo  # noqa: F401
+from tests.directory_helpers import set_feature
 from tests.visits.conftest import (  # noqa: F401
     DAY,
     PASSWORD,
@@ -137,6 +138,7 @@ def test_freeze_tells_each_crew_member_and_their_trainee_once(
 def test_freeze_due_tells_the_crew(db, world, make_crew, new_visit, push):
     ravi = make_crew("9000000010", "Ravi")
     new_visit(assigned=ravi, status="Draft")
+    set_feature(db.get_bind(), "scheduler.auto_freeze", True)
     after_cutoff = datetime(2026, 11, 6, 21, 0, tzinfo=IST)
     assert len(scheduling.freeze_due(db, after_cutoff)) >= 1
     assert events(db, ravi.login_id) == ["crew_schedule_frozen"]
@@ -443,6 +445,7 @@ def test_the_cron_jobs_do_their_work(cron, db, world, customer_login, make_crew,
     for job in ("freeze-due", "payments-daily", "renewal-reminders"):
         cron_log.set_enabled(db, job, True, None)
     db.commit()
+    set_feature(db.get_bind(), "scheduler.auto_freeze", True)
     ravi = make_crew("9000000010", "Ravi")
     new_visit(assigned=ravi, status="Draft")
     # Freeze at 8 PM.

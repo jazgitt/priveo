@@ -2,7 +2,11 @@ import { useState, type CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf } from "./Board";
+import {
+  gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf,
+  zoneShort, zonesOf, zoneStyle,
+} from "./Board";
+import type { Density } from "./CardBoard";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
@@ -19,7 +23,7 @@ interface Tip { job: AdminJob; x: number; y: number }
  * as wide as its duration and coloured by its status. Hovering or focusing a
  * block shows its details. Nothing can be moved here (ADM-SCH-33).
  */
-export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", now }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", now }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -29,10 +33,13 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   type?: string;
   /** "late" or "manual" keeps only those jobs bright; empty shows all. */
   flag?: string;
+  /** How much a block shows, as on the cards: compact, standard or detailed. */
+  density?: Density;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
 }) {
   const [tip, setTip] = useState<Tip | null>(null);
+  const zones = zonesOf(jobs);
   if (crew.length === 0) {
     return <p className="text-sm text-muted-foreground">No crew is set up for this site.</p>;
   }
@@ -96,7 +103,15 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                        style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
                        onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
                        onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
-                    <span>{job.status === "Completed" ? "✓ " : job.status === "Could not complete" ? "✕ " : ""}{serviceCode(job.service)}</span>
+                    <span className="sch-tl-text">
+                      {density === "detailed" && job.zone && (
+                        <span className="sch-zone" style={zoneStyle(job.zone, zones)}>{zoneShort(job.zone)}</span>
+                      )}
+                      <span>{job.status === "Completed" ? "✓ " : job.status === "Could not complete" ? "✕ " : ""}{serviceCode(job.service)}</span>
+                      {density !== "compact" && <strong className="reg">{job.registration}</strong>}
+                      {density === "detailed" && <span>{job.vehicle}</span>}
+                      {density === "detailed" && <span>{job.customer_name}</span>}
+                    </span>
                   </div>
                 ))}
                 {now !== undefined && now >= first && now <= last && (

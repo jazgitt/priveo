@@ -11,7 +11,7 @@ from app.identity.models import Login
 from app.platform.clock import IST
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
-from tests.directory_helpers import set_setting
+from tests.directory_helpers import set_feature, set_setting
 from tests.scheduling.conftest import SUNDAY
 from tests.test_api import auth, login
 
@@ -257,11 +257,24 @@ def test_a_late_visit_is_placed_on_a_frozen_schedule_without_moving_others(
         assert after[job_id] == placement
 
 
+def test_freeze_by_itself_is_off_until_the_feature_is_on(api, admin, world, run_week, engine):
+    world.add_crew()
+    world.add_vehicle()
+    world.db.commit()
+    run_week(days=1)
+    with Session(engine) as db:
+        assert service.freeze_due(db, datetime(2026, 10, 17, 21, 0, tzinfo=IST)) == []
+    set_feature(engine, "scheduler.auto_freeze", True)
+    with Session(engine) as db:
+        assert len(service.freeze_due(db, datetime(2026, 10, 17, 21, 0, tzinfo=IST))) == 1
+
+
 def test_the_freeze_cutoff_time_freezes_drafts(api, admin, world, run_week, engine):
     world.add_crew()
     world.add_vehicle()
     world.db.commit()
     run_week(days=1)
+    set_feature(engine, "scheduler.auto_freeze", True)
     with Session(engine) as db:
         early = datetime(2026, 10, 17, 19, 59, tzinfo=IST)
         assert service.freeze_due(db, early) == []
@@ -381,6 +394,7 @@ def test_a_changed_freeze_hour_moves_the_cutoff(api, admin, world, run_week, eng
     world.add_vehicle()
     world.db.commit()
     run_week(days=1)
+    set_feature(engine, "scheduler.auto_freeze", True)
     set_setting(engine, "schedule.freeze_hour", 18)
     with Session(engine) as db:
         assert service.freeze_due(db, datetime(2026, 10, 17, 17, 59, tzinfo=IST)) == []

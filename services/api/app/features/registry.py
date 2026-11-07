@@ -12,6 +12,8 @@ from dataclasses import dataclass
 CUSTOMER = "customer"
 CREW = "crew"
 BOTH = "both"
+# Read by the admin portal only, never sent to the apps.
+ADMIN = "admin"
 
 
 @dataclass(frozen=True)
@@ -20,7 +22,7 @@ class FlagDef:
     label: str
     description: str
     group: str
-    audience: str  # customer | crew | both
+    audience: str  # customer | crew | both | admin
     default: bool = True  # value while no row is stored
 
 
@@ -69,6 +71,12 @@ FLAGS: tuple[FlagDef, ...] = (
     # ---- both ----
     FlagDef("common.push", "Push registration", "Register the device for push.",
             "Both", BOTH),
+    # ---- admin (portal only) ----
+    # Off until the owner turns it on: with it off, a draft is never frozen by the clock,
+    # and the admin freezes it by hand (ADM-SCH-25).
+    FlagDef("scheduler.auto_freeze", "Freeze by itself",
+            "Freeze each draft schedule by itself at the freeze hour the day before it starts. "
+            "Off: freeze by hand.", "Scheduler", ADMIN, default=False),
 )
 
 BY_KEY = {f.key: f for f in FLAGS}

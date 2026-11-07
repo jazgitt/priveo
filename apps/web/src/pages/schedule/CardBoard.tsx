@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { HoverTip } from "../../components";
 import {
   fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa, isUnplaced, jobLabel, matches, minutesOf, Reasoning,
-  serviceCode, SNAP, statusClass, typeClass, windowsOf,
+  serviceCode, SNAP, statusClass, typeClass, windowsOf, zoneShort, zonesOf, zoneStyle,
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
 import { Scroller } from "./Scroller";
@@ -83,6 +83,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
 }) {
   const confirm = useConfirm();
+  const zones = zonesOf(jobs);
   const dragging = useRef<AdminJob | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<Over | null>(null);
@@ -226,6 +227,13 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     const code = serviceCode(job.service);
     const open = isOpen(job);
     const time = job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min`;
+    const statusIcon = (
+      <>
+        {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
+        {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
+        {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
+      </>
+    );
     return (
       <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
            aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
@@ -242,27 +250,47 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
                nudge(job, e.key === "ArrowUp" ? -SNAP : SNAP);
              }
            }}>
-        <span className="sch-card-top">
-          <span className="sch-time">{time}</span>
-          <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
-          {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
-          {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
-          {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
-          {density === "compact" && <strong className="reg ml-auto truncate">{job.registration}</strong>}
-          {job.late && <span className="sch-flag late">Late</span>}
-          {job.manual && <span className="sch-flag">By hand</span>}
-        </span>
-        {density !== "compact" && (
-          <span className="sch-card-main">
-            <strong className="reg">{job.registration}</strong>
-            <span>{job.parking || "-"}{job.finish_by ? ` · by ${job.finish_by}` : ""}</span>
-          </span>
-        )}
-        {density === "detailed" && (
-          <span className="sch-card-who">{job.customer_name} · {job.vehicle}</span>
+        {density === "detailed" ? (
+          <>
+            {/* Line 1: zone, car model, car number and cutoff. The basement place is not shown. */}
+            <span className="sch-line1">
+              {job.zone && <span className="sch-zone" style={zoneStyle(job.zone, zones)} title={job.zone}>{zoneShort(job.zone)}</span>}
+              <span className="sch-model">{job.vehicle || "-"}</span>
+              <strong className="reg">{job.registration}</strong>
+              <span className="sch-cut">{job.finish_by ? `Cutoff ${job.finish_by}` : "No cutoff"}</span>
+            </span>
+            {/* Line 2: the kind of clean and its time slot, then the flags. */}
+            <span className="sch-card-top">
+              <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
+              <span className="sch-time">{time}</span>
+              {statusIcon}
+              {job.late && <span className="sch-flag late">Late</span>}
+              {job.manual && <span className="sch-flag">By hand</span>}
+            </span>
+            {/* Line 3: the customer. */}
+            <span className="sch-card-who">{job.customer_name}</span>
+          </>
+        ) : (
+          <>
+            <span className="sch-card-top">
+              <span className="sch-time">{time}</span>
+              <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
+              {statusIcon}
+              {density === "compact" && <strong className="reg ml-auto truncate">{job.registration}</strong>}
+              {job.late && <span className="sch-flag late">Late</span>}
+              {job.manual && <span className="sch-flag">By hand</span>}
+            </span>
+            {density !== "compact" && (
+              <span className="sch-card-main">
+                <strong className="reg">{job.registration}</strong>
+                <span>{job.parking || "-"}{job.finish_by ? ` · by ${job.finish_by}` : ""}</span>
+              </span>
+            )}
+          </>
         )}
         {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
         {job.crew_id && job.cross_zone_reason && density !== "compact" && <span className="sch-why">Cross-zone: {job.cross_zone_reason}</span>}
+        {/* Line 4 on a card taken off a crew member: the reason it has no place. */}
         {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
       </div>
     );
