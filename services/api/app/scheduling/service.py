@@ -1047,9 +1047,14 @@ def job_rows(db: Session, *where) -> list[dict]:
     result = [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
     on = parking_slots(db, [(veh, v.date) for _, v, veh, *_ in rows])
     zones = zone_names(db, [veh for _, _, veh, *_ in rows])
+    # The preferred Interior day is on the car's subscription (one per vehicle).
+    interior = dict(db.execute(
+        select(Subscription.vehicle_id, Subscription.interior_day)
+        .where(Subscription.vehicle_id.in_({veh.id for _, _, veh, *_ in rows}))).all())
     for r, (_, v, veh, *_) in zip(result, rows, strict=True):
         r["zone"] = zones.get(veh.id, "")
         r["parking"] = with_zone(r["zone"], parking_label(on[(veh.id, v.date)]))
+        r["interior_day"] = interior.get(veh.id)
     from app.scheduling.outcomes import visit_outcomes
 
     derived = visit_outcomes(db, {r["visit_id"] for r in result})

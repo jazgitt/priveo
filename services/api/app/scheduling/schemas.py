@@ -167,6 +167,8 @@ class AdminJob(BaseModel):
     cross_zone_reason: str | None = None
     # SCHS-22: the rules a job was placed against by hand and the admin confirmed; the Board marks it wine.
     hand_breaches: list[str] = []
+    # The car's preferred Interior day as set on its subscription: a weekday, "Custom", or null when not set.
+    interior_day: str | None = None
 
 
 class Board(BaseModel):
