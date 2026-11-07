@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Scheduler Requirements (Scheduling Rules v1.2)
 
-**Status:** Draft v0.4 (worked examples for the weekend cutoff added to section 3, no row changed, 06-Nov-26), v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
+**Status:** Draft v0.6 (9 Nov 2026: SCHR-INT-28 answered, the car keeps its preferred day; earlier: Interior gap rule SCHR-INT-27 and the no-Interior case SCHR-INT-28 added, SCHR-INT-05 and SCHR-HIER-08 changed, 8 Nov 2026), v0.4 (worked examples for the weekend cutoff added to section 3, no row changed, 06-Nov-26), v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
 **Scope:** The daily and weekly scheduler for car cleaning (Cleaning-External and Cleaning-Internal): the settings it reads, the rules it applies, the order in which rules win, the entitlement accounting for interior cleaning, and the reports it must give. Deep Spa is outside the sheet and keeps its current behaviour (ADM-ADD, ADM-SCH-30).
 **Platforms:** The rules run in the API (`services/api/app/scheduling`). Settings and reports are shown in the React web portal. The crew app shows the resulting day (crew file).
 **Language:** English only
@@ -197,7 +197,7 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | SCHR-HIER-05 | Where the sheet's list puts "prefer meeting weekend cutoffs" last but rule 06 says free capacity must not be created by violating cutoffs, weekend lateness is minimised above the early-capacity objective in Pass A. On a weekend the break wins over the cutoff: an Interior runs after the break and is flagged late against the weekend cutoff. Exterior still comes first (owner, 05-Nov-26). | Owner and Derived |
 | SCHR-HIER-06 | Tie-breaks, in order: fewer cross-zone assignments, fewer zone switches in a cleaner's day, earlier start, a stable order by vehicle creation date and ID, then the fixed random seed. | Derived |
 | SCHR-HIER-07 | Pass A and Pass B are two separate solves. Pass B receives Pass A's placements as fixed jobs and fills the gaps. "Exterior first" is a planning order only: a cleaner who has finished their own Exteriors may start an assigned Interior while another cleaner still works on Exteriors (SCHR-INT-08). | Owner |
-| SCHR-HIER-08 | Jobs placed by hand and jobs already frozen stay where they are and take up the cleaner's time in both passes, as today (ADM-SCH-14, ADM-SCH-27). The admin may place a job against any rule; the screen warns and each breach is flagged in the exception report. The scheduler itself never breaks a hard constraint (owner, 05-Nov-26). | Owner |
+| SCHR-HIER-08 | Jobs placed by hand and jobs already frozen stay where they are and take up the cleaner's time in both passes, as today (ADM-SCH-14, ADM-SCH-27). The admin may place a job against any rule; the screen warns and each breach is flagged in the exception report. The scheduler itself never breaks a hard constraint (owner, 05-Nov-26). A hand move that overlaps another job is refused, not warned (ADM-SCH-43). | Owner and Derived |
 
 ---
 
@@ -248,7 +248,7 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | SCHR-INT-02 | Each Interior takes exactly 30 minutes, including movement between cars or zones. | Owner |
 | SCHR-INT-03 | No Interior starts before 07:00 on any day, including the weekend, because customer keys may not be reachable earlier. | Owner |
 | SCHR-INT-04 | A visit that has both an Exterior and an Interior occupies 60 minutes of work. The two 30-minute jobs may follow one another or be apart, and may be done by different cleaners. | Owner |
-| SCHR-INT-05 | The customer's interior care day (ONB-18) is a preference only and does not bind the scheduler. It may be used as a tie-break among equal plans. Exceptional customer requests are handled by hand by the admin. | Owner and Derived |
+| SCHR-INT-05 | The customer's interior care day (ONB-18) is a preference only and does not bind the scheduler. It may be used as a tie-break among equal plans. Exceptional customer requests are handled by hand by the admin. The gap rule for the preferred day is SCHR-INT-27. | Owner and Derived |
 | SCHR-INT-06 | The default entitlement is one Interior service for each service week. A second Interior is never planned against the same service week. | Owner |
 | SCHR-INT-07 | Pass B starts only after all Exterior jobs of the day are allocated. It looks at the gaps of 30 minutes or more that start no earlier than 07:00. | Owner |
 | SCHR-INT-08 | Exterior first is a planning sequence, not an execution barrier. An Interior can be assigned to a cleaner who is free while others are still working on Exteriors. | Owner |
@@ -270,6 +270,8 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | SCHR-INT-24 | An Interior placed by hand is counted against the oldest pending service week of the car, unless the admin picks another week. | Derived |
 | SCHR-INT-25 | The entitlement model replaces the Custom interior care day rotation (ADM-SUB-10, parked on 03-Nov-26). A Custom subscription is a normal case; its notes stay informational (owner, 05-Nov-26). | Owner |
 | SCHR-INT-26 | A Weekly or Cycle pattern (ADM-SCH-41) that names Interior days feeds the car's preferred days (a tie-break, SCHR-INT-05). It does not override the entitlement model. | Derived |
+| SCHR-INT-27 | Only a completed Interior in the car's plan week counts. If it is up to 2 days after the car's preferred Interior day, the preferred day is kept. If the gap is larger, the Interior is held as optional: the screen shows "Preferred Interior day moved: last Interior on <date>" and the Interior goes to Unscheduled. A car whose last Interior was in an earlier week keeps its preferred day. The 2-day threshold is Derived (8 Nov 2026). | Derived |
+| SCHR-INT-28 | If no Interior is completed in the car's plan week, the car keeps its preferred day. Owner confirmed 9 Nov 2026. | Owner |
 
 ---
 
@@ -399,3 +401,5 @@ Answered by the owner on 05-Nov-26 in this session. The SCHR- rows that depend o
 | 16 | Deferral reasons | Owner: these will be added in configuration. No change in this document. | SCHR-DEF-04 |
 
 Nothing is open from the original 16 questions. The hand-placement decision (10) makes the hard constraints advisory for admins only; the scheduler itself never breaks them.
+
+Open from 8 Nov 2026 (admin file, section 13, question 1): what "Earliest" in Site Setup controls. The no-Interior-in-the-week case (SCHR-INT-28) is answered: the car keeps its preferred day.

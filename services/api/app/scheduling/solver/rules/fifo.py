@@ -85,8 +85,11 @@ def add_day_terms(ctx: ModelContext) -> None:
         by_tier.setdefault(tier_of[week] if week is not None else newest, []).append(j)
     terms = []
     for tier, members in by_tier.items():
+        # The car id before the job key: a job key is new each time a day is
+        # planned again, so ties must not depend on it (SCHS-58, same input same plan).
         members.sort(key=lambda j: (created.get(j.vehicle, 0.0),
-                                    NO_CUTOFF if j.finish_by is None else j.finish_by, j.key))
+                                    NO_CUTOFF if j.finish_by is None else j.finish_by,
+                                    j.vehicle, j.key))
         for rank, j in enumerate(members):
             terms.append((base[tier] + len(jobs) - rank) * ctx.placed_vars[j.key])
     ctx.add_term("fifo", sum(terms))

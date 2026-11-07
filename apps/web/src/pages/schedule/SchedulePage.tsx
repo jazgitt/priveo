@@ -5,10 +5,9 @@ import { useHref, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/api/client";
 import { useConfirm } from "@/blocks/confirm";
-import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
-import { DetailList, EmptyState, ErrorState, Panel } from "@/blocks/layout";
+import { DetailList, EmptyState, ErrorState } from "@/blocks/layout";
 import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
@@ -26,20 +25,22 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { isOpen, JobFlags, JobLabel, matches, StatusSummary, TypeKey } from "./Board";
+import { breached, isOpen, JobFlags, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
 import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
+import { NameRain } from "./NameRain";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
-import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
+import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
 import { Fireworks } from "./RunFireworks";
 import {
-  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useNeedsScheduling,
+  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
   useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
@@ -73,9 +74,9 @@ function useDensity(): [Density, (d: Density) => void] {
 const count = (label: string, n: number) => (n ? `${label} (${n})` : label);
 
 /** The sections of the page, one tab each, all for the chosen day (ADM-SCH-32). Run is a button in the top bar. */
-const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) => [
+const SCHEDULE_TABS = (n: { attention: number; skipped: number; cutoff: number }) => [
   { id: "board", label: "Board" },
-  { id: "needs", label: count("Needs scheduling", n.needs) },
+  { id: "attention", label: count("Needs Attention", n.attention) },
   { id: "skipped", label: count("Skipped and paused", n.skipped) },
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "queue", label: "Crew queue" },
@@ -116,13 +117,13 @@ function periodStart(period: Period, date: string, weekStart: number): string {
 }
 
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
-const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** The result of a run in words: "12 placed, 1 unscheduled, 0 late." */
 const runSummary = (r: { schedules: RunResult[] }) => {
   const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
   return `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`;
 };
+const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** A draft's freeze time, only while "Freeze by itself" is on (scheduler.auto_freeze). */
 function freezeText(s: ScheduleOut, autoFreeze: boolean): string {
@@ -200,8 +201,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const needsQ = useNeedsScheduling(societyId);
   const cutoffQ = useCutoffRequests();
   const needsAll = needsQ.data?.jobs ?? [];
-  const needs = needsAll.filter((j) => j.date === date);
   const addons = (needsQ.data?.pending_addons ?? []).filter((a) => a.date === date);
+  const interiorQ = useInteriorDayMissing(societyId);
+  const interiorMissing = interiorQ.data?.length ?? 0;
   const cutoffs = (cutoffQ.data ?? []).filter((r) => r.date === date);
   const attention = new Set([...needsAll.map((j) => j.date), ...(cutoffQ.data ?? []).map((r) => r.date)]);
 
@@ -218,7 +220,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
 
   // An old link with tab=run opens the board with the Run dialog.
-  const tab = !boardOnly && params.get("tab") && params.get("tab") !== "run" ? params.get("tab")! : "board";
+  // An old link with tab=needs (the Needs scheduling tab, now on the Board's Unscheduled column) opens the board.
+  const tab = !boardOnly && params.get("tab") && !["run", "needs"].includes(params.get("tab")!) ? params.get("tab")! : "board";
   const [runOpen, setRunOpen] = useState(!boardOnly && params.get("tab") === "run");
   const runLabel = `Scheduler, ${site.name || "site"}`;
   const running = tasks.isRunning(runLabel);
@@ -471,6 +474,13 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           </div>
         );
 
+  // The names that fall while a run works: every crew member and every car (registration) the loaded data shows.
+  const rainNames = [...new Set([
+    ...(board?.crew ?? []).map((c) => c.name),
+    ...(board?.jobs ?? []).map((j) => j.registration),
+    ...needsAll.map((j) => j.registration),
+  ].filter(Boolean))];
+
   return (
     <div className={cn("sch-page", mode !== "page" && mode)}>
       {/* One slim bar: title, the day, the schedule of the day and its actions. The day strip folds away (ADM-SCH-35). */}
@@ -480,7 +490,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
         ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
           : (
-          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 basis-full flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3">
             {schedule ? (
               <>
                 <StatusBadge status={schedule.status} />
@@ -493,8 +503,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
             ) : (
               <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
             )}
-            <div className="ml-auto flex items-center gap-2">
-              {!boardOnly && (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {/* The Run button is on the page and in the focus view's top bar; the own-tab board has none. */}
+              {mode !== "solo" && (
                 <Button size="sm" variant={schedule ? "outline" : "default"} onClick={() => setRunOpen(true)} disabled={running}
                         aria-busy={running || undefined}>
                   {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
@@ -529,36 +540,11 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
         </div>
       )}
 
-      {boardOnly ? <div className="sch-panel">{boardPanel}</div> : <Tabs tabs={SCHEDULE_TABS({ needs: needs.length, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
+      {boardOnly ? <div className="sch-panel">{boardPanel}</div> : <Tabs tabs={SCHEDULE_TABS({ attention: interiorMissing, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
             label="Schedule sections" onChange={(t) => setParam("tab", t)}>
-        {tab === "board" && boardPanel}
+        {tab === "board" && <>{boardPanel}<PendingAddons addons={addons} /></>}
 
-        {tab === "needs" && (
-          <div className="flex flex-col gap-6">
-            <Panel title={`Needs scheduling on ${dayText(date)}`}
-                   description="Jobs of this day left without a crew member after the freeze, or that no crew member fits (ADM-SCH-28)." bodyClassName="p-0">
-              {needsQ.isError ? <div className="p-4"><ErrorState message={errorMessage(needsQ.error)} /></div> : (
-                <DataTable
-                  className="[&>div]:rounded-none [&>div]:border-0"
-                  rows={needsQ.data ? needs : undefined}
-                  loading={needsQ.isPending}
-                  rowKey={(j) => j.id}
-                  empty={<p className="text-sm text-muted-foreground">Nothing needs scheduling on this day.</p>}
-                  columns={[
-                    { key: "v", header: "Vehicle", width: "14rem", cell: (j) => <JobLabel job={j} /> },
-                    { key: "c", header: "Customer", width: "12rem", cell: (j) => j.customer_name },
-                    { key: "f", header: "Finish by", width: "6rem", cell: (j) => j.finish_by ?? "-" },
-                    { key: "r", header: "Reason", wrap: true, cell: (j) => j.reason || "No crew member fits." },
-                    { key: "a", header: "", width: "6rem", align: "right", cell: (j) => (board
-                      ? <Button size="sm" variant="outline" onClick={() => setOpen(j)}>Place</Button> : null) },
-                  ]}
-                />
-              )}
-              <OtherDays dates={needsAll.map((j) => j.date)} date={date} onDate={chooseDate} what="job" />
-            </Panel>
-            <PendingAddons addons={addons} />
-          </div>
-        )}
+        {tab === "attention" && <NeedsAttention societyId={societyId} />}
         {tab === "skipped" && (!societyId
           ? <EmptyState title="Choose a site">Pick a site at the top left to see its skipped and paused jobs.</EmptyState>
           : <SkippedJobs key={`${societyId}-${date}`} societyId={societyId} date={date} />)}
@@ -624,6 +610,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
         </FormDialog>
       )}
+      {/* Last in the page, so it never takes the first child's place in the focus view. Under an open focus
+          view the rain falls on that view instead, so it is not drawn twice. */}
+      <NameRain names={rainNames} active={running && !focusOpen} />
       {running && <Fireworks mode="running" />}
       {celebration && <Fireworks mode="celebrate" message={celebration} onEnd={() => setCelebration(null)} />}
     </div>
@@ -687,8 +676,10 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
 
   const movable = isOpen(job);
   return (
+    // The dialog takes the card's colour: the kind of work, or wine when the job was placed against a rule by hand.
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${job.registration}, ${job.service}`} size="md"
-                submitLabel={movable ? "Move here" : "Close"} cancelLabel={movable ? "Cancel" : null}
+                submitLabel={movable ? "Move here" : "Close"} cancelLabel={null}
+                className={cn("sch-detail", breached(job) ? "wine" : typeClass(job))} style={{ background: "var(--type-bg)" }}
                 busy={busy} onSubmit={movable ? submit : onClose}
                 extraActions={movable ? (
                   <>
@@ -701,6 +692,8 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
                   </>
                 ) : undefined}>
       <DetailList columns={2} items={[
+        { label: "Zone", value: job.zone || "-" },
+        { label: "Parking", value: parkingPlace(job) || "-" },
         { label: "Vehicle", value: job.vehicle },
         { label: "Customer", value: job.customer_name },
         { label: "Date", value: dayText(job.date) },
@@ -717,6 +710,11 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
       ]} />
       {(job.late || job.manual || job.visit_outcome === "Partially Completed") && <div className="flex gap-2"><JobFlags job={job} /></div>}
       {job.reason && <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{job.reason}</p>}
+      {breached(job) && (
+        <p className="rounded-md border border-current px-3 py-2 text-sm">
+          Placed by hand against a rule: {(job.hand_breaches ?? []).join(" ")}
+        </p>
+      )}
       {!movable && (
         <p className="m-0 border-t pt-4 text-sm text-muted-foreground">
           This job is {job.status}, so it can no longer be placed or moved.

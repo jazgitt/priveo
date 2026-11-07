@@ -150,8 +150,9 @@ test.describe("Schedule (scenario R06)", () => {
     await focus.getByRole("button", { name: /TS35TT0001/ }).click();
     const job = page.getByRole("dialog", { name: /TS35TT0001/ });
     await expect(job).toBeVisible();
-    // The job dialog is on top: its Cancel button can be clicked.
-    await job.getByRole("button", { name: "Cancel" }).click();
+    // The job dialog is on top of the focus view. It has no Cancel button (item 12): Escape closes it.
+    await expect(job).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(job).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(focus).toHaveCount(0);

@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -13,10 +13,13 @@ import {
  */
 export function FormDialog({
   open, onOpenChange, title, description, submitLabel, onSubmit, busy, disabled, danger,
-  children, size = "md", extraActions, cancelLabel = "Cancel",
+  children, size = "md", extraActions, cancelLabel = "Cancel", className, style,
 }: {
   /** null hides the Cancel button, for a dialog whose only button closes it. */
   cancelLabel?: string | null;
+  /** Extra classes and a fill for the dialog surface, for a dialog that takes a colour (the card detail). */
+  className?: string;
+  style?: CSSProperties;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -37,7 +40,7 @@ export function FormDialog({
   const width = { sm: "sm:max-w-md", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-3xl" }[size];
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
-      <DialogContent className={cn("max-h-[90vh] overflow-y-auto bg-card", width)}>
+      <DialogContent className={cn("max-h-[90vh] overflow-y-auto bg-card", width, className)} style={style}>
         <form onSubmit={submit} className="flex flex-col gap-5">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

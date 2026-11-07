@@ -91,6 +91,8 @@ export interface AdminJob {
   queue_unlocked?: boolean;
   /** Rules version 2: why the job sits outside its cleaner's home zone (SCHR-ZONE-06). */
   cross_zone_reason?: string | null;
+  /** The rules a job was placed against by hand and the admin confirmed (SCHS-22): the card is marked wine. */
+  hand_breaches?: string[];
 }
 
 export interface Board {
@@ -198,6 +200,28 @@ export function useNeedsScheduling(societyId: string) {
       const q = societyId ? `?society_id=${encodeURIComponent(societyId)}` : "";
       const r = await api<{ jobs?: AdminJob[]; pending_addons?: PendingAddon[] }>(`/v1/admin/scheduling/needs-scheduling${q}`);
       return { jobs: r.jobs ?? [], pending_addons: r.pending_addons ?? [] };
+    },
+  });
+}
+
+/** A car on a plan with Interior care whose preferred Interior day is not set (Needs Attention). */
+export interface InteriorDayMissing {
+  subscription_id: string;
+  vehicle_id: string;
+  registration: string;
+  customer_name: string;
+  vehicle: string;
+  plan_name: string;
+}
+
+/** The cars of a site with no preferred Interior day. The scheduler gives them no Interior visit. */
+export function useInteriorDayMissing(societyId: string) {
+  return useQuery({
+    queryKey: ["interior-day-missing", societyId],
+    enabled: Boolean(societyId),
+    queryFn: () => {
+      const q = new URLSearchParams({ society_id: societyId });
+      return api<InteriorDayMissing[]>(`/v1/admin/scheduling/interior-day-missing?${q}`);
     },
   });
 }

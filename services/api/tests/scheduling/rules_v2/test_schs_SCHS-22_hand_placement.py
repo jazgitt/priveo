@@ -34,24 +34,28 @@ def _hand_findings(world):
     return sorted(f.code for f in world.db.scalars(select(ScheduleFinding)) if f.code.startswith("hand_"))
 
 
-def test_SCHR_HIER_08_a_drop_against_a_rule_is_a_warning_not_a_refusal(api, world, rules_v2):
+def test_SCHR_HIER_08_an_overlap_is_refused_and_cannot_be_confirmed_away(api, world, rules_v2):
     cleaner, (one, two) = _two_cars(world)
     r = _move(api, two, cleaner, one.start_minute + 10)
     assert r.status_code == 409
-    assert r.json()["code"] == "placement_warning"
-    assert r.json()["fields"] == {"overlap": "That time overlaps another job."}
+    assert r.json()["code"] == "overlap"
+    assert "is in the way" in r.json()["message"] and "Please try another time." in r.json()["message"]
     world.db.refresh(two)
     assert two.start_minute != one.start_minute + 10 and _hand_findings(world) == []
+    # Confirming does not place a job over another one (owner, 8-Nov-26).
+    r = _move(api, two, cleaner, one.start_minute + 10, override=True)
+    assert r.status_code == 409 and r.json()["code"] == "overlap"
+    assert _hand_findings(world) == []
 
 
 def test_SCHR_HIER_08_after_confirm_the_job_moves_and_the_breach_is_stored(api, world, rules_v2):
     cleaner, (one, two) = _two_cars(world)
-    r = _move(api, two, cleaner, one.start_minute + 10, override=True)
+    r = _move(api, two, cleaner, 60, override=True)
     assert r.status_code == 200, r.text
-    assert r.json()["start_minute"] == one.start_minute + 10 and r.json()["manual"] is True
-    assert _hand_findings(world) == ["hand_overlap"]
-    finding = world.db.scalar(select(ScheduleFinding).where(ScheduleFinding.code == "hand_overlap"))
-    assert finding.job_id == two.id and finding.detail == "That time overlaps another job."
+    assert r.json()["start_minute"] == 60 and r.json()["manual"] is True
+    assert r.json()["hand_breaches"] == [
+        "That time is outside the crew member's hours.", "That time is outside this service's working slots."]
+    assert _hand_findings(world) == ["hand_outside_hours", "hand_outside_slot"]
 
 
 def test_SCHR_HIER_08_outside_the_hours_all_breaches_are_listed_together(api, world, rules_v2):
@@ -61,6 +65,20 @@ def test_SCHR_HIER_08_outside_the_hours_all_breaches_are_listed_together(api, wo
     assert set(r.json()["fields"]) == {"outside_hours", "outside_slot"}
     assert _move(api, two, cleaner, 60, override=True).status_code == 200
     assert _hand_findings(world) == ["hand_outside_hours", "hand_outside_slot"]
+
+
+def test_SCHS_22_a_clean_move_clears_the_breaches_the_board_marks(api, world, rules_v2):
+    cleaner, (one, two) = _two_cars(world)
+    assert _move(api, two, cleaner, 60, override=True).status_code == 200
+    admin = auth(login(api, "admin")["access_token"])
+    schedule_id = world.db.scalar(select(Visit.schedule_id).where(Visit.id == two.visit_id))
+    r = api.get(f"{BASE}/board", headers=admin, params={"schedule_id": str(schedule_id)})
+    assert r.status_code == 200, r.text
+    marked = {j["id"]: j["hand_breaches"] for j in r.json()["jobs"]}
+    assert marked[str(two.id)] and marked[str(one.id)] == []
+    # A placement that breaks nothing clears the mark.
+    assert _move(api, two, cleaner, one.start_minute + 60).status_code == 200
+    assert _hand_findings(world) == []
 
 
 def test_SCHR_CUT_05_a_hand_placement_after_a_weekday_cutoff_warns_and_is_marked_late(api, world, rules_v2):
@@ -83,9 +101,9 @@ def test_SCHR_HIER_08_a_placement_that_breaks_nothing_needs_no_confirm_and_leave
 
 def test_SCHR_HIER_08_the_breach_survives_a_rerun_and_goes_when_the_job_is_taken_off(api, world, rules_v2):
     cleaner, (one, two) = _two_cars(world)
-    assert _move(api, two, cleaner, one.start_minute + 10, override=True).status_code == 200
+    assert _move(api, two, cleaner, 60, override=True).status_code == 200
     Scenario(world).run(SUNDAY)  # the hand placement is kept, so is its finding
-    assert _hand_findings(world) == ["hand_overlap"]
+    assert _hand_findings(world) == ["hand_outside_hours", "hand_outside_slot"]
     admin = auth(login(api, "admin")["access_token"])
     r = api.post(f"{BASE}/jobs/{two.id}/move", headers=admin, json={})
     assert r.status_code == 200 and _hand_findings(world) == []

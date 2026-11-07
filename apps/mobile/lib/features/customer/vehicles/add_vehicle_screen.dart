@@ -165,7 +165,7 @@ class _State extends ConsumerState<AddVehicleScreen> {
           _parking.text.trim().isNotEmpty &&
           _parking.text.trim().length <= 60,
     3 => planId.isNotEmpty,
-    4 => plan?['includes_interior'] != true || interior.isNotEmpty,
+    4 => true, // The interior care day is optional at onboarding (Needs Attention on the portal).
     _ => true,
   };
 

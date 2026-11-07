@@ -1028,6 +1028,7 @@ class AdminJob {
     this.queueUnlocked,
     required this.reasonCode,
     required this.crossZoneReason,
+    this.handBreaches,
   });
 
   final String id;
@@ -1064,6 +1065,7 @@ class AdminJob {
   final bool? queueUnlocked;
   final String? reasonCode;
   final String? crossZoneReason;
+  final List<String>? handBreaches;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1100,6 +1102,7 @@ class AdminJob {
         queueUnlocked: j['queue_unlocked'] == null ? null : j['queue_unlocked'] as bool,
         reasonCode: j['reason_code'] == null ? null : j['reason_code'] as String,
         crossZoneReason: j['cross_zone_reason'] == null ? null : j['cross_zone_reason'] as String,
+        handBreaches: j['hand_breaches'] == null ? null : [for (final x in j['hand_breaches'] as List) x as String],
       );
 
   Map<String, dynamic> toJson() => {
@@ -1137,6 +1140,7 @@ class AdminJob {
         'queue_unlocked': queueUnlocked,
         'reason_code': reasonCode,
         'cross_zone_reason': crossZoneReason,
+        'hand_breaches': handBreaches == null ? null : [for (final x in handBreaches!) x],
       };
 }
 
@@ -5981,6 +5985,42 @@ class Inbox {
   Map<String, dynamic> toJson() => {
         'unread_count': unreadCount,
         'items': [for (final x in items) x.toJson()],
+      };
+}
+
+class InteriorDayMissing {
+  const InteriorDayMissing({
+    required this.subscriptionId,
+    required this.vehicleId,
+    required this.registration,
+    required this.customerName,
+    required this.vehicle,
+    required this.planName,
+  });
+
+  final String subscriptionId;
+  final String vehicleId;
+  final String registration;
+  final String customerName;
+  final String vehicle;
+  final String planName;
+
+  factory InteriorDayMissing.fromJson(Map<String, dynamic> j) => InteriorDayMissing(
+        subscriptionId: j['subscription_id'] as String,
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        customerName: j['customer_name'] as String,
+        vehicle: j['vehicle'] as String,
+        planName: j['plan_name'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'subscription_id': subscriptionId,
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'customer_name': customerName,
+        'vehicle': vehicle,
+        'plan_name': planName,
       };
 }
 

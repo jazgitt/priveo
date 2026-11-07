@@ -167,7 +167,23 @@ def test_admin_sets_up_the_subscription_of_a_vehicle_that_has_none(client, direc
             "first_service_date": "2026-11-01"}
 
     assert client.post(url, headers=admin, json={**body, "cutoff_time": "09:10"}).status_code == 422
-    assert client.post(url, headers=admin, json={**body, "interior_day": None}).status_code == 422
+    assert client.post(url, headers=admin, json={**body, "interior_day": "Someday"}).status_code == 422
+    # The interior care day is optional (changed 08-Nov-26): a blank day is accepted,
+    # the car has no day and shows on the Needs Attention list until the admin sets it.
+    spare = Vehicle(customer_id=customer.id, society_id=car.society_id, model="Punch",
+                    registration="T0927HR9226CH", parking_number="Under D26")
+    db.add(spare)
+    db.commit()
+    blank = client.post(f"/v1/admin/vehicles/{spare.id}/subscription", headers=admin,
+                        json={**body, "interior_day": None})
+    assert blank.status_code == 201, blank.text
+    assert blank.json()["subscription"]["interior_day"] is None
+    # The Needs Attention list covers Active cars: once the spare car is Active it is listed.
+    spare_sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == spare.id))
+    spare_sub.status = "Active"
+    db.commit()
+    missing = client.get("/v1/admin/scheduling/interior-day-missing", headers=admin).json()
+    assert [row["vehicle_id"] for row in missing] == [str(spare.id)]
     made = client.post(url, headers=admin, json=body)
     assert made.status_code == 201, made.text
     sub = made.json()["subscription"]

@@ -6,12 +6,14 @@ import { cn } from "@/lib/utils";
 
 import { HoverTip } from "../../components";
 import {
-  fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa, isUnplaced, jobLabel, matches, minutesOf, Reasoning,
-  serviceCode, SNAP, statusClass, typeClass, windowsOf, zoneShort, zonesOf, zoneStyle,
+  breached, cardLines, clashMessage, clashOf, type CardPart, type Density, fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa,
+  isUnplaced, jobLabel, matches, minutesOf, Reasoning, stepOf, statusClass, typeClass, windowsOf, zoneShort, zonesOf, zoneStyle,
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
+
+export type { Density } from "./Board";
 
 const UNSCHEDULED = "unscheduled";
 
@@ -30,9 +32,6 @@ function useFoldedLanes(): [Set<string>, (id: string) => void] {
   })];
 }
 
-/** How much a card shows: one line, the usual three, or also the customer and the model. */
-export type Density = "compact" | "standard" | "detailed";
-
 const byStart = (a: AdminJob, b: AdminJob) => (a.start_minute ?? 0) - (b.start_minute ?? 0);
 
 /** Where a dragged card would land: before the index-th card, or at a time in a free slot. */
@@ -43,17 +42,66 @@ const gapHeight = (minutes: number) => Math.round(Math.min(360, Math.max(30, min
 
 /**
  * The start time for a card dropped on a free slot: as far into the slot as the
- * pointer is, snapped to 5 minutes, and never past the slot's end.
+ * pointer is, snapped to `step` minutes (5, or 15 on the detailed layout), and
+ * never past the slot's end.
  */
-function slotTime(el: HTMLElement, y: number, duration: number): number {
+export function slotTime(el: HTMLElement, y: number, duration: number, step = 5): number {
   const start = Number(el.dataset.start);
   const end = Number(el.dataset.end);
-  const base = Math.ceil(start / SNAP) * SNAP;
+  const base = Math.ceil(start / step) * step;
   const room = end - duration - base;
   if (room < 0) return start;
   const r = el.getBoundingClientRect();
   const frac = r.height ? Math.min(1, Math.max(0, (y - r.top) / r.height)) : 0;
-  return base + Math.round((frac * room) / SNAP) * SNAP;
+  return base + Math.round(frac * Math.floor(room / step)) * step;
+}
+
+/** One piece of a card's line. The same kind looks the same at every size: zone, car number, cutoff, code and slot. */
+function Piece({ part, zones }: { part: CardPart; zones: string[] }) {
+  switch (part.kind) {
+    case "zone":
+      return <span className="sch-zone" style={zoneStyle(part.text, zones)} title={part.text}>{zoneShort(part.text)}</span>;
+    case "reg":
+      return <strong className="reg sch-reg">{part.text}</strong>;
+    case "model":
+      return <span className="sch-model">{part.text}</span>;
+    case "customer":
+      return <span className="sch-customer">{part.text}</span>;
+    case "cutoff":
+      return <span className="sch-cut">{part.text}</span>;
+    case "code":
+      return <span className={`sch-code ${part.text.toLowerCase()}`}>{part.text}</span>;
+    case "slot":
+      return <span className="sch-time">{part.text}</span>;
+  }
+}
+
+/**
+ * The face of a card or a timeline block: its lines at the chosen size (owner review, 8-Nov-26),
+ * with the status icon and the flags on the line of the kind of clean. Shared by the board and
+ * the timeline, so both show the same lines.
+ */
+export function CardFace({ job, density, zones }: { job: AdminJob; density: Density; zones: string[] }) {
+  const flagLine = density === "compact" ? 0 : 1;
+  const flags = (
+    <>
+      {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
+      {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
+      {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
+      {job.late && <span className="sch-flag late">Late</span>}
+      {job.manual && <span className="sch-flag">By hand</span>}
+    </>
+  );
+  return (
+    <>
+      {cardLines(job, density).map((line, i) => (
+        <span key={i} className="sch-card-line">
+          {line.map((part) => <Piece key={part.kind} part={part} zones={zones} />)}
+          {i === flagLine && flags}
+        </span>
+      ))}
+    </>
+  );
 }
 
 /**
@@ -61,10 +109,11 @@ function slotTime(el: HTMLElement, y: number, duration: number): number {
  * crew member first, then one column for each crew member with that member's
  * jobs and free slots in time order. A card is dragged onto a free slot (it
  * starts where it is dropped in the slot) or between two cards (it takes the
- * first free time after the card above). Dropping a card on Unscheduled takes
- * it off its crew member. Clicking a card opens its dialog to set an exact
- * time. A crew member who cannot work that day is greyed out and takes no card
- * (ADM-SCH-32, -33).
+ * first free time after the card above). On the detailed layout the start moves
+ * in 15-minute steps. Dropping a card on Unscheduled takes it off its crew
+ * member. Clicking a card opens its dialog to set an exact time. A crew member
+ * who cannot work that day is greyed out and takes no card (ADM-SCH-32, -33).
+ * A drop that would overlap another job is refused with the job in the way.
  */
 export function CardBoard({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, onOpen, onMove }: {
   crew: SchedulingCrew[];
@@ -84,6 +133,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
 }) {
   const confirm = useConfirm();
   const zones = zonesOf(jobs);
+  const step = stepOf(density);
   const dragging = useRef<AdminJob | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<Over | null>(null);
@@ -114,7 +164,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     const avail = availOf(member.id);
     if (avail?.status === "Off") return false;
     const others = jobs.filter((j) => j.crew_id === member.id && j.id !== dragged.id && j.start_minute !== null);
-    return freeStart(windowsOf(member, avail), others, 0, dragged.duration_minutes) !== null;
+    return freeStart(windowsOf(member, avail), others, 0, dragged.duration_minutes, step) !== null;
   };
   /** Dragging the background or a column heading pans the board sideways, like grabbing paper. */
   const panStart = (e: PointerEvent<HTMLElement>) => {
@@ -158,7 +208,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     e.preventDefault();
     const slot = col === UNSCHEDULED ? null : slotOf(e);
     const next: Over = slot
-      ? { col, index: -1, gap: Number(slot.dataset.start), at: slotTime(slot, e.clientY, job.duration_minutes) }
+      ? { col, index: -1, gap: Number(slot.dataset.start), at: slotTime(slot, e.clientY, job.duration_minutes, step) }
       : { col, index: col === UNSCHEDULED ? 0 : indexAt(e.currentTarget, e.clientY) };
     if (over?.col !== next.col || over.index !== next.index || over.gap !== next.gap || over.at !== next.at) setOver(next);
   };
@@ -191,14 +241,24 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     const others = jobs.filter((j) => j.crew_id === member.id && j.id !== job.id && j.start_minute !== null).sort(byStart);
     let start: number | null;
     if (slot) {
-      start = slotTime(slot, e.clientY, job.duration_minutes);
+      start = slotTime(slot, e.clientY, job.duration_minutes, step);
       if (!fitsAt(wins, others, start, job.duration_minutes)) {
+        // A free slot shorter than the card is named as such; the job next to it is not the reason.
         const free = Number(slot.dataset.end) - Number(slot.dataset.start);
+        if (free < job.duration_minutes) {
+          setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
+          return;
+        }
+        const blocker = clashOf(others, start, job.duration_minutes);
+        if (blocker) {
+          setBlocked(clashMessage(job, blocker, member.name, freeStart(wins, others, 0, job.duration_minutes, step)));
+          return;
+        }
         setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
         return;
       }
     } else {
-      start = freeStart(wins, others, index, job.duration_minutes);
+      start = freeStart(wins, others, index, job.duration_minutes, step);
     }
     if (start === null) {
       setBlocked(`${member.name} has no free ${job.duration_minutes} minutes in their slots this day.`);
@@ -209,14 +269,21 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     onMove(job, member.id, start);
   };
 
-  /** Alt + Up or Down moves a placed card 5 minutes earlier or later in its own column. */
-  const nudge = (job: AdminJob, by: number) => {
+  /** Alt + Up or Down moves a placed card one step (5 minutes, or 15 on the detailed layout) earlier or later in its own column. */
+  const nudge = (job: AdminJob, by: 1 | -1) => {
     const member = crew.find((c) => c.id === job.crew_id);
     if (!member || job.start_minute === null) return;
-    const start = job.start_minute + by;
+    // Lands on the next multiple of the step in that direction, so an odd start snaps too.
+    const start = by > 0
+      ? (Math.floor(job.start_minute / step) + 1) * step
+      : (Math.ceil(job.start_minute / step) - 1) * step;
     const others = jobs.filter((j) => j.crew_id === member.id && j.id !== job.id && j.start_minute !== null);
-    if (!fitsAt(windowsOf(member, availOf(member.id)), others, start, job.duration_minutes)) {
-      setBlocked(`${job.registration} cannot start at ${hhmm(start)}: that time is not free for ${member.name}.`);
+    const wins = windowsOf(member, availOf(member.id));
+    if (!fitsAt(wins, others, start, job.duration_minutes)) {
+      const blocker = clashOf(others, start, job.duration_minutes);
+      setBlocked(blocker
+        ? clashMessage(job, blocker, member.name, freeStart(wins, others, 0, job.duration_minutes, step))
+        : `${job.registration} cannot start at ${hhmm(start)}: that time is not free for ${member.name}.`);
       return;
     }
     setBlocked("");
@@ -224,22 +291,14 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   };
 
   const card = (job: AdminJob) => {
-    const code = serviceCode(job.service);
     const open = isOpen(job);
-    const time = job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min`;
-    const statusIcon = (
-      <>
-        {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
-        {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
-        {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
-      </>
-    );
+    const wine = breached(job);
     return (
       <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
            aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
-           title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}. ${job.status}${job.reason ? `. ${job.reason}` : ""}${open && job.crew_id ? ". Alt and the up or down arrow move it 5 minutes." : ""}`}
+           title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}`}
            className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
-             !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
+             wine && "wine", !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
              savingId === job.id && "saving")}
            onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
            onClick={() => onOpen(job)}
@@ -247,60 +306,26 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); }
              else if (e.altKey && open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                e.preventDefault();
-               nudge(job, e.key === "ArrowUp" ? -SNAP : SNAP);
+               nudge(job, e.key === "ArrowUp" ? -1 : 1);
              }
            }}>
-        {density === "detailed" ? (
-          <>
-            {/* Line 1: zone, car model, car number and cutoff. The basement place is not shown. */}
-            <span className="sch-line1">
-              {job.zone && <span className="sch-zone" style={zoneStyle(job.zone, zones)} title={job.zone}>{zoneShort(job.zone)}</span>}
-              <span className="sch-model">{job.vehicle || "-"}</span>
-              <strong className="reg">{job.registration}</strong>
-              <span className="sch-cut">{job.finish_by ? `Cutoff ${job.finish_by}` : "No cutoff"}</span>
-            </span>
-            {/* Line 2: the kind of clean and its time slot, then the flags. */}
-            <span className="sch-card-top">
-              <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
-              <span className="sch-time">{time}</span>
-              {statusIcon}
-              {job.late && <span className="sch-flag late">Late</span>}
-              {job.manual && <span className="sch-flag">By hand</span>}
-            </span>
-            {/* Line 3: the customer. */}
-            <span className="sch-card-who">{job.customer_name}</span>
-          </>
-        ) : (
-          <>
-            <span className="sch-card-top">
-              <span className="sch-time">{time}</span>
-              <span className={`sch-code ${code.toLowerCase()}`}>{code}</span>
-              {statusIcon}
-              {density === "compact" && <strong className="reg ml-auto truncate">{job.registration}</strong>}
-              {job.late && <span className="sch-flag late">Late</span>}
-              {job.manual && <span className="sch-flag">By hand</span>}
-            </span>
-            {density !== "compact" && (
-              <span className="sch-card-main">
-                <strong className="reg">{job.registration}</strong>
-                <span>{job.parking || "-"}{job.finish_by ? ` · by ${job.finish_by}` : ""}</span>
-              </span>
-            )}
-          </>
-        )}
+        <CardFace job={job} density={density} zones={zones} />
         {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
         {job.crew_id && job.cross_zone_reason && density !== "compact" && <span className="sch-why">Cross-zone: {job.cross_zone_reason}</span>}
-        {/* Line 4 on a card taken off a crew member: the reason it has no place. */}
+        {/* A card taken off a crew member shows the reason it has no place. */}
         {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
+        {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
       </div>
     );
   };
 
   /** A member's day in time order: cards, free slots and the time between slots. */
   const lane = (member: SchedulingCrew, mine: AdminJob[], wins: { start: number; end: number }[], brk: { start: number; end: number } | null) => {
+    // The card being moved does not block its own slot, so it can go back to where it was or a step either side.
+    const others = mine.filter((j) => j.id !== dragId);
     const items: { start: number; node: () => ReactNode; card?: AdminJob }[] = [
       ...mine.map((j) => ({ start: j.start_minute!, card: j, node: () => card(j) })),
-      ...freeSlots(aroundBreak(wins, brk), mine).map((g) => ({ start: g.start, node: () => {
+      ...freeSlots(aroundBreak(wins, brk), others).map((g) => ({ start: g.start, node: () => {
         const here = over?.col === member.id && over.gap === g.start;
         const tight = here && dragged !== null && g.end - g.start < dragged.duration_minutes;
         return (

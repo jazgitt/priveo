@@ -47,6 +47,11 @@ from app.scheduling.models import InteriorEntitlement, Job, Schedule, Visit
 ORDER = 40
 INTERIOR = entitlements.INTERIOR
 _OPEN = ("Scheduled", "In progress")
+# Derived (tester rule 2, 18.5): an actual Interior on the preferred day or up to
+# this many days later, within the plan week, is a small gap and keeps the
+# preferred day. Anything else holds the Interior as optional on the preferred day.
+SMALL_GAP_DAYS = 2
+HELD_NOTE = "Preferred Interior day moved: last Interior on {when}"
 
 
 def _is_plan_interior(item) -> bool:
@@ -65,6 +70,7 @@ def provide(ctx, demand: list):
     sched: Schedule = ctx.schedule
     days = _days(sched.start_date, sched.end_date)
     ctx.interior_rows = {}
+    ctx.interior_held = {}  # (vehicle id, day) -> note: optional, Unscheduled (18.5)
     demand[:] = [d for d in demand if not _is_plan_interior(d)]
 
     interior_open = None
@@ -126,6 +132,9 @@ def provide(ctx, demand: list):
                 used.discard(day)
                 pending.append(row)
             elif job.status == "Scheduled":
+                # Recorded like a new choice, so a day planned again keeps the ledger age
+                # the fifo objective ranks by (SCHS-58, same input same plan).
+                ctx.interior_rows[(vehicle.id, day)] = row.id
                 extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
         # Retries and hand placements already in the plan cover the oldest rows.
         linked = set(db.scalars(select(InteriorEntitlement.job_id).where(
@@ -134,6 +143,9 @@ def provide(ctx, demand: list):
         covered = len(redo.get(vehicle.id, [])) + sum(
             1 for j, _d in mine if j.manual and j.status in _OPEN and j.id not in linked)
         used |= set(redo.get(vehicle.id, []))
+        # A held Interior keeps its day so the next run holds it again (18.5).
+        held_prefix = HELD_NOTE.split(":", 1)[0]
+        used -= {d for j, d in mine if (j.note or "").startswith(held_prefix)}
         pattern = patterns.get(sub.id)
         last_week = entitlements.week_start(db, days[-1])
         # A job of the week that was not done (missed or deferred) is tried again
@@ -161,6 +173,17 @@ def provide(ctx, demand: list):
             first = next((d for d in pool if d.weekday() not in weekend), pool[0])
             day = first if not own else next(
                 (d for d in pool if _prefers(db, sub, pattern, d)), first)
+            if own and _prefers(db, sub, pattern, day):
+                # Only a completed Interior in the plan week counts. A car whose last
+                # Interior was in an earlier week is the normal weekly case: keep the day.
+                last = _last_actual(db, vehicle.id, days[-1], since=days[0])
+                if last is not None and not 0 <= (last - day).days <= SMALL_GAP_DAYS:
+                    # Held: optional on the preferred day, shown as Unscheduled (18.5).
+                    ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(
+                        when=last.strftime("%d-%b-%y"))
+                    used.add(day)
+                    extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
+                    continue
             used.add(day)
             ctx.interior_rows[(vehicle.id, day)] = row.id
             extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
@@ -176,3 +199,15 @@ def _prefers(db, sub: Subscription, pattern, day: date) -> bool:
     if pattern is None:
         return bool(sub.interior_day) and WEEKDAYS[day.weekday()] == sub.interior_day
     return day_flags(db, sub, pattern, day)[1]
+
+
+def _last_actual(db, vehicle_id: uuid.UUID, through: date, since: date | None = None) -> date | None:
+    """The most recent Interior actually done (completed) for the car, on or
+    before `through` (the last day of the plan), or None when there is none.
+    It is not limited to the plan week: the car's last Interior may be in an
+    earlier week."""
+    from app.scheduling.models import Job as _Job
+    from app.scheduling.models import Visit as _Visit
+    return db.scalar(select(func.max(_Visit.date)).join(_Job, _Job.visit_id == _Visit.id).where(
+        _Visit.vehicle_id == vehicle_id, _Job.service == INTERIOR, _Job.status == "Completed",
+        _Visit.date <= through, *([_Visit.date >= since] if since else [])))

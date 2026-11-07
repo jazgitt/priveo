@@ -165,6 +165,8 @@ class AdminJob(BaseModel):
     reason_code: str | None = None
     # Rules version 2 only (SCHS-45): why the job sits outside its cleaner's home zone.
     cross_zone_reason: str | None = None
+    # SCHS-22: the rules a job was placed against by hand and the admin confirmed; the Board marks it wine.
+    hand_breaches: list[str] = []
 
 
 class Board(BaseModel):
@@ -177,6 +179,17 @@ class Board(BaseModel):
 class NeedsScheduling(BaseModel):
     jobs: list[AdminJob]
     pending_addons: list[dict] = Field(default_factory=list)
+
+
+class InteriorDayMissing(BaseModel):
+    """A car whose plan includes Interior care but whose preferred Interior day is not set.
+    Such a car is on the Needs Attention tab until the admin sets the day."""
+    subscription_id: uuid.UUID
+    vehicle_id: uuid.UUID
+    registration: str
+    customer_name: str
+    vehicle: str
+    plan_name: str
 
 
 class FreezeDue(BaseModel):

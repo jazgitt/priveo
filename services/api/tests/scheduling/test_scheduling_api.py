@@ -436,3 +436,47 @@ def test_the_schedules_of_a_society_list_oldest_first_from_a_date(api, admin, wo
     r = api.get(f"{BASE}/schedules", headers=admin,
                 params={"society_id": str(world.society.id), "date_from": "2026-10-19"})
     assert [s["id"] for s in r.json()] == [second["schedule_id"]]
+
+
+def test_needs_attention_lists_cars_on_interior_care_with_no_day(api, admin, world):
+    """Needs Attention: a car on a plan with Interior care and no preferred Interior day
+    is listed, and leaves the list once its day is saved through the subscription."""
+    from app.customers.models import Subscription
+    from app.directory.models import Plan
+
+    plan = Plan(name="Interior attention plan", monthly_price_rupees=1299, includes_interior=True)
+    world.db.add(plan)
+    world.db.flush()
+    no_day = world.add_vehicle()
+    has_day = world.add_vehicle(interior_day="Monday")
+    world.db.commit()
+    subs = {}
+    for car in (no_day, has_day):
+        sub = world.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id))
+        sub.plan_id = plan.id
+        subs[car.id] = sub.id
+    world.db.commit()
+
+    rows = api.get(f"{BASE}/interior-day-missing", headers=admin).json()
+    assert [r["vehicle_id"] for r in rows] == [str(no_day.id)]
+    assert rows[0]["plan_name"] == "Interior attention plan" and rows[0]["registration"]
+
+    r = api.patch(f"/v1/admin/subscriptions/{subs[no_day.id]}", headers=admin,
+                  json={"interior_day": "Monday"})
+    assert r.status_code == 200, r.text
+    assert api.get(f"{BASE}/interior-day-missing", headers=admin).json() == []
+
+
+def test_needs_attention_skips_a_plan_without_interior_care(api, admin, world):
+    from app.customers.models import Subscription
+    from app.directory.models import Plan
+
+    plan = Plan(name="Exterior only plan", monthly_price_rupees=499, includes_interior=False)
+    world.db.add(plan)
+    world.db.flush()
+    car = world.add_vehicle()
+    world.db.commit()
+    sub = world.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id))
+    sub.plan_id = plan.id
+    world.db.commit()
+    assert api.get(f"{BASE}/interior-day-missing", headers=admin).json() == []

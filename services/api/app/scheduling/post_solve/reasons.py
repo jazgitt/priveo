@@ -14,14 +14,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.scheduling import hooks
+from app.scheduling.entitlements import INTERIOR
 from app.scheduling.models import SERVICES, Job, Schedule, Visit
 
 ORDER = 50
 
 
 def after_solve(ctx, day, items, result) -> None:
-    for job, _visit in items:
+    held = getattr(ctx, "interior_held", {})
+    for job, visit in items:
         key = str(job.id)
+        if job.service == INTERIOR and (visit.vehicle_id, day) in held and key not in result.placed:
+            # Optional Interior held off the preferred day (18.5): Unscheduled, with the reason.
+            job.note = held[(visit.vehicle_id, day)]
+            job.reason_code = None
+            continue
         code = result.unplaced_codes.get(key)
         if code is not None:
             job.reason_code = code.value

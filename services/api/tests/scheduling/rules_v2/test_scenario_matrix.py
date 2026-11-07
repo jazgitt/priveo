@@ -41,7 +41,7 @@ def _covered() -> set[str]:
 
 def test_every_schr_row_is_in_the_matrix_once_as_covered_or_not_planner():
     doc = _doc_ids()
-    assert len(doc) == 133
+    assert len(doc) == 135
     covered = _covered()
     overlap = covered & set(m.NOT_PLANNER)
     assert not overlap, f"a row is both covered and not planner: {sorted(overlap)}"

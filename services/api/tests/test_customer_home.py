@@ -311,8 +311,10 @@ def test_the_gaps_must_be_filled_before_confirming(client, db, asha):
                          for v in o["vehicles"]]}
     r = confirm(client, asha, body)
     assert r.status_code == 422 and r.json()["code"] == "validation_failed"
+    # The interior care day is optional at onboarding (changed 08-Nov-26): a blank day
+    # is not a gap, so vehicles.0 is not listed.
     assert set(r.json()["fields"]) == {
-        "mobile", "vehicles.0.interior_day", "vehicles.1.parking_basement",
+        "mobile", "vehicles.1.parking_basement",
         "vehicles.1.parking_number", "vehicles.1.cutoff_time", "vehicles.2.parking_number"}
     assert r.json()["fields"]["vehicles.1.cutoff_time"] == (
         "Please select your service cutoff time.")
