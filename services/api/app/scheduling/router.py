@@ -21,6 +21,7 @@ from app.scheduling.schemas import (
     CustomerNextService,
     DayCapacity,
     FreezeDue,
+    InteriorDayMissing,
     MoveRequest,
     NeedsScheduling,
     QueueChange,
@@ -281,6 +282,42 @@ def needs_scheduling(
         {"id": str(b.id), "date": b.proposed_date, "registration": v.registration,
          "finish_by": b.finish_by.strftime("%H:%M"), "service": b.service}
         for b, v in db.execute(query)]}
+
+
+@admin.get("/interior-day-missing", response_model=list[InteriorDayMissing])
+def interior_day_missing(
+    society_id: uuid.UUID | None = None,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Active cars on a plan with Interior care and no preferred Interior day. The
+    scheduler gives such a car no Interior visit, so the admin sets the day here.
+    Read only; the day is saved with PATCH /v1/admin/subscriptions/{id}."""
+    from app.customers.models import Customer, Subscription, Vehicle
+    from app.customers.service import show_registration
+    from app.directory.models import Plan
+    query = (
+        select(Subscription, Vehicle, Customer, Plan)
+        .join(Vehicle, Vehicle.id == Subscription.vehicle_id)
+        .join(Customer, Customer.id == Vehicle.customer_id)
+        .join(Plan, Plan.id == Subscription.plan_id)
+        .where(Subscription.status == "Active", Vehicle.active.is_(True),
+               Plan.includes_interior.is_(True), Subscription.interior_day.is_(None))
+        .order_by(Customer.first_name, Customer.last_name, Vehicle.registration)
+    )
+    if society_id:
+        query = query.where(func.coalesce(Vehicle.society_id, Customer.society_id) == society_id)
+    return [
+        {
+            "subscription_id": s.id,
+            "vehicle_id": v.id,
+            "registration": show_registration(v.registration),
+            "customer_name": f"{c.first_name} {c.last_name}".strip(),
+            "vehicle": " ".join(x for x in (v.make, v.model) if x),
+            "plan_name": p.name,
+        }
+        for s, v, c, p in db.execute(query)
+    ]
 
 
 @admin.get("/capacity", response_model=list[DayCapacity])

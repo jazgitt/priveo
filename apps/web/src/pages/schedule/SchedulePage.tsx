@@ -5,10 +5,9 @@ import { useHref, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "@/api/client";
 import { useConfirm } from "@/blocks/confirm";
-import { DataTable } from "@/blocks/DataTable";
 import { Field, SelectBox } from "@/blocks/fields";
 import { FormDialog } from "@/blocks/FormDialog";
-import { DetailList, EmptyState, ErrorState, Panel } from "@/blocks/layout";
+import { DetailList, EmptyState, ErrorState } from "@/blocks/layout";
 import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
@@ -35,12 +34,13 @@ import { NameRain } from "./NameRain";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
-import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
+import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
 import { Fireworks } from "./RunFireworks";
 import {
-  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useNeedsScheduling,
+  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
   useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
@@ -74,9 +74,9 @@ function useDensity(): [Density, (d: Density) => void] {
 const count = (label: string, n: number) => (n ? `${label} (${n})` : label);
 
 /** The sections of the page, one tab each, all for the chosen day (ADM-SCH-32). Run is a button in the top bar. */
-const SCHEDULE_TABS = (n: { needs: number; skipped: number; cutoff: number }) => [
+const SCHEDULE_TABS = (n: { attention: number; skipped: number; cutoff: number }) => [
   { id: "board", label: "Board" },
-  { id: "needs", label: count("Needs scheduling", n.needs) },
+  { id: "attention", label: count("Needs Attention", n.attention) },
   { id: "skipped", label: count("Skipped and paused", n.skipped) },
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "queue", label: "Crew queue" },
@@ -201,8 +201,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const needsQ = useNeedsScheduling(societyId);
   const cutoffQ = useCutoffRequests();
   const needsAll = needsQ.data?.jobs ?? [];
-  const needs = needsAll.filter((j) => j.date === date);
   const addons = (needsQ.data?.pending_addons ?? []).filter((a) => a.date === date);
+  const interiorQ = useInteriorDayMissing(societyId);
+  const interiorMissing = interiorQ.data?.length ?? 0;
   const cutoffs = (cutoffQ.data ?? []).filter((r) => r.date === date);
   const attention = new Set([...needsAll.map((j) => j.date), ...(cutoffQ.data ?? []).map((r) => r.date)]);
 
@@ -219,7 +220,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
 
   // An old link with tab=run opens the board with the Run dialog.
-  const tab = !boardOnly && params.get("tab") && params.get("tab") !== "run" ? params.get("tab")! : "board";
+  // An old link with tab=needs (the Needs scheduling tab, now on the Board's Unscheduled column) opens the board.
+  const tab = !boardOnly && params.get("tab") && !["run", "needs"].includes(params.get("tab")!) ? params.get("tab")! : "board";
   const [runOpen, setRunOpen] = useState(!boardOnly && params.get("tab") === "run");
   const runLabel = `Scheduler, ${site.name || "site"}`;
   const running = tasks.isRunning(runLabel);
@@ -538,36 +540,11 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
         </div>
       )}
 
-      {boardOnly ? <div className="sch-panel">{boardPanel}</div> : <Tabs tabs={SCHEDULE_TABS({ needs: needs.length, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
+      {boardOnly ? <div className="sch-panel">{boardPanel}</div> : <Tabs tabs={SCHEDULE_TABS({ attention: interiorMissing, skipped: skippedCount, cutoff: cutoffs.length })} active={tab}
             label="Schedule sections" onChange={(t) => setParam("tab", t)}>
-        {tab === "board" && boardPanel}
+        {tab === "board" && <>{boardPanel}<PendingAddons addons={addons} /></>}
 
-        {tab === "needs" && (
-          <div className="flex flex-col gap-6">
-            <Panel title={`Needs scheduling on ${dayText(date)}`}
-                   description="Jobs of this day left without a crew member after the freeze, or that no crew member fits (ADM-SCH-28)." bodyClassName="p-0">
-              {needsQ.isError ? <div className="p-4"><ErrorState message={errorMessage(needsQ.error)} /></div> : (
-                <DataTable
-                  className="[&>div]:rounded-none [&>div]:border-0"
-                  rows={needsQ.data ? needs : undefined}
-                  loading={needsQ.isPending}
-                  rowKey={(j) => j.id}
-                  empty={<p className="text-sm text-muted-foreground">Nothing needs scheduling on this day.</p>}
-                  columns={[
-                    { key: "v", header: "Vehicle", width: "14rem", cell: (j) => <JobLabel job={j} /> },
-                    { key: "c", header: "Customer", width: "12rem", cell: (j) => j.customer_name },
-                    { key: "f", header: "Finish by", width: "6rem", cell: (j) => j.finish_by ?? "-" },
-                    { key: "r", header: "Reason", wrap: true, cell: (j) => j.reason || "No crew member fits." },
-                    { key: "a", header: "", width: "6rem", align: "right", cell: (j) => (board
-                      ? <Button size="sm" variant="outline" onClick={() => setOpen(j)}>Place</Button> : null) },
-                  ]}
-                />
-              )}
-              <OtherDays dates={needsAll.map((j) => j.date)} date={date} onDate={chooseDate} what="job" />
-            </Panel>
-            <PendingAddons addons={addons} />
-          </div>
-        )}
+        {tab === "attention" && <NeedsAttention societyId={societyId} />}
         {tab === "skipped" && (!societyId
           ? <EmptyState title="Choose a site">Pick a site at the top left to see its skipped and paused jobs.</EmptyState>
           : <SkippedJobs key={`${societyId}-${date}`} societyId={societyId} date={date} />)}

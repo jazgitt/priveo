@@ -350,8 +350,10 @@ class CustomerService:
                 if cutoff is None:
                     errors[f"{at}.cutoff_time"] = "Please select your service cutoff time."
                 if self._asks_interior_day(sub) and sub.interior_day != INTERIOR_DAY_CUSTOM:
-                    day = (answer.interior_day or "").strip().capitalize()
-                    if day not in WEEKDAYS:
+                    # Optional at onboarding: a blank day keeps the car's current day (none is
+                    # Needs Attention). A day that is given must be a weekday.
+                    day = (answer.interior_day or "").strip().capitalize() or None
+                    if day is not None and day not in WEEKDAYS:
                         errors[f"{at}.interior_day"] = "Please select your interior care day."
             changes.append((vehicle, sub, basement, number, cutoff, day))
         if errors:

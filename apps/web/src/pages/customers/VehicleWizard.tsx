@@ -83,7 +83,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
     : stage === "Vehicle" ? Boolean(vehicle.catalogue_id && vehicle.registration)
     : stage === "Parking" ? parkingOk(vehicle.parking_basement, vehicle.parking_number, vehicle.zone_id)
     : stage === "Plan" ? !withSubscription || Boolean(vehicle.plan_id)
-    : stage === "Preferences" ? !withSubscription || Boolean(vehicle.cutoff_time && (!plan?.includes_interior || vehicle.interior_day))
+    : stage === "Preferences" ? !withSubscription || Boolean(vehicle.cutoff_time)
     : true;
   const lookupError = societies.error ?? catalogue.error ?? plans.error ?? uploadError;
   const noSociety = societies.data !== undefined && societies.data.every((s) => !s.active);

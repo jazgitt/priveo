@@ -230,10 +230,10 @@ export function SubscriptionSetupDialog({ v, customerId, onClose }: { v: Vehicle
   return (
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Set up subscription, ${v.registration}`}
                 description="The subscription starts as Activating, with the first plan payment, like a vehicle added with a plan."
-                submitLabel="Set up subscription" busy={save.isPending} disabled={!planId || (needsInterior && !interior)}
+                submitLabel="Set up subscription" busy={save.isPending} disabled={!planId}
                 onSubmit={() => save.mutate({ path: `/v1/admin/vehicles/${v.id}/subscription`, method: "POST", body: {
                   plan_id: planId, cutoff_time: cutoff,
-                  ...(needsInterior ? { interior_day: interior } : {}),
+                  ...(needsInterior && interior ? { interior_day: interior } : {}),
                   ...(needsInterior && interior === CUSTOM_DAY && notes.trim() ? { interior_day_notes: notes.trim() } : {}),
                   ...(starts ? { first_service_date: starts } : {}),
                 } })}>

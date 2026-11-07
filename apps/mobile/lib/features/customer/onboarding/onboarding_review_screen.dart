@@ -173,9 +173,6 @@ class _ReviewState extends ConsumerState<_Review> {
       }
       if (part == 3 && d.vehicle.hasSubscription) {
         if (d.cutoff == null) errors['cutoff'] = l.selectCutoff;
-        if (d.vehicle.asksInteriorDay && d.day == null) {
-          errors['day'] = l.selectInteriorDay;
-        }
       }
     }
     return errors;

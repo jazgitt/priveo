@@ -73,6 +73,8 @@ interface Opts {
   /** More boards by schedule ID, for the days of other schedules (ADM-SCH-35). */
   boards?: Record<string, ReturnType<typeof board>>;
   needs?: ReturnType<typeof job>[];
+  /** Cars on Interior care with no preferred day (the Needs Attention tab). */
+  interiorMissing?: Record<string, unknown>[];
   /** The "Freeze by itself" feature (scheduler.auto_freeze), off unless a test switches it on. */
   autoFreeze?: boolean;
 }
@@ -106,6 +108,7 @@ function server(o: Opts = {}) {
               start_time: null, status: "Skipped", skip_kind: "Skipped", skip_reason: "Skipped by operations" }),
       ]);
     }
+    if (url.startsWith("/v1/admin/scheduling/interior-day-missing")) return json(200, o.interiorMissing ?? []);
     if (url.startsWith("/v1/admin/scheduling/needs-scheduling")) {
       return json(200, { jobs: o.needs ?? [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null,
                                                  start_time: null, reason: "Capacity is short." })] });
@@ -800,7 +803,7 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-08", days: 7 });
   });
 
-  it("marks days that need the admin and lists needs scheduling for the chosen day only", async () => {
+  it("marks days that need the admin, and has no Needs scheduling tab (the Board's Unscheduled column shows those jobs)", async () => {
     server({ needs: [
       job({ id: "j9", crew_id: null, crew_name: null, start_minute: null, start_time: null, reason: "Capacity is short." }),
       job({ id: "j10", date: "2026-11-09", registration: "KA10NN0010", crew_id: null, crew_name: null,
@@ -809,13 +812,8 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     await openDay();
     const days = await screen.findByRole("group", { name: "Days" });
     expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, needs you/ })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("tab", { name: "Needs scheduling (1)" }));
-    expect(await screen.findByText("Capacity is short.")).toBeInTheDocument();
-    expect(screen.queryByText("KA10NN0010")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Mon 09-Nov-26 (1)" }));
-    expect(await screen.findByText("KA10NN0010")).toBeInTheDocument();
-    expect(screen.queryByText("Capacity is short.")).not.toBeInTheDocument();
-    expect(within(days).getByRole("button", { name: /^Mon 09-Nov-26/ })).toHaveAttribute("aria-pressed", "true");
+    const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
+    expect(within(tabs).queryByRole("tab", { name: /Needs scheduling/ })).not.toBeInTheDocument();
   });
 });
 
@@ -938,11 +936,12 @@ describe("schedule tabs and unavailable crew time", () => {
   ];
 
   it("shows the sections as tabs with the chosen day's counts, the board first once a schedule exists", async () => {
-    server();
+    server({ interiorMissing: [{ subscription_id: "sub1", vehicle_id: "veh1", registration: "KA07IN0007",
+      customer_name: "Meena", vehicle: "Honda City", plan_name: "Premium" }] });
     await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Board", "Needs scheduling (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Reports"]));
+      "Board", "Needs Attention (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Reports"]));
     expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
     // Run is a button in the top bar and opens a dialog.
@@ -1107,10 +1106,10 @@ describe("long runs, confirmations and the action tabs", () => {
     expect(screen.getByRole("button", { name: "Preview improvements" })).toBeDisabled();
   });
 
-  it("lists add-ons waiting for a scheduling period on their day under Needs scheduling", async () => {
+  it("lists add-ons waiting for a scheduling period on their day under the Board", async () => {
     serverWith({ "/v1/admin/scheduling/needs-scheduling": () => json(200, { jobs: [],
       pending_addons: [{ id: "b1", registration: "HR03", date: "2026-11-21", finish_by: "12:00" }] }) });
-    await openDay("2026-11-21", "&tab=needs");
+    await openDay("2026-11-21");
     expect(await screen.findByText("Add-ons awaiting a scheduling period")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Manage booking" })).toHaveAttribute("href", "/addons");
   });
