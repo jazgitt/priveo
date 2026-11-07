@@ -61,6 +61,8 @@ export interface AdminJob {
   vehicle: string;
   /** For example "B1-24": basement and parking number. */
   parking?: string;
+  /** The zone of the vehicle, for example "Zone 3", or empty. */
+  zone?: string;
   customer_name: string;
   service: string;
   status: string;
@@ -272,4 +274,16 @@ export function fmtHours(minutes: number): string {
 
 export function errorText(e: unknown): string {
   return e instanceof ApiError ? e.message : "Something went wrong. Please try again.";
+}
+
+/**
+ * Whether the admin's "Freeze by itself" feature is on (scheduler.auto_freeze, off
+ * by default). Off: drafts are frozen by hand only, so no freeze time is shown.
+ */
+export function useAutoFreezeOn(): boolean {
+  const flags = useQuery({
+    queryKey: ["admin-features"],
+    queryFn: () => api<{ key: string; enabled: boolean }[]>("/v1/admin/features"),
+  });
+  return flags.data?.find((f) => f.key === "scheduler.auto_freeze")?.enabled ?? false;
 }

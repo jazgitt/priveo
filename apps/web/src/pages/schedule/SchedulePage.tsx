@@ -37,9 +37,10 @@ import { REPORT_SECTIONS } from "./reports";
 import { CutoffRequests, DraftImprovements, OtherDays, PendingAddons } from "./ScheduleActions";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
+import { Fireworks } from "./RunFireworks";
 import {
   datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useNeedsScheduling,
-  useScheduleBoard, useSchedules, weekday,
+  useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
 import "./schedule.css";
@@ -117,8 +118,16 @@ function periodStart(period: Period, date: string, weekStart: number): string {
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
 const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
-function freezeText(s: ScheduleOut): string {
+/** The result of a run in words: "12 placed, 1 unscheduled, 0 late." */
+const runSummary = (r: { schedules: RunResult[] }) => {
+  const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
+  return `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`;
+};
+
+/** A draft's freeze time, only while "Freeze by itself" is on (scheduler.auto_freeze). */
+function freezeText(s: ScheduleOut, autoFreeze: boolean): string {
   if (s.status === "Frozen") return `Frozen${s.frozen_at ? ` on ${fmtDate(s.frozen_at)}` : ""}. Crew see it as their cards.`;
+  if (!autoFreeze) return "";
   const t = new Date(s.freeze_deadline).toLocaleTimeString("en-IN", {
     hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata",
   });
@@ -162,6 +171,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const boardQ = useScheduleBoard(schedule?.id);
   const board: Board | null = boardQ.data ?? null;
 
+  const autoFreeze = useAutoFreezeOn();
   const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{ key: string; value: string | number }[]>("/v1/admin/directory/settings") });
   const configured = String(preferences.data?.find((p) => p.key === "schedule.period")?.value ?? "Weekly").toLowerCase();
   const configuredPeriod: Period = configured === "daily" ? "daily" : configured === "monthly" ? "monthly" : "weekly";
@@ -178,6 +188,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [crewSel, setCrewSel] = useState<string[]>([]);
   const [hideOff, setHideOff] = useState(false);
   const [density, setDensity] = useDensity();
+  // The result of the last run, shown as a celebration until it ends.
+  const [celebration, setCelebration] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
@@ -257,6 +269,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   const run = () => {
     setRunOpen(false);
+    setCelebration(null);
     const start = runStart;
     const day = date;
     void tasks.start({
@@ -269,16 +282,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
         await refresh();
         return r;
       },
-      done: (r) => {
-        const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
-        return {
-          message: `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`,
-          link: { label: "Open board", to: `/schedule?date=${day}&tab=board` },
-        };
-      },
-    }).then(() => {
+      done: (r) => ({
+        message: runSummary(r),
+        link: { label: "Open board", to: `/schedule?date=${day}&tab=board` },
+      }),
+    }).then((r) => {
       setProblem(null);
       setParams({ date: day, tab: "board" }, { replace: true });
+      setCelebration(runSummary(r));
     }, () => { /* The task tray and a toast say why it failed. */ });
   };
 
@@ -404,21 +415,20 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   <TypeKey type={focusType} onType={setFocusType} />
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
                   <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />
-                  {view === "cards" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="outline" className="size-8" aria-label={`Card detail: ${density}`} title="How much a card shows">
-                          <Rows3 aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Card detail</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
-                          {DENSITIES.map(([id, label]) => <DropdownMenuRadioItem key={id} value={id}>{label}</DropdownMenuRadioItem>)}
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  {/* The card detail switch works for all three views (ADM-SCH-32). */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="outline" className="size-8" aria-label={`Card detail: ${density}`} title="How much each job shows">
+                        <Rows3 aria-hidden />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuLabel>Card detail</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
+                        {DENSITIES.map(([id, label]) => <DropdownMenuRadioItem key={id} value={id}>{label}</DropdownMenuRadioItem>)}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <span className={cn("inline-flex", schedule.status === "Frozen" && view === "cards" && "text-foreground")}
                         role="note" title={hint} aria-label={hint} tabIndex={0}>
                     <Info className="size-4 text-muted-foreground" aria-hidden />
@@ -446,14 +456,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   </span>
                 </div>
                 {view === "table" ? (
-                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen}
+                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen} density={density}
                             fileName={`schedule-${(site.name || "site").replace(/[^A-Za-z0-9]+/g, "-")}-${date}.csv`} />
                 ) : view === "cards" ? (
                   <CardBoard crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
                              type={focusType} flag={focusFlag} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
                              onOpen={setOpen} onMove={onMove} />
                 ) : (
-                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag}
+                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density}
                             now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>
@@ -470,14 +480,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
         ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
           : (
-          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 basis-full flex-wrap items-center gap-x-3 gap-y-1.5">
             {schedule ? (
               <>
                 <StatusBadge status={schedule.status} />
                 <span className="min-w-0 truncate text-sm text-muted-foreground"
                       title={schedule.start_date === schedule.end_date ? "A schedule for this day only."
                         : `Part of the schedule for ${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}. Freezing applies to all its days.`}>
-                  {freezeText(schedule)}
+                  {freezeText(schedule, autoFreeze)}
                 </span>
               </>
             ) : (
@@ -614,6 +624,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
         </FormDialog>
       )}
+      {running && <Fireworks mode="running" />}
+      {celebration && <Fireworks mode="celebrate" message={celebration} onEnd={() => setCelebration(null)} />}
     </div>
   );
 }

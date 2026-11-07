@@ -17,11 +17,13 @@ export interface Feature {
   label: string;
   description: string;
   group: string;
-  audience: "customer" | "crew" | "both";
+  audience: "customer" | "crew" | "both" | "admin";
   enabled: boolean;
 }
 
-const AUDIENCE: Record<Feature["audience"], string> = { customer: "Customers", crew: "Crew", both: "Customers and crew" };
+const AUDIENCE: Record<Feature["audience"], string> = {
+  customer: "Customers", crew: "Crew", both: "Customers and crew", admin: "Admins only",
+};
 
 function FeatureRow({ feature }: { feature: Feature }) {
   const qc = useQueryClient();
@@ -37,7 +39,9 @@ function FeatureRow({ feature }: { feature: Feature }) {
     if (!enabled) {
       const ok = await confirm({
         title: `Turn off ${feature.label}?`,
-        description: `${AUDIENCE[feature.audience]} will lose this the next time their app refreshes. Nothing is deleted. You can turn it back on at any time.`,
+        description: feature.audience === "admin"
+          ? "Nothing is deleted. You can turn it back on at any time."
+          : `${AUDIENCE[feature.audience]} will lose this the next time their app refreshes. Nothing is deleted. You can turn it back on at any time.`,
         confirmLabel: "Turn off",
         tone: "danger",
       });
