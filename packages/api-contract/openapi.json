@@ -7039,6 +7039,77 @@
         }
       }
     },
+    "/v1/admin/scheduling/interior-day-missing": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Interior Day Missing",
+        "description": "Active cars on a plan with Interior care and no preferred Interior day. The\nscheduler gives such a car no Interior visit, so the admin sets the day here.\nRead only; the day is saved with PATCH /v1/admin/subscriptions/{id}.",
+        "operationId": "interior_day_missing_v1_admin_scheduling_interior_day_missing_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InteriorDayMissing"
+                  },
+                  "title": "Response Interior Day Missing V1 Admin Scheduling Interior Day Missing Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/capacity": {
       "get": {
         "tags": [
@@ -21870,6 +21941,14 @@
               }
             ],
             "title": "Cross Zone Reason"
+          },
+          "hand_breaches": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hand Breaches",
+            "default": []
           }
         },
         "type": "object",
@@ -28446,6 +28525,47 @@
           "items"
         ],
         "title": "Inbox"
+      },
+      "InteriorDayMissing": {
+        "properties": {
+          "subscription_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subscription Id"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "vehicle": {
+            "type": "string",
+            "title": "Vehicle"
+          },
+          "plan_name": {
+            "type": "string",
+            "title": "Plan Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscription_id",
+          "vehicle_id",
+          "registration",
+          "customer_name",
+          "vehicle",
+          "plan_name"
+        ],
+        "title": "InteriorDayMissing",
+        "description": "A car whose plan includes Interior care but whose preferred Interior day is not set.\nSuch a car is on the Needs Attention tab until the admin sets the day."
       },
       "InteriorLine": {
         "properties": {
