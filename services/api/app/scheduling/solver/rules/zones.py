@@ -45,6 +45,14 @@ CROSS_COST = 10_000  # one cross-zone assignment
 ZONE_COST = 100  # one more zone for a cleaner in a day
 OVERLAP_COST = 1  # two zones of a cleaner that overlap in time
 CROSS_SETTING = "site.cross_zone_help_allowed"
+# Derived: a cleaner with no home zone, on a site where some cleaner has one,
+# counts as cross-zone for every zoned car (soft cost, never a hard limit).
+HOMELESS_IS_CROSS = True
+
+
+def _cleaner(key: str) -> str:
+    """The cleaner behind a window key ("<crew id>|<window>")."""
+    return key.split("|", 1)[0]
 
 
 def day_inputs(run_ctx, day: date, crew: list[SolverCrew]) -> dict | None:
@@ -95,9 +103,11 @@ def add_day_terms(ctx: ModelContext) -> None:
     owned = set(data.get("owned", ()))
     allowed = data.get("cross_allowed", True)
 
-    # Per cleaner: (zone, literal or None for a kept job, start, duration in steps).
+    # Per cleaner (not per working window, so a split shift counts once):
+    # (zone, literal or None for a kept job, start, duration in steps).
     entries: dict[str, list] = {}
     cross = []
+    any_home = any(v is not None for v in home.values())
     for job in ctx.free:
         zone = cars.get(job.vehicle)
         if zone is None or job.key not in ctx.placed_vars:
@@ -106,9 +116,14 @@ def add_day_terms(ctx: ModelContext) -> None:
             lit = ctx.presence.get((job.key, c.key))
             if lit is None:
                 continue
-            entries.setdefault(c.key, []).append((zone, lit, ctx.start_vars[job.key], ctx.durations[job.key]))
+            entries.setdefault(_cleaner(c.key), []).append(
+                (zone, lit, ctx.start_vars[job.key], ctx.durations[job.key]))
             mine = home.get(c.key)
-            if mine is not None and mine != zone:
+            if mine is None and any_home and HOMELESS_IS_CROSS:
+                # HOMELESS_IS_CROSS (Derived): a cleaner with no home zone takes a
+                # zoned car only as cross-zone work, soft, so coverage still wins.
+                cross.append(lit)
+            elif mine is not None and mine != zone:
                 if not allowed and zone in owned:
                     model.Add(lit == 0)
                 else:
@@ -118,7 +133,8 @@ def add_day_terms(ctx: ModelContext) -> None:
         if zone is None or job.fixed is None or job.fixed[0] not in home:
             continue
         start = job.fixed[1] // step
-        entries.setdefault(job.fixed[0], []).append((zone, None, start, -(-job.duration // step)))
+        entries.setdefault(_cleaner(job.fixed[0]), []).append(
+            (zone, None, start, -(-job.duration // step)))
 
     penalty = []
     if cross:
