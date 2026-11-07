@@ -480,7 +480,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
         ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
           : (
-          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 basis-full flex-wrap items-center gap-x-3 gap-y-1.5">
             {schedule ? (
               <>
                 <StatusBadge status={schedule.status} />
