@@ -60,6 +60,18 @@ describe("portal shell", () => {
     expect(screen.getByText("Priveo Papa")).toBeInTheDocument();
   });
 
+  it("has no empty top bar with an Alerts button; Alerts is only in the sidebar (item 1)", async () => {
+    fetchMock.mockResolvedValue(json(200, profile));
+    renderAt("/payments");
+    const nav = await screen.findByRole("navigation", { name: "Admin areas" });
+    expect(within(nav).getByRole("link", { name: "Alerts" })).toBeInTheDocument();
+    // The bell that repeated Alerts in the top bar is gone.
+    expect(screen.queryByRole("button", { name: /^Alerts, \d+ unread$/ })).not.toBeInTheDocument();
+    // With no running task the bar only holds the narrow-screen menu button, so it is hidden on a wide screen.
+    const bar = screen.getByRole("button", { name: "Open menu" }).parentElement!;
+    expect(bar).toHaveClass("lg:hidden");
+  });
+
   it("opens the areas from a menu button on a narrow screen and closes the menu after a choice", async () => {
     fetchMock.mockResolvedValue(json(200, profile));
     renderAt("/payments");

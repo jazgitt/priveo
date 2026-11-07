@@ -10,6 +10,7 @@ import { ToastProvider } from "../../components";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
 import { CapacityPage } from "../capacity/CapacityPage";
 import { jobsCsv, csvCell } from "./JobTable";
+import { toIso } from "./api";
 import { SchedulePage } from "./SchedulePage";
 
 const fetchMock = vi.fn();
@@ -489,9 +490,9 @@ describe("focus view and the board in its own tab (ADM-SCH-33)", () => {
     await column("c1");
     await userEvent.click(screen.getByRole("button", { name: /Focus/ }));
     const focus = await screen.findByRole("dialog", { name: "Schedule board, focus view" });
-    // Only the board: no tabs, no Run.
+    // Only the board: no tabs. The top bar keeps the Run button, as on the page (item 8).
     expect(within(focus).queryByRole("tablist")).not.toBeInTheDocument();
-    expect(within(focus).queryByRole("button", { name: "Run" })).not.toBeInTheDocument();
+    expect(within(focus).getByRole("button", { name: "Run" })).toBeInTheDocument();
     expect(within(focus).getByRole("button", { name: "Freeze" })).toBeInTheDocument();
     const card = await within(focus).findByRole("button", { name: /KA01AB1234/ });
     await userEvent.click(card);
@@ -776,6 +777,14 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(screen.getByText("No schedule for Sun 15-Nov-26")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Previous day" }));
     expect(await screen.findByRole("button", { name: "Freeze" })).toBeInTheDocument();
+  });
+
+  it("the Today button moves the whole page to today (item 11)", async () => {
+    server();
+    await openDay("2026-11-14");
+    await screen.findByRole("button", { name: "Freeze" });
+    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+    expect(screen.getByLabelText("Day")).toHaveValue(toIso(new Date()));
   });
 
   it("runs the scheduler for the period that contains the chosen day", async () => {
