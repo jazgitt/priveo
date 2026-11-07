@@ -26,7 +26,7 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { isOpen, JobFlags, JobLabel, matches, StatusSummary, TypeKey } from "./Board";
+import { breached, isOpen, JobFlags, JobLabel, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
 import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
@@ -687,8 +687,10 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
 
   const movable = isOpen(job);
   return (
+    // The dialog takes the card's colour: the kind of work, or wine when the job was placed against a rule by hand.
     <FormDialog open onOpenChange={(o) => !o && onClose()} title={`${job.registration}, ${job.service}`} size="md"
-                submitLabel={movable ? "Move here" : "Close"} cancelLabel={movable ? "Cancel" : null}
+                submitLabel={movable ? "Move here" : "Close"} cancelLabel={null}
+                className={cn("sch-detail", breached(job) ? "wine" : typeClass(job))} style={{ background: "var(--type-bg)" }}
                 busy={busy} onSubmit={movable ? submit : onClose}
                 extraActions={movable ? (
                   <>
@@ -701,6 +703,8 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
                   </>
                 ) : undefined}>
       <DetailList columns={2} items={[
+        { label: "Zone", value: job.zone || "-" },
+        { label: "Parking", value: parkingPlace(job) || "-" },
         { label: "Vehicle", value: job.vehicle },
         { label: "Customer", value: job.customer_name },
         { label: "Date", value: dayText(job.date) },
@@ -717,6 +721,11 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
       ]} />
       {(job.late || job.manual || job.visit_outcome === "Partially Completed") && <div className="flex gap-2"><JobFlags job={job} /></div>}
       {job.reason && <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{job.reason}</p>}
+      {breached(job) && (
+        <p className="rounded-md border border-current px-3 py-2 text-sm">
+          Placed by hand against a rule: {(job.hand_breaches ?? []).join(" ")}
+        </p>
+      )}
       {!movable && (
         <p className="m-0 border-t pt-4 text-sm text-muted-foreground">
           This job is {job.status}, so it can no longer be placed or moved.

@@ -131,7 +131,7 @@
   .sch-drop-line { flex: 0 0 auto; height: 3px; margin: -0.1rem 0; border-radius: 999px; background: var(--c-gold); }
 
   /* The kind of work sets the card's colour; the status is an icon and a word, so the two never fight (ADM-SCH-34). */
-  .sch-card { --type: var(--c-ok); --type-bg: #eef8f1; --type-line: #bfe0cd;
+  .sch-card, .sch-detail { --type: var(--c-ok); --type-bg: #eef8f1; --type-line: #bfe0cd;
     position: relative; display: flex; flex-direction: column; gap: 0.15rem; padding: 0.4rem 0.55rem 0.45rem 0.65rem;
     border: 1px solid var(--type-line); border-left: 5px solid var(--type); border-radius: 8px; background: var(--type-bg);
     font-size: 0.75rem; line-height: 1.25; cursor: grab; user-select: none;
@@ -142,9 +142,10 @@
   .sch-card.dragging { opacity: 0.35; transform: none; box-shadow: none; }
   .sch-card.dim { opacity: 0.3; }
   .sch-card.locked { cursor: pointer; }
-  .sch-card.t-int { --type: var(--c-info); --type-bg: #ebf2fb; --type-line: #bdd3ee; }
-  .sch-card.t-spa { --type: var(--c-spa); --type-bg: #f4edfa; --type-line: #d9c6ea; }
-  .sch-card.t-other { --type: #8a8478; --type-bg: var(--c-card); --type-line: var(--c-line); }
+  /* The colour of a kind of work: the card and the card detail dialog share these (ADM-SCH-34). */
+  .sch-card.t-int, .sch-detail.t-int { --type: var(--c-info); --type-bg: #ebf2fb; --type-line: #bdd3ee; }
+  .sch-card.t-spa, .sch-detail.t-spa { --type: var(--c-spa); --type-bg: #f4edfa; --type-line: #d9c6ea; }
+  .sch-card.t-other, .sch-detail.t-other { --type: #8a8478; --type-bg: var(--c-card); --type-line: var(--c-line); }
   /* A late job is filled red, whatever its kind, so it stands out on the board (the Late label stays). */
   .sch-card.late { --type-bg: #f8d7d2; --type-line: #e0877c; box-shadow: 0 0 0 1.5px var(--c-error), 0 1px 2px rgba(22, 21, 26, 0.06); }
   .sch-card.manual { box-shadow: 0 0 0 1px var(--c-gold), 0 1px 2px rgba(22, 21, 26, 0.06); }
@@ -242,19 +243,48 @@
   .sch-controls .btn { margin-bottom: 0.9rem; }
 }
 
-/* Card detail: Detailed shows zone, car model, car number and cutoff on line 1; the zone is a label in the zone's shade. */
-.sch-zone { flex: none; padding: 0 0.3rem; border-radius: 4px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.03em; line-height: 1.25rem; }
-.sch-line1 { display: flex; align-items: center; gap: 0.3rem; min-width: 0; white-space: nowrap; color: var(--c-text); }
-.sch-line1 > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sch-line1 .sch-zone { flex: none; }
-.sch-line1 .sch-model { color: var(--c-mute); font-size: 0.6875rem; }
-.sch-line1 .sch-cut { margin-left: auto; flex: none; color: var(--c-mute); font-size: 0.6875rem; }
-.sch-line1 strong { font-size: 0.8125rem; }
+/* The zone is a label in the zone's shade; the car number is a chip of the same shape, so the two read alike at every size. */
+.sch-zone, .sch-reg { flex: none; padding: 0 0.3rem; border-radius: 4px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.03em; line-height: 1.25rem; }
+.sch-reg { font-size: 0.75rem; letter-spacing: 0; background: var(--c-card); border: 1px solid var(--c-line); color: var(--c-text); }
+.sch-zone { border: 0; }
 
-/* Timeline blocks follow the card detail: code, then registration, then zone, model and customer when detailed. */
-.sch-tl-text { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
-.sch-tl-text > * { flex: none; }
-.sch-tl-text > strong, .sch-tl-text > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Card lines (owner review, 8-Nov-26): the same kind of piece is shown the same way on every card size. */
+.sch-card-line { display: flex; align-items: center; gap: 0.3rem; min-width: 0; white-space: nowrap; overflow: hidden; color: var(--c-text); }
+.sch-card-line > * { flex: none; }
+.sch-card-line > .sch-model, .sch-card-line > .sch-customer { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sch-card-line > .sch-model { color: var(--c-mute); font-size: 0.6875rem; }
+.sch-card-line > .sch-customer { color: var(--c-mute); font-size: 0.6875rem; }
+.sch-card-line > .sch-cut { margin-left: auto; color: var(--c-mute); font-size: 0.6875rem; }
+.sch-card-line > .sch-time { font-size: 0.6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Card heights by layout. The timeline blocks use the same heights, so a row is as tall as a card. */
+.sch-card.compact { min-height: 1.9rem; justify-content: center; }
+.sch-card.standard { min-height: 2.9rem; justify-content: center; }
+.sch-card.detailed { min-height: 4rem; justify-content: center; }
+.sch-tl.compact .sch-tl-row:not(.sch-tl-head) { height: 1.9rem; }
+.sch-tl.standard .sch-tl-row:not(.sch-tl-head) { height: 2.9rem; }
+.sch-tl.detailed .sch-tl-row:not(.sch-tl-head) { height: 4rem; }
+.sch-tl-job { top: 3px; bottom: 3px; display: flex; flex-direction: column; justify-content: center; align-items: stretch; padding: 0 3px; }
+.sch-tl-face { display: flex; flex-direction: column; justify-content: center; gap: 0.1rem; min-width: 0; width: 100%; }
+
+/* A card placed by hand against a rule and confirmed is wine (SCHS-22). It wins over the kind and the late fill. */
+.sch-card.wine, .sch-detail.wine { --type: #4f1019; --type-bg: var(--c-wine); --type-line: #4f1019; }
+.sch-card.wine { color: #fdf2f4; }
+.sch-card.wine .sch-time, .sch-card.wine .sch-cut, .sch-card.wine .sch-model, .sch-card.wine .sch-customer,
+.sch-card.wine .sch-card-status, .sch-card.wine .sch-why, .sch-card.wine .sch-breach, .sch-card.wine .reg { color: #fdf2f4; }
+.sch-card.wine .sch-reg, .sch-card.wine .sch-zone { color: var(--c-text); }
+.sch-card.wine .sch-flag { background: #fdf2f4; color: var(--c-wine); }
+.sch-card.wine .sch-st.done, .sch-card.wine .sch-st.failed { color: #fdf2f4; }
+.sch-card.wine .sch-breach { font-weight: 700; }
+.sch-tl-job.wine { background: var(--c-wine); color: #fdf2f4; box-shadow: inset 0 0 0 1px #4f1019; }
+.sch-tl-job.wine .sch-time, .sch-tl-job.wine .sch-cut, .sch-tl-job.wine .sch-model, .sch-tl-job.wine .sch-customer { color: #fdf2f4; }
+.sch-tl-job.wine .sch-reg, .sch-tl-job.wine .sch-zone { color: var(--c-text); }
+
+/* The card detail dialog takes the card's colour: the same fill as the card (set inline from --type-bg). */
+.sch-detail { border-left: 6px solid var(--type); }
+.sch-detail.wine { color: #fdf2f4; }
+.sch-detail.wine .text-muted-foreground { color: #f3dfe3; }
+.sch-detail.wine .bg-muted { color: #fdf2f4; }
 
 /* Running and celebration overlay: it never takes clicks, so the page stays usable under it. */
 .sch-fireworks { position: fixed; inset: 0; z-index: 70; pointer-events: none; }

@@ -3,10 +3,9 @@ import { useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 import {
-  gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf,
-  zoneShort, zonesOf, zoneStyle,
+  breached, gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, statusClass, typeClass, windowsOf, zonesOf, type Density,
 } from "./Board";
-import type { Density } from "./CardBoard";
+import { CardFace } from "./CardBoard";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
@@ -69,7 +68,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
 
   return (
     <div className="sch-fill">
-      <Scroller className="sch-tl" role="group" aria-label="Day timeline">
+      <Scroller className={cn("sch-tl", density)} role="group" aria-label="Day timeline">
         <div className="sch-tl-row sch-tl-head">
           <div className="sch-tl-name">Crew <span>booked/available</span></div>
           <div className="sch-tl-track" aria-hidden>
@@ -99,18 +98,13 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                   <div key={job.id} tabIndex={0} aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
                        aria-describedby={tip?.job.id === job.id ? "sch-tl-tip" : undefined}
                        className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
-                         !matches(job, focus, search, type, flag) && "dim")}
+                         breached(job) && "wine", !matches(job, focus, search, type, flag) && "dim")}
                        style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
                        onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
                        onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
-                    <span className="sch-tl-text">
-                      {density === "detailed" && job.zone && (
-                        <span className="sch-zone" style={zoneStyle(job.zone, zones)}>{zoneShort(job.zone)}</span>
-                      )}
-                      <span>{job.status === "Completed" ? "✓ " : job.status === "Could not complete" ? "✕ " : ""}{serviceCode(job.service)}</span>
-                      {density !== "compact" && <strong className="reg">{job.registration}</strong>}
-                      {density === "detailed" && <span>{job.vehicle}</span>}
-                      {density === "detailed" && <span>{job.customer_name}</span>}
+                    {/* The block shows the lines of the card at this layout, so its height is the card's height. */}
+                    <span className="sch-tl-face">
+                      <CardFace job={job} density={density} zones={zones} />
                     </span>
                   </div>
                 ))}

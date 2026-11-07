@@ -176,12 +176,12 @@ describe("the card board (ADM-SCH-33)", () => {
     ] });
     await openDay();
     const asha = await column("c1");
-    // Each card shows the time, the service code, the vehicle number and the parking place.
+    // Standard: line 1 is zone, car number and cutoff; line 2 is EXT or INT and the service slot (owner review, 8-Nov-26).
     const card1 = within(asha).getByRole("button", { name: "EXT,KA01AB1234,B1-24" });
     expect(card1).toHaveTextContent("09:00-09:20");
     expect(card1).toHaveTextContent("EXT");
-    expect(card1).toHaveTextContent("B1-24");
-    expect(card1).toHaveTextContent("by 10:00");
+    expect(card1).toHaveTextContent("KA01AB1234Cutoff 10:00");
+    expect(card1.querySelectorAll(".sch-card-line")).toHaveLength(2);
     const card2 = within(await column("c2")).getByRole("button", { name: /KA02ZZ0001/ });
     expect(card2).toHaveClass("late");
     expect(card2).toHaveClass("manual");
@@ -218,7 +218,7 @@ describe("the card board (ADM-SCH-33)", () => {
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("That time overlaps another job.");
+    expect(dialog).toHaveTextContent("That time is outside the crew member's hours.");
     expect(callsTo("/move")).toHaveLength(1);
     await userEvent.click(within(dialog).getByRole("button", { name: "Place anyway" }));
     await waitFor(() => expect(callsTo("/move")).toHaveLength(2));
@@ -226,7 +226,7 @@ describe("the card board (ADM-SCH-33)", () => {
   });
 
   it("SCHS-22: cancelling the warning leaves the job where it was", async () => {
-    server({ moveReply: () => json(409, { code: "placement_warning", message: "Confirm.", fields: { overlap: "Overlap." } }) });
+    server({ moveReply: () => json(409, { code: "placement_warning", message: "Confirm.", fields: { outside_hours: "Outside." } }) });
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
     await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
@@ -1130,16 +1130,61 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     expect(await screen.findByRole("button", { name: "Card detail: standard" })).toBeInTheDocument();
   });
 
-  it("shows the zone, car model, car number and cutoff on a detailed card, and no basement place", async () => {
+  it("shows the lines of a detailed card: zone, model and cutoff; EXT and slot; car number and customer", async () => {
     localStorage.setItem("priveo.schedule.card-density", "detailed");
     server({ jobs: [job({ zone: "Zone 3", parking: "Zone 3 · B1-24", vehicle: "Honda City", finish_by: "10:00" })] });
     await openDay();
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
-    expect(card.querySelector(".sch-line1")).toHaveTextContent("Z3Honda CityKA01AB1234Cutoff 10:00");
-    expect(card).toHaveTextContent("EXT");
-    expect(card).toHaveTextContent("09:00-09:20");
-    expect(card).toHaveTextContent("Meena");
+    const lines = [...card.querySelectorAll(".sch-card-line")];
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toHaveTextContent("Z3Honda CityCutoff 10:00");
+    expect(lines[1]).toHaveTextContent("EXT09:00-09:20");
+    expect(lines[2]).toHaveTextContent("KA01AB1234Meena");
     expect(card).not.toHaveTextContent("B1-24");
+  });
+
+  it("shows a compact card as zone, EXT or INT and cutoff on one line", async () => {
+    localStorage.setItem("priveo.schedule.card-density", "compact");
+    server({ jobs: [job({ zone: "Zone 3" })] });
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    const lines = [...card.querySelectorAll(".sch-card-line")];
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent("Z3EXTCutoff 10:00");
+  });
+
+  it("marks a card placed by hand against a rule as wine", async () => {
+    server({ jobs: [job({ hand_breaches: ["That time is outside the crew member's hours."] })] });
+    await openDay();
+    expect(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ })).toHaveClass("wine");
+  });
+
+  it("moves a detailed card in 15-minute steps with Alt and the arrow keys", async () => {
+    localStorage.setItem("priveo.schedule.card-density", "detailed");
+    server();
+    await openDay();
+    within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }).focus();
+    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c1", start_minute: 555 });
+  });
+
+  it("opens the card detail in the card's colour, with a zone and no Cancel button", async () => {
+    server({ jobs: [job({ zone: "Zone 3" })] });
+    await openDay();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveClass("sch-detail", "t-ext");
+    expect(dialog).toHaveAttribute("style", expect.stringContaining("var(--type-bg)"));
+    expect(dialog).toHaveTextContent("Zone");
+    expect(within(dialog).queryByRole("button", { name: "Cancel" })).toBeNull();
+  });
+
+  it("refuses a drop that overlaps another job, naming the job in the way", async () => {
+    server({ moveReply: () => json(409, err("overlap", "KA02ZZ0001 is in the way at 10:00-10:20. Please try another time.")) });
+    await openDay();
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    expect(await screen.findByText(/KA02ZZ0001 is in the way/)).toBeInTheDocument();
   });
 
   it("gives a detailed card taken off its crew member its reason as line four", async () => {

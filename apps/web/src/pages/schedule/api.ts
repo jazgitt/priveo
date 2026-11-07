@@ -91,6 +91,8 @@ export interface AdminJob {
   queue_unlocked?: boolean;
   /** Rules version 2: why the job sits outside its cleaner's home zone (SCHR-ZONE-06). */
   cross_zone_reason?: string | null;
+  /** The rules a job was placed against by hand and the admin confirmed (SCHS-22): the card is marked wine. */
+  hand_breaches?: string[];
 }
 
 export interface Board {
