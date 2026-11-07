@@ -828,8 +828,23 @@ def move_job(
             continue
         o_start = other.start_minute or 0
         if start_minute < o_start + other.duration_minutes and o_start < end:
-            breach("overlap", "That time overlaps another job.")
-            break
+            # An overlap is refused on every site and cannot be confirmed away (owner, 8-Nov-26).
+            blocker = db.get(Vehicle, other_visit.vehicle_id)
+            car = (blocker.registration if blocker and blocker.registration else "Another car")
+            span = f"{rules.hhmm(o_start)}-{rules.hhmm(o_start + other.duration_minutes)}"
+            raise ApiError(
+                "overlap",
+                f"{car} is in the way at {span}. Please try another time.",
+                409,
+                {"overlap": f"{car} is in the way at {span}."},
+            )
+    if warn:
+        # The cleaner's break is a rule on a version 2 site (SCHR-BRK-09); the Board marks a job that takes it.
+        from app.scheduling.window_rules import capacity_break
+
+        brk = capacity_break.visible_break(db, member, visit.date)
+        if brk and start_minute < brk[1] and brk[0] < end:
+            breaches.append(("break", "That time overlaps the crew member's break."))
     if warn and job.finish_by_minute is not None and end > job.finish_by_minute and is_strict_day(
             run_context.start(db, schedule, admin_id), visit.date):
         breaches.append(("customer_cutoff", "The job ends after the Customer cutoff."))
@@ -844,8 +859,8 @@ def move_job(
     job.queue_unlocked = False
     # The moved job takes its place by start time on its new day (Derived).
     queue.resequence_all(db, {(crew_id, visit.date), (old_crew_id, visit.date)})
-    if warn:
-        hand_placement.record(db, schedule.id, job.id, breaches)
+    # Each placement replaces the breaches stored for the job, so a clean move clears the Board's mark.
+    hand_placement.record(db, schedule.id, job.id, breaches)
     record(db, schedule.id, admin_id, "move", f"job {job.id} to {rules.hhmm(start_minute)}", {
         "job": str(job.id), "crew_id": [_s(before[0]), str(crew_id)],
         "start_minute": [before[1], start_minute]})
@@ -1041,6 +1056,9 @@ def job_rows(db: Session, *where) -> list[dict]:
         d = derived[r["visit_id"]]
         r["visit_outcome"], r["planned_services"], r["delivered_services"] = (
             d.outcome, d.planned, d.delivered)
+    marks = hand_placement.messages_of(db, [r["id"] for r in result])
+    for r in result:
+        r["hand_breaches"] = marks.get(r["id"], [])
     return result
 
 
