@@ -29177,17 +29177,10 @@
             "title": "Role"
           },
           "working_hours": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/DayHours"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "type": "array",
             "title": "Working Hours"
           },
           "paired_member_id": {
@@ -29208,7 +29201,8 @@
           "name",
           "mobile",
           "society_id",
-          "role"
+          "role",
+          "working_hours"
         ],
         "title": "NewCrew"
       },

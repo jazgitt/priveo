@@ -16,6 +16,7 @@ WEEK = [SUNDAY + timedelta(days=i) for i in range(7)]  # weekdays and the weeken
 
 def _site(world, version=2, earliest=None, start=300, end=660):
     for name in (INTERIOR, EXTERIOR):
+        world.drop_slots(name)
         world.db.add(WorkingSlot(society_id=world.society.id, service=name,
                                  start_minute=start, end_minute=end, days=list(range(7))))
     world.db.commit()
@@ -64,6 +65,7 @@ def test_schr_par_08_at_rules_version_1_nothing_changes(world):
 
 
 def test_schr_par_08_without_the_version_setting_nothing_changes(world):
+    world.drop_slots(INTERIOR)
     world.db.add(WorkingSlot(society_id=world.society.id, service=INTERIOR,
                              start_minute=300, end_minute=660, days=list(range(7))))
     world.db.commit()

@@ -87,8 +87,13 @@ def test_schr_cfg_01_no_hardcoded_scheduler_time_in_scheduler_code():
     assert hits == []
 
 
-@pytest.mark.xfail(reason="removed by later scheduler stories (weights, windows, crew defaults)",
-                   strict=False)
+@pytest.mark.xfail(
+    reason=("still hard-coded on 06-Nov-26 (open): the no-slot fallback window (300, 660) in "
+            "window_rules/base_job_slots.py and crew/service.py; the full-day fallback (0, 1440) "
+            "in solver/core.py, solver/rules/objective_order.py and window_rules/base_job_slots.py; "
+            "the crew model defaults 360 and 660 in scheduling/models.py. Removing the fallbacks "
+            "needs an owner decision: SCHR-PAR-16 says a weekday with no slot is a day off."),
+    strict=False)
 def test_schr_cfg_09_pending_constants_are_gone():
     assert _hits(PENDING) == []
 

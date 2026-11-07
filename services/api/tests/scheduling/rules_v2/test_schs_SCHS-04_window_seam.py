@@ -55,6 +55,7 @@ def _build(world):
     db.flush()
     c1 = _crew(db, other, "Esha", start=300, end=600)
     c2 = _crew(db, other, "Farid", hours=_hours(False))
+    world.drop_slots()
     db.add(WorkingSlot(society_id=world.society.id, service="Cleaning-External",
                        start_minute=330, end_minute=600, days=[0, 1, 2, 3, 4, 5]))
     db.add(WorkingSlot(society_id=world.society.id, service="Cleaning-Internal",

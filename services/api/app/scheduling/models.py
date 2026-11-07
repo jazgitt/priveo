@@ -45,8 +45,8 @@ class SchedulingCrew(Base):
     # The working window, in minutes after midnight. Used on every day when
     # `working_hours` is empty. Otherwise the earliest start and latest end of
     # the working days, as a summary.
-    start_minute: Mapped[int] = mapped_column(Integer, default=360)
-    end_minute: Mapped[int] = mapped_column(Integer, default=660)
+    start_minute: Mapped[int] = mapped_column(Integer)
+    end_minute: Mapped[int] = mapped_column(Integer)
     # One entry for each weekday: {"day", "working", "start", "end"} (ADM-CRW-04).
     working_hours: Mapped[list | None] = mapped_column(JSON)
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).

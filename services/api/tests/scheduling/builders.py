@@ -137,6 +137,11 @@ class Scenario:
         days = [d for d in ALL_DAYS if d not in off]
         for service_name in services:
             s, e, _days = defaults.DEFAULT_SLOT_WINDOWS[service_name]
+            # Replace this service's slots: a second call must not add duplicates.
+            for old in self.db.scalars(select(WorkingSlot).where(
+                    WorkingSlot.society_id == site.id, WorkingSlot.service == service_name)):
+                self.db.delete(old)
+            self.db.flush()
             self.db.add(WorkingSlot(society_id=site.id, service=service_name,
                                     start_minute=s if start is None else start,
                                     end_minute=e if end is None else end, days=days))

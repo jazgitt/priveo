@@ -63,8 +63,8 @@ class NewCrew(BaseModel):
     mobile: str
     society_id: uuid.UUID
     role: str
-    # Left out, the hours come from the society's working slots (ADM-CRW-25).
-    working_hours: list[DayHours] | None = None
+    # Mandatory: the admin enters the hours of every crew member (ADM-CRW-04, ADM-CRW-25).
+    working_hours: list[DayHours]
     # A Trainee is onboarded with the Member they are paired with (ADM-CRW-19).
     paired_member_id: uuid.UUID | None = None
 
@@ -287,8 +287,8 @@ def society_default_hours(db: Session, society_id: uuid.UUID) -> list[DayHours]:
     """Working hours taken from the society's working slots for Cleaning-External
     and Cleaning-Internal: on each weekday the slots are joined where they touch
     or overlap, the first is the day's window and the rest are extra slots. A
-    weekday with no slot is a day off. A society with no slots at all gets the
-    standard 05:00 to 11:00 (ADM-CRW-25, ADM-SVS-05)."""
+    weekday with no slot is a day off, and so is every day of a society with no
+    slots. This is a suggestion for the admin to confirm; nothing is saved from it."""
     slots = [s for s in lookup.working_slots(db, society_id)
              if s.service in ("Cleaning-External", "Cleaning-Internal")]
 
@@ -299,8 +299,6 @@ def society_default_hours(db: Session, society_id: uuid.UUID) -> list[DayHours]:
     out = []
     for number, day in enumerate(WEEKDAYS):
         spans = sorted((s.start_minute, s.end_minute) for s in slots if number in s.days)
-        if not slots:
-            spans = [(300, 660)]
         merged: list[list[int]] = []
         for start, end in spans:
             if merged and start <= merged[-1][1]:
@@ -541,9 +539,7 @@ class CrewService:
         society = self._db.get(Society, body.society_id)
         if society is None:
             raise _problem("Choose a society.", society_id="Choose a society.")
-        hours = check_hours(
-            body.working_hours if body.working_hours is not None
-            else society_default_hours(self._db, society.id))
+        hours = check_hours(body.working_hours)  # mandatory; nothing is copied or assumed
         mate_sc = None
         if body.role == "Trainee":
             if body.paired_member_id is None:

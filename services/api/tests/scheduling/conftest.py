@@ -42,8 +42,27 @@ class World:
         for car in db.query(Vehicle).filter_by(customer_id=self.customer.id):
             car.active = False
         db.flush()
+        # The test site starts with working slots on every day, as the old fallback
+        # gave. A day with no slot is a day off: a test sets that up on purpose
+        # with Scenario.slots(off=...).
+        from app.directory import defaults
+        from app.directory.models import WorkingSlot
+        for service, (start, end, _days) in defaults.DEFAULT_SLOT_WINDOWS.items():
+            db.add(WorkingSlot(society_id=self.society.id, service=service,
+                               start_minute=start, end_minute=end, days=list(range(7))))
         self.crew: list[SchedulingCrew] = []
         self.vehicles: list[Vehicle] = []
+
+    def drop_slots(self, service=None) -> None:
+        """Remove the site's working slots (of one service, or all). A test that
+        adds its own slots starts here, so the standard ones do not duplicate."""
+        from app.directory.models import WorkingSlot
+        query = self.db.query(WorkingSlot).filter(WorkingSlot.society_id == self.society.id)
+        if service is not None:
+            query = query.filter(WorkingSlot.service == service)
+        for row in query.all():
+            self.db.delete(row)
+        self.db.flush()
 
     def add_crew(self, login_id=None, role="Member", start=360, end=420,
                  name="Ravi", society_id=None, paired=None) -> SchedulingCrew:

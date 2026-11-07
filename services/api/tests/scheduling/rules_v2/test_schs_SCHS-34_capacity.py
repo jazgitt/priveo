@@ -2,6 +2,8 @@
 (SCHR-BRK-08, SCHR-EXT-09). Version 2 only."""
 from types import SimpleNamespace
 
+import pytest
+
 from app.directory import lookup, rule_seed, site_settings
 from app.directory.models import WorkingSlot
 from app.scheduling import capacity
@@ -78,3 +80,36 @@ def test_schr_ext_09_nothing_changes_at_rules_version_1(world):
     day = _day(world)
     assert day["break_minutes"] == 0 and day["early_band_free_minutes"] == 0
     assert day["capacity_minutes"] == 660 - 300
+
+
+# ---- SCHR-BRK-08: the break is taken out of each working window (gap check) ---
+
+
+@pytest.mark.parametrize("windows, found, expected", [
+    ([(480, 600)], (510, 540), [(480, 510), (540, 600)]),   # break inside: split in two
+    ([(500, 560)], (480, 520), [(520, 560)]),               # break covers the start
+    ([(500, 560)], (540, 600), [(500, 540)]),               # break covers the end
+    ([(480, 500)], (510, 540), [(480, 500)]),               # window ends before the break
+    ([(560, 600)], (510, 540), [(560, 600)]),               # window starts after the break
+    ([(480, 600)], None, [(480, 600)]),                     # no break for this cleaner
+])
+def test_schr_brk_08_the_break_is_taken_out_of_each_window(monkeypatch, windows, found, expected):
+    from app.scheduling import breaks
+    from app.scheduling.window_rules import capacity_break
+
+    monkeypatch.setattr(capacity_break, "_active", lambda db, society_id: True)
+    brk = None if found is None else SimpleNamespace(start_minute=found[0], end_minute=found[1])
+    monkeypatch.setattr(breaks, "effective_break", lambda db, crew, day: brk)
+    crew = SimpleNamespace(society_id=1, id=1)
+    assert capacity_break.capacity_windows(None, crew, SUNDAY, windows) == expected
+
+
+def test_schr_brk_08_version_1_keeps_the_windows_whole(monkeypatch):
+    from app.scheduling import breaks
+    from app.scheduling.window_rules import capacity_break
+
+    monkeypatch.setattr(capacity_break, "_active", lambda db, society_id: False)
+    monkeypatch.setattr(breaks, "effective_break", lambda db, crew, day: SimpleNamespace(
+        start_minute=510, end_minute=540))
+    crew = SimpleNamespace(society_id=1, id=1)
+    assert capacity_break.capacity_windows(None, crew, SUNDAY, [(480, 600)]) == [(480, 600)]
