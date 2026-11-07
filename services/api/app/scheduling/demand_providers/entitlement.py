@@ -172,9 +172,11 @@ def provide(ctx, demand: list):
                 (d for d in pool if _prefers(db, sub, pattern, d)), first)
             if own and _prefers(db, sub, pattern, day):
                 last = _last_actual_in_week(db, vehicle.id, row.service_week_start)
-                if last is not None and not 0 <= (last - day).days <= SMALL_GAP_DAYS:
+                if last is None or not 0 <= (last - day).days <= SMALL_GAP_DAYS:
                     # Held: optional on the preferred day, shown as Unscheduled (18.5).
-                    ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(when=last.strftime("%d-%b-%y"))
+                    # No Interior yet in the plan week is held too (owner default).
+                    when = last.strftime("%d-%b-%y") if last is not None else "none this week"
+                    ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(when=when)
                     used.add(day)
                     extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
                     continue

@@ -59,10 +59,11 @@ def test_item_18_5_large_gap_holds_the_interior_as_optional_and_unscheduled(worl
     assert any(u.day == MONDAY and u.vehicle_id == car.id for u in res.unassigned)
 
 
-def test_item_18_5_no_interior_in_the_plan_week_keeps_the_preferred_day(world, rules_v2):
-    # Derived: with no actual Interior in the plan week there is nothing to measure
-    # the gap against, so the preferred day is used as before.
+def test_item_18_5_no_interior_in_the_plan_week_holds_the_interior(world, rules_v2):
+    # Owner default: with no actual Interior in the plan week the Interior is held
+    # as optional on the preferred day and is Unscheduled.
     sc, car, _cleaner = _scenario(world)
     sc.run(WEEK1, days=7)
     (job,) = _interior_on(sc, car, MONDAY)
-    assert job.crew_id is not None
+    assert job.crew_id is None
+    assert job.note == HELD_NOTE.format(when="none this week")
