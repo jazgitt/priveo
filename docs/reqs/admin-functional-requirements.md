@@ -586,7 +586,7 @@ Open from the 23 Oct 2026 review:
 Open from the 8 Nov 2026 build:
 
 1. What "Earliest" in Site Setup, Scheduling rules, controls. The builder reads it as the earliest first-job time (05:30, SCHR-PAR-04). Open.
-2. For a car with no Interior in its plan week: should the Interior be held as optional, as built (SCHR-INT-28), or should the car keep its preferred Interior day? Open.
+2. For a car with no Interior in its plan week: answered 9 Nov 2026. The car keeps its preferred Interior day (SCHR-INT-28).
 
 Resolved 5 Nov 2026: the 16 scheduling-rules questions are answered in section 13 of `scheduler-requirements.md`. They change the weekly off, the Interior entitlement and carry-forward, the service week, durations, the break, the cutoff policy, zones, Custom interior day (ADM-SUB-10), hand placement and deferral.
 
