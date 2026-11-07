@@ -243,12 +243,17 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     if (slot) {
       start = slotTime(slot, e.clientY, job.duration_minutes, step);
       if (!fitsAt(wins, others, start, job.duration_minutes)) {
+        // A free slot shorter than the card is named as such; the job next to it is not the reason.
+        const free = Number(slot.dataset.end) - Number(slot.dataset.start);
+        if (free < job.duration_minutes) {
+          setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
+          return;
+        }
         const blocker = clashOf(others, start, job.duration_minutes);
         if (blocker) {
           setBlocked(clashMessage(job, blocker, member.name, freeStart(wins, others, 0, job.duration_minutes, step)));
           return;
         }
-        const free = Number(slot.dataset.end) - Number(slot.dataset.start);
         setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
         return;
       }

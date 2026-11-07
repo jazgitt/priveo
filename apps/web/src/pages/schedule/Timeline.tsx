@@ -3,7 +3,8 @@ import { useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 import {
-  breached, gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, statusClass, typeClass, windowsOf, zonesOf, type Density,
+  breached, gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf, zonesOf,
+  type Density,
 } from "./Board";
 import { CardFace } from "./CardBoard";
 import { Scroller } from "./Scroller";

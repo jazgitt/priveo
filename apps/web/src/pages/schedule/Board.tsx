@@ -99,6 +99,12 @@ export function clashMessage(job: AdminJob, blocker: AdminJob, crewName: string,
   return `${job.registration} cannot go there: ${blocker.registration}${when} is in the way for ${crewName}. ${next}`;
 }
 
+/** The parking place alone: the API sends "Zone 3 · B1-24", and the zone is shown on its own line. */
+export function parkingPlace(job: AdminJob): string {
+  const parts = (job.parking ?? "").split(" · ");
+  return parts[parts.length - 1].trim();
+}
+
 /** "EXT,HR26AB2324,B1-24": service code, vehicle number and parking place. */
 export function jobLabel(job: AdminJob): string {
   return `${serviceCode(job.service)},${job.registration},${job.parking || "-"}`;

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { ToastProvider } from "../../components";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
@@ -163,6 +164,8 @@ beforeEach(() => {
   localStorage.removeItem("priveo.schedule.card-density");
   localStorage.removeItem("priveo.schedule.days-folded");
   localStorage.removeItem("priveo.schedule.folded-lanes");
+  // Toasts are kept at module level, so a toast from one test must not crowd the next test's toast out of view.
+  toast.dismiss();
 });
 afterEach(() => {
   fetchMock.mockReset();
@@ -217,7 +220,7 @@ describe("the card board (ADM-SCH-33)", () => {
     let calls = 0;
     server({ moveReply: () => (++calls === 1
       ? json(409, { code: "placement_warning", message: "This placement breaks a rule. Confirm to place it anyway.",
-          fields: { overlap: "That time overlaps another job." } })
+          fields: { outside_hours: "That time is outside the crew member's hours." } })
       : json(200, job())) });
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));

@@ -675,21 +675,27 @@ it("shows a customer loaded without an email and adds one", async () => {
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1/email", "PATCH")).toEqual({ email: "later@example.com" }));
 });
 
-it("sets up the subscription of a vehicle that has none", async () => {
-  detail([{ ...car(), subscription: null, payments: [] }]);
+it("sets up the subscription of a vehicle that has none, without an interior day, and lists it for Needs Attention", async () => {
+  // Once the set-up is saved, the vehicle comes back with no interior day on a plan that includes interior care.
+  let saved = false;
+  detail([{ ...car(), subscription: null, payments: [] }], (path, o) => {
+    if (path === "/v1/admin/vehicles/v1/subscription" && o?.method === "POST") { saved = true; return reply({}); }
+    if (saved && path === "/v1/admin/customers/c1" && (o?.method ?? "GET") === "GET") {
+      return reply({ ...customer, vehicles: [{ ...car({ status: "Activating", interior_day: null }), payments: [] }] });
+    }
+    return undefined;
+  });
   expect(await screen.findByText(/No subscription/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Set up subscription" }));
   const dialog = await screen.findByRole("dialog");
   const submit = within(dialog).getByRole("button", { name: "Set up subscription" });
   expect(submit).toBeDisabled();
   await choose("Plan", /Premium/);
-  expect(submit).toBeDisabled(); // the plan includes interior, so a day is needed
-  await choose("Interior care day", "Custom");
-  await userEvent.type(within(dialog).getByLabelText(/Interior day notes/), "Odd weeks");
+  expect(submit).toBeEnabled(); // the interior care day is optional at set-up (owner, 8-Nov-26)
   await userEvent.click(submit);
   await waitFor(() => expect(bodyOf("/v1/admin/vehicles/v1/subscription", "POST")).toEqual({
-    plan_id: "p1", cutoff_time: "09:00",
-    interior_day: "Custom", interior_day_notes: "Odd weeks" }));
+    plan_id: "p1", cutoff_time: "09:00" }));
+  expect(await screen.findByText("Not set. Needs Attention on the Schedule page.")).toBeInTheDocument();
 });
 
 it("shows the alternate names and sends them when the details are edited", async () => {
