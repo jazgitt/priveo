@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { render, screen } from "@testing-library/react";
 
-import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary, typeClass } from "./Board";
+import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary, typeClass, zoneShort, zonesOf, zoneStyle } from "./Board";
 import type { AdminJob } from "./api";
 
 const at = (start: number, duration = 20) => ({ start_minute: start, duration_minutes: duration } as AdminJob);
@@ -129,5 +129,30 @@ describe("the job search (ADM-SCH-33)", () => {
   it("keeps only late or by-hand jobs for a flag", () => {
     expect(matches(j, "", "", "", "late")).toBe(true);
     expect(matches(j, "", "", "", "manual")).toBe(false);
+  });
+});
+
+describe("zone labels on the cards (ADM-SCH-32)", () => {
+  it("shortens a zone to Z and its number, and keeps other names short", () => {
+    expect(zoneShort("Zone 3")).toBe("Z3");
+    expect(zoneShort("zone 12")).toBe("Z12");
+    expect(zoneShort("Block North")).toBe("Bloc");
+  });
+
+  it("lists the zones of the day in number order, without the empty ones", () => {
+    const jobs = [{ zone: "Zone 10" }, { zone: "" }, { zone: "Zone 2" }, { zone: "Zone 2" }] as AdminJob[];
+    expect(zonesOf(jobs)).toEqual(["Zone 2", "Zone 10"]);
+  });
+
+  it("shades each zone from white to black across the zones, the same every time", () => {
+    const zones = ["Zone 1", "Zone 2", "Zone 3"];
+    const first = zoneStyle("Zone 1", zones)!;
+    const last = zoneStyle("Zone 3", zones)!;
+    expect(first.background).toBe("hsl(0 0% 97%)");
+    expect(last.background).toBe("hsl(0 0% 18%)");
+    expect(last.color).toBe("#ffffff");
+    expect(first.color).toBe("#16151a");
+    expect(zoneStyle("Zone 2", zones)).toEqual(zoneStyle("Zone 2", zones));
+    expect(zoneStyle("", zones)).toBeUndefined();
   });
 });

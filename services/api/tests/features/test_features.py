@@ -18,7 +18,7 @@ def admin(client):
 
 def test_registry_keys_are_unique_and_valid():
     assert len({f.key for f in registry.FLAGS}) == len(registry.FLAGS)
-    assert all(f.audience in ("customer", "crew", "both") for f in registry.FLAGS)
+    assert all(f.audience in ("customer", "crew", "both", "admin") for f in registry.FLAGS)
 
 
 def test_only_admin_can_list_or_change(client, admin):

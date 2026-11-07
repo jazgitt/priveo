@@ -145,7 +145,8 @@
   .sch-card.t-int { --type: var(--c-info); --type-bg: #ebf2fb; --type-line: #bdd3ee; }
   .sch-card.t-spa { --type: var(--c-spa); --type-bg: #f4edfa; --type-line: #d9c6ea; }
   .sch-card.t-other { --type: #8a8478; --type-bg: var(--c-card); --type-line: var(--c-line); }
-  .sch-card.late { box-shadow: 0 0 0 1.5px var(--c-error), 0 1px 2px rgba(22, 21, 26, 0.06); }
+  /* A late job is filled red, whatever its kind, so it stands out on the board (the Late label stays). */
+  .sch-card.late { --type-bg: #f8d7d2; --type-line: #e0877c; box-shadow: 0 0 0 1.5px var(--c-error), 0 1px 2px rgba(22, 21, 26, 0.06); }
   .sch-card.manual { box-shadow: 0 0 0 1px var(--c-gold), 0 1px 2px rgba(22, 21, 26, 0.06); }
   .sch-card.done { border-top-color: #38a169; }
   .sch-card.done .sch-card-status { color: #1f7a4d; }
@@ -240,3 +241,27 @@
   .sch-controls .field { min-width: 11rem; }
   .sch-controls .btn { margin-bottom: 0.9rem; }
 }
+
+/* Card detail: Detailed shows zone, car model, car number and cutoff on line 1; the zone is a label in the zone's shade. */
+.sch-zone { flex: none; padding: 0 0.3rem; border-radius: 4px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.03em; line-height: 1.25rem; }
+.sch-line1 { display: flex; align-items: center; gap: 0.3rem; min-width: 0; white-space: nowrap; color: var(--c-text); }
+.sch-line1 > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sch-line1 .sch-zone { flex: none; }
+.sch-line1 .sch-model { color: var(--c-mute); font-size: 0.6875rem; }
+.sch-line1 .sch-cut { margin-left: auto; flex: none; color: var(--c-mute); font-size: 0.6875rem; }
+.sch-line1 strong { font-size: 0.8125rem; }
+
+/* Timeline blocks follow the card detail: code, then registration, then zone, model and customer when detailed. */
+.sch-tl-text { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
+.sch-tl-text > * { flex: none; }
+.sch-tl-text > strong, .sch-tl-text > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Running and celebration overlay: it never takes clicks, so the page stays usable under it. */
+.sch-fireworks { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+.sch-fireworks-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sch-fireworks-caption { position: absolute; top: 14%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 1.1rem; border-radius: 999px; background: var(--c-card); border: 1px solid var(--c-line);
+  box-shadow: 0 8px 24px rgba(22, 21, 26, 0.18); font-size: 0.9rem; white-space: nowrap; animation: sch-pop 0.35s ease-out; }
+.sch-fireworks[data-mode="running"] .sch-fireworks-caption { top: auto; bottom: 1.5rem; }
+@keyframes sch-pop { from { opacity: 0; transform: translate(-50%, -6px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .sch-fireworks-caption { animation: none; } }

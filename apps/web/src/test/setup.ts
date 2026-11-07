@@ -21,6 +21,8 @@ if (!globalThis.ResizeObserver) {
     disconnect() {}
   };
 }
+// jsdom has no canvas: the scheduler's fireworks run without a drawing context.
+HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement["getContext"];
 if (!window.matchMedia) {
   window.matchMedia = (query: string) => ({
     matches: false, media: query, onchange: null,

@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 
-import { JobFlags, serviceCode, typeClass } from "./Board";
+import { JobFlags, serviceCode, typeClass, zoneShort, zonesOf, zoneStyle } from "./Board";
+import type { Density } from "./CardBoard";
 import { Scroller } from "./Scroller";
 import type { AdminJob } from "./api";
 
@@ -59,15 +60,19 @@ export function jobsCsv(jobs: AdminJob[]): string {
  * details, sorted by any column. Opening a row opens the job's dialog, where it
  * can be moved; the table itself changes nothing (ADM-SCH-33).
  */
-export function JobTable({ jobs, total, fileName, onOpen }: {
+export function JobTable({ jobs, total, fileName, onOpen, density = "standard" }: {
   /** The jobs to show, already filtered by the search and the chips. */
   jobs: AdminJob[];
   /** All jobs of the day, to say how many are hidden by the filters. */
   total: number;
   fileName: string;
   onOpen: (job: AdminJob) => void;
+  /** Compact hides the customer, parking and notes columns; detailed adds each job's zone. */
+  density?: Density;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "crew", dir: 1 });
+  const zones = zonesOf(jobs);
+  const wide = density !== "compact";
   const rows = [...jobs].sort((a, b) => sort.dir * compare(a, b, sort.key));
   const choose = (key: SortKey) => setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
 
@@ -96,19 +101,19 @@ export function JobTable({ jobs, total, fileName, onOpen }: {
   return (
     <div className="sch-fill">
       <Scroller axis="y" wrapClassName="sch-table-wrap" className="sch-table" role="region" aria-label="Jobs of the day">
-        <table className="w-full min-w-[64rem] caption-bottom text-sm">
+        <table className={cn("w-full caption-bottom text-sm", wide ? "min-w-[64rem]" : "min-w-[40rem]")}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {head("time", "Time")}
               {head("crew", "Crew")}
               {head("vehicle", "Vehicle")}
-              {head("customer", "Customer")}
-              {head("parking", "Parking")}
+              {wide && head("customer", "Customer")}
+              {wide && head("parking", "Parking")}
               {head("service", "Service")}
               {head("duration", "Min", "text-right")}
               {head("finish", "Finish by")}
               {head("status", "Status")}
-              <TableHead scope="col" className="sticky top-0 z-10 h-9 bg-muted px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notes</TableHead>
+              {wide && <TableHead scope="col" className="sticky top-0 z-10 h-9 bg-muted px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notes</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,16 +125,21 @@ export function JobTable({ jobs, total, fileName, onOpen }: {
                 {cell(j.crew_name ?? <span className="text-muted-foreground italic">{UNASSIGNED}</span>)}
                 {cell(
                   <span className="flex flex-col leading-tight">
-                    <strong className="reg">{j.registration}</strong>
+                    <strong className="reg inline-flex items-center gap-1.5">
+                      {density === "detailed" && j.zone && (
+                        <span className="sch-zone" style={zoneStyle(j.zone, zones)}>{zoneShort(j.zone)}</span>
+                      )}
+                      {j.registration}
+                    </strong>
                     <span className="text-xs text-muted-foreground">{j.vehicle}</span>
                   </span>)}
-                {cell(j.customer_name, "max-w-[12rem] truncate")}
-                {cell(j.parking || "-")}
+                {wide && cell(j.customer_name, "max-w-[12rem] truncate")}
+                {wide && cell(j.parking || "-")}
                 {cell(<span className={cn("sch-kind", typeClass(j))}><i aria-hidden />{serviceCode(j.service)}<span className="sr-only"> {j.service}</span></span>)}
                 {cell(j.duration_minutes, "text-right tabular-nums")}
                 {cell(j.finish_by ?? "-")}
                 {cell(<StatusBadge status={j.status} />)}
-                {cell(
+                {wide && cell(
                   <span className="flex items-center gap-1.5">
                     <JobFlags job={j} />
                     {j.reason && <span className="max-w-[16rem] truncate text-xs text-muted-foreground" title={j.reason}>{j.reason}</span>}
@@ -138,7 +148,7 @@ export function JobTable({ jobs, total, fileName, onOpen }: {
             ))}
             {rows.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={10} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={wide ? 10 : 7} className="px-3 py-6 text-center text-sm text-muted-foreground">
                   {total === 0 ? "No jobs on this day." : "No job matches the search and filters."}
                 </TableCell>
               </TableRow>

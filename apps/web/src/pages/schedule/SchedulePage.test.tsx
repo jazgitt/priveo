@@ -72,12 +72,18 @@ interface Opts {
   /** More boards by schedule ID, for the days of other schedules (ADM-SCH-35). */
   boards?: Record<string, ReturnType<typeof board>>;
   needs?: ReturnType<typeof job>[];
+  /** The "Freeze by itself" feature (scheduler.auto_freeze), off unless a test switches it on. */
+  autoFreeze?: boolean;
 }
 
 function server(o: Opts = {}) {
   fetchMock.mockImplementation(async (path: string, init?: RequestInit) => {
     const url = String(path);
     if (url.startsWith("/v1/admin/directory/settings")) return json(200, []);
+    if (url.startsWith("/v1/admin/features")) {
+      return json(200, [{ key: "scheduler.auto_freeze", label: "Freeze by itself", description: "", group: "Scheduler",
+                          audience: "admin", enabled: o.autoFreeze ?? false }]);
+    }
     if (url.startsWith("/v1/admin/scheduling/cutoff-requests")) return json(200, []);
     if (url.startsWith("/v1/admin/crew")) return json(200, crew);
     const main = () => board(o.status ?? "Draft", o.jobs ?? [job()]);
@@ -1098,5 +1104,70 @@ describe("long runs, confirmations and the action tabs", () => {
     await openDay("2026-11-21", "&tab=needs");
     expect(await screen.findByText("Add-ons awaiting a scheduling period")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Manage booking" })).toHaveAttribute("href", "/addons");
+  });
+});
+
+describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
+  it("shows no freeze time for a draft while Freeze by itself is off", async () => {
+    server();
+    await openDay();
+    expect(await screen.findByRole("button", { name: "Freeze" })).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock.mock.calls.some(([p]) => String(p).startsWith("/v1/admin/features"))).toBe(true));
+    expect(screen.queryByText(/Freezes by itself/)).not.toBeInTheDocument();
+  });
+
+  it("shows the freeze time for a draft once Freeze by itself is on", async () => {
+    server({ autoFreeze: true });
+    await openDay();
+    expect(await screen.findByText(/Freezes by itself at/)).toBeInTheDocument();
+  });
+
+  it("keeps the card detail switch on the timeline and the table, not only the cards", async () => {
+    server();
+    await openDay("2026-11-08", "&view=timeline");
+    expect(await screen.findByRole("button", { name: "Card detail: standard" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Table/ }));
+    expect(await screen.findByRole("button", { name: "Card detail: standard" })).toBeInTheDocument();
+  });
+
+  it("shows the zone, car model, car number and cutoff on a detailed card, and no basement place", async () => {
+    localStorage.setItem("priveo.schedule.card-density", "detailed");
+    server({ jobs: [job({ zone: "Zone 3", parking: "Zone 3 · B1-24", vehicle: "Honda City", finish_by: "10:00" })] });
+    await openDay();
+    const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    expect(card.querySelector(".sch-line1")).toHaveTextContent("Z3Honda CityKA01AB1234Cutoff 10:00");
+    expect(card).toHaveTextContent("EXT");
+    expect(card).toHaveTextContent("09:00-09:20");
+    expect(card).toHaveTextContent("Meena");
+    expect(card).not.toHaveTextContent("B1-24");
+  });
+
+  it("gives a detailed card taken off its crew member its reason as line four", async () => {
+    localStorage.setItem("priveo.schedule.card-density", "detailed");
+    server({ jobs: [job({ id: "j9", crew_id: null, crew_name: null, start_minute: null, start_time: null, zone: "Zone 1",
+                          reason: "Capacity is short." })] });
+    await openDay();
+    const card = within(await column("unscheduled")).getByRole("button", { name: /KA01AB1234/ });
+    expect(card).toHaveTextContent("Capacity is short.");
+    expect(card.querySelector(".sch-zone")).toHaveTextContent("Z1");
+  });
+
+  it("shows the zone and the customer on a timeline block when detailed", async () => {
+    localStorage.setItem("priveo.schedule.card-density", "detailed");
+    server({ jobs: [job({ zone: "Zone 3", vehicle: "Honda City" })] });
+    await openDay("2026-11-08", "&view=timeline");
+    const block = await screen.findByLabelText(/KA01AB1234/);
+    expect(block).toHaveTextContent("Z3");
+    expect(block).toHaveTextContent("Honda City");
+    expect(block).toHaveTextContent("Meena");
+  });
+
+  it("celebrates a finished run with its result", async () => {
+    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
+    await openDay("2026-11-11");
+    await userEvent.click(await screen.findByRole("button", { name: "Run the scheduler" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run scheduler" }));
+    expect(await screen.findByText("Schedule done")).toBeInTheDocument();
+    expect(screen.getByText("Schedule done").parentElement).toHaveTextContent("3 placed, 1 unscheduled, 0 late.");
   });
 });
