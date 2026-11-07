@@ -1,6 +1,6 @@
 """SCHS-02: per-site scheduler settings, key registry, lookup and seeding."""
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.directory import lookup, rule_seed, settings_registry, site_settings
 from app.directory.models import DirectoryAudit, Society, SystemSetting
@@ -52,7 +52,14 @@ def test_schr_cfg_03_registry_defines_every_new_key_once_with_requirements_defau
     assert settings_registry.BY_KEY["site.weekend_weekdays"].default == "5,6"
 
 
+def _unseed(db):
+    """The engine fixture seeds the global defaults; these tests start from none."""
+    db.execute(delete(SystemSetting))
+    db.commit()
+
+
 def test_schr_cfg_03_seed_adds_missing_keys_then_nothing(db):
+    _unseed(db)
     assert rule_seed.seed_rule_keys(db) == len(NEW_KEYS)
     db.commit()
     assert rule_seed.seed_rule_keys(db) == 0
@@ -61,6 +68,7 @@ def test_schr_cfg_03_seed_adds_missing_keys_then_nothing(db):
 
 
 def test_schr_cfg_03_seed_never_changes_an_edited_value(db):
+    _unseed(db)
     db.add(SystemSetting(key="scheduler.grid_minutes", value="10"))
     db.commit()
     rule_seed.seed_rule_keys(db)
@@ -96,6 +104,7 @@ def test_schr_par_01_typed_values(db, two_sites, seeded):
 
 
 def test_schr_cfg_04_missing_key_raises_and_no_hidden_default(db, two_sites):
+    _unseed(db)
     a, _ = two_sites  # nothing seeded
     with pytest.raises(site_settings.SettingMissing, match="site.reporting_minute"):
         lookup.site_setting(db, a.id, "site.reporting_minute")

@@ -110,12 +110,19 @@ class DayCapacity(BaseModel):
     availability: list[CrewDayAvailability] = []
 
 
+class ZoneRef(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
 class SchedulingCrewOut(BaseModel):
     id: uuid.UUID
     name: str
     role: str
     start_minute: int
     end_minute: int
+    # The home zones the planner uses (SCHS-29); a Trainee shows the Member's.
+    home_zones: list[ZoneRef] = Field(default_factory=list)
 
 
 class AdminJob(BaseModel):

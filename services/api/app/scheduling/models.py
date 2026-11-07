@@ -51,11 +51,22 @@ class SchedulingCrew(Base):
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).
     paired_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    # Scheduler rules v1.2 (unused until their stories): per-crew reporting and
-    # first-job minutes, and the home zone. Null means "use the site setting".
+    # Scheduler rules v1.2: per-crew reporting and first-job minutes. Null means
+    # "use the site setting". The home zones are in SchedulingCrewHomeZone.
     reporting_minute: Mapped[int | None] = mapped_column(Integer)
     first_job_minute: Mapped[int | None] = mapped_column(Integer)
-    home_zone_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("zones.id"))
+
+
+class SchedulingCrewHomeZone(Base):
+    """A zone a cleaner fills first (SCHS-29). A cleaner may have several, and
+    several cleaners may share one. A Trainee has none of its own."""
+
+    __tablename__ = "scheduling_crew_home_zones"
+
+    crew_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("scheduling_crew.id"), primary_key=True)
+    zone_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("zones.id"), primary_key=True, index=True)
 
 
 class SchedulingCrewException(Base):

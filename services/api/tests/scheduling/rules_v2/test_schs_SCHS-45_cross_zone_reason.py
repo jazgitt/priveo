@@ -139,7 +139,21 @@ def test_schr_zone_06_a_skipped_job_is_given_no_reason():
                           finish_by_minute=None, status="Skipped", cross_zone_reason="old")
     visit = SimpleNamespace(vehicle_id=vehicle)
     ctx = SimpleNamespace(zone_days={SUNDAY: {
-        "home": {key: "Z1"}, "vehicle_zone": {str(vehicle): "Z2"},
+        "home": {key: ["Z1"]}, "vehicle_zone": {str(vehicle): "Z2"},
         "crew": {key: [(360, 600)]}}})
     zone_reason.after_solve(ctx, SUNDAY, [(job, visit)], None)
     assert job.cross_zone_reason is None
+
+
+def test_schr_zone_06_a_car_in_any_home_zone_has_no_reason_and_one_outside_has_one(world):
+    sc = Scenario(world)
+    sc.slots()
+    sc.cleaner("Asha", shift=(360, 600), zone=["Z1", "Z2"])
+    sc.cleaner("Bala", shift=(360, 600), zone="Z3")
+    in_zone = sc.car(zone="Z2")
+    outside = sc.car(zone="Z3")
+    sc.exception(sc.cleaners["Bala"], MONDAY)
+    sc.run(MONDAY)
+    reasons = _reasons(sc)
+    assert reasons.get(in_zone.id) is None
+    assert reasons[outside.id] == zone_reason.ABSENT

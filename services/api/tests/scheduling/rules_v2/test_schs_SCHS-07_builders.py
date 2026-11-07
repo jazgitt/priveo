@@ -2,6 +2,7 @@
 from datetime import time, timedelta
 
 from app.directory import site_settings
+from app.scheduling import home_zone
 from tests.scheduling import builders
 from tests.scheduling.builders import EXTERNAL, Scenario, default_of
 from tests.scheduling.conftest import SUNDAY
@@ -45,7 +46,7 @@ def test_cleaner_zone_exception_and_car_zone(world):
     ravi = sc.cleaner("Ravi", zone="A", shift=(360, 600), reporting=300, first_job=330)
     sc.exception(ravi, SUNDAY, "Sick")
     car = sc.car(zone="A", cutoff=time(9, 0), interior_day="Monday")
-    assert ravi.home_zone_id == car.zone_id
+    assert [z.id for z in home_zone.effective_zones(sc.db, ravi)] == [car.zone_id]
     assert (ravi.reporting_minute, ravi.first_job_minute) == (300, 330)
     res = sc.run(SUNDAY)
     assert len(res.unassigned) == 2  # the only cleaner is sick: the Exterior and the Interior

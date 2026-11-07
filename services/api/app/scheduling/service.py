@@ -22,7 +22,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import entitlements, hand_placement, hooks, passes, queue, rules, run_context, run_counts
+from app.scheduling import entitlements, hand_placement, home_zone, hooks, passes, queue, rules, run_context, run_counts
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -1106,6 +1106,9 @@ def board(db: Session, schedule: Schedule) -> dict:
                 "role": c.role,
                 "start_minute": c.start_minute,
                 "end_minute": c.end_minute,
+                "home_zones": [
+                    {"id": z.id, "name": z.name} for z in home_zone.effective_zones(db, c)
+                ],
             }
             for c in crew.values()
         ],

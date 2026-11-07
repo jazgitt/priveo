@@ -174,7 +174,7 @@ def _pair_day(seed):
         jobs.append(SolverJob(f"i{n}", f"w{n}", 30, service="Cleaning-Internal", interior=True,
                               week=rng.choice(PAIR_WEEKS), finish_by=rng.choice([None, 540, 600])))
     inputs = {
-        "zones": {"home": home, "vehicle_zone": vehicle_zone,
+        "zones": {"home": {k: [v] for k, v in home.items()}, "vehicle_zone": vehicle_zone,
                   "owned": sorted(set(home.values())), "cross_allowed": True},
         "break_block": {k: PAIR_BREAK for k in home if rng.random() < 0.8},
         "fifo": {"weeks": {j.vehicle: j.week.isoformat() for j in jobs if j.interior}, "created": {}},

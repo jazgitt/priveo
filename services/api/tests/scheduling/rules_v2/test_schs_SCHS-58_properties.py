@@ -19,7 +19,7 @@ from datetime import time, timedelta
 import pytest
 from sqlalchemy import select
 
-from app.scheduling import passes
+from app.scheduling import home_zone, passes
 from app.scheduling.breaks import effective_break
 from app.scheduling.models import InteriorEntitlement, Job, SchedulingCrewException, Visit
 from app.scheduling.solver import SolverCrew, SolverJob, solve_day
@@ -230,9 +230,9 @@ def test_schr_hard_properties_a_planned_day_keeps_the_site_rules(world, site_cfg
             continue
         car_zone = b["car_zone"].get(visit.vehicle_id)
         crew = crew_by_id[job.crew_id]
-        home = zone_name.get(crew.home_zone_id)
+        homes = {zone_name[z.id] for z in home_zone.effective_zones(sc.db, crew)}
         if job.cross_zone_reason:  # SCHR-ZONE-04, ZONE-06: a cross-zone job has a car zone, a home zone, and a reason
-            assert car_zone is not None and home is not None and home != car_zone, f"seed {seed}: bad cross-zone"
+            assert car_zone is not None and homes and car_zone not in homes, f"seed {seed}: bad cross-zone"
         if car_zone is None:  # SCHR-ZONE-08: a zone-less car is never cross-zone
             assert job.cross_zone_reason is None, f"seed {seed}: zone-less car marked cross-zone"
         if job.service == INTERNAL and not job.manual:  # SCHR-INT-11: each Interior carries its service week

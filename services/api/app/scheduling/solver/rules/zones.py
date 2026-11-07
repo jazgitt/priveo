@@ -3,10 +3,13 @@
 
 The module reads one per-day input, `ctx.inputs["zones"]`, built by `day_inputs`:
 
-    {"home": {crew key: zone id or None},      # the zone each cleaner fills first
+    {"home": {crew key: [zone ids]},          # the zones each cleaner fills first
      "vehicle_zone": {vehicle key: zone id},   # cars without a zone are absent
      "owned": [zone ids with a home cleaner],
      "cross_allowed": bool}                    # site.cross_zone_help_allowed
+
+A car is in its cleaner's home zone when its zone is any of the cleaner's home
+zones (SCHS-29, several zones each).
 
 and adds one objective, `zone` (the weight is `scheduler.weight_zone`). It ranks
 below placed minutes in the default order, so a cleaner crosses into another zone
@@ -69,12 +72,12 @@ def day_inputs(run_ctx, day: date, crew: list[SolverCrew]) -> dict | None:
     db = run_ctx.db
     rows = {c.id: c for c in db.scalars(select(SchedulingCrew).where(
         SchedulingCrew.society_id == run_ctx.society_id, SchedulingCrew.active.is_(True)))}
-    zone_of = {cid: home_zone.effective_zone_id(db, sc) for cid, sc in rows.items()}
-    owned = {str(z) for z in zone_of.values() if z is not None}
-    home: dict[str, str | None] = {}
+    zones_of = {cid: home_zone.effective_zone_ids(db, sc) for cid, sc in rows.items()}
+    owned = {str(z) for ids in zones_of.values() for z in ids}
+    home: dict[str, list[str]] = {}
     for c in crew:
-        zone = zone_of.get(uuid.UUID(c.key.split("|", 1)[0]))
-        home[c.key] = str(zone) if zone is not None else None
+        ids = zones_of.get(uuid.UUID(c.key.split("|", 1)[0]), [])
+        home[c.key] = [str(z) for z in ids]
     if not any(home.values()):
         return None
     cars = {
@@ -106,7 +109,7 @@ def add_day_terms(ctx: ModelContext) -> None:
     # (zone, literal or None for a kept job, start, duration in steps).
     entries: dict[str, list] = {}
     cross = []
-    any_home = any(v is not None for v in home.values())
+    any_home = any(home.values())
     for job in ctx.free:
         zone = cars.get(job.vehicle)
         if zone is None or job.key not in ctx.placed_vars:
@@ -117,12 +120,12 @@ def add_day_terms(ctx: ModelContext) -> None:
                 continue
             entries.setdefault(_cleaner(c.key), []).append(
                 (zone, lit, ctx.start_vars[job.key], ctx.durations[job.key]))
-            mine = home.get(c.key)
-            if mine is None and any_home and HOMELESS_IS_CROSS:
+            mine = home.get(c.key) or []
+            if not mine and any_home and HOMELESS_IS_CROSS:
                 # HOMELESS_IS_CROSS (Derived): a cleaner with no home zone takes a
                 # zoned car only as cross-zone work, soft, so coverage still wins.
                 cross.append(lit)
-            elif mine is not None and mine != zone:
+            elif mine and zone not in mine:
                 if not allowed and zone in owned:
                     model.Add(lit == 0)
                 else:
