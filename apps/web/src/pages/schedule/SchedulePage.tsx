@@ -25,7 +25,7 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { breached, isOpen, JobFlags, JobLabel, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
+import { breached, isOpen, JobFlags, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
 import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
