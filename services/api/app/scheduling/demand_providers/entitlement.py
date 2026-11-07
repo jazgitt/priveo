@@ -174,8 +174,9 @@ def provide(ctx, demand: list):
             day = first if not own else next(
                 (d for d in pool if _prefers(db, sub, pattern, d)), first)
             if own and _prefers(db, sub, pattern, day):
-                last = _last_actual(db, vehicle.id, days[-1])
-                # No completed Interior at all: keep the preferred day (no hold).
+                # Only a completed Interior in the plan week counts. A car whose last
+                # Interior was in an earlier week is the normal weekly case: keep the day.
+                last = _last_actual(db, vehicle.id, days[-1], since=days[0])
                 if last is not None and not 0 <= (last - day).days <= SMALL_GAP_DAYS:
                     # Held: optional on the preferred day, shown as Unscheduled (18.5).
                     ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(
@@ -200,7 +201,7 @@ def _prefers(db, sub: Subscription, pattern, day: date) -> bool:
     return day_flags(db, sub, pattern, day)[1]
 
 
-def _last_actual(db, vehicle_id: uuid.UUID, through: date) -> date | None:
+def _last_actual(db, vehicle_id: uuid.UUID, through: date, since: date | None = None) -> date | None:
     """The most recent Interior actually done (completed) for the car, on or
     before `through` (the last day of the plan), or None when there is none.
     It is not limited to the plan week: the car's last Interior may be in an
@@ -209,4 +210,4 @@ def _last_actual(db, vehicle_id: uuid.UUID, through: date) -> date | None:
     from app.scheduling.models import Visit as _Visit
     return db.scalar(select(func.max(_Visit.date)).join(_Job, _Job.visit_id == _Visit.id).where(
         _Visit.vehicle_id == vehicle_id, _Job.service == INTERIOR, _Job.status == "Completed",
-        _Visit.date <= through))
+        _Visit.date <= through, *([_Visit.date >= since] if since else [])))
