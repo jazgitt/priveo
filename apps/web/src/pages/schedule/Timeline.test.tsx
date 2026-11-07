@@ -25,6 +25,14 @@ function renderTimeline() {
 }
 
 describe("Timeline scale (ux9, items 11 and 12)", () => {
+  it("a 09:00 block starts under the 09:00 tick on the ruler", () => {
+    renderTimeline();
+    const tick = screen.getByText("09:00");
+    const block = screen.getByLabelText(/^09:00-09:30 /);
+    expect(block.style.left).not.toBe("");
+    expect(block.style.left).toBe(tick.style.left);
+  });
+
   it("the ruler and every row share one track width, so they use the same scale", () => {
     const { container } = renderTimeline();
     const tracks = Array.from(container.querySelectorAll<HTMLElement>(".sch-tl-track"));
