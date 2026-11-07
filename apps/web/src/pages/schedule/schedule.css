@@ -307,3 +307,8 @@
 @media (prefers-reduced-motion: reduce) {
   .sch-rain { display: none; }
 }
+
+/* ux9 (ADM-SCH-17 legend): Draft is dark yellow, Frozen dark green, Needs Attention deep red. */
+.dot.draft { background: #9a6513; box-shadow: none; }
+.dot.frozen { background: #1f6b43; box-shadow: none; }
+.sch-day .flag, .sch-day-key .flag { background: #8b1a1a; }
