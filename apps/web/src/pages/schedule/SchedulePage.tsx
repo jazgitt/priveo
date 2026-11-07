@@ -25,7 +25,7 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { breached, isOpen, JobFlags, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
+import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass, TypeKey } from "./Board";
 import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
@@ -714,6 +714,8 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
         { label: "Status", value: <StatusBadge status={job.status} /> },
         { label: "Now", value: job.crew_name ? `${job.crew_name} at ${job.start_time}` : "Unscheduled" },
         { label: "Finish by", value: job.finish_by },
+        // The car's preferred Interior day, on Interior cards only (owner, item 1).
+        ...(serviceCode(job.service) === "INT" ? [{ label: "Preferred Interior day", value: job.interior_day ?? "Not set" }] : []),
         ...(job.moved_to_date ? [{ label: "Moved", wide: true, value: `Moved to ${dayText(job.moved_to_date)}.` }] : []),
         ...(job.moved_from_date ? [{ label: "Moved", wide: true, value: `Moved from ${dayText(job.moved_from_date)}.` }] : []),
         ...(job.visit_outcome === "Partially Completed" ? [{
