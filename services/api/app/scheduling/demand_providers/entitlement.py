@@ -132,6 +132,9 @@ def provide(ctx, demand: list):
                 used.discard(day)
                 pending.append(row)
             elif job.status == "Scheduled":
+                # Recorded like a new choice, so a day planned again keeps the ledger age
+                # the fifo objective ranks by (SCHS-58, same input same plan).
+                ctx.interior_rows[(vehicle.id, day)] = row.id
                 extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
         # Retries and hand placements already in the plan cover the oldest rows.
         linked = set(db.scalars(select(InteriorEntitlement.job_id).where(
@@ -171,12 +174,12 @@ def provide(ctx, demand: list):
             day = first if not own else next(
                 (d for d in pool if _prefers(db, sub, pattern, d)), first)
             if own and _prefers(db, sub, pattern, day):
-                last = _last_actual_in_week(db, vehicle.id, row.service_week_start)
-                if last is None or not 0 <= (last - day).days <= SMALL_GAP_DAYS:
+                last = _last_actual(db, vehicle.id, days[-1])
+                # No completed Interior at all: keep the preferred day (no hold).
+                if last is not None and not 0 <= (last - day).days <= SMALL_GAP_DAYS:
                     # Held: optional on the preferred day, shown as Unscheduled (18.5).
-                    # No Interior yet in the plan week is held too (owner default).
-                    when = last.strftime("%d-%b-%y") if last is not None else "none this week"
-                    ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(when=when)
+                    ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(
+                        when=last.strftime("%d-%b-%y"))
                     used.add(day)
                     extra.append(_demand(service, day, vehicle.id, cutoff_of(day)))
                     continue
@@ -197,11 +200,13 @@ def _prefers(db, sub: Subscription, pattern, day: date) -> bool:
     return day_flags(db, sub, pattern, day)[1]
 
 
-def _last_actual_in_week(db, vehicle_id: uuid.UUID, week: date) -> date | None:
-    """The last Interior actually done for the car in the service week, or None."""
+def _last_actual(db, vehicle_id: uuid.UUID, through: date) -> date | None:
+    """The most recent Interior actually done (completed) for the car, on or
+    before `through` (the last day of the plan), or None when there is none.
+    It is not limited to the plan week: the car's last Interior may be in an
+    earlier week."""
     from app.scheduling.models import Job as _Job
     from app.scheduling.models import Visit as _Visit
-    last = db.scalar(select(func.max(_Visit.date)).join(_Job, _Job.visit_id == _Visit.id).where(
+    return db.scalar(select(func.max(_Visit.date)).join(_Job, _Job.visit_id == _Visit.id).where(
         _Visit.vehicle_id == vehicle_id, _Job.service == INTERIOR, _Job.status == "Completed",
-        _Visit.date >= week, _Visit.date <= week + timedelta(days=6)))
-    return last
+        _Visit.date <= through))

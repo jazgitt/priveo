@@ -616,7 +616,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             else:
                 free.append((job, visit))
             slots = service_windows(db, schedule.society_id, job.service, day)
-            if (visit.vehicle_id, day) in getattr(ctx, "interior_held", {}):
+            if job.service == entitlements.INTERIOR and (visit.vehicle_id, day) in getattr(ctx, "interior_held", {}):
                 slots = ()  # held optional Interior: no slot, so it stays Unscheduled (18.5)
             if (
                 fixed is None

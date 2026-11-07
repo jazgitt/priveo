@@ -110,11 +110,13 @@ def test_SCHR_OUT_03_hand_placement_breaches_are_listed(api, world, rules_v2):
     sc.run(SUNDAY)
     one, two = world.db.scalars(select(Job).order_by(Job.start_minute)).all()
     admin = auth(login(api, "admin")["access_token"])
+    # 10:00 is after the cleaner's shift (08:00 to 10:00): a breach that is not an
+    # overlap, so the admin can confirm it. An overlap is refused (SCHR-HIER-08).
     r = api.post(f"/v1/admin/scheduling/jobs/{two.id}/move", headers=admin, json={
-        "crew_id": str(cleaner.id), "start_minute": one.start_minute + 10, "override": True})
+        "crew_id": str(cleaner.id), "start_minute": 600, "override": True})
     assert r.status_code == 200, r.text
     rows = kinds(get(api, world))["hand_placement"]
-    assert [(x["code"], x["job_id"]) for x in rows] == [("hand_overlap", str(two.id))]
+    assert [(x["code"], x["job_id"]) for x in rows] == [("hand_outside_hours", str(two.id))]
     assert rows[0]["cleaner_name"] and rows[0]["registration"]
 
 

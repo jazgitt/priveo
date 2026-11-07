@@ -99,7 +99,9 @@ def _greedy_hint(ctx: ModelContext) -> None:
     step = ctx.params.step
     free_at = {c.key: -(-c.start // step) for c in ctx.crew}
     ends = {c.key: c.end // step for c in ctx.crew}
-    for job in sorted(ctx.free, key=lambda j: (-ctx.durations.get(j.key, 0), j.key)):
+    # Ties by the car and the service, not the job key: a job key is new each time
+    # a day is planned again, and the hint decides which of equal plans is found.
+    for job in sorted(ctx.free, key=lambda j: (-ctx.durations.get(j.key, 0), j.vehicle, j.service or "", j.key)):
         if job.key not in ctx.start_vars:
             continue
         dur = ctx.durations[job.key]
