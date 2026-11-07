@@ -814,7 +814,7 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     ] });
     await openDay();
     const days = await screen.findByRole("group", { name: "Days" });
-    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, needs you/ })).toBeInTheDocument();
+    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, Needs Attention/ })).toBeInTheDocument();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     expect(within(tabs).queryByRole("tab", { name: /Needs scheduling/ })).not.toBeInTheDocument();
   });
@@ -930,6 +930,10 @@ describe("skipped and finished jobs cannot be placed or moved", () => {
     expect(screen.getByText("Paused by the customer, 08-Nov-26 to 10-Nov-26")).toBeInTheDocument();
   });
 });
+
+// The run plays its music (ux9, item 4), and jsdom has no media element to play it: stub play and pause.
+HTMLMediaElement.prototype.play = () => Promise.resolve();
+HTMLMediaElement.prototype.pause = () => {};
 
 describe("schedule tabs and unavailable crew time", () => {
   const avail = [

@@ -307,3 +307,17 @@
 @media (prefers-reduced-motion: reduce) {
   .sch-rain { display: none; }
 }
+
+/* ux9 (ADM-SCH-17 legend): Draft is dark yellow, Frozen dark green, Needs Attention deep red. */
+.dot.draft { background: #9a6513; box-shadow: none; }
+.dot.frozen { background: #1f6b43; box-shadow: none; }
+.sch-day .flag, .sch-day-key .flag { background: #8b1a1a; }
+
+/* ux9 (timeline, items 11 and 12): the track keeps its fixed width (REM_PER_MINUTE), so blocks keep their length and the ruler lines up. */
+.sch-tl .sch-tl-track { flex: 0 0 auto; }
+
+/* ux9 (item 4): the Mute control on the run overlay. The overlay never takes clicks, so only this button does. */
+.sch-fireworks-mute { position: absolute; top: 1rem; right: 1rem; pointer-events: auto; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.8rem; border-radius: 999px; border: 1px solid var(--c-line); background: var(--c-card); color: var(--c-text);
+  box-shadow: 0 4px 14px rgba(22, 21, 26, 0.16); font-size: 0.8rem; cursor: pointer; }
+.sch-fireworks-mute:hover { background: #fbf6e9; }
