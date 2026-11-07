@@ -48,6 +48,8 @@ export interface SchedulingCrew {
   role: string;
   start_minute: number;
   end_minute: number;
+  /** The zones the crew member works in at home, shown after the name. Empty when none. */
+  home_zones?: { id: string; name: string }[];
 }
 
 export interface AdminJob {
@@ -93,6 +95,11 @@ export interface AdminJob {
   cross_zone_reason?: string | null;
   /** The rules a job was placed against by hand and the admin confirmed (SCHS-22): the card is marked wine. */
   hand_breaches?: string[];
+  /** The car's preferred Interior day: a weekday, "Custom", or null when not set. Shown on Interior cards. */
+  interior_day?: string | null;
+  /** The job was placed by hand, and the admin can lock it there (lock icon). */
+  placed_by_hand?: boolean;
+  hand_locked?: boolean;
 }
 
 export interface Board {

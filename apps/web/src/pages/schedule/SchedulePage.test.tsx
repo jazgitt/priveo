@@ -1191,6 +1191,15 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     expect(within(dialog).queryByRole("button", { name: "Cancel" })).toBeNull();
   });
 
+  it("shows the preferred Interior day in the card detail of an Interior card only", async () => {
+    server({ jobs: [job({ service: "Cleaning-Internal", interior_day: "Tuesday" })] });
+    await openDay();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Preferred Interior day")).toBeInTheDocument();
+    expect(within(dialog).getByText("Tuesday")).toBeInTheDocument();
+  });
+
   it("refuses a drop that overlaps another job, naming the job in the way", async () => {
     server({ moveReply: () => json(409, err("overlap", "KA02ZZ0001 is in the way at 10:00-10:20. Please try another time.")) });
     await openDay();
