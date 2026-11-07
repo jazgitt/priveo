@@ -282,8 +282,9 @@ def add_vehicle(db, c, body, owner, by=None):
         raise ApiError("validation_failed", "Choose an active society, vehicle and plan.", 422)
     cutoff = read_cutoff(body.cutoff_time)
     basement, number = body.parking_basement.strip().upper(), clean_number(body.parking_number)
-    if plan and (cutoff is None or (plan.includes_interior and body.interior_day not in INTERIOR_DAYS)):
-        raise ApiError("validation_failed", "Choose a cutoff and interior care day.", 422)
+    # The interior care day is optional at onboarding; a car without one is on Needs Attention.
+    if plan and (cutoff is None or (body.interior_day is not None and body.interior_day not in INTERIOR_DAYS)):
+        raise ApiError("validation_failed", "Choose a cutoff, and an interior care day from the list.", 422)
     if number is None or not basement_ok(db, society.id, basement,
                                          has_zone=body.zone_id is not None):
         raise ApiError("validation_failed", "Check the parking location.", 422)
@@ -680,9 +681,10 @@ def set_up_subscription(
     if cutoff is None:
         raise ApiError("validation_failed", "Choose a cutoff in 30-minute steps.", 422,
                        {"cutoff_time": "Invalid."})
-    if plan.includes_interior and body.interior_day not in INTERIOR_DAYS:
-        raise ApiError("validation_failed", "Choose an interior care day.", 422,
-                       {"interior_day": "Required."})
+    # The interior care day is optional at onboarding; a car without one is on Needs Attention.
+    if body.interior_day is not None and body.interior_day not in INTERIOR_DAYS:
+        raise ApiError("validation_failed", "Choose an interior care day from the list.", 422,
+                       {"interior_day": "Invalid."})
     c = db.get(Customer, v.customer_id)
     sub, payment = start_subscription(
         db, c, v, plan, cutoff=cutoff, interior_day=body.interior_day,
