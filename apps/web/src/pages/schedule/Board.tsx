@@ -7,6 +7,15 @@ import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } fr
 /** Moves and the timeline snap start times to 5 minutes. */
 export const SNAP = 5;
 
+/** The detailed card moves in 15-minute steps (owner, 8-Nov-26). */
+export const DETAILED_STEP = 15;
+
+/** How much a card shows: compact, standard, or detailed with the model and the customer. */
+export type Density = "compact" | "standard" | "detailed";
+
+/** The minutes a card moves by: 15 on the detailed layout, 5 otherwise. */
+export const stepOf = (density: Density): number => (density === "detailed" ? DETAILED_STEP : SNAP);
+
 const CODES: Record<string, string> = {
   "Cleaning-External": "EXT", "Cleaning-Internal": "INT", "Deep Spa": "SPA",
 };
@@ -42,6 +51,52 @@ export function zoneStyle(zone: string, zones: string[]): CSSProperties | undefi
     color: light < 55 ? "#ffffff" : "#16151a",
     boxShadow: "inset 0 0 0 1px rgba(22, 21, 26, 0.18)",
   };
+}
+
+/** A piece of a card's lines. The same kind is shown the same way at every size. */
+export type CardPiece = "zone" | "reg" | "model" | "customer" | "cutoff" | "code" | "slot";
+export interface CardPart { kind: CardPiece; text: string }
+
+/**
+ * The lines a card shows at each size (owner review, 8-Nov-26). Compact: zone, EXT or INT and the
+ * cutoff. Standard: zone, car number and cutoff, then EXT or INT and the service slot. Detailed:
+ * zone, make and model and cutoff, then EXT or INT and the slot, then car number and customer.
+ * The status flags and notes are added by the card itself.
+ */
+export function cardLines(job: AdminJob, density: Density): CardPart[][] {
+  const zone: CardPart | null = job.zone ? { kind: "zone", text: job.zone } : null;
+  const reg: CardPart = { kind: "reg", text: job.registration };
+  const cutoff: CardPart | null = job.finish_by ? { kind: "cutoff", text: `Cutoff ${job.finish_by}` } : null;
+  const code: CardPart = { kind: "code", text: serviceCode(job.service) };
+  const slot: CardPart = { kind: "slot", text: job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min` };
+  const model: CardPart | null = job.vehicle ? { kind: "model", text: job.vehicle } : null;
+  const customer: CardPart | null = job.customer_name ? { kind: "customer", text: job.customer_name } : null;
+  const lines: (CardPart | null)[][] = density === "compact"
+    ? [[zone, code, cutoff]]
+    : density === "standard"
+      ? [[zone, reg, cutoff], [code, slot]]
+      : [[zone, model, cutoff], [code, slot], [reg, customer]];
+  return lines.map((line) => line.filter((p): p is CardPart => p !== null)).filter((line) => line.length > 0);
+}
+
+/** Whether the admin placed the job by hand against a rule and confirmed it: the Board marks it wine (SCHS-22). */
+export function breached(job: AdminJob): boolean {
+  return (job.hand_breaches?.length ?? 0) > 0;
+}
+
+/** The first job that overlaps a job of `duration` starting at `start`, or null when none does. */
+export function clashOf(others: AdminJob[], start: number, duration: number): AdminJob | null {
+  return others
+    .filter((j) => j.start_minute !== null)
+    .sort((a, b) => a.start_minute! - b.start_minute!)
+    .find((j) => start < j.start_minute! + j.duration_minutes && j.start_minute! < start + duration) ?? null;
+}
+
+/** The polite refusal for a drop that would overlap a job: the job in the way, and a time to try (owner, 8-Nov-26). */
+export function clashMessage(job: AdminJob, blocker: AdminJob, crewName: string, suggest: number | null): string {
+  const when = blocker.start_time && blocker.end_time ? ` (${blocker.start_time}-${blocker.end_time})` : "";
+  const next = suggest === null ? "Please try another time." : `Try ${hhmm(suggest)} instead.`;
+  return `${job.registration} cannot go there: ${blocker.registration}${when} is in the way for ${crewName}. ${next}`;
 }
 
 /** "EXT,HR26AB2324,B1-24": service code, vehicle number and parking place. */
@@ -102,7 +157,7 @@ export function matches(job: AdminJob, focus: string, search: string, type = "",
 function matchesSearch(job: AdminJob, search: string): boolean {
   const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
-  const hay = [job.registration, job.registration.replace(/\s/g, ""), job.parking, job.customer_name, job.crew_name, job.vehicle, job.service]
+  const hay = [job.zone, job.zone ? zoneShort(job.zone) : "", job.registration, job.registration.replace(/\s/g, ""), job.parking, job.customer_name, job.crew_name, job.vehicle, job.service]
     .filter(Boolean).join(" ").toLowerCase();
   return words.every((w) => hay.includes(w));
 }
@@ -235,11 +290,11 @@ export function freeSlots(wins: Win[], jobs: AdminJob[]): Win[] {
  * after that job, the earliest free time of the day is used. Null when the job
  * fits nowhere (ADM-SCH-33).
  */
-export function freeStart(wins: Win[], others: AdminJob[], index: number, duration: number): number | null {
+export function freeStart(wins: Win[], others: AdminJob[], index: number, duration: number, step = SNAP): number | null {
   const busy = spans(others);
   const fits = (s: number) => fitsAt(wins, others, s, duration);
   const tries = [...wins.map((w) => w.start), ...busy.map((b) => b.end)]
-    .map((m) => Math.ceil(m / SNAP) * SNAP).sort((a, b) => a - b);
+    .map((m) => Math.ceil(m / step) * step).sort((a, b) => a - b);
   const after = index > 0 && busy[index - 1] ? busy[index - 1].end : -Infinity;
   return tries.find((s) => s >= after && fits(s)) ?? tries.find(fits) ?? null;
 }

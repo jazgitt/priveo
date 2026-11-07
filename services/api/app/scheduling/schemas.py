@@ -165,6 +165,8 @@ class AdminJob(BaseModel):
     reason_code: str | None = None
     # Rules version 2 only (SCHS-45): why the job sits outside its cleaner's home zone.
     cross_zone_reason: str | None = None
+    # SCHS-22: the rules a job was placed against by hand and the admin confirmed; the Board marks it wine.
+    hand_breaches: list[str] = []
 
 
 class Board(BaseModel):
