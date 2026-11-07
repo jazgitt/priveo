@@ -13,7 +13,7 @@ import { Button } from "@/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
 import { HISTORY_STATES, parkingText, type Changes, type ParkingChanges, type PlanHistory, type SchedulePattern, type ServiceHistory, type Vehicle, type VehicleCrew } from "./api";
-import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog, SubscriptionSetupDialog } from "./dialogs";
+import { CarDialog, ParkingDialog, PatternDialog, PauseDialog, SettingsDialog, SkipDialog, StatusDialog, SubscriptionSetupDialog, usePlans } from "./dialogs";
 
 type Open = null | "setup" | "car" | "parking" | "pattern" | "settings" | "skip" | "pause" | "Active" | "Inactive" | "Activating";
 
@@ -46,6 +46,10 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
   const confirm = useConfirm();
   const close = () => setOpen(null);
   const sub = v.subscription;
+  // A plan with Interior care and no preferred day: the scheduler gives no Interior visits (Needs Attention).
+  const plans = usePlans();
+  const interiorDayMissing = Boolean(sub && !sub.interior_day
+    && plans.data?.find((p) => p.id === sub.plan_id)?.includes_interior);
   const changes = useQuery({
     queryKey: ["customer", customerId, "changes", v.id],
     queryFn: () => api<Changes>(`/v1/admin/vehicles/${v.id}/changes`),
@@ -199,7 +203,9 @@ export function VehiclePanel({ v, customerId }: { v: Vehicle; customerId: string
             { label: "Plan", value: <>{sub.plan_name || <span className="text-muted-foreground">No plan set</span>}<span className="text-muted-foreground"> · {inr(sub.price_rupees)}/month</span></> },
             { label: "First service date", value: sub.first_service_date ? showDate(sub.first_service_date) : "Not set" },
             { label: "Service cutoff", value: sub.cutoff_time },
-            { label: "Interior care day", value: sub.interior_day === "Custom" && sub.interior_day_notes ? `Custom: ${sub.interior_day_notes}` : sub.interior_day ?? "None" },
+            { label: "Interior care day", value: interiorDayMissing
+              ? <span className="text-destructive">Not set. Needs Attention on the Schedule page.</span>
+              : sub.interior_day === "Custom" && sub.interior_day_notes ? `Custom: ${sub.interior_day_notes}` : sub.interior_day ?? "None" },
             { label: "Schedule pattern", value: patternText(pattern.data) },
             { label: "Plan change", value: sub.pending_from ? `Starts ${showDate(sub.pending_from)}` : "None pending" },
           ]} />

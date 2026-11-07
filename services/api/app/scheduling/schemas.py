@@ -179,6 +179,17 @@ class NeedsScheduling(BaseModel):
     pending_addons: list[dict] = Field(default_factory=list)
 
 
+class InteriorDayMissing(BaseModel):
+    """A car whose plan includes Interior care but whose preferred Interior day is not set.
+    Such a car is on the Needs Attention tab until the admin sets the day."""
+    subscription_id: uuid.UUID
+    vehicle_id: uuid.UUID
+    registration: str
+    customer_name: str
+    vehicle: str
+    plan_name: str
+
+
 class FreezeDue(BaseModel):
     frozen: list[uuid.UUID]
 
