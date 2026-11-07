@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.directory import lookup, rule_seed, site_settings
+from app.directory import lookup, site_settings
 from app.scheduling import hooks, run_context, service
 from app.scheduling.models import Job, ScheduleFinding, ScheduleRunConfig
 from tests.scheduling.conftest import SUNDAY
@@ -42,12 +42,6 @@ def _plan(world):
     world.add_vehicle()
     world.db.commit()
     return service.get_or_create_schedule(world.db, world.society.id, SUNDAY, 7)
-
-
-def _version(world, value):
-    rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", value, None)
-    lookup.invalidate()
 
 
 def _configs(world, schedule):
@@ -93,32 +87,12 @@ def test_schr_cfg_07_a_route_module_is_included_by_register(api):
         assert TestClient(app).get("/v1/schs06-ping").json() == {"ok": True}
 
 
-def test_schr_cfg_07_version_1_stores_nothing_and_calls_no_handler(world, api, calls):
+def test_schr_cfg_08_run_stores_the_values_it_used(world, api, calls):
     schedule = _plan(world)
-    body = """
-        from app.scheduling import hooks
-        def provide(ctx, demand): hooks.test_calls.append("provide"); return []
-        def sync(ctx, job, item): hooks.test_calls.append("sync")
-        def after_solve(ctx, day, items, result): hooks.test_calls.append("solve")
-        def on_status_change(db, job, source): hooks.test_calls.append("status")
-    """
-    with dropped("demand_providers", "t1", body), dropped("job_sync", "t1", body), \
-            dropped("post_solve", "t1", body), dropped("hook_handlers", "t1", body):
-        service.run_schedule(world.db, schedule, None)
-        service.run_schedule(world.db, schedule, None)
-        job = world.db.scalars(select(Job)).first()
-        service.set_job_status(world.db, job.id, "Started")
-    assert calls == []
-    assert _configs(world, schedule) == []
-
-
-def test_schr_cfg_08_version_2_run_stores_the_values_it_used(world, api, calls):
-    schedule = _plan(world)
-    _version(world, 2)
     body = """
         from app.scheduling import hooks
         def provide(ctx, demand):
-            hooks.test_calls.append(("provide", ctx.rules_version, ctx.setting("scheduler.grid_minutes")))
+            hooks.test_calls.append(("provide", ctx.setting("scheduler.grid_minutes")))
             return []
         def sync(ctx, job, item): hooks.test_calls.append("sync")
         def after_solve(ctx, day, items, result):
@@ -132,7 +106,7 @@ def test_schr_cfg_08_version_2_run_stores_the_values_it_used(world, api, calls):
         service.run_schedule(world.db, schedule, None)
         job = world.db.scalars(select(Job)).first()
         service.set_job_status(world.db, job.id, "Started")
-    assert ("provide", 2, 5) in calls and "sync" in calls and "solve" in calls
+    assert ("provide", 5) in calls and "sync" in calls and "solve" in calls
     assert ("status", "crew", "Started") in calls
     rows = _configs(world, schedule)
     assert len(rows) == 2
@@ -147,7 +121,6 @@ def test_schr_cfg_08_version_2_run_stores_the_values_it_used(world, api, calls):
 
 def test_schr_cfg_07_a_setting_change_does_not_touch_past_snapshots_or_a_frozen_plan(world, api):
     schedule = _plan(world)
-    _version(world, 2)
     service.run_schedule(world.db, schedule, None)
     first = _configs(world, schedule)[0].values["site.first_job_minute"]
     service.freeze(world.db, schedule, None)
@@ -165,7 +138,7 @@ def test_schr_cfg_07_a_setting_change_does_not_touch_past_snapshots_or_a_frozen_
     assert rows[-1].values["site.first_job_minute"] == first + 5
 
 
-def test_schr_cfg_08_status_hook_needs_a_handler_and_version_2(world, api, calls):
+def test_schr_cfg_08_status_hook_needs_a_handler(world, api, calls):
     schedule = _plan(world)
     service.run_schedule(world.db, schedule, None)
     job = world.db.scalars(select(Job)).first()
@@ -174,9 +147,6 @@ def test_schr_cfg_08_status_hook_needs_a_handler_and_version_2(world, api, calls
         def on_status_change(db, job, source): hooks.test_calls.append(source)
     """
     with dropped("hook_handlers", "t3", body):
-        hooks.job_status_changed(world.db, job, "crew")  # version 1 (not seeded): inert
-        assert calls == []
-        _version(world, 2)
         hooks.job_status_changed(world.db, job, "visit_skip")
     assert calls == ["visit_skip"]
     hooks.job_status_changed(world.db, job, "crew")  # no handler left
@@ -186,14 +156,13 @@ def test_schr_cfg_08_status_hook_needs_a_handler_and_version_2(world, api, calls
 def test_schr_cfg_07_no_handlers_means_no_change_to_the_plan(world, api):
     schedule = _plan(world)
     service.run_schedule(world.db, schedule, None)
-    # Version 2 now plans Interiors from the ledger (SCHS-36), so only the
+    # The ledger plans Interiors (SCHS-36), so only the
     # Exterior jobs are compared: the handlers change none of them.
     def plan():
         return {j.id: (j.crew_id, j.start_minute, j.status) for j in world.db.scalars(
             select(Job).where(Job.service == "Cleaning-External"))}
 
     before = plan()
-    _version(world, 2)
     service.run_schedule(world.db, schedule, None)
     world.db.expire_all()
     assert plan() == before

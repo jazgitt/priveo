@@ -5,13 +5,12 @@ from app.scheduling.models import SchedulingCrewException
 from tests.scheduling.conftest import SUNDAY
 
 
-def _site(world, version=2, start=300, end=660, **crew_fields):
+def _site(world, start=300, end=660, **crew_fields):
     member = world.add_crew(start=start, end=end)
     for k, v in crew_fields.items():
         setattr(member, k, v)
     world.db.commit()
     rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", version, None)
     lookup.invalidate()
     return member
 
@@ -86,6 +85,3 @@ def test_schr_hard_04_a_late_start_before_the_floor_does_not_lower_it(world):
     world.db.commit()
     assert _start(world, member) == 330
 
-
-def test_schr_hard_04_the_floor_is_off_at_rules_version_1(world):
-    assert _start(world, _site(world, version=1)) == 300

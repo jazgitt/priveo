@@ -36,7 +36,7 @@ def test_schr_cfg_03_registry_defines_every_new_key_once_with_requirements_defau
     keys = [d.key for d in settings_registry.DEFINITIONS]
     assert len(keys) == len(set(keys))
     expected = {
-        "scheduler.rules_version": 1, "scheduler.grid_minutes": 5,
+        "scheduler.grid_minutes": 5,
         "scheduler.solve_seconds": 10, "scheduler.seed": 7, "scheduler.workers": 1,
         "scheduler.retry_minutes_running": 30, "scheduler.retry_minutes_error": 5,
         "site.reporting_minute": 300, "site.first_job_minute": 330,
@@ -78,11 +78,6 @@ def test_schr_cfg_03_seed_defaults_adds_new_keys_to_an_existing_settings_table(d
     assert NEW_KEYS <= {r.key for r in db.scalars(select(SystemSetting))}
 
 
-def test_schr_par_01_rules_version_reads_1_for_every_existing_site(db, two_sites, seeded):
-    for society in two_sites:
-        assert lookup.rules_version(db, society.id) == 1
-
-
 def test_schr_par_01_site_value_overrides_global(db, two_sites, seeded, admin_id):
     a, b = two_sites
     assert lookup.site_setting(db, a.id, "site.first_job_minute") == 330
@@ -117,7 +112,6 @@ def test_schr_par_14_global_only_key_cannot_be_set_for_a_site(db, two_sites, see
     ("site.first_job_minute", 1440), ("site.first_job_minute", -1),
     ("site.first_job_minute", "soon"), ("site.break_enabled", "maybe"),
     ("site.weekend_weekdays", "5,9"), ("site.weekend_weekdays", "5,5"),
-    ("scheduler.rules_version", 3),
 ])
 def test_schr_cfg_05_out_of_range_or_malformed_is_refused(db, two_sites, seeded, admin_id,
                                                           key, value):

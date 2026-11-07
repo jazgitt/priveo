@@ -24,7 +24,7 @@ def _short_day(world):
 
 
 def test_schr_out_07_the_summary_counts_unassigned_exteriors_and_unplanned_interiors(
-        api, world, rules_v2):
+        api, world):
     sc = _short_day(world)
     sc.cars(2)
     sc.car(interior=True)  # its Interior has no room left
@@ -37,7 +37,7 @@ def test_schr_out_07_the_summary_counts_unassigned_exteriors_and_unplanned_inter
     assert run["cross_zone_jobs"] == 0 and run["missed_breaks"] == 0
 
 
-def test_schr_out_07_deferred_jobs_and_cross_zone_jobs_are_counted(world, rules_v2):
+def test_schr_out_07_deferred_jobs_and_cross_zone_jobs_are_counted(world):
     sc = _short_day(world)
     car = sc.car(interior=True)
     sc.db.commit()
@@ -53,7 +53,7 @@ def test_schr_out_07_deferred_jobs_and_cross_zone_jobs_are_counted(world, rules_
     assert car and summary.placed >= 1
 
 
-def test_schr_out_07_the_run_is_recorded_in_the_history_with_the_counts(world, rules_v2):
+def test_schr_out_07_the_run_is_recorded_in_the_history_with_the_counts(world):
     sc = _short_day(world)
     sc.cars(3)
     sc.db.commit()
@@ -63,13 +63,3 @@ def test_schr_out_07_the_run_is_recorded_in_the_history_with_the_counts(world, r
     assert "unassigned exteriors 1" in event.detail
     assert "deferred interiors 0" in event.detail and "missed breaks 0" in event.detail
 
-
-def test_schr_out_07_version_1_counts_are_zero_and_the_history_text_is_unchanged(
-        api, world):
-    sc = _short_day(world)
-    sc.cars(3)
-    sc.db.commit()
-    run = _post_run(api, world)
-    assert (run["deferred_interiors"], run["cross_zone_jobs"], run["missed_breaks"]) == (0, 0, 0)
-    event = world.db.scalar(select(SchedulingEvent).where(SchedulingEvent.kind == "rerun"))
-    assert event.detail == "placed 2, unscheduled 1, late 0"

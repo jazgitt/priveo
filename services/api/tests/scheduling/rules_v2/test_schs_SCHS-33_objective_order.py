@@ -74,7 +74,7 @@ def test_schr_hier_03_an_objective_the_order_does_not_list_runs_last():
     assert set(result.placed) == {"A"}
 
 
-def test_without_an_order_the_single_weighted_solve_of_version_1_is_kept():
+def test_without_an_order_the_single_weighted_solve_is_kept():
     result = solve_day(CREW, _conflict(), SolverParams())
     assert set(result.placed) == {"A"}
 
@@ -96,7 +96,6 @@ def test_schr_par_15_the_run_snapshot_carries_the_order(world, site_cfg):
     from app.scheduling.models import Schedule
     from tests.scheduling.builders import Scenario
 
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))

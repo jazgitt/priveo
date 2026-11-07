@@ -134,7 +134,7 @@ def _build(world, site_cfg, seed):
     first_job = rng.choice([330, 360, 390])
     earliest = rng.choice([420, 450, 480])
     break_start = rng.choice([540, 570, 600])
-    site_cfg({"scheduler.rules_version": 2, "site.first_job_minute": first_job,
+    site_cfg({"site.first_job_minute": first_job,
               "site.interior_earliest_minute": earliest, "site.weekday_cutoff_hard": True,
               "site.break_enabled": rng.random() < 0.8})
     # A break must start before it ends, and the settings are saved one at a time. Move the

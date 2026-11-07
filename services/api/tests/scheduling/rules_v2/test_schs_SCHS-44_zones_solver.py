@@ -112,7 +112,7 @@ def test_schr_zone_05_no_travel_minutes_are_added():
     assert sorted(s for _c, s in result.placed.values()) == [360, 390, 420, 450]
 
 
-def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world, rules_v2):
+def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 600), zone="Z1")
@@ -124,7 +124,7 @@ def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world, rul
     assert by_car[cars[2].id] == by_car[cars[3].id] == sc.cleaners["Bala"].id
 
 
-def test_schr_zone_11_a_site_with_no_home_zones_records_no_cross_zone_job(world, rules_v2):
+def test_schr_zone_11_a_site_with_no_home_zones_records_no_cross_zone_job(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 600))

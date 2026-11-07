@@ -145,7 +145,6 @@ def test_schr_par_09_api_is_admin_only(api, world):
 
 
 def test_schr_par_09_api_create_list_update_delete(api, admin, world, site_cfg):
-    site_cfg({})
     ravi = Scenario(world).cleaner("Ravi", shift=(360, 780))
     world.db.commit()
     body = _api_body(world, crew_id=str(ravi.id), start_date=DAY.isoformat(),
@@ -173,7 +172,6 @@ def test_schr_par_09_api_create_list_update_delete(api, admin, world, site_cfg):
 
 
 def test_schr_par_09_api_crew_rule_without_dates_applies_every_day(api, admin, world, site_cfg):
-    site_cfg({})
     sc = Scenario(world)
     sc.slots()
     ravi = sc.cleaner("Ravi", shift=(360, 780))
@@ -186,7 +184,6 @@ def test_schr_par_09_api_crew_rule_without_dates_applies_every_day(api, admin, w
 
 
 def test_schr_par_09_api_rejects_bad_input(api, admin, world, site_cfg):
-    site_cfg({})
     ravi = Scenario(world).cleaner("Ravi", shift=(360, 780))
     world.db.commit()
     bad = [
@@ -204,7 +201,6 @@ def test_schr_par_09_api_rejects_bad_input(api, admin, world, site_cfg):
 
 
 def test_schr_par_09_api_effective_break(api, admin, world, site_cfg):
-    site_cfg({})
     sc = Scenario(world)
     sc.slots()
     ravi = sc.cleaner("Ravi", shift=(360, 780))
@@ -242,7 +238,6 @@ def _frozen_day(sc, cleaner, statuses):
 
 def test_schr_brk_10_change_for_a_frozen_date_is_audited_and_counts_only_unstarted_jobs(
         api, admin, world, site_cfg):
-    site_cfg({})
     sc = Scenario(world)
     sc.slots()
     ravi = sc.cleaner("Ravi", shift=(360, 780))
@@ -261,7 +256,6 @@ def test_schr_brk_10_change_for_a_frozen_date_is_audited_and_counts_only_unstart
 
 
 def test_schr_brk_10_unfrozen_dates_report_no_frozen_dates(api, admin, world, site_cfg):
-    site_cfg({})
     sc = Scenario(world)
     sc.slots()
     ravi = sc.cleaner("Ravi", shift=(360, 780))

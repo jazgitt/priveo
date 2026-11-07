@@ -19,7 +19,7 @@ Pass A also receives `ctx.inputs["pending_interiors"]`: the Interior jobs still 
 place, so an Exterior-pass rule can leave room for them. Rules that need more add
 a module to `solver/rules/`; this file does not change.
 
-Version 1 does not come here: `run_schedule` calls `solve_day` once.
+
 """
 
 from __future__ import annotations
@@ -86,6 +86,6 @@ def day_inputs(run_ctx, day: date, crew: list[SolverCrew]) -> dict[str, Any]:
 def solve_two_pass(
     run_ctx, day: date, crew: list[SolverCrew], jobs: list[SolverJob], params: SolverParams
 ) -> SolverResult:
-    """The planner's entry at rules version 2 (called by `run_schedule`)."""
+    """The planner's entry (called by `run_schedule`)."""
     params = replace(params, settings=dict(run_ctx.settings))
     return solve_passes(crew, jobs, params, day_inputs(run_ctx, day, crew))

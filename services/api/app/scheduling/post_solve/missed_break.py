@@ -1,6 +1,6 @@
 """Missed break flag (SCHR-BRK-04): after a day is solved, every cleaner whose
 planned work overlaps their break gets a finding `missed_break` that names the
-cleaner, the date and the reason. Runs only at rules version 2."""
+cleaner, the date and the reason."""
 from __future__ import annotations
 
 from sqlalchemy import select

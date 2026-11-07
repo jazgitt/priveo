@@ -34,7 +34,7 @@ def _status(sc, job, status):
 
 
 @pytest.fixture
-def sc(world, rules_v2):
+def sc(world):
     return Scenario(world)
 
 
@@ -109,14 +109,6 @@ def test_schr_int_22_an_exterior_does_not_touch_the_ledger(sc):
     assert sc.db.get(InteriorEntitlement, row.id).status == "Planned"
 
 
-def test_schs_30_version_1_leaves_the_ledger_alone(world):
-    sc = Scenario(world)  # no rules_v2 fixture: the site is on version 1
-    car = sc.car()
-    row, job = _planned(sc, car, WEEK1, WEEK1)
-    _status(sc, job, "Completed")
-    assert sc.db.get(InteriorEntitlement, row.id).status == "Planned"
-
-
 # ---- ledger and link paths (gap check, 06-Nov-26) ---------------------------
 
 
@@ -172,20 +164,6 @@ def test_schr_int_12_the_owed_check_and_the_week_rows_read_the_ledger(sc):
     assert entitlements.owes(sc.db, sub, WEEK1) is True
     assert [r.id for r in entitlements.rows_for_week(sc.db, car.id, WEEK1)] == [row.id]
     assert entitlements.rows_for_week(sc.db, car.id, WEEK2) == []
-
-
-def test_schr_int_08_a_job_with_no_visit_on_record_runs_under_the_old_rules():
-    import uuid
-    from types import SimpleNamespace
-
-    from app.scheduling import hooks
-
-    class _NoRows:
-        def scalar(self, _query):
-            return None
-
-    job = SimpleNamespace(visit_id=uuid.uuid4())
-    assert hooks.job_rules_version(_NoRows(), job) == 1
 
 
 def test_schr_dur_01_a_service_without_a_configured_duration_keeps_its_own(world):

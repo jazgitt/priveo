@@ -11,19 +11,18 @@ THURSDAY = SUNDAY + timedelta(days=4)
 CREW = [SolverCrew("a", 480, 600)]
 
 
-def _ctx(active=True, flexible=True):
+def _ctx(flexible=True):
     values = {"site.weekend_cutoff_flexible": flexible, "site.weekend_weekdays": [5, 6]}
-    return SimpleNamespace(active=active, setting=values.__getitem__)
+    return SimpleNamespace(setting=values.__getitem__)
 
 
 def _job(key, cutoff=510, **kw):
     return SolverJob(key, "creta", 30, finish_by=cutoff, **kw)
 
 
-def test_schr_wke_01_the_cutoff_is_flexible_only_on_weekend_days_at_version_2():
+def test_schr_wke_01_the_cutoff_is_flexible_only_on_weekend_days():
     assert is_flexible_day(_ctx(), SATURDAY) and is_flexible_day(_ctx(), SUNDAY)
     assert not is_flexible_day(_ctx(), THURSDAY)
-    assert not is_flexible_day(_ctx(active=False), SATURDAY)
     assert not is_flexible_day(_ctx(flexible=False), SATURDAY)
 
 

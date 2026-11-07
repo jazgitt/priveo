@@ -97,11 +97,6 @@ def site_settings_all(db: Session, society_id: uuid.UUID) -> dict[str, Any]:
     return site_settings.read_all(db, society_id)
 
 
-def rules_version(db: Session, society_id: uuid.UUID) -> int:
-    """The kill switch of the scheduler rules for a site: 1 old, 2 new."""
-    return site_setting(db, society_id, "scheduler.rules_version")
-
-
 def unfreeze_code(db: Session) -> str:
     return setting(db, "schedule.unfreeze_code")
 

@@ -65,18 +65,18 @@ def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world, run_week):
     world.db.commit()
 
     summary = run_week(days=2)  # Sunday and Monday
-    assert summary["unscheduled"] == 0
     b = api.get(f"{BASE}/board", headers=admin,
                 params={"schedule_id": summary["schedule_id"]}).json()
+    # Every Exterior fits; only Interiors (ledger demand, SCHS-36) can be left over.
+    assert all(j["service"] == "Cleaning-Internal" for j in b["jobs"] if j["crew_id"] is None)
     by_day = {d["date"]: d for d in b["days"]}
     off = by_day[MONDAY.isoformat()]
     assert off["demand_minutes"] == 0 and not off["over_capacity"] and off["demand"] == []
     assert by_day[SUNDAY.isoformat()]["demand_minutes"] == 60
-    assert all(j["date"] != MONDAY.isoformat() for j in b["jobs"])
+    assert all(j["date"] != MONDAY.isoformat() or j["service"] == "Cleaning-Internal" for j in b["jobs"])
 
 
-def test_a_closed_weekday_gives_no_cleaner_window_only_at_rules_version_2(world):
-    from app.directory import lookup, rule_seed, site_settings
+def test_a_closed_weekday_gives_no_cleaner_window(world):
     from app.scheduling import service
 
     world.add_crew()
@@ -85,8 +85,4 @@ def test_a_closed_weekday_gives_no_cleaner_window_only_at_rules_version_2(world)
     world.db.commit()
     crew = service.load_crew(world.db, world.society.id)
     wednesday = SUNDAY + timedelta(days=3)
-    assert service.availability(world.db, crew, [wednesday])[wednesday]  # version 1: as before
-    rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", 2, None)
-    lookup.invalidate()
     assert service.availability(world.db, crew, [wednesday])[wednesday] == {}

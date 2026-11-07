@@ -3,7 +3,6 @@
 After a day is solved, every placed job whose car is in a zone other than the
 home zone of its cleaner gets `Job.cross_zone_reason`; any other job loses a
 reason it carried. The facts come from the solver rule `zones` (`ctx.zone_days`).
-Runs only at `scheduler.rules_version` 2 (the hook is skipped otherwise).
 
 The reason is one of four texts (SCHR-ZONE-06):
 

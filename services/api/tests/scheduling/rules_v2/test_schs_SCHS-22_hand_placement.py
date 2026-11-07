@@ -34,7 +34,7 @@ def _hand_findings(world):
     return sorted(f.code for f in world.db.scalars(select(ScheduleFinding)) if f.code.startswith("hand_"))
 
 
-def test_SCHR_HIER_08_an_overlap_is_refused_and_cannot_be_confirmed_away(api, world, rules_v2):
+def test_SCHR_HIER_08_an_overlap_is_refused_and_cannot_be_confirmed_away(api, world):
     cleaner, (one, two) = _two_cars(world)
     r = _move(api, two, cleaner, one.start_minute + 10)
     assert r.status_code == 409
@@ -48,7 +48,7 @@ def test_SCHR_HIER_08_an_overlap_is_refused_and_cannot_be_confirmed_away(api, wo
     assert _hand_findings(world) == []
 
 
-def test_SCHR_HIER_08_after_confirm_the_job_moves_and_the_breach_is_stored(api, world, rules_v2):
+def test_SCHR_HIER_08_after_confirm_the_job_moves_and_the_breach_is_stored(api, world):
     cleaner, (one, two) = _two_cars(world)
     r = _move(api, two, cleaner, 60, override=True)
     assert r.status_code == 200, r.text
@@ -58,7 +58,7 @@ def test_SCHR_HIER_08_after_confirm_the_job_moves_and_the_breach_is_stored(api, 
     assert _hand_findings(world) == ["hand_outside_hours", "hand_outside_slot"]
 
 
-def test_SCHR_HIER_08_outside_the_hours_all_breaches_are_listed_together(api, world, rules_v2):
+def test_SCHR_HIER_08_outside_the_hours_all_breaches_are_listed_together(api, world):
     cleaner, (_one, two) = _two_cars(world)
     r = _move(api, two, cleaner, 60)
     assert r.status_code == 409 and r.json()["code"] == "placement_warning"
@@ -67,7 +67,7 @@ def test_SCHR_HIER_08_outside_the_hours_all_breaches_are_listed_together(api, wo
     assert _hand_findings(world) == ["hand_outside_hours", "hand_outside_slot"]
 
 
-def test_SCHS_22_a_clean_move_clears_the_breaches_the_board_marks(api, world, rules_v2):
+def test_SCHS_22_a_clean_move_clears_the_breaches_the_board_marks(api, world):
     cleaner, (one, two) = _two_cars(world)
     assert _move(api, two, cleaner, 60, override=True).status_code == 200
     admin = auth(login(api, "admin")["access_token"])
@@ -81,7 +81,7 @@ def test_SCHS_22_a_clean_move_clears_the_breaches_the_board_marks(api, world, ru
     assert _hand_findings(world) == []
 
 
-def test_SCHR_CUT_05_a_hand_placement_after_a_weekday_cutoff_warns_and_is_marked_late(api, world, rules_v2):
+def test_SCHR_CUT_05_a_hand_placement_after_a_weekday_cutoff_warns_and_is_marked_late(api, world):
     cleaner, (two,) = _two_cars(world, day=THURSDAY, cutoff=time(8, 30), n=1)
     late_start = 8 * 60 + 30
     r = _move(api, two, cleaner, late_start)
@@ -92,14 +92,14 @@ def test_SCHR_CUT_05_a_hand_placement_after_a_weekday_cutoff_warns_and_is_marked
     assert "hand_customer_cutoff" in _hand_findings(world)
 
 
-def test_SCHR_HIER_08_a_placement_that_breaks_nothing_needs_no_confirm_and_leaves_no_finding(api, world, rules_v2):
+def test_SCHR_HIER_08_a_placement_that_breaks_nothing_needs_no_confirm_and_leaves_no_finding(api, world):
     cleaner, (one, two) = _two_cars(world)
     r = _move(api, two, cleaner, one.start_minute + 60)
     assert r.status_code == 200, r.text
     assert _hand_findings(world) == []
 
 
-def test_SCHR_HIER_08_the_breach_survives_a_rerun_and_goes_when_the_job_is_taken_off(api, world, rules_v2):
+def test_SCHR_HIER_08_the_breach_survives_a_rerun_and_goes_when_the_job_is_taken_off(api, world):
     cleaner, (one, two) = _two_cars(world)
     assert _move(api, two, cleaner, 60, override=True).status_code == 200
     Scenario(world).run(SUNDAY)  # the hand placement is kept, so is its finding
@@ -109,7 +109,7 @@ def test_SCHR_HIER_08_the_breach_survives_a_rerun_and_goes_when_the_job_is_taken
     assert r.status_code == 200 and _hand_findings(world) == []
 
 
-def test_SCHR_HIER_08_the_planner_itself_never_produces_such_a_placement(world, rules_v2):
+def test_SCHR_HIER_08_the_planner_itself_never_produces_such_a_placement(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -120,10 +120,3 @@ def test_SCHR_HIER_08_the_planner_itself_never_produces_such_a_placement(world, 
                               .where(Job.crew_id.is_not(None)).order_by(Job.start_minute)).all()
     assert all(a[0] + a[1] <= b[0] for a, b in zip(placed, placed[1:], strict=False))
 
-
-def test_kill_switch_version_1_refuses_as_before(api, world):
-    cleaner, (one, two) = _two_cars(world)
-    r = _move(api, two, cleaner, one.start_minute + 10, override=True)
-    assert r.status_code == 409 and r.json()["code"] == "overlap"
-    assert _hand_findings(world) == []
-    assert world.db.scalar(select(Visit.id).limit(1)) is not None

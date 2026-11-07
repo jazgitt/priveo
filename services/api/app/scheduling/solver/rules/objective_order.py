@@ -1,15 +1,15 @@
 """Ordered objectives and weights from configuration (SCHR-PAR-15, SCHR-HIER-03
 to 06).
 
-Rule modules add their terms by objective name (`ctx.add_term`). At rules
-version 2 the run's settings carry `scheduler.objective_order`, a comma list of
+Rule modules add their terms by objective name (`ctx.add_term`). A run's
+settings carry `scheduler.objective_order`, a comma list of
 objective names, highest first, and this module solves one stage per objective:
 it maximises the objective, fixes the best value it reached as a floor, and goes
 on to the next one. So a lower objective never worsens a higher one, whatever
 the weights. The weight of an objective (`scheduler.weight_<name>`) scales its
 own terms only.
 
-Without `scheduler.objective_order` in the settings (version 1, direct calls)
+Without `scheduler.objective_order` in the settings (direct calls)
 the terms are summed with their weights and solved once, as before.
 
 Derived: an objective with terms that the order does not list runs after the

@@ -22,8 +22,7 @@ rewards, from the most to the least important:
   jobs of a zone together, so the zone switches are the fewest (ZONE-02, EXT-10).
 
 Cars with no zone and cleaners with no home zone take no part (ZONE-08). A day
-where no cleaner has a home zone adds nothing (ZONE-11), and so does version 1,
-which gives the module no input. Movement across zones costs no extra minutes
+where no cleaner has a home zone adds nothing (ZONE-11). Movement across zones costs no extra minutes
 (ZONE-05): the durations are not changed.
 
 Derived: with `site.cross_zone_help_allowed` off, a cleaner never takes a job of a
@@ -57,8 +56,8 @@ def _cleaner(key: str) -> str:
 
 def day_inputs(run_ctx, day: date, crew: list[SolverCrew]) -> dict | None:
     """Home zones of the day's cleaners and the zone of each car; None when the
-    site is not on version 2 or no cleaner of the day has a home zone."""
-    if not run_ctx.active or not crew:
+    no cleaner of the day has a home zone."""
+    if not crew:
         return None
     from sqlalchemy import select
 

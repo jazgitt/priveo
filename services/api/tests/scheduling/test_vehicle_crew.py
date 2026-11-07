@@ -1,7 +1,10 @@
 """ADM-CUS-28: the admin's read-only view of the crew who serve a vehicle."""
 import uuid
 
+from sqlalchemy import select
+
 from app.scheduling import service
+from app.scheduling.models import Job
 from tests.scheduling.test_operations import setup
 
 
@@ -17,8 +20,8 @@ def test_the_crew_are_read_from_the_vehicles_scheduled_jobs(world, api, admin, m
     (member,) = r.json()
     assert member["name"] == "Ravi" and member["role"] == "Member"
     assert set(member["services"]) == {"Cleaning-External", "Cleaning-Internal"}
-    # A week: External every day (7) and Internal on the care day (1).
-    assert member["jobs"] == 8 and member["next_date"] == visit.date.isoformat()
+    # A week: External every day (7) and two Internals from the ledger (SCHS-36).
+    assert member["jobs"] == 9 and member["next_date"] == visit.date.isoformat()
     # No customer name or mobile number reaches the crew view.
     assert "Asha" not in r.text and "9876543210" not in r.text
 
@@ -26,7 +29,8 @@ def test_the_crew_are_read_from_the_vehicles_scheduled_jobs(world, api, admin, m
 def test_skipped_jobs_and_past_days_are_left_out(world, api, admin, monkeypatch):
     vehicle, _, visit, jobs = setup(world, api, admin)
     monkeypatch.setattr("app.customers.administration.today_ist", lambda: visit.date)
-    service.set_job_status(world.db, jobs["Cleaning-Internal"].id, "Skipped")
+    for internal in world.db.scalars(select(Job).where(Job.service == "Cleaning-Internal")).all():
+        service.set_job_status(world.db, internal.id, "Skipped")
     (member,) = crew_of(api, admin, vehicle.id).json()
     assert member["services"] == ["Cleaning-External"] and member["jobs"] == 7
     monkeypatch.setattr("app.customers.administration.today_ist",

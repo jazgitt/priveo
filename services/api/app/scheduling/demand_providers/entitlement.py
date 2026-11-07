@@ -1,6 +1,6 @@
 """Ledger-driven Interior demand (SCHS-36, SCHR-INT-01, INT-05, INT-26, EXT-11).
 
-At `scheduler.rules_version` 2 an Interior is planned from the entitlement
+An Interior is planned from the entitlement
 ledger, not from the customer's interior care weekday:
 
 * The weekday Interior items of `build_demand` are removed from the demand

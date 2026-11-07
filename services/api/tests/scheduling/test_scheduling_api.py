@@ -45,7 +45,8 @@ def test_a_run_makes_a_draft_and_respects_capacity(api, admin, world, run_week):
 
     summary = run_week(days=1)
     assert summary["status"] == "Draft"
-    assert summary["placed"] == 6 and summary["unscheduled"] == 2
+    # Each car also owes an Interior (SCHS-36): 16 jobs, six fit.
+    assert summary["placed"] == 6 and summary["unscheduled"] == 10
 
     b = board(api, admin, summary["schedule_id"])
     assert b["days"][0]["capacity_minutes"] == 120
@@ -60,13 +61,13 @@ def test_a_run_makes_a_draft_and_respects_capacity(api, admin, world, run_week):
 
     r = api.get(f"{BASE}/needs-scheduling", headers=admin,
                 params={"society_id": str(world.society.id)})
-    assert len(r.json()["jobs"]) == 2
+    assert len(r.json()["jobs"]) == 10  # the Exteriors and the Interiors that did not fit
     assert all(j["reason"] for j in r.json()["jobs"])
 
 
 def test_a_manual_change_survives_a_rerun(api, admin, world, run_week):
-    a = world.add_crew(end=480)
-    world.add_crew(end=480)
+    a = world.add_crew(end=720)  # room for the Interiors as well as the Exteriors
+    world.add_crew(end=720)
     for _ in range(4):
         world.add_vehicle(cutoff=time(9, 0))
     world.db.commit()
@@ -75,16 +76,16 @@ def test_a_manual_change_survives_a_rerun(api, admin, world, run_week):
     target = jobs[-1]
 
     r = api.post(f"{BASE}/jobs/{target['id']}/move", headers=admin,
-                 json={"crew_id": str(a.id), "start_minute": 450})
+                 json={"crew_id": str(a.id), "start_minute": 540})
     assert r.status_code == 200, r.text
-    assert r.json()["manual"] and r.json()["start_time"] == "07:30"
+    assert r.json()["manual"] and r.json()["start_time"] == "09:00"
 
     second = run_week(days=1)
     assert second["schedule_id"] == first["schedule_id"]
     after = {j["id"]: j for j in board(api, admin, second["schedule_id"])["jobs"]}
     assert after[target["id"]]["crew_id"] == str(a.id)
-    assert after[target["id"]]["start_minute"] == 450
-    assert len(after) == 4 and all(j["crew_id"] for j in after.values())
+    assert after[target["id"]]["start_minute"] == 540
+    assert len(after) == 8 and all(j["crew_id"] for j in after.values())  # 4 cars, Exterior and Interior
 
 
 def test_taking_a_job_off_is_kept_on_a_rerun(api, admin, world, run_week):
@@ -97,7 +98,8 @@ def test_taking_a_job_off_is_kept_on_a_rerun(api, admin, world, run_week):
     assert r.status_code == 200 and r.json()["crew_id"] is None
 
     again = run_week(days=1)
-    assert again["placed"] == 0 and again["unscheduled"] == 1
+    # The Interior is planned again; the Exterior taken off by hand stays off.
+    assert again["placed"] == 1 and again["unscheduled"] == 1
 
 
 def test_a_move_that_overlaps_or_leaves_the_hours_is_refused(api, admin, world, run_week):
@@ -106,14 +108,15 @@ def test_a_move_that_overlaps_or_leaves_the_hours_is_refused(api, admin, world, 
     world.add_vehicle()
     world.db.commit()
     first = run_week(days=1)
-    jobs = board(api, admin, first["schedule_id"])["jobs"]
+    jobs = [j for j in board(api, admin, first["schedule_id"])["jobs"] if j["service"] == "Cleaning-External"]
     one, two = jobs[0], jobs[1]
     r = api.post(f"{BASE}/jobs/{two['id']}/move", headers=admin,
                  json={"crew_id": str(a.id), "start_minute": one["start_minute"] + 10})
     assert r.status_code == 409 and r.json()["code"] == "overlap"
     r = api.post(f"{BASE}/jobs/{two['id']}/move", headers=admin,
-                 json={"crew_id": str(a.id), "start_minute": 470})
-    assert r.status_code == 409 and r.json()["code"] == "outside_hours"
+                 json={"crew_id": str(a.id), "start_minute": 480})  # the shift ends at 480
+    # On the Board a breach is a warning first (SCHS-22): the code is placement_warning.
+    assert r.status_code == 409 and r.json()["code"] == "placement_warning" and "outside_hours" in r.text
 
 
 def test_interior_day_and_deep_spa_are_jobs_of_their_own(api, admin, world, run_week):
@@ -127,7 +130,7 @@ def test_interior_day_and_deep_spa_are_jobs_of_their_own(api, admin, world, run_
     by_day = {}
     for j in jobs:
         by_day.setdefault(j["date"], []).append(j["service"])
-    assert len(jobs) == 7 + 1 + 1
+    assert len(jobs) == 7 + 2 + 1  # the Interiors are ledger demand (SCHS-36), not only the weekday
     assert sorted(by_day["2026-10-21"]) == ["Cleaning-External", "Cleaning-Internal"]
     assert sorted(by_day["2026-10-20"]) == ["Cleaning-External", "Deep Spa"]
     spa = next(j for j in jobs if j["service"] == "Deep Spa")
@@ -142,7 +145,7 @@ def test_inactive_and_trainee_do_not_count(api, admin, world, run_week):
     world.db.commit()
     summary = run_week(days=1)
     b = board(api, admin, summary["schedule_id"])
-    assert len(b["jobs"]) == 1
+    assert len(b["jobs"]) == 2  # the car's Exterior and Interior
     assert b["days"][0]["capacity_minutes"] == 120
 
 
@@ -191,7 +194,7 @@ def test_a_crew_exception_removes_that_days_capacity(api, admin, world, run_week
     world.db.add(SchedulingCrewException(crew_id=crew.id, on_date=SUNDAY, kind="Sick"))
     world.db.commit()
     summary = run_week(days=1)
-    assert summary["placed"] == 0 and summary["unscheduled"] == 1
+    assert summary["placed"] == 0 and summary["unscheduled"] == 2  # the Exterior and the Interior
 
 
 def test_freeze_and_unfreeze_with_the_code(api, admin, world, run_week):
@@ -200,7 +203,7 @@ def test_freeze_and_unfreeze_with_the_code(api, admin, world, run_week):
     world.db.commit()
     summary = run_week(days=1)
     sid = summary["schedule_id"]
-    job = board(api, admin, sid)["jobs"][0]
+    job = next(j for j in board(api, admin, sid)["jobs"] if j["service"] == "Cleaning-External")
 
     r = api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin)
     assert r.status_code == 200 and r.json()["status"] == "Frozen"
@@ -219,7 +222,7 @@ def test_freeze_and_unfreeze_with_the_code(api, admin, world, run_week):
     r = api.post(f"{BASE}/schedules/{sid}/unfreeze", headers=admin, json={"code": "unfreeze"})
     assert r.status_code == 200 and r.json()["status"] == "Draft"
     r = api.post(f"{BASE}/jobs/{job['id']}/move", headers=admin,
-                 json={"crew_id": str(a.id), "start_minute": 400})
+                 json={"crew_id": str(a.id), "start_minute": 390})  # clear of the Interior at 420
     assert r.status_code == 200
 
 
@@ -250,7 +253,8 @@ def test_a_late_visit_is_placed_on_a_frozen_schedule_without_moving_others(
     world.add_vehicle()  # a new customer vehicle after the freeze (ADM-SCH-27)
     world.db.commit()
     summary = run_week(days=1)
-    assert summary["status"] == "Frozen" and summary["placed"] == 2
+    # The new car's Exterior and Interior, and the first car's Interior that was not placed before.
+    assert summary["status"] == "Frozen" and summary["placed"] == 4
     after = {j["id"]: (j["crew_id"], j["start_minute"])
              for j in board(api, admin, sid)["jobs"]}
     for job_id, placement in before.items():
@@ -299,8 +303,8 @@ def test_the_crew_day_shows_only_frozen_work_and_no_customer_details(
     api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin)
     r = api.get("/v1/crew/day", headers=crew, params={"date": SUNDAY.isoformat()})
     day = r.json()
-    assert day["total"] == 1 and day["left"] == 1 and day["society"] == "DLF Meadows"
-    card = day["jobs"][0]
+    assert day["total"] == 2 and day["left"] == 2 and day["society"] == "DLF Meadows"
+    card = next(c for c in day["jobs"] if c["service"] == "Cleaning-External")
     assert card["service"] == "Cleaning-External" and card["status"] == "Scheduled"
     assert card["registration"] == "MH12AB0001" and card["start_time"] == "06:00"
     assert card["end_time"] == "06:20" and card["finish_by"] == "08:00"
@@ -318,7 +322,7 @@ def test_a_trainee_sees_the_paired_members_jobs(api, world, admin, run_week):
     api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin)
     crew = auth(login(api, "crew")["access_token"])
     r = api.get("/v1/crew/day", headers=crew, params={"date": SUNDAY.isoformat()})
-    assert r.json()["total"] == 1
+    assert r.json()["total"] == 2  # the Exterior and the Interior of the car
 
 
 def test_next_service_for_the_customer(api, world, admin, run_week):

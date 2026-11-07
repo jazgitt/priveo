@@ -85,8 +85,8 @@ def test_booking_reaches_scheduler_without_payment_and_has_its_own_visit(
     )
     spa = world.db.get(Visit, job.visit_id)
     assert spa.id != plan.id and spa.addon_key == b["id"]
-    plan_job = world.db.scalar(select(Job).where(Job.visit_id == plan.id))
-    service.set_job_status(world.db, plan_job.id, "Completed")
+    for plan_job in world.db.scalars(select(Job).where(Job.visit_id == plan.id)).all():
+        service.set_job_status(world.db, plan_job.id, "Completed")  # the Exterior and the Interior
     assert world.db.get(Visit, plan.id).status == "Completed"
     assert world.db.get(Visit, spa.id).status == "Scheduled"
     service.set_job_status(world.db, job.id, "Completed")

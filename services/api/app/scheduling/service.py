@@ -32,7 +32,7 @@ from app.scheduling.models import (
     SchedulingEvent,
     Visit,
 )
-from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
+from app.scheduling.solver import SolverCrew, SolverJob, SolverParams
 from app.scheduling.solver.rules.job_cutoff import is_strict_day
 
 DAY_DONE = ("Completed", "Skipped")
@@ -65,7 +65,7 @@ class RunSummary:
     placed: int
     unscheduled: int
     late: int
-    # Rules version 2 (SCHS-40); 0 at version 1.
+    # SCHS-40.
     deferred_interiors: int = 0
     cross_zone_jobs: int = 0
     missed_breaks: int = 0
@@ -633,17 +633,15 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     fixed,
                     slots,
                     hard_cutoff=is_strict_day(ctx, day),
-                    interior=ctx.active and entitlements.uses_entitlement(job),
+                    interior=entitlements.uses_entitlement(job),
                     week=job.service_week_start,
                     service=job.service,
                 )
             )
         if not solver_jobs:
             continue
-        if ctx.active:  # two passes, Exterior then Interior (SCHS-32)
-            result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
-        else:
-            result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
+        # Two passes, Exterior then Interior (SCHS-32).
+        result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
@@ -752,10 +750,10 @@ def move_job(
     moving needs the schedule unfrozen with the code (ADM-SCH-17).
 
     `override` is None for the bulk tools: a placement against a rule is refused
-    as it always was. The Board passes True or False (SCHS-22): on a site at
-    rules version 2 a placement against a rule is then answered with a
-    `placement_warning` (409) until it is repeated with `override` True, and each
-    breach is stored as a finding (`hand_placement`)."""
+    as it always was. The Board passes True or False (SCHS-22): a placement
+    against a rule is then answered with a `placement_warning` (409) until it is
+    repeated with `override` True, and each breach is stored as a finding
+    (`hand_placement`)."""
     job = db.get(Job, job_id)
     if job is None:
         raise ApiError("not_found", "That job does not exist.", 404)
@@ -795,7 +793,7 @@ def move_job(
     member = crew.get(crew_id)
     if member is None:
         raise ApiError("crew_not_found", "That crew member is not in this society.", 404)
-    warn = override is not None and hooks._version(db, schedule.society_id) == 2
+    warn = override is not None
     breaches: list[hand_placement.Breach] = []
 
     def breach(code: str, message: str) -> None:
@@ -841,7 +839,7 @@ def move_job(
                 {"overlap": f"{car} is in the way at {span}."},
             )
     if warn:
-        # The cleaner's break is a rule on a version 2 site (SCHR-BRK-09); the Board marks a job that takes it.
+        # The cleaner's break is a rule (SCHR-BRK-09); the Board marks a job that takes it.
         from app.scheduling.window_rules import capacity_break
 
         brk = capacity_break.visible_break(db, member, visit.date)
@@ -1218,7 +1216,7 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
         .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
     ).all()
     # The break of the Member whose jobs are shown, as a block that holds no job
-    # (SCHR-BRK-09, version 2 only).
+    # (SCHR-BRK-09).
     from app.scheduling.window_rules import capacity_break
 
     target_crew = me if target == me.id else db.get(SchedulingCrew, target)

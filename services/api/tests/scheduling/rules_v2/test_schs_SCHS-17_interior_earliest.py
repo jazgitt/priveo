@@ -14,14 +14,13 @@ EXTERIOR = "Cleaning-External"
 WEEK = [SUNDAY + timedelta(days=i) for i in range(7)]  # weekdays and the weekend
 
 
-def _site(world, version=2, earliest=None, start=300, end=660):
+def _site(world, earliest=None, start=300, end=660):
     for name in (INTERIOR, EXTERIOR):
         world.drop_slots(name)
         world.db.add(WorkingSlot(society_id=world.society.id, service=name,
                                  start_minute=start, end_minute=end, days=list(range(7))))
     world.db.commit()
     rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", version, None)
     if earliest is not None:
         site_settings.write(world.db, world.society.id,
                             "site.interior_earliest_minute", earliest, None)
@@ -58,15 +57,3 @@ def test_schr_ext_08_exterior_keeps_the_early_band(world):
     _site(world)
     assert tuple(_w(world, EXTERIOR, SUNDAY)) == ((300, 660),)
 
-
-def test_schr_par_08_at_rules_version_1_nothing_changes(world):
-    _site(world, version=1)
-    assert tuple(_w(world, INTERIOR, SUNDAY)) == ((300, 660),)
-
-
-def test_schr_par_08_without_the_version_setting_nothing_changes(world):
-    world.drop_slots(INTERIOR)
-    world.db.add(WorkingSlot(society_id=world.society.id, service=INTERIOR,
-                             start_minute=300, end_minute=660, days=list(range(7))))
-    world.db.commit()
-    assert tuple(_w(world, INTERIOR, SUNDAY)) == ((300, 660),)

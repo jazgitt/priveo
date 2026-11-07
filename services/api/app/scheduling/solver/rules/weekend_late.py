@@ -15,7 +15,7 @@ PRIORITY = 41
 
 def is_flexible_day(ctx, day) -> bool:
     """True when the cutoff is only a preference on `day`: the site is on
-    version 2, the setting is on and the weekday is a weekend day."""
-    if not ctx.active or not ctx.setting("site.weekend_cutoff_flexible"):
+    the setting is on and the weekday is a weekend day."""
+    if not ctx.setting("site.weekend_cutoff_flexible"):
         return False
     return day.weekday() in set(ctx.setting("site.weekend_weekdays"))

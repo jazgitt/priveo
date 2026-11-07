@@ -81,7 +81,7 @@ def test_schr_int_12_exteriors_and_a_single_interior_are_untouched():
     assert len(passes.solve_passes(crew, jobs, _params(), {}).placed) == 2
 
 
-def test_schr_int_12_version_1_settings_add_nothing():
+def test_schr_int_12_a_direct_call_without_settings_adds_nothing():
     crew = [SolverCrew("a", 360, 390)]
     jobs = [_int("b", WEEK2), _int("a", WEEK1)]
     result = solve_day(crew, jobs, SolverParams(), "single", {})
@@ -95,7 +95,7 @@ def test_schr_int_12_tier_values_make_each_tier_outweigh_the_ones_below():
     assert max(fifo.tier_values(100, 12)) <= fifo.VALUE_CAP
 
 
-def test_schr_int_13_the_catch_up_example_plans_end_to_end(world, rules_v2):
+def test_schr_int_13_the_catch_up_example_plans_end_to_end(world):
     # Week 1's Interior was missed; the run for week 2 plans it first (Monday 09-Nov)
     # and week 2's own Interior on its day (Thursday 12-Nov). Wednesday is off.
     sc = Scenario(world)
@@ -113,7 +113,7 @@ def test_schr_int_13_the_catch_up_example_plans_end_to_end(world, rules_v2):
     assert [r.status for r in done] == ["Planned", "Planned"]
 
 
-def test_schr_int_10_an_overdue_interior_takes_a_weekday_before_the_weekend(world, rules_v2):
+def test_schr_int_10_an_overdue_interior_takes_a_weekday_before_the_weekend(world):
     # The period is Saturday 14-Nov to Tuesday 17-Nov. The week-1 Interior is overdue
     # and goes to Monday, not to the Saturday that is feasible too.
     sc = Scenario(world)
@@ -130,7 +130,7 @@ def test_schr_int_10_an_overdue_interior_takes_a_weekday_before_the_weekend(worl
     assert (WEEK3, WEEK1) in rows and all(d.weekday() < 5 for d, w in rows if w == WEEK1)
 
 
-def test_schr_int_10_a_row_of_the_current_week_prefers_its_own_day_over_a_weekday_fallback(world, rules_v2):
+def test_schr_int_10_a_row_of_the_current_week_prefers_its_own_day_over_a_weekday_fallback(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(360, 660))
@@ -154,13 +154,9 @@ class _Db:
         return self._rows.get(row_id)
 
 
-def _run_ctx(rows, chosen, active=True):
+def _run_ctx(rows, chosen):
     from types import SimpleNamespace
-    return SimpleNamespace(active=active, db=_Db(rows), interior_rows=chosen)
-
-
-def test_schr_int_13_no_fifo_inputs_when_the_run_is_not_version_2():
-    assert fifo.day_inputs(_run_ctx({}, {}, active=False), SUNDAY, []) is None
+    return SimpleNamespace(db=_Db(rows), interior_rows=chosen)
 
 
 def test_schr_int_13_no_fifo_inputs_when_no_car_has_an_interior_that_day():

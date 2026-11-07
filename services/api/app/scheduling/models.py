@@ -22,8 +22,7 @@ from app.platform.db import Base, UtcDateTime, utcnow
 
 SERVICES = ("Cleaning-External", "Cleaning-Internal", "Deep Spa")
 # "Deferred" (SCHS-31): the car or keys were not available, so the job was put off
-# and is planned again. Only a reason marked "defers" gives it, and only on a
-# site at `scheduler.rules_version` 2.
+# and is planned again. Only a reason marked "defers" gives it.
 JOB_STATUSES = (
     "Scheduled", "In progress", "Completed", "Skipped", "Could not complete", "Deferred")
 CREW_ROLES = ("Member", "Trainee", "Manager")

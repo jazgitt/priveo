@@ -27,7 +27,7 @@ def test_SCHR_CFG_10_every_site_key_is_listed_with_default_site_value_and_range(
     site_keys = {d.key for d in settings_registry.RULE_DEFINITIONS
                  if d.site and d.key.startswith("site.")}
     assert set(rows) == site_keys
-    assert "scheduler.rules_version" not in rows  # the kill switch is not a panel value
+    assert "scheduler.rules_version" not in rows  # the setting was removed
     first = rows["site.first_job_minute"]
     assert first["default_value"] == "330" and first["site_value"] is None and first["value"] == "330"
     assert (first["minimum"], first["maximum"]) == (0, 1439)

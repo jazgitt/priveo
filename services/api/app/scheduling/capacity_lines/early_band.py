@@ -2,8 +2,7 @@
 to 07:00 by default). Free minutes in it are shown in capacity as available for
 onboarding. The scheduler neither holds them back nor reserves them
 (SCHR-EXT-09, Derived; SCHR-EXT-08). Only free minutes are counted: the break
-and jobs already scheduled are taken out. Runs only at
-`scheduler.rules_version` 2."""
+and jobs already scheduled are taken out."""
 from app.directory import lookup
 from app.directory.site_settings import SettingMissing
 from app.scheduling import crew_rules
@@ -30,8 +29,6 @@ def _free(window, band, busy) -> int:
 
 def day_fields(db, society_id, day, ctx) -> dict:
     try:
-        if int(lookup.rules_version(db, society_id)) != 2:
-            return {}
         end = int(lookup.site_setting(db, society_id, "site.interior_earliest_minute"))
     except SettingMissing:
         return {}

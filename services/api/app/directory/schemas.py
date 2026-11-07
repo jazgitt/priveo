@@ -210,7 +210,7 @@ class DirectorySlotOut(BaseModel):
 
 class DirectoryReasonCreate(BaseModel):
     label: str = Field(min_length=1, max_length=120)
-    # Rules version 2 (SCHS-31): the reason defers the job instead of ending it.
+    # SCHS-31: the reason defers the job instead of ending it.
     defers: bool = False
 
 

@@ -162,8 +162,3 @@ def site_cfg(world):
     yield _set
     builders.restore_site_values(world.db, world.society.id, saved)
 
-
-@pytest.fixture
-def rules_v2(site_cfg):
-    """Flip the test site's scheduler.rules_version to 2 for this test."""
-    site_cfg({"scheduler.rules_version": 2})

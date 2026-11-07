@@ -37,7 +37,7 @@ def _lengths(db) -> dict[str, set[int]]:
     return out
 
 
-def test_draft_rerun_gives_unfrozen_scheduled_jobs_the_new_length(world, rules_v2):
+def test_draft_rerun_gives_unfrozen_scheduled_jobs_the_new_length(world):
     sc = _scenario(world)
     sc.run(SUNDAY)
     assert _lengths(world.db) == {EXTERNAL: {30}, INTERNAL: {30}}
@@ -46,14 +46,14 @@ def test_draft_rerun_gives_unfrozen_scheduled_jobs_the_new_length(world, rules_v
     assert _lengths(world.db) == {EXTERNAL: {45}, INTERNAL: {30}}
 
 
-def test_new_jobs_get_the_new_length(world, rules_v2):
+def test_new_jobs_get_the_new_length(world):
     sc = _scenario(world)
     _set_duration(world.db, EXTERNAL, 45)
     sc.run(SUNDAY)
     assert _lengths(world.db)[EXTERNAL] == {45}
 
 
-def test_frozen_schedule_keeps_its_length(world, rules_v2):
+def test_frozen_schedule_keeps_its_length(world):
     sc = _scenario(world)
     sc.run(SUNDAY)
     schedule = world.db.scalar(select(Schedule))
@@ -63,7 +63,7 @@ def test_frozen_schedule_keeps_its_length(world, rules_v2):
     assert _lengths(world.db) == {EXTERNAL: {30}, INTERNAL: {30}}
 
 
-def test_started_jobs_keep_their_length(world, rules_v2):
+def test_started_jobs_keep_their_length(world):
     sc = _scenario(world)
     sc.run(SUNDAY)
     job = world.db.scalar(select(Job).where(Job.service == EXTERNAL))
@@ -73,10 +73,3 @@ def test_started_jobs_keep_their_length(world, rules_v2):
     sc.run(SUNDAY)
     assert _lengths(world.db)[EXTERNAL] == {30}
 
-
-def test_version_1_keeps_the_old_behaviour(world):
-    sc = _scenario(world)
-    sc.run(SUNDAY)
-    _set_duration(world.db, EXTERNAL, 45)
-    sc.run(SUNDAY)
-    assert _lengths(world.db)[EXTERNAL] == {30}

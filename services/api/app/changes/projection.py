@@ -13,8 +13,6 @@ from sqlalchemy.orm import Session, object_session
 from app.changes.cycle import CYCLE_DAYS
 from app.customers import schedule_pattern
 from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
-from app.directory import lookup
-from app.directory.site_settings import SettingMissing
 
 INTERIOR = "Cleaning-Internal"
 
@@ -30,20 +28,15 @@ def _society_id(session: Session, sub: Subscription):
 
 
 def _entitlement_model(session: Session | None, sub: Subscription) -> bool:
-    """True when the car's site is on scheduler rules version 2: an Interior is
-    owed for the service week, and no weekday is promised for it (SCHS-38)."""
+    """True when the car has a site: an Interior is owed for the service week,
+    and no weekday is promised for it (SCHS-38)."""
     society = _society_id(session, sub) if session is not None else None
-    if society is None:
-        return False
-    try:
-        return int(lookup.rules_version(session, society)) == 2
-    except SettingMissing:
-        return False
+    return society is not None
 
 
 def interior_this_week(sub: Subscription | None, day: date) -> bool:
     """Whether the calendar says "Interior this week" for the service week of `day`
-    (version 2 only): the plan owes an Interior that week and the ledger has not
+    : the plan owes an Interior that week and the ledger has not
     planned, completed or waived it. A week with a planned Interior job is the
     caller's to exclude, because it shows the planned day instead."""
     session = object_session(sub) if sub is not None else None

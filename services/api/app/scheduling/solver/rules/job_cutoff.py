@@ -1,9 +1,8 @@
 """Hard weekday cutoff (SCHR-CUT-01 to 04, SCHR-HARD-08): on a strict day a job
 that is placed ends by its car's Customer cutoff. A job that cannot is left
 unassigned with the reason Customer cutoff. The caller marks a job
-`hard_cutoff` only for a site on `scheduler.rules_version` 2 and a strict day
-(`is_strict_day`), so version 1 and weekend days keep the soft penalty of the
-base rule (the weekend is SCHS-20)."""
+`hard_cutoff` only for a strict day (`is_strict_day`), so weekend days that are
+flexible keep the soft penalty of the base rule (the weekend is SCHS-20)."""
 
 from __future__ import annotations
 
@@ -19,10 +18,10 @@ PRIORITY = 40
 
 
 def is_strict_day(ctx, day) -> bool:
-    """True when the cutoff is a hard limit on `day`: the site is on version 2,
-    the setting is on and the day is a weekday, or a weekend day whose cutoff is
-    not flexible (`site.weekend_cutoff_flexible` off; owner, 06-Nov-26)."""
-    if not ctx.active or not ctx.setting("site.weekday_cutoff_hard"):
+    """True when the cutoff is a hard limit on `day`: the setting is on and the
+    day is a weekday, or a weekend day whose cutoff is not flexible
+    (`site.weekend_cutoff_flexible` off; owner, 06-Nov-26)."""
+    if not ctx.setting("site.weekday_cutoff_hard"):
         return False
     if day.weekday() not in set(ctx.setting("site.weekend_weekdays")):
         return True

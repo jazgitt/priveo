@@ -55,8 +55,8 @@ def test_schr_cut_08_the_late_assignment_after_a_freeze_picks_the_earliest_time_
     assert result.placed["l"] == ("a", 480) and not result.late
 
 
-def _thursday(world, site_cfg, version=2, **cfg):
-    site_cfg({"scheduler.rules_version": version, **cfg})
+def _thursday(world, site_cfg, **cfg):
+    site_cfg(cfg)
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -93,12 +93,6 @@ def test_schr_par_11_the_strict_setting_off_leaves_the_cutoff_soft(world, site_c
 def test_schr_par_10_the_weekend_days_come_from_the_setting(world, site_cfg):
     sc, car = _thursday(world, site_cfg, **{"site.weekend_weekdays": [3, 4]})
     res = sc.run(THURSDAY)  # Thursday is a weekend day at this site
-    assert len(res.placed) == 2 and [p.late for p in res.placed].count(True) == 1
-
-
-def test_kill_switch_version_1_keeps_the_soft_cutoff(world, site_cfg):
-    sc, car = _thursday(world, site_cfg, version=1)
-    res = sc.run(THURSDAY)
     assert len(res.placed) == 2 and [p.late for p in res.placed].count(True) == 1
 
 

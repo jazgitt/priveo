@@ -1,6 +1,6 @@
 """SCHS-38: the customer calendar no longer promises the Interior on the preferred
 weekday. It says "Interior this week" until the Interior is planned, then shows the
-planned day. Version 2 only. (Enabling story: no SCHR row.)"""
+planned day. (Enabling story: no SCHR row.)"""
 import uuid
 from datetime import date
 
@@ -8,33 +8,16 @@ from sqlalchemy import select
 
 from app.customer_reads.repository import Job, Visit
 from app.customers.models import Subscription, Vehicle
-from app.directory import lookup, rule_seed, site_settings
-from app.directory.models import Society
 from app.scheduling import entitlements
 from app.scheduling.models import InteriorEntitlement
 from tests.customer_reads.test_calendar_projection import by_date, clock, month  # noqa: F401
-
-
-def _version(db, value):
-    soc = db.query(Society).filter_by(name="DLF Meadows").one()
-    rule_seed.seed_rule_keys(db)
-    site_settings.write(db, soc.id, "scheduler.rules_version", value, None)
-    db.commit()
-    lookup.invalidate()
 
 
 def _flagged(body):
     return sorted(v["date"] for v in body["visits"] if v.get("interior_this_week"))
 
 
-def test_a_site_at_version_1_still_promises_the_interior_day(api, asha, clock):  # noqa: F811
-    days = by_date(month(api, asha, "2026-12"))
-    assert days["2026-12-04"]["services"] == ["Cleaning-External", "Cleaning-Internal"]
-    assert not any(v["interior_this_week"] for v in days.values())
-
-
 def test_before_planning_the_calendar_says_interior_this_week(api, asha, clock, db):  # noqa: F811
-    _version(db, 2)
     body = month(api, asha, "2026-12")
     days = by_date(body)
     # 04-Dec-26 (Friday) was the interior care day: no longer promised.
@@ -45,7 +28,6 @@ def test_before_planning_the_calendar_says_interior_this_week(api, asha, clock, 
 
 
 def test_after_planning_the_calendar_shows_the_planned_day(api, asha, clock, db, repo):  # noqa: F811
-    _version(db, 2)
     vehicle = asha["vehicles"][0]
     repo.visit_rows.append(Visit("v-int", vehicle, date(2026, 12, 9), "Scheduled"))
     repo.job_rows.append(Job("j-int", "v-int", "Cleaning-Internal", "Scheduled"))
@@ -59,7 +41,6 @@ def test_after_planning_the_calendar_shows_the_planned_day(api, asha, clock, db,
 
 
 def test_a_week_the_ledger_has_completed_or_waived_is_not_flagged(api, asha, clock, db):  # noqa: F811
-    _version(db, 2)
     vehicle = db.get(Vehicle, uuid.UUID(asha["vehicles"][0]))
     sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
     entitlements.ensure(db, sub, date(2026, 12, 31))
