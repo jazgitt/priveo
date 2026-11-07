@@ -13,6 +13,12 @@ import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } fr
 /** The timeline opens at 05:00 and closes at 22:00 when the day has no hours to go by. */
 const DAY_START = 5 * 60;
 const DAY_END = 22 * 60;
+/**
+ * One minute on the timeline, in rem. The ruler and every block use this one scale,
+ * so a block is as long as its job and sits under its own time on the ruler (ux9).
+ * The track is this wide at every layout, so a short job keeps its whole card in view.
+ */
+export const REM_PER_MINUTE = 0.15;
 
 interface Tip { job: AdminJob; x: number; y: number }
 
@@ -52,8 +58,10 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   const first = edges.length ? Math.floor(Math.min(...edges) / 60) * 60 : DAY_START;
   const last = Math.max(first + 4 * 60, edges.length ? Math.ceil(Math.max(...edges) / 60) * 60 : DAY_END);
   const span = last - first;
+  // Percentages of the track, which is span * REM_PER_MINUTE wide on the ruler and on every row.
   const pos = (m: number) => `${((m - first) / span) * 100}%`;
   const len = (m: number) => `${(m / span) * 100}%`;
+  const trackWidth = `${span * REM_PER_MINUTE}rem`;
   const hours: number[] = [];
   for (let m = first; m <= last; m += 60) hours.push(m);
   const grid: CSSProperties = {
@@ -72,7 +80,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
       <Scroller className={cn("sch-tl", density)} role="group" aria-label="Day timeline">
         <div className="sch-tl-row sch-tl-head">
           <div className="sch-tl-name">Crew <span>booked/available</span></div>
-          <div className="sch-tl-track" aria-hidden>
+          <div className="sch-tl-track" style={{ width: trackWidth }} aria-hidden>
             {hours.map((m) => (
               <span key={m} className="sch-tl-hour" style={{ left: pos(m) }}>{m < last ? hhmm(m) : ""}</span>
             ))}
@@ -90,7 +98,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                 <span className="truncate">{member.name}</span>
                 <span className="tabular-nums">{closed ? "Off" : `${booked}/${minutesOf(wins)}`}</span>
               </div>
-              <div className="sch-tl-track" style={grid}>
+              <div className="sch-tl-track" style={{ ...grid, width: trackWidth }}>
                 {gaps(wins, first, last).map((g) => (
                   <div key={g.start} className="sch-off" data-testid="grey" title={avail?.reason}
                        style={{ left: pos(g.start), width: len(g.end - g.start) }} />

@@ -312,3 +312,6 @@
 .dot.draft { background: #9a6513; box-shadow: none; }
 .dot.frozen { background: #1f6b43; box-shadow: none; }
 .sch-day .flag, .sch-day-key .flag { background: #8b1a1a; }
+
+/* ux9 (timeline, items 11 and 12): the track keeps its fixed width (REM_PER_MINUTE), so blocks keep their length and the ruler lines up. */
+.sch-tl .sch-tl-track { flex: 0 0 auto; }
