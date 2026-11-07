@@ -1,7 +1,8 @@
-import { Check, ChevronsLeft, ChevronsRight, X } from "lucide-react";
+import { Check, ChevronsLeft, ChevronsRight, Lock, Trash2, Unlock, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
+import { useAppMutation } from "@/blocks/mutation";
 import { cn } from "@/lib/utils";
 
 import { HoverTip } from "../../components";
@@ -11,6 +12,7 @@ import {
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
 import { Scroller } from "./Scroller";
+import { api } from "@/api/client";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
 export type { Density } from "./Board";
@@ -18,6 +20,15 @@ export type { Density } from "./Board";
 const UNSCHEDULED = "unscheduled";
 
 const FOLD_KEY = "priveo.schedule.folded-lanes";
+
+/** A crew member's home zone names, in the order the API gives them: "Zone 2, Zone 5". */
+export const homeZonesText = (member: SchedulingCrew): string => (member.home_zones ?? []).map((z) => z.name).join(", ");
+
+/** What the lock icon of a card placed by hand says it will do when clicked (owner, item 15). */
+export const LOCK_TIP = {
+  locked: "Locked. The scheduler keeps this card here on every run. Click to unlock; the next run may then move it.",
+  unlocked: "Unlocked. The next scheduler run may move this card. Click to lock it here.",
+} as const;
 
 /** The crew members whose lanes are folded to a thin strip, remembered in the browser. */
 function useFoldedLanes(): [Set<string>, (id: string) => void] {
@@ -132,6 +143,13 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
 }) {
   const confirm = useConfirm();
+  // Lock or unlock a card placed by hand; the board is read again so the icon and the card follow the server (item 15).
+  const lockOf = useAppMutation<{ job: AdminJob; locked: boolean }, AdminJob>({
+    mutationFn: (v) => api(`/v1/admin/scheduling/jobs/${v.job.id}/hand-lock`, { method: "PUT", body: { locked: v.locked } }),
+    pending: false,
+    success: (_d, v) => `${v.job.registration} is ${v.locked ? "locked" : "unlocked"}.`,
+    invalidate: [["board"]],
+  });
   const zones = zonesOf(jobs);
   const step = stepOf(density);
   const dragging = useRef<AdminJob | null>(null);
@@ -201,6 +219,15 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     requestAnimationFrame(() => setDragId(job.id));
   };
   const endDrag = () => { dragging.current = null; setDragId(null); setOver(null); };
+
+  /** The delete icon takes a placed job off its crew member for the day; it goes to Unscheduled, nothing is deleted (item 6). */
+  const takeOff = async (job: AdminJob) => {
+    if (await confirm({
+      title: `Take ${job.registration} off the day?`,
+      description: `The job goes to Unscheduled for this day. It is not deleted: you can place it again later.`,
+      confirmLabel: "Take off the day", tone: "danger",
+    })) onMove(job, null, null);
+  };
 
   const dragOver = (col: string) => (e: DragEvent<HTMLElement>) => {
     const job = dragging.current;
@@ -293,13 +320,14 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   const card = (job: AdminJob) => {
     const open = isOpen(job);
     const wine = breached(job);
+    const tools = job.placed_by_hand || (open && job.crew_id);
     return (
       <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
            aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
            title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}`}
            className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
              wine && "wine", !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
-             savingId === job.id && "saving")}
+             savingId === job.id && "saving", tools && "has-tools")}
            onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
            onClick={() => onOpen(job)}
            onKeyDown={(e) => {
@@ -311,10 +339,37 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
            }}>
         <CardFace job={job} density={density} zones={zones} />
         {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
-        {job.crew_id && job.cross_zone_reason && density !== "compact" && <span className="sch-why">Cross-zone: {job.cross_zone_reason}</span>}
+        {job.crew_id && job.cross_zone_reason && density !== "compact" && (
+          <span className="sch-why" role="note" title={job.cross_zone_reason} aria-label={job.cross_zone_reason}>Outside zone</span>
+        )}
         {/* A card taken off a crew member shows the reason it has no place. */}
         {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
         {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
+        {tools && (
+          // The icons sit at the bottom right (standard and detailed) or the right (compact). They never open the card.
+          <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
+            {job.placed_by_hand && (() => {
+              const locked = job.hand_locked === true;
+              const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
+              return (
+                <button type="button" className="sch-tool lock" aria-pressed={locked} aria-disabled={!open || undefined}
+                        aria-label={tip} title={tip}
+                        onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
+                  {locked ? <Lock aria-hidden /> : <Unlock aria-hidden />}
+                </button>
+              );
+            })()}
+            {open && job.crew_id && (
+              // The name stays out of the button's label, so a search by registration still finds the card alone.
+              <button type="button" className="sch-tool del" aria-label="Take off the day"
+                      title={`Take ${job.registration} off the day`}
+                      onClick={() => void takeOff(job)}>
+                <Trash2 aria-hidden />
+              </button>
+            )}
+          </span>
+        )}
       </div>
     );
   };
@@ -368,11 +423,31 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     <div className="sch-fill" ref={root}>
       <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", panning && "panning")} role="group" aria-label="Day board"
                 onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={panEnd} onWheel={wheel}>
+        {folded.has(UNSCHEDULED) ? (
+          // A folded Unscheduled lane is a thin strip; a card dropped on it is taken off its crew member, as on the open lane.
+          <section aria-label={`Unscheduled (${unplaced.length}), folded`} data-testid="col-unscheduled"
+                   className={cn("sch-col unscheduled folded", over?.col === UNSCHEDULED && "over")}
+                   onDragOver={dragOver(UNSCHEDULED)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(null)(e)}>
+            <button type="button" className="sch-fold-btn" aria-label="Show the Unscheduled lane" title="Show the lane"
+                    onClick={() => toggleFold(UNSCHEDULED)}>
+              <ChevronsRight aria-hidden />
+            </button>
+            <span className="sch-count">{unplaced.length}</span>
+            <span className="sch-fold-name">Unscheduled</span>
+          </section>
+        ) : (
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
                  className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
           <header className="sch-col-head">
             <span className="flex items-baseline justify-between gap-2">
-              <strong>Unscheduled</strong><span className="sch-count">{unplaced.length}</span>
+              <strong>Unscheduled</strong>
+              <span className="flex items-center gap-1">
+                <span className="sch-count">{unplaced.length}</span>
+                <button type="button" className="sch-fold-btn small" aria-label="Fold the Unscheduled lane" title="Fold the lane to a thin strip"
+                        onClick={() => toggleFold(UNSCHEDULED)}>
+                  <ChevronsLeft aria-hidden />
+                </button>
+              </span>
             </span>
             <span className="text-xs text-muted-foreground">No crew member yet. Drop a card here to take it off.</span>
           </header>
@@ -383,6 +458,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
               : withLine(UNSCHEDULED, unplaced.map((j) => ({ card: j, node: () => card(j) })))}
           </Scroller>
         </section>
+        )}
         {members.map((member) => {
           const avail = availOf(member.id);
           const closed = avail?.status === "Off";
@@ -415,7 +491,10 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
             <section key={member.id} aria-label={member.name} data-testid={`col-${member.id}`} className={state}>
               <header className="sch-col-head">
                 <span className="flex items-baseline justify-between gap-2">
-                  <HoverTip label={<strong>{member.name}</strong>}
+                  <HoverTip label={<span className="sch-name-line"><strong>{member.name}</strong>
+                              {(member.home_zones ?? []).length > 0 && (
+                                <span className="sch-home-zones" title={homeZonesText(member)}> · {homeZonesText(member)}</span>
+                              )}</span>}
                             ariaLabel={`${member.name}, ${member.role}. Hover for how jobs are allocated.`}>
                     <Reasoning member={member} avail={avail} jobs={mine} />
                   </HoverTip>
