@@ -10,8 +10,7 @@ import { useManiAccess } from "./api/mani";
 import { useAuth } from "./auth/AuthContext";
 import { ConfirmProvider } from "./blocks/confirm";
 import { SelectBox } from "./blocks/fields";
-import { TaskTray, TasksProvider } from "./blocks/tasks";
-import { AlertBell } from "./components/AlertBell";
+import { TaskTray, TasksProvider, useTasks } from "./blocks/tasks";
 import { useToast } from "./components";
 import { cn } from "./lib/utils";
 import { AGENT_NAV, NAV, type NavItem } from "./nav";
@@ -143,6 +142,9 @@ function Frame() {
   // Below 1024 px (an iPad in portrait, a phone) the areas open from a menu button.
   const [menuOpen, setMenuOpen] = useState(false);
   const wide = useLocation().pathname === "/schedule";
+  // The top bar holds the menu button (narrow screens) and running tasks. On a wide screen with no task
+  // it would be an empty band, so it is hidden there. Alerts live in the sidebar, not in the bar.
+  const hasTasks = useTasks().tasks.length > 0;
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)] lg:bg-[linear-gradient(to_right,var(--sidebar)_15rem,transparent_15rem)]">
@@ -157,12 +159,14 @@ function Frame() {
         </SheetContent>
       </Sheet>
       <div className="flex min-w-0 flex-col">
-        <div className="sticky top-0 z-30 flex min-h-14 items-center justify-end gap-3 border-b bg-background/90 px-4 backdrop-blur md:px-8">
+        <div className={cn(
+          "sticky top-0 z-30 flex min-h-14 items-center justify-end gap-3 border-b bg-background/90 px-4 backdrop-blur md:px-8",
+          !hasTasks && "lg:hidden",
+        )}>
           <Button variant="ghost" size="icon" className="-ml-2 lg:hidden" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
             <Menu aria-hidden />
           </Button>
           <div className="mr-auto min-w-0"><TaskTray /></div>
-          <AlertBell />
         </div>
         {/* The Schedule board needs the whole window (ADM-SCH-33), so it has no width cap and little padding. */}
         <main className={cn("w-full min-w-0", wide ? "px-3 py-3 md:px-4" : "max-w-[90rem] px-4 py-6 md:px-8")}>

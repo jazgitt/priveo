@@ -295,3 +295,15 @@
 .sch-fireworks[data-mode="running"] .sch-fireworks-caption { top: auto; bottom: 1.5rem; }
 @keyframes sch-pop { from { opacity: 0; transform: translate(-50%, -6px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .sch-fireworks-caption { animation: none; } }
+
+/* Name rain: names of crew and cars falling while the scheduler runs (decorative, off for reduced motion). */
+.sch-rain { position: fixed; inset: 0; z-index: 40; overflow: hidden; pointer-events: none; }
+.sch-rain-item { position: absolute; top: -8vh; white-space: nowrap; font-weight: 600; color: var(--c-gold-text);
+  opacity: 0.45; animation-name: sch-rain-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes sch-rain-fall {
+  from { transform: translateY(0); }
+  to { transform: translateY(112vh); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sch-rain { display: none; }
+}

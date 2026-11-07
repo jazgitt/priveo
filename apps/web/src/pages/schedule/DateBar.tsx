@@ -10,6 +10,12 @@ import { datesOf, fmtDate, weekday, type ScheduleOut } from "./api";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** "1 Nov" for an ISO day: the short form the ends of the date trail show. */
+function shortDay(iso: string): string {
+  const [, m, d] = iso.split("-");
+  return `${Number(d)} ${MONTHS[Number(m) - 1]}`;
+}
+
 export function addDays(iso: string, n: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
@@ -53,22 +59,28 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
 
   return (
     <div className="mb-2 rounded-xl border bg-card shadow-xs">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2">
-        <h1 className="m-0 text-base font-semibold tracking-tight">{title}</h1>
-        {site && <span className="text-sm font-medium">{site}</span>}
-        <span className="mx-1 hidden h-5 border-l sm:inline-block" aria-hidden />
-        <Button size="icon" variant="outline" className="size-8" aria-label="Previous day" onClick={() => onChange(addDays(date, -1))}>
+      {/* One line: the title, the day, the schedule of the day and its actions, then the days toggle. */}
+      <div className="flex flex-nowrap items-center gap-x-2 px-3 py-1.5">
+        <h1 className="m-0 shrink-0 text-base font-semibold tracking-tight">{title}</h1>
+        {site && <span className="shrink-0 text-sm font-medium">{site}</span>}
+        <span className="mx-1 hidden h-5 shrink-0 border-l sm:inline-block" aria-hidden />
+        <Button size="icon" variant="outline" className="size-8 shrink-0" aria-label="Previous day" onClick={() => onChange(addDays(date, -1))}>
           <ChevronLeft aria-hidden />
         </Button>
-        <Input type="date" aria-label="Day" className="h-8 w-36" value={date}
+        <Input type="date" aria-label="Day" className="h-8 w-36 shrink-0" value={date}
                onChange={(e) => { if (e.target.value) onChange(e.target.value); }} />
-        <Button size="icon" variant="outline" className="size-8" aria-label="Next day" onClick={() => onChange(addDays(date, 1))}>
+        <Button size="icon" variant="outline" className="size-8 shrink-0" aria-label="Next day" onClick={() => onChange(addDays(date, 1))}>
           <ChevronRight aria-hidden />
         </Button>
+        <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={() => onChange(today)}>
+          Today
+        </Button>
         {children}
-        <Button size="sm" variant="ghost" className="ml-auto h-8" aria-expanded={!folded} aria-controls="sch-days"
+        {/* The control names the days of the strip it shows or hides (the date trail), at 75% of the normal size. */}
+        <Button size="sm" variant="ghost" className="ml-auto h-8 shrink-0 text-[10.5px]" aria-expanded={!folded} aria-controls="sch-days"
                 onClick={toggle}>
           <CalendarDays aria-hidden /> {folded ? "Show days" : "Hide days"}
+          <span aria-hidden className="text-muted-foreground">{shortDay(from)} to {shortDay(to)}</span>
         </Button>
       </div>
       {!folded && (

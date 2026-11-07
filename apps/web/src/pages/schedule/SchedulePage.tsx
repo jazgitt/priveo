@@ -31,6 +31,7 @@ import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
+import { NameRain } from "./NameRain";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
@@ -116,13 +117,13 @@ function periodStart(period: Period, date: string, weekStart: number): string {
 }
 
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
-const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** The result of a run in words: "12 placed, 1 unscheduled, 0 late." */
 const runSummary = (r: { schedules: RunResult[] }) => {
   const sum = (k: "placed" | "unscheduled" | "late") => r.schedules.reduce((n, s) => n + s[k], 0);
   return `${sum("placed")} placed, ${sum("unscheduled")} unscheduled, ${sum("late")} late.`;
 };
+const isDate = (s: string | null): s is string => Boolean(s && /^\d{4}-\d{2}-\d{2}$/.test(s));
 
 /** A draft's freeze time, only while "Freeze by itself" is on (scheduler.auto_freeze). */
 function freezeText(s: ScheduleOut, autoFreeze: boolean): string {
@@ -471,6 +472,13 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           </div>
         );
 
+  // The names that fall while a run works: every crew member and every car (registration) the loaded data shows.
+  const rainNames = [...new Set([
+    ...(board?.crew ?? []).map((c) => c.name),
+    ...(board?.jobs ?? []).map((j) => j.registration),
+    ...needsAll.map((j) => j.registration),
+  ].filter(Boolean))];
+
   return (
     <div className={cn("sch-page", mode !== "page" && mode)}>
       {/* One slim bar: title, the day, the schedule of the day and its actions. The day strip folds away (ADM-SCH-35). */}
@@ -480,7 +488,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
         ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
           : (
-          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 basis-full flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3">
             {schedule ? (
               <>
                 <StatusBadge status={schedule.status} />
@@ -493,8 +501,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
             ) : (
               <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
             )}
-            <div className="ml-auto flex items-center gap-2">
-              {!boardOnly && (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {/* The Run button is on the page and in the focus view's top bar; the own-tab board has none. */}
+              {mode !== "solo" && (
                 <Button size="sm" variant={schedule ? "outline" : "default"} onClick={() => setRunOpen(true)} disabled={running}
                         aria-busy={running || undefined}>
                   {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
@@ -624,6 +633,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
         </FormDialog>
       )}
+      {/* Last in the page, so it never takes the first child's place in the focus view. Under an open focus
+          view the rain falls on that view instead, so it is not drawn twice. */}
+      <NameRain names={rainNames} active={running && !focusOpen} />
       {running && <Fireworks mode="running" />}
       {celebration && <Fireworks mode="celebrate" message={celebration} onEnd={() => setCelebration(null)} />}
     </div>
