@@ -8,12 +8,13 @@ import { addDays, chooseSite, scenario, signInAsAdmin } from "./helpers";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const dmy = (iso: string) => `${iso.slice(8, 10)}-${MONTHS[Number(iso.slice(5, 7)) - 1]}-${iso.slice(2, 4)}`;
 
-async function openSiteSetupRules(page: Page) {
+// The per-site rules are on the Scheduler's Rules tab (moved from Site Setup).
+async function openSchedulerRules(page: Page) {
   await signInAsAdmin(page);
-  await page.getByRole("link", { name: "Site Setup", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Site Setup" })).toBeVisible();
+  await page.getByRole("link", { name: "Schedule", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   await chooseSite(page, /TEST R06/);
-  await page.getByRole("tab", { name: "Scheduling rules" }).click();
+  await page.getByRole("tab", { name: "Rules", exact: true }).click();
 }
 
 async function openScheduleDay(page: Page, date: string) {
@@ -26,7 +27,7 @@ async function openScheduleDay(page: Page, date: string) {
 
 test.describe("Scheduling rules panel (SCHS-18)", () => {
   test("the Site rules section names the three cutoffs and a changed value is saved and kept [SCHR-CUT-06]", async ({ page }) => {
-    await openSiteSetupRules(page);
+    await openSchedulerRules(page);
     await expect(page.getByRole("heading", { level: 2, name: "Site rules", exact: true })).toBeVisible();
     // The cutoffs are named the same way everywhere.
     for (const name of ["Customer cutoff", "Freeze", "9 PM rule"]) {
@@ -42,7 +43,7 @@ test.describe("Scheduling rules panel (SCHS-18)", () => {
 
     // Kept after a reload: the hint now says this site has its own value.
     await page.reload();
-    await page.getByRole("tab", { name: "Scheduling rules" }).click();
+    await page.getByRole("tab", { name: "Rules", exact: true }).click();
     await expect(page.getByRole("switch", { name: label })).toHaveAttribute("aria-checked", String(!was));
     await expect(page.getByText(`This site: ${was ? "Off" : "On"}.`).first()).toBeVisible();
 
@@ -53,7 +54,7 @@ test.describe("Scheduling rules panel (SCHS-18)", () => {
   });
 
   test("Save stays off until a value is changed [SCHR-CUT-06]", async ({ page }) => {
-    await openSiteSetupRules(page);
+    await openSchedulerRules(page);
     await expect(page.getByRole("button", { name: "Save Customer cutoff is strict on weekdays" })).toBeDisabled();
   });
 });
@@ -61,7 +62,7 @@ test.describe("Scheduling rules panel (SCHS-18)", () => {
 test.describe("Break dialog (SCHS-28)", () => {
   test("a no-break change for a date range is added to the site and then deleted [SCHR-BRK-05, SCHR-BRK-06]", async ({ page }) => {
     const day = addDays(scenario("R06").as_of, 40);
-    await openSiteSetupRules(page);
+    await openSchedulerRules(page);
     await expect(page.getByRole("heading", { level: 2, name: "Break", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Change break" }).click();
@@ -92,7 +93,7 @@ test.describe("Break dialog (SCHS-28)", () => {
 
   test("the dialog refuses an end date before the start date [SCHR-BRK-05]", async ({ page }) => {
     const day = addDays(scenario("R06").as_of, 41);
-    await openSiteSetupRules(page);
+    await openSchedulerRules(page);
     await page.getByRole("button", { name: "Change break" }).click();
     const dialog = page.getByRole("dialog", { name: "Change the break for the site" });
     await dialog.getByRole("button", { name: "Date range" }).click();

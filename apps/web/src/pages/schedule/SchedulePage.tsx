@@ -34,6 +34,7 @@ import { NameRain } from "./NameRain";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
+import { RulesPanel } from "./rules/RulesPanel";
 import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
 import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
@@ -82,6 +83,8 @@ const SCHEDULE_TABS = (n: { attention: number; skipped: number; cutoff: number }
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "queue", label: "Crew queue" },
   { id: "improve", label: "Draft improvements" },
+  // The per-site scheduling rules (moved from Site Setup).
+  { id: "rules", label: "Rules" },
   // Shown only when a report section file exists in ./reports.
   ...(REPORT_SECTIONS.length ? [{ id: "reports", label: "Reports" }] : []),
 ] as const;
@@ -565,6 +568,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           ? <QueuePanel key={date} crew={board.crew} jobs={dayJobs} date={date} refresh={refresh} />
           : <EmptyState title="No schedule for this day">Run the scheduler for this day to make a draft first.</EmptyState>)}
         {tab === "improve" && <DraftImprovements key={date} board={board} date={date} refresh={refresh} />}
+        {tab === "rules" && <RulesPanel />}
         {tab === "reports" && REPORT_SECTIONS.length > 0 && <ReportsPanel societyId={societyId} date={date} />}
       </Tabs>}
 
