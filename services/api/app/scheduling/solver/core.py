@@ -41,7 +41,6 @@ class SolverParams:
     # The run's settings snapshot (empty for a direct call). Rule
     # modules read weights, the objective order and times from it (SCHS-33).
     settings: dict[str, Any] = field(default_factory=dict, compare=False)
-    debug_log: bool = False  # DEBUG-SOLVER-LOG (temporary)
 
     @classmethod
     def load(cls, db, society_id) -> SolverParams:
