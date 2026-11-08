@@ -299,12 +299,10 @@ describe("the card board (ADM-SCH-33)", () => {
     await column("c1");
     const card = () => within(screen.getByTestId("col-c1")).getByRole("button", { name: /KA01AB1234/ });
     expect(card()).not.toHaveTextContent("Meena");
-    await userEvent.click(await screen.findByRole("button", { name: "Card detail: standard" }));
-    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Detail" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Detail" }));
     expect(card()).toHaveTextContent("Meena");
     expect(localStorage.getItem("priveo.schedule.card-density")).toBe("detailed");
-    await userEvent.click(await screen.findByRole("button", { name: "Card detail: detailed" }));
-    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Compact" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Compact" }));
     expect(card()).toHaveClass("compact");
   });
 
@@ -1254,9 +1252,9 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
   it("keeps the card detail switch on the timeline and the table, not only the cards", async () => {
     server();
     await openDay("2026-11-08", "&view=timeline");
-    expect(await screen.findByRole("button", { name: "Card detail: standard" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Standard", pressed: true })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Table/ }));
-    expect(await screen.findByRole("button", { name: "Card detail: standard" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Standard", pressed: true })).toBeInTheDocument();
   });
 
   it("shows the lines of a detailed card: zone, model and cutoff; EXT and slot; car number and customer", async () => {
