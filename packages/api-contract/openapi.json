@@ -22029,6 +22029,17 @@
             "type": "array",
             "title": "Hand Breaches",
             "default": []
+          },
+          "interior_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interior Day"
           }
         },
         "type": "object",

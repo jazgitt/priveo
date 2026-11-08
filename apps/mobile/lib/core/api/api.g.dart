@@ -1031,6 +1031,7 @@ class AdminJob {
     required this.reasonCode,
     required this.crossZoneReason,
     this.handBreaches,
+    required this.interiorDay,
   });
 
   final String id;
@@ -1070,6 +1071,7 @@ class AdminJob {
   final String? reasonCode;
   final String? crossZoneReason;
   final List<String>? handBreaches;
+  final String? interiorDay;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1109,6 +1111,7 @@ class AdminJob {
         reasonCode: j['reason_code'] == null ? null : j['reason_code'] as String,
         crossZoneReason: j['cross_zone_reason'] == null ? null : j['cross_zone_reason'] as String,
         handBreaches: j['hand_breaches'] == null ? null : [for (final x in j['hand_breaches'] as List) x as String],
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1149,6 +1152,7 @@ class AdminJob {
         'reason_code': reasonCode,
         'cross_zone_reason': crossZoneReason,
         'hand_breaches': handBreaches == null ? null : [for (final x in handBreaches!) x],
+        'interior_day': interiorDay,
       };
 }
 
