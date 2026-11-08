@@ -42,16 +42,11 @@ import { Timeline } from "./Timeline";
 import { Fireworks } from "./RunFireworks";
 import { isRunMusicMuted, setRunMusicMuted, startRunMusic, stopRunMusic } from "./runMusic";
 import {
-  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
+  datesOf, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
   useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
 import "./schedule.css";
-
-type Period = "daily" | "weekly" | "monthly";
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" },
-];
 
 /** How far back the day strip goes (ADM-SCH-35). */
 const DAYS_BACK = 30;
@@ -102,22 +97,6 @@ function ReportsPanel({ societyId, date }: { societyId: string; date: string }) 
       ))}
     </div>
   );
-}
-
-function periodDays(period: Period, start: string): number {
-  if (period === "daily") return 1;
-  if (period === "monthly") return daysInMonthFrom(start);
-  return 7;
-}
-
-/** The first day of the period that contains `date`. */
-function periodStart(period: Period, date: string, weekStart: number): string {
-  if (period === "monthly") return `${date.slice(0, 7)}-01`;
-  if (period !== "weekly") return date;
-  const d = new Date(`${date}T00:00:00Z`);
-  const mondayDay = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - (mondayDay - weekStart + 7) % 7);
-  return d.toISOString().slice(0, 10);
 }
 
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
@@ -178,13 +157,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   const autoFreeze = useAutoFreezeOn();
   const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{ key: string; value: string | number }[]>("/v1/admin/directory/settings") });
-  const configured = String(preferences.data?.find((p) => p.key === "schedule.period")?.value ?? "Weekly").toLowerCase();
-  const configuredPeriod: Period = configured === "daily" ? "daily" : configured === "monthly" ? "monthly" : "weekly";
-  const [chosenPeriod, setPeriod] = useState<Period | null>(null);
-  const period = chosenPeriod ?? configuredPeriod;
-  const weekStart = Number(preferences.data?.find((p) => p.key === "schedule.week_start")?.value ?? 6);
-  const runStart = periodStart(period, date, weekStart);
-  const runDays = periodDays(period, runStart);
+  // Runs are daily only (ADM-SCH-09): the run covers the chosen day.
+  const runStart = date;
+  const runDays = 1;
 
   const [focusStatus, setFocusStatus] = useState("");
   const [focusType, setFocusType] = useState("");
@@ -268,14 +243,6 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     qc.invalidateQueries({ queryKey: ["skipped"] }),
     qc.invalidateQueries({ queryKey: ["capacity"] }),
   ]);
-
-  const savePeriod = useAppMutation<Period>({
-    mutationFn: (value) => api("/v1/admin/directory/settings/schedule.period", {
-      method: "PUT", body: { value: value[0].toUpperCase() + value.slice(1) },
-    }),
-    success: (_d, v) => `${v[0].toUpperCase() + v.slice(1)} is now the default period.`,
-    invalidate: [["admin-settings"]],
-  });
 
   const toggleMusic = () => {
     const next = !musicMuted;
@@ -600,28 +567,15 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       )}
       {runOpen && (
         <FormDialog open onOpenChange={(o) => !o && setRunOpen(false)} title={`Run the scheduler, ${site.name || "no site chosen"}`}
-                    description="It runs for the chosen site and the period that contains the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member."
+                    description="It runs for the chosen site and the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member."
                     size="lg" submitLabel={schedule ? "Run again" : "Run scheduler"} disabled={!societyId || running}
                     onSubmit={run}>
-          <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
-            <Field label="Period">
-              {(p) => <SelectBox {...p} value={period} onChange={(v) => setPeriod(v as Period)} choices={PERIODS} />}
-            </Field>
-            <div className="flex min-h-9 flex-col justify-center text-sm">
-              <span className="text-xs font-medium text-muted-foreground">Period to schedule</span>
-              <span>{runDays === 1 ? dayText(runStart) : `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}`}</span>
-            </div>
+          <div className="flex min-h-9 flex-col justify-center text-sm">
+            <span className="text-xs font-medium text-muted-foreground">Day to schedule</span>
+            <span>{dayText(runStart)}</span>
           </div>
           <p className="m-0 text-sm text-muted-foreground">
-            To schedule another period, choose one of its days at the top.
-            {period !== configuredPeriod && (
-              <> This run uses {period}; the default is {configuredPeriod}.{" "}
-                <Button type="button" variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
-                        onClick={() => savePeriod.mutate(period)}>
-                  Make {period} the default
-                </Button>
-              </>
-            )}
+            To schedule another day, choose it at the top.
           </p>
           {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
         </FormDialog>

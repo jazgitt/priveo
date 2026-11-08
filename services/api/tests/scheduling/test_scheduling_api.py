@@ -12,7 +12,7 @@ from app.platform.clock import IST
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
 from tests.directory_helpers import set_feature, set_setting
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_day, run_days
 from tests.test_api import auth, login
 
 BASE = "/v1/admin/scheduling"
@@ -119,19 +119,22 @@ def test_a_move_that_overlaps_or_leaves_the_hours_is_refused(api, admin, world, 
     assert r.status_code == 409 and r.json()["code"] == "placement_warning" and "outside_hours" in r.text
 
 
-def test_interior_day_and_deep_spa_are_jobs_of_their_own(api, admin, world, run_week):
+def test_interior_day_and_deep_spa_are_jobs_of_their_own(api, admin, world):
     world.add_crew(end=600)
     car = world.add_vehicle(cutoff=time(9, 0), interior_day="Wednesday")
     world.db.add(AddonRequest(customer_id=world.customer.id, vehicle_id=car.id,
                               service="Deep Spa", service_date=date(2026, 10, 20)))
     world.db.commit()
-    summary = run_week()
-    jobs = board(api, admin, summary["schedule_id"])["jobs"]
+    days = run_days(api, admin, world.society.id, SUNDAY)  # a week, one daily run at a time
+    jobs = [j for d in days for j in board(api, admin, d["schedule_id"])["jobs"]]
     by_day = {}
     for j in jobs:
         by_day.setdefault(j["date"], []).append(j["service"])
     assert len(jobs) == 7 + 2 + 1  # the Interiors are ledger demand (SCHS-36), not only the weekday
-    assert sorted(by_day["2026-10-21"]) == ["Cleaning-External", "Cleaning-Internal"]
+    # Daily runs (ADM-SCH-09): each Interior is planned on the first run day with room, not on the
+    # car's preferred Wednesday (SCHR-INT-05). The Sunday and Monday runs each take one.
+    assert sorted(by_day["2026-10-18"]) == ["Cleaning-External", "Cleaning-Internal"]
+    assert sorted(by_day["2026-10-19"]) == ["Cleaning-External", "Cleaning-Internal"]
     assert sorted(by_day["2026-10-20"]) == ["Cleaning-External", "Deep Spa"]
     spa = next(j for j in jobs if j["service"] == "Deep Spa")
     assert spa["duration_minutes"] == 120 and spa["crew_id"]
@@ -325,18 +328,19 @@ def test_a_trainee_sees_the_paired_members_jobs(api, world, admin, run_week):
     assert r.json()["total"] == 2  # the Exterior and the Interior of the car
 
 
-def test_next_service_for_the_customer(api, world, admin, run_week):
+def test_next_service_for_the_customer(api, world, admin):
     world.add_crew(end=480, name="Ravi Kumar")
     world.add_vehicle(cutoff=time(9, 30))
     world.db.commit()
-    sid = run_week(days=2)["schedule_id"]
+    days = run_days(api, admin, world.society.id, SUNDAY, 2)
     cust = auth(login(api, "customer")["access_token"])
     params = {"from_date": SUNDAY.isoformat()}
 
     r = api.get("/v1/customer/next-job", headers=cust, params=params)
     assert r.status_code == 200 and r.json() == {"job": None}  # a draft is not shown
 
-    api.post(f"{BASE}/schedules/{sid}/freeze", headers=admin)
+    for d in days:
+        api.post(f"{BASE}/schedules/{d['schedule_id']}/freeze", headers=admin)
     job = api.get("/v1/customer/next-job", headers=cust, params=params).json()["job"]
     assert job["date"] == "2026-10-18" and job["service"] == "Cleaning-External"
     assert job["status"] == "Scheduled" and job["crew_name"] == "Ravi Kumar"
@@ -428,7 +432,7 @@ def test_the_schedules_of_a_society_list_oldest_first_from_a_date(api, admin, wo
     world.add_vehicle()
     world.db.commit()
     first = run_week(days=1)
-    second = run_week(days=1, start_date="2026-10-19")
+    second = run_day(api, admin, world.society.id, date(2026, 10, 19))
 
     r = api.get(f"{BASE}/schedules", headers=admin, params={"society_id": str(world.society.id)})
     assert r.status_code == 200, r.text

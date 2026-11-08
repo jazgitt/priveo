@@ -34,10 +34,12 @@ def _rows(sc, car):
 
 def test_schr_int_01_an_interior_is_planned_for_the_pending_entitlement_of_the_week(
         world):
+    # Daily runs (ADM-SCH-09): the Interior is planned on the first run day with a pending
+    # entitlement and room, not on the preferred Thursday (SCHR-INT-05, owner 08-Nov-26).
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
     ((day, job),) = _interiors(sc)
-    assert day == THURSDAY and job.service_week_start == WEEK1
+    assert day == WEEK1 and job.service_week_start == WEEK1
     (row,) = _rows(sc, car)
     assert (row.status, row.job_id) == ("Planned", job.id)
 
@@ -66,7 +68,9 @@ def test_schr_int_05_without_a_preference_the_first_feasible_day_is_used(world):
     assert day == WEEK1
 
 
-def test_schr_int_26_a_weekly_pattern_feeds_the_preference(world):
+def test_schr_int_26_a_weekly_pattern_does_not_add_an_entitlement(world):
+    # The pattern's Interior days name a preference, which a one-day run cannot act on
+    # (owner 08-Nov-26): the Interior is planned on the first run day.
     sc, car = _scenario(world, interior=True)
     sub = sc.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id))
     sc.db.add(SchedulePattern(subscription_id=sub.id, kind="Weekly",
@@ -74,7 +78,7 @@ def test_schr_int_26_a_weekly_pattern_feeds_the_preference(world):
                               interior_weekdays=["Friday"]))
     sc.run(WEEK1, days=7)
     ((day, _job),) = _interiors(sc)
-    assert day == WEEK1 + timedelta(days=4)  # Friday
+    assert day == WEEK1
     assert len(_rows(sc, car)) == 1  # the pattern did not add a second entitlement
 
 
@@ -110,12 +114,12 @@ def test_schr_int_06_a_rerun_keeps_the_planned_interior_and_adds_none(world):
 def test_schr_def_03_a_deferred_interior_is_planned_again_on_a_later_day(world):
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
-    ((_day, job),) = _interiors(sc)
+    ((first_day, job),) = _interiors(sc)
     from app.scheduling import service
     service.set_job_status(sc.db, job.id, "Could not complete")
     sc.run(WEEK1, days=7)
     live = [(d, j) for d, j in _interiors(sc) if j.status == "Scheduled"]
-    assert len(live) == 1 and live[0][0] > THURSDAY
+    assert len(live) == 1 and live[0][0] > first_day
     assert live[0][1].service_week_start == WEEK1
 
 

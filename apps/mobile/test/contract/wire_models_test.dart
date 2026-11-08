@@ -2000,7 +2000,7 @@ void main() {
     expect(wire.RunRequest.fromJson(input).toJson(), equals(input));
   });
   test('RunRequest preserves nullable wire fields', () {
-    final input = jsonDecode('{"society_id":null,"start_date":"2026-10-20","days":null}') as Map<String, dynamic>;
+    final input = jsonDecode('{"society_id":null,"start_date":"2026-10-20","days":1}') as Map<String, dynamic>;
     expect(wire.RunRequest.fromJson(input).toJson(), equals(input));
   });
   test('RunResponse preserves populated wire fields', () {

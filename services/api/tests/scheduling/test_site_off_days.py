@@ -4,7 +4,7 @@ from datetime import time, timedelta
 
 from app.directory.models import WorkingSlot
 from app.scheduling.service import build_demand
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 
 BASE = "/v1/admin/scheduling"
 MONDAY = SUNDAY + timedelta(days=1)
@@ -50,7 +50,7 @@ def test_each_service_follows_its_own_slots(world):
     assert services_on(world, SUNDAY) == {("Cleaning-Internal", SUNDAY)}
 
 
-def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world, run_week):
+def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world):
     from app.directory import lookup
     from app.directory.models import DirectoryService
     for order, name in enumerate(("Cleaning-External", "Cleaning-Internal")):
@@ -64,16 +64,18 @@ def test_capacity_and_the_run_agree_on_an_off_day(api, admin, world, run_week):
     slot(world, "Cleaning-External", [1, 2, 3, 4, 5, 6])  # Monday off
     world.db.commit()
 
-    summary = run_week(days=2)  # Sunday and Monday
-    b = api.get(f"{BASE}/board", headers=admin,
-                params={"schedule_id": summary["schedule_id"]}).json()
+    # Sunday and Monday, one daily run each (ADM-SCH-09); each day's board shows its own day.
+    days = run_days(api, admin, world.society.id, SUNDAY, 2)
+    boards = [api.get(f"{BASE}/board", headers=admin, params={"schedule_id": d["schedule_id"]}).json()
+              for d in days]
+    jobs = [j for b in boards for j in b["jobs"]]
+    by_day = {d["date"]: d for b in boards for d in b["days"]}
     # Every Exterior fits; only Interiors (ledger demand, SCHS-36) can be left over.
-    assert all(j["service"] == "Cleaning-Internal" for j in b["jobs"] if j["crew_id"] is None)
-    by_day = {d["date"]: d for d in b["days"]}
+    assert all(j["service"] == "Cleaning-Internal" for j in jobs if j["crew_id"] is None)
     off = by_day[MONDAY.isoformat()]
     assert off["demand_minutes"] == 0 and not off["over_capacity"] and off["demand"] == []
     assert by_day[SUNDAY.isoformat()]["demand_minutes"] == 60
-    assert all(j["date"] != MONDAY.isoformat() or j["service"] == "Cleaning-Internal" for j in b["jobs"])
+    assert all(j["date"] != MONDAY.isoformat() or j["service"] == "Cleaning-Internal" for j in jobs)
 
 
 def test_a_closed_weekday_gives_no_cleaner_window(world):

@@ -6,7 +6,7 @@ from app.directory.models import Society
 from app.directory.service import save_settings
 from app.platform.clock import IST
 from app.scheduling import service
-from app.scheduling.automatic import next_period, run_due
+from app.scheduling.automatic import next_day, run_due
 from app.scheduling.models import AutomaticPlanningRun, Schedule
 from app.support.models import AdminAlert
 
@@ -18,7 +18,7 @@ def configure(db, world):
     for society in db.scalars(select(Society)):
         society.active = society.id == world.society.id
     db.commit()
-    save_settings(db, None, {'schedule.auto_time': '18:00', 'schedule.period': 'Daily'})
+    save_settings(db, None, {'schedule.auto_time': '18:00'})
 
 
 def test_only_admin_can_save_the_planning_time(api, admin):
@@ -83,7 +83,8 @@ def test_failure_alerts_and_retries_same_draft(world, db, monkeypatch):
     assert db.scalar(select(AutomaticPlanningRun)).schedule_id == draft_id
 
 
-def test_next_period_handles_week_and_year_and_leap_month():
-    assert next_period(date(2026, 10, 18), 'Weekly', 6) == (date(2026, 10, 25), 7)
-    assert next_period(date(2026, 12, 31), 'Monthly', 6) == (date(2027, 1, 1), 31)
-    assert next_period(date(2028, 1, 30), 'Monthly', 6) == (date(2028, 2, 1), 29)
+def test_the_planner_drafts_tomorrow_across_month_and_year_ends():
+    # Daily runs only (ADM-SCH-09): the draft is one day, the day after the planning time.
+    assert next_day(date(2026, 10, 18)) == date(2026, 10, 19)
+    assert next_day(date(2026, 12, 31)) == date(2027, 1, 1)
+    assert next_day(date(2028, 2, 28)) == date(2028, 2, 29)

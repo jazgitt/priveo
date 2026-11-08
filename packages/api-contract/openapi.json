@@ -31184,17 +31184,10 @@
             "title": "Start Date"
           },
           "days": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 31.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Days"
+            "type": "integer",
+            "const": 1,
+            "title": "Days",
+            "default": 1
           }
         },
         "type": "object",

@@ -17,7 +17,7 @@ call. Defaults come from the registry and `directory.defaults`, not from
 numbers written here.
 """
 from dataclasses import dataclass, field
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -271,10 +271,11 @@ class Scenario:
     # ---- running and reading back ------------------------------------
 
     def run(self, start: date, days=1) -> Result:
-        """Run the scheduler for `days` from `start` and read the outcome."""
+        """Run the scheduler for `days` from `start`, one daily run per day (ADM-SCH-09), and read the outcome."""
         self.db.commit()
-        summary = service.run(self.db, self.site.id, start, days, None)[0]
-        return self.read(summary)
+        summaries = [service.run(self.db, self.site.id, start + timedelta(days=i), None)[0]
+                     for i in range(days)]
+        return self.read(summaries[0])
 
     def read(self, summary=None) -> Result:
         self.db.expire_all()

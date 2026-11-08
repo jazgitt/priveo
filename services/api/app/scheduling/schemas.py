@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -8,8 +9,8 @@ class RunRequest(BaseModel):
     # Empty means every active society (ADM-SCH-01).
     society_id: uuid.UUID | None = None
     start_date: date
-    # A week by default (ADM-SCH-09).
-    days: int | None = Field(default=None, ge=1, le=31)
+    # One run covers one day (ADM-SCH-09, owner 08-Nov-26). Any other length is refused.
+    days: Literal[1] = 1
 
 
 class RunResult(BaseModel):

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.addons.models import AddonBooking
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, Visit
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 from tests.test_api import auth, login
 
 
@@ -56,13 +56,7 @@ def request(api, customer, vehicle, finish="12:00"):
 
 
 def run(api, admin, world):
-    r = api.post(
-        "/v1/admin/scheduling/run",
-        headers=admin,
-        json={"society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 7},
-    )
-    assert r.status_code == 200, r.text
-    return r.json()["schedules"][0]["schedule_id"]
+    return run_days(api, admin, world.society.id, SUNDAY)[0]["schedule_id"]
 
 
 def test_booking_reaches_scheduler_without_payment_and_has_its_own_visit(

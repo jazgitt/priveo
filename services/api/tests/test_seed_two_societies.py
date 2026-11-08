@@ -34,7 +34,9 @@ def clean_tool_tables(engine):
 
 @pytest.fixture(autouse=True)
 def quick_solver(monkeypatch):
-    """The solver's real limit is 10 seconds a day; a fraction of a second is enough here."""
+    """The solver's real limit is 10 seconds a day. A tiny budget gives each stage a slice of about
+    0.01 s, which is the case that aborted OR-Tools while hint repair was on (see objective_order).
+    Keep this budget as the regression test for that abort."""
     from dataclasses import replace
 
     from app.scheduling import passes
@@ -42,7 +44,7 @@ def quick_solver(monkeypatch):
     original = passes.solve_day
 
     def quick(crew, jobs, params=None, *args, **kwargs):
-        return original(crew, jobs, replace(params, max_seconds=0.3), *args, **kwargs)
+        return original(crew, jobs, replace(params, max_seconds=0.03), *args, **kwargs)
 
     monkeypatch.setattr(passes, "solve_day", quick)
 

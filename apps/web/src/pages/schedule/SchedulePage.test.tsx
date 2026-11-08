@@ -906,17 +906,17 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(screen.getByLabelText("Day")).toHaveValue(toIso(new Date()));
   });
 
-  it("runs the scheduler for the period that contains the chosen day", async () => {
-    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
+  it("runs the scheduler for the chosen day only (daily runs only, ADM-SCH-09)", async () => {
+    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that day.")) });
     await openDay("2026-11-11");
     // No schedule covers the day, so the board offers to run the scheduler.
     await userEvent.click(await screen.findByRole("button", { name: "Run the scheduler" }));
     expect(await screen.findByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
-    expect(screen.getByText("Sun 08-Nov-26 to Sat 14-Nov-26")).toBeInTheDocument();
+    expect(screen.getByText("Wed 11-Nov-26")).toBeInTheDocument();
     expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Run scheduler" }));
     await waitFor(() => expect(callsTo("/run")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-08", days: 7 });
+    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-11", days: 1 });
   });
 
   it("marks days that need the admin, and has no Needs scheduling tab (the Board's Unscheduled column shows those jobs)", async () => {
@@ -1153,15 +1153,14 @@ describe("long runs, confirmations and the action tabs", () => {
     expect((await screen.findAllByText("3 placed, 1 unscheduled, 0 late.")).length).toBeGreaterThan(0);
   });
 
-  it("does not change the default period unless asked", async () => {
+  it("offers no weekly or monthly run, and changes no default period (ADM-SCH-09)", async () => {
     server();
     await openDay();
     await userEvent.click(await screen.findByRole("button", { name: "Run" }));
-    await choose("Period", "Daily");
-    expect(screen.getByText("Period to schedule").nextSibling).toHaveTextContent(/^Sun 08-Nov-26$/);
+    expect(screen.getByText("Day to schedule")).toBeInTheDocument();
+    expect(screen.queryByText("Period")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /the default$/ })).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Make daily the default" }));
-    await waitFor(() => expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(true));
   });
 
   it("shows the chosen day's cutoff requests, links to other days and applies or rejects after a confirmation", async () => {

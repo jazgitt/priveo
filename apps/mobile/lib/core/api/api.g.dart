@@ -7984,7 +7984,7 @@ class RunRequest {
   const RunRequest({
     required this.societyId,
     required this.startDate,
-    required this.days,
+    this.days,
   });
 
   final String? societyId;

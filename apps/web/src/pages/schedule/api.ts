@@ -279,12 +279,6 @@ export function nextSunday(from: Date = new Date()): string {
   return toIso(d);
 }
 
-/** Days from this date to the end of its month (a Monthly run). */
-export function daysInMonthFrom(iso: string): number {
-  const [y, m, d] = parts(iso);
-  return new Date(y, m, 0).getDate() - d + 1;
-}
-
 /** Minutes after midnight -> "HH:MM". */
 export function hhmm(minute: number): string {
   return `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;

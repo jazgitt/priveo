@@ -12,6 +12,7 @@ from app.crew.models import CrewMember
 from app.platform.clock import today_ist
 from app.scheduling import rules, service
 from app.scheduling.models import Job, SchedulingCrew, SchedulingCrewException
+from tests.scheduling.conftest import run_days
 from tests.test_api import auth
 
 CREW = "/v1/admin/crew"
@@ -51,12 +52,11 @@ def sc_of(db: Session, crew_id: str) -> SchedulingCrew:
 
 def run_and_freeze(api, admin, world, days=3):
     start = today_ist() + timedelta(days=1)
-    r = api.post(f"{SCHED}/run", headers=admin, json={
-        "society_id": str(world.society.id), "start_date": start.isoformat(), "days": days})
-    assert r.status_code == 200, r.text
-    schedule_id = r.json()["schedules"][0]["schedule_id"]
-    f = api.post(f"{SCHED}/schedules/{schedule_id}/freeze", headers=admin)
-    assert f.status_code == 200, f.text
+    days_run = run_days(api, admin, world.society.id, start, days)
+    schedule_id = days_run[0]["schedule_id"]
+    for day in days_run:
+        f = api.post(f"{SCHED}/schedules/{day['schedule_id']}/freeze", headers=admin)
+        assert f.status_code == 200, f.text
     return start, schedule_id
 
 

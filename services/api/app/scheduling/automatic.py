@@ -1,5 +1,4 @@
 """Disabled-by-default next-period drafts; preserve existing and frozen work."""
-import calendar
 import logging
 from datetime import date, timedelta
 
@@ -17,13 +16,9 @@ from app.support import alerts
 log = logging.getLogger(__name__)
 
 
-def next_period(day: date, period: str, week_start: int) -> tuple[date, int]:
-    if period == "Daily":
-        return day + timedelta(days=1), 1
-    if period == "Monthly":
-        start = date(day.year + (day.month == 12), day.month % 12 + 1, 1)
-        return start, calendar.monthrange(start.year, start.month)[1]
-    return day + timedelta(days=(week_start - day.weekday()) % 7 or 7), 7
+def next_day(day: date) -> date:
+    """The day the automatic planner drafts: tomorrow. A run covers one day (ADM-SCH-09)."""
+    return day + timedelta(days=1)
 
 
 def run_due(db, now):
@@ -31,8 +26,7 @@ def run_due(db, now):
     at = lookup.setting(db, "schedule.auto_time")
     if not at or local.strftime("%H:%M") < at:
         return {"not_due": True, "planned": 0, "errors": 0}
-    start, days = next_period(local.date(), lookup.setting(db, "schedule.period"),
-                              lookup.setting(db, "schedule.week_start"))
+    start = next_day(local.date())
     planned = errors = 0
     society_ids = list(db.scalars(select(Society.id).where(Society.active.is_(True))))
     for sid in society_ids:
@@ -45,7 +39,7 @@ def run_due(db, now):
                 db.rollback()
                 continue  # Existing row was locked by another worker.
             row = AutomaticPlanningRun(society_id=sid, start_date=start,
-                end_date=start + timedelta(days=days - 1), next_attempt_at=now)
+                end_date=start, next_attempt_at=now)
             db.add(row)
             try:
                 db.flush()
@@ -74,7 +68,7 @@ def run_due(db, now):
                     row.status, row.schedule_id = "Existing", existing.id
                     db.commit()
                     continue
-                schedule = service.get_or_create_schedule(db, sid, start, days)
+                schedule = service.get_or_create_schedule(db, sid, start, 1)
                 row.schedule_id = schedule.id
                 db.commit()
             service.run_schedule(db, schedule, None)

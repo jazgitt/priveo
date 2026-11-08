@@ -12,7 +12,7 @@ from app.customers.models import SchedulePattern, Subscription
 from app.directory.models import DirectoryAudit, Plan
 from app.scheduling import service
 from app.scheduling.models import Visit
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 from tests.test_api import auth, login
 
 EXT, INT = "Cleaning-External", "Cleaning-Internal"
@@ -214,9 +214,7 @@ def test_a_planned_week_follows_the_pattern(world, api, admin):
     assert put(api, admin, sub_of(world, vehicle), kind="Weekly",
                exterior_weekdays=["Monday", "Wednesday"], interior_weekdays=["Wednesday"]
                ).status_code == 200
-    r = api.post("/v1/admin/scheduling/run", headers=admin, json={
-        "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 7})
-    assert r.status_code == 200, r.text
+    run_days(api, admin, world.society.id, SUNDAY)
     world.db.expire_all()
     dates = sorted(v.date for v in world.db.scalars(select(Visit).where(Visit.vehicle_id == vehicle.id)))
     # Exteriors on Monday and Wednesday. The Interiors come from the ledger (SCHS-36): the one of the

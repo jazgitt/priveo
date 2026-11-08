@@ -96,8 +96,9 @@ def test_schr_int_12_tier_values_make_each_tier_outweigh_the_ones_below():
 
 
 def test_schr_int_13_the_catch_up_example_plans_end_to_end(world):
-    # Week 1's Interior was missed; the run for week 2 plans it first (Monday 09-Nov)
-    # and week 2's own Interior on its day (Thursday 12-Nov). Wednesday is off.
+    # Week 1's Interior was missed. Daily runs (ADM-SCH-09): the first run day, Monday 09-Nov,
+    # takes it; week 2's own Interior takes the next run day with room, Tuesday 10-Nov.
+    # Wednesday is off.
     sc = Scenario(world)
     sc.slots(off=(2,))
     sc.cleaner("Ravi", shift=(360, 660))
@@ -108,14 +109,15 @@ def test_schr_int_13_the_catch_up_example_plans_end_to_end(world):
     rows = sc.db.execute(
         select(Visit.date, Job.service_week_start).join(Job, Job.visit_id == Visit.id)
         .where(Job.service == INTERNAL, Job.status != "Skipped").order_by(Visit.date)).all()
-    assert rows == [(WEEK2, WEEK1), (WEEK2 + timedelta(days=3), WEEK2)]
+    assert rows == [(WEEK2, WEEK1), (WEEK2 + timedelta(days=1), WEEK2)]
     done = list(sc.db.scalars(select(InteriorEntitlement).order_by(InteriorEntitlement.service_week_start)))
     assert [r.status for r in done] == ["Planned", "Planned"]
 
 
-def test_schr_int_10_an_overdue_interior_takes_a_weekday_before_the_weekend(world):
-    # The period is Saturday 14-Nov to Tuesday 17-Nov. The week-1 Interior is overdue
-    # and goes to Monday, not to the Saturday that is feasible too.
+def test_schr_int_10_an_overdue_interior_is_planned_on_the_first_run_day(world):
+    # The period is Saturday 14-Nov to Tuesday 17-Nov, one daily run each (ADM-SCH-09). The
+    # week-1 Interior is overdue and goes to the first run day, Saturday. There is no
+    # weekday-first choice across the period any more (owner 08-Nov-26).
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(360, 660))
@@ -127,10 +129,14 @@ def test_schr_int_10_an_overdue_interior_takes_a_weekday_before_the_weekend(worl
     rows = sc.db.execute(
         select(Visit.date, Job.service_week_start).join(Job, Job.visit_id == Visit.id)
         .where(Job.service == INTERNAL, Job.status != "Skipped")).all()
-    assert (WEEK3, WEEK1) in rows and all(d.weekday() < 5 for d, w in rows if w == WEEK1)
+    # The overdue week-1 Interior is the first placement; the new week's Interior is planned on
+    # its own first run day in the period (Monday 16-Nov).
+    assert rows[0] == (WEEK2 + timedelta(days=5), WEEK1)
 
 
-def test_schr_int_10_a_row_of_the_current_week_prefers_its_own_day_over_a_weekday_fallback(world):
+def test_schr_int_10_a_row_of_the_current_week_is_planned_on_the_first_run_day(world):
+    # Daily runs (ADM-SCH-09): the preferred Saturday is not used across days; the first run
+    # day with room takes it (SCHR-INT-05, owner 08-Nov-26).
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(360, 660))
@@ -140,7 +146,7 @@ def test_schr_int_10_a_row_of_the_current_week_prefers_its_own_day_over_a_weekda
     days = [d for d, in sc.db.execute(
         select(Visit.date).join(Job, Job.visit_id == Visit.id)
         .where(Job.service == INTERNAL, Job.status != "Skipped"))]
-    assert days == [WEEK1 + timedelta(days=5)]
+    assert days == [WEEK1]
 
 
 # ---- SCHR-INT-13: the FIFO inputs of a day (gap check) -----------------------

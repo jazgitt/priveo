@@ -12,7 +12,7 @@ from app.notifications.models import Notification
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
 from app.visits.models import JobOutcome, OperationsDecision
-from tests.scheduling.conftest import PINNED_NOW, SUNDAY
+from tests.scheduling.conftest import PINNED_NOW, SUNDAY, run_days
 from tests.test_api import auth, login
 
 
@@ -26,18 +26,11 @@ def setup(world, api, admin):
     world.add_crew(start=360, end=840)
     vehicle = world.add_vehicle(interior_day="Sunday")
     world.db.commit()
-    response = api.post(
-        "/v1/admin/scheduling/run",
-        headers=admin,
-        json={
-            "society_id": str(world.society.id),
-            "start_date": SUNDAY.isoformat(),
-            "days": 7,
-        },
-    )
-    assert response.status_code == 200, response.text
-    sid = response.json()["schedules"][0]["schedule_id"]
-    api.post(f"/v1/admin/scheduling/schedules/{sid}/freeze", headers=admin)
+    # A week, one daily run at a time (ADM-SCH-09); every day is frozen, as a week used to be.
+    days = run_days(api, admin, world.society.id, SUNDAY)
+    sid = days[0]["schedule_id"]
+    for day in days:
+        api.post(f"/v1/admin/scheduling/schedules/{day['schedule_id']}/freeze", headers=admin)
     visit = world.db.scalar(
         select(Visit).where(Visit.vehicle_id == vehicle.id, Visit.date == SUNDAY)
     )

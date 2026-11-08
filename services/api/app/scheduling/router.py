@@ -102,7 +102,7 @@ def crew_day(date: date, user: User = Depends(require_role("crew")), db: Session
 def run(
     body: RunRequest, user: User = Depends(require_role("admin")), db: Session = Depends(get_db)
 ):
-    done = service.run(db, body.society_id, body.start_date, body.days, user.id)
+    done = service.run(db, body.society_id, body.start_date, user.id)
     schedules = {s.id: s for s in db.scalars(
         select(Schedule).where(Schedule.id.in_([d.schedule_id for d in done])))}
     return {"schedules": [

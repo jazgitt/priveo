@@ -41,7 +41,7 @@ def test_schr_out_07_deferred_jobs_and_cross_zone_jobs_are_counted(world):
     sc = _short_day(world)
     car = sc.car(interior=True)
     sc.db.commit()
-    summary = service.run(sc.db, sc.site.id, SUNDAY, 1, None)[0]
+    summary = service.run(sc.db, sc.site.id, SUNDAY, None)[0]
     interior = sc.db.scalar(select(Job).where(Job.service == INTERNAL))
     interior.status = "Deferred"
     exterior = sc.db.scalar(select(Job).where(Job.service == EXTERNAL))
@@ -57,7 +57,7 @@ def test_schr_out_07_the_run_is_recorded_in_the_history_with_the_counts(world):
     sc = _short_day(world)
     sc.cars(3)
     sc.db.commit()
-    summary = service.run(sc.db, sc.site.id, SUNDAY, 1, None)[0]
+    summary = service.run(sc.db, sc.site.id, SUNDAY, None)[0]
     event = sc.db.scalar(select(SchedulingEvent).where(
         SchedulingEvent.schedule_id == summary.schedule_id, SchedulingEvent.kind == "rerun"))
     assert "unassigned exteriors 1" in event.detail

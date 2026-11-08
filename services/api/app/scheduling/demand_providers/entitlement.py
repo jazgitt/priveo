@@ -150,11 +150,14 @@ def provide(ctx, demand: list):
         society = entitlements.society_of(db, sub.vehicle_id)
         last_week = entitlements.week_start(db, days[-1], society)
         # A job of the week that was not done (missed or deferred) is tried again
-        # on a later day, never on or before the day it failed.
+        # on a later day, never on or before the day it failed. The failure may sit in
+        # another day's schedule (a run covers one day, ADM-SCH-09), so every schedule counts.
         failed = {}
-        for j, d in mine:
-            if j.status in ("Could not complete", "Deferred") and j.service_week_start:
-                failed[j.service_week_start] = max(failed.get(j.service_week_start, d), d)
+        for j, d in db.execute(select(Job, Visit.date).join(Visit, Visit.id == Job.visit_id).where(
+                Visit.vehicle_id == vehicle.id, Job.service == INTERIOR,
+                Job.status.in_(("Could not complete", "Deferred")),
+                Job.service_week_start.is_not(None))).all():
+            failed[j.service_week_start] = max(failed.get(j.service_week_start, d), d)
         for row in pending[covered:]:
             if row.service_week_start > last_week:
                 continue
@@ -175,9 +178,12 @@ def provide(ctx, demand: list):
             day = first if not own else next(
                 (d for d in pool if _prefers(db, sub, pattern, d)), first)
             if own and _prefers(db, sub, pattern, day):
-                # Only a completed Interior in the plan week counts. A car whose last
-                # Interior was in an earlier week is the normal weekly case: keep the day.
-                last = _last_actual(db, vehicle.id, days[-1], since=days[0])
+                # Only a completed Interior in the car's plan week counts (SCHR-INT-27, INT-28).
+                # The plan week is the service week of the day, not the run's window: a run
+                # covers one day (ADM-SCH-09), so the window would miss the rest of the week.
+                # A car whose last Interior was in an earlier week keeps the day.
+                plan_week = entitlements.week_start(db, day, society)
+                last = _last_actual(db, vehicle.id, plan_week + timedelta(days=6), since=plan_week)
                 if last is not None and not 0 <= (last - day).days <= SMALL_GAP_DAYS:
                     # Held: optional on the preferred day, shown as Unscheduled (18.5).
                     ctx.interior_held[(vehicle.id, day)] = HELD_NOTE.format(

@@ -47,7 +47,9 @@ def test_schr_def_02_the_deferred_job_is_planned_at_the_next_run_in_the_same_wee
     sc, car, job_id = _plan_and_defer(world)
     sc.run(WEEK1, days=7)
     ((day, job),) = _live(sc)
-    assert job.id != job_id and day > THURSDAY
+    # Planned on the first run day, Monday, then deferred: the retry is on a later day (Tuesday),
+    # never on or before the day it failed (daily runs, ADM-SCH-09).
+    assert job.id != job_id and day > WEEK1
     assert job.service_week_start == WEEK1
     # The deferred job itself is never shown as Completed.
     assert sc.db.get(Job, job_id).status == "Deferred"

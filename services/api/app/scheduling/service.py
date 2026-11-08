@@ -708,24 +708,12 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
 def run(
     db: Session,
     society_id: uuid.UUID | None,
-    start: date,
-    days: int | None,
+    day: date,
     admin_id: uuid.UUID | None,
 ) -> list[RunSummary]:
-    """Start scheduling for one society, or all active societies (ADM-SCH-01)."""
-    if days is None:
-        import calendar
+    """Start scheduling for one day, for one society or all active societies (ADM-SCH-01).
 
-        period = lookup.setting(db, "schedule.period")
-        if period == "Daily":
-            days = 1
-        elif period == "Monthly":
-            start = start.replace(day=1)
-            days = calendar.monthrange(start.year, start.month)[1]
-        else:
-            week_start = lookup.setting(db, "schedule.week_start")
-            start -= timedelta(days=(start.weekday() - week_start) % 7)
-            days = 7
+    A run covers the chosen day only (ADM-SCH-09, owner 08-Nov-26)."""
     if society_id is not None:
         society_ids = [society_id]
     else:
@@ -736,7 +724,7 @@ def run(
         )
     out = []
     for sid in society_ids:
-        schedule = get_or_create_schedule(db, sid, start, days)
+        schedule = get_or_create_schedule(db, sid, day, 1)
         out.append(run_schedule(db, schedule, admin_id))
     return out
 

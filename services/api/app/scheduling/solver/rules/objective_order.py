@@ -56,7 +56,15 @@ def optimise(ctx: ModelContext):
         return solver.Solve(model), solver
     remaining = float(params.max_seconds)
     _greedy_hint(ctx)
-    solver.parameters.repair_hint = True
+    # repair_hint stays off. With it on, OR-Tools 9.15 can abort the whole process (a native
+    # CHECK failure, `heuristics.fixed_search != nullptr`) when a stage's time limit ends during
+    # hint repair. Stage slices can be very short, and a slower machine reaches the repair
+    # sooner, so the abort is intermittent. Regression: tests/test_seed_two_societies.py at 0.03 s.
+    # A hint never changes what is allowed, so this changes only how fast a plan is found.
+    # Measured 08-Nov-26 at the 10 s limit (early-stage penalty, higher is better):
+    #   60 cars: repair off -1764, repair on -1782 (off is better)
+    #   120 cars: repair off -3773, repair on -3606 (on is better, by about 4.6%)
+    solver.parameters.repair_hint = False
     best = None
     for i, name in enumerate(names):
         stage = sum(ctx.weight(name) * t for t in ctx.terms[name])
