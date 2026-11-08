@@ -175,3 +175,20 @@ def test_no_notification_is_sent(db, world, tmp_path, monkeypatch):
     scheduled(db, "AB12CD0001", D6, services=(EXT, INT))
     path = sheet(tmp_path, {"AB12CD0001": {D6: "skipped - Customer not available"}})
     load_service_history(db, path, apply=True, since=date(2026, 11, 4), through=date(2026, 11, 7))
+
+
+def test_an_alias_matches_a_sheet_car_to_its_registration(db, world, tmp_path):
+    visit = scheduled(db, "AB12CD0003", D6)
+    path = sheet(tmp_path, {"2001": {D6: "ext"}})
+    report = load_service_history(db, path, apply=True, since=date(2026, 11, 4), through=date(2026, 11, 7),
+                                  aliases={"2001": "AB12CD0003"})
+    assert report.vehicles_matched == 1 and report.updated["Completed"] == 1
+    db.refresh(visit)
+    assert visit.status == "Completed"
+
+
+def test_an_alias_to_an_unknown_registration_stops(db, world, tmp_path):
+    path = sheet(tmp_path, {"2001": {D6: "ext"}})
+    with pytest.raises(ValueError):
+        load_service_history(db, path, apply=True, since=date(2026, 11, 4), through=date(2026, 11, 7),
+                             aliases={"2001": "NOPE0000"})
