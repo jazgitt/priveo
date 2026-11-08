@@ -74,7 +74,7 @@ def test_schr_hier_03_an_objective_the_order_does_not_list_runs_last():
     assert set(result.placed) == {"A"}
 
 
-def test_without_an_order_the_single_weighted_solve_of_version_1_is_kept():
+def test_without_an_order_the_single_weighted_solve_is_kept():
     result = solve_day(CREW, _conflict(), SolverParams())
     assert set(result.placed) == {"A"}
 
@@ -96,7 +96,6 @@ def test_schr_par_15_the_run_snapshot_carries_the_order(world, site_cfg):
     from app.scheduling.models import Schedule
     from tests.scheduling.builders import Scenario
 
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -175,7 +174,7 @@ def _pair_day(seed):
         jobs.append(SolverJob(f"i{n}", f"w{n}", 30, service="Cleaning-Internal", interior=True,
                               week=rng.choice(PAIR_WEEKS), finish_by=rng.choice([None, 540, 600])))
     inputs = {
-        "zones": {"home": home, "vehicle_zone": vehicle_zone,
+        "zones": {"home": {k: [v] for k, v in home.items()}, "vehicle_zone": vehicle_zone,
                   "owned": sorted(set(home.values())), "cross_allowed": True},
         "break_block": {k: PAIR_BREAK for k in home if rng.random() < 0.8},
         "fifo": {"weeks": {j.vehicle: j.week.isoformat() for j in jobs if j.interior}, "created": {}},

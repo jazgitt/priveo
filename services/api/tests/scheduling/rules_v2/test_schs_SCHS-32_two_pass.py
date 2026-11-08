@@ -28,7 +28,6 @@ def test_schr_ext_03_all_exteriors_are_placed_before_any_interior_is_considered(
 
 
 def test_schr_wke_02_the_same_holds_on_a_weekend(world, site_cfg):
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 540))
@@ -96,20 +95,7 @@ def test_schr_hier_02_hard_constraints_hold_and_the_unplaced_are_reported():
     assert set(result.unplaced_codes) == set(result.unplaced)
 
 
-def test_schr_hier_01_version_1_runs_the_single_pass(world, site_cfg, monkeypatch):
-    site_cfg({"scheduler.rules_version": 1})
-    calls = []
-    real = passes.solve_two_pass
-    monkeypatch.setattr(passes, "solve_two_pass", lambda *a, **k: calls.append(1) or real(*a, **k))
-    sc = Scenario(world)
-    sc.slots()
-    sc.cleaner(shift=(480, 600))
-    sc.car(interior_day="Monday")
-    assert sc.run(MONDAY).placed and not calls
-
-
-def test_schr_hier_01_version_2_runs_two_passes_with_each_pass_named(world, site_cfg, monkeypatch):
-    site_cfg({"scheduler.rules_version": 2})
+def test_schr_hier_01_runs_two_passes_with_each_pass_named(world, site_cfg, monkeypatch):
     names = []
     real = passes.solve_day
     monkeypatch.setattr(

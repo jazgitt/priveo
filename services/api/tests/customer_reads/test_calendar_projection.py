@@ -48,8 +48,8 @@ def test_a_future_month_is_projected_from_the_subscription(api, asha, clock):
     assert first["source"] == "projected" and first["status"] == "Projected"
     assert first["visit_id"] is None and first["services"] == ["Cleaning-External"]
     assert first["cutoff_time"] == "07:00" and first["can_change"] is True
-    # 04-Dec-26 is a Friday: the interior care day.
-    assert days["2026-12-04"]["services"] == ["Cleaning-External", "Cleaning-Internal"]
+    # 04-Dec-26 is a Friday. The Interior is not promised on a weekday (SCHS-38).
+    assert days["2026-12-04"]["services"] == ["Cleaning-External"]
 
 
 def test_planned_visits_win_over_projected_days(api, asha, clock):
@@ -258,7 +258,7 @@ def test_preferences_change_the_default_cutoff_and_interior_day(api, asha, clock
     # 11-Oct-26 10:00: tomorrow is still before its 9 PM cutoff.
     assert body["applies_from"] == "2026-10-12"
     days = by_date(month(api, asha, "2026-12"))
-    assert days["2026-12-02"]["services"] == ["Cleaning-External", "Cleaning-Internal"]
+    assert days["2026-12-02"]["services"] == ["Cleaning-External"]  # no weekday Interior (SCHS-38)
     assert days["2026-12-04"]["services"] == ["Cleaning-External"]
     assert days["2026-12-04"]["cutoff_time"] == "08:30"
     bad = api.patch(

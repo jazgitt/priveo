@@ -28,7 +28,7 @@ def _capacity_short(world, cars=3, shift=(480, 540)):
     return sc
 
 
-def test_SCHR_EXT_04_every_unassigned_job_carries_a_code_and_a_text(world, rules_v2):
+def test_SCHR_EXT_04_every_unassigned_job_carries_a_code_and_a_text(world):
     sc = _capacity_short(world)  # room for two 30 minute Exteriors, three cars
     res = sc.run(SUNDAY)
     assert len(res.placed) == 2 and len(res.unassigned) == 1
@@ -37,7 +37,7 @@ def test_SCHR_EXT_04_every_unassigned_job_carries_a_code_and_a_text(world, rules
     assert res.findings == [ReasonCode.CAPACITY_SHORT.value]
 
 
-def test_SCHR_EXT_04_the_run_reports_the_shortfall_in_cars_and_minutes(api, world, rules_v2):
+def test_SCHR_EXT_04_the_run_reports_the_shortfall_in_cars_and_minutes(api, world):
     sc = _capacity_short(world, cars=4)
     sc.db.commit()
     _admin, run = _post_run(api, world)
@@ -47,7 +47,7 @@ def test_SCHR_EXT_04_the_run_reports_the_shortfall_in_cars_and_minutes(api, worl
         select(Job.duration_minutes).where(Job.service == EXTERNAL).limit(1))
 
 
-def test_SCHR_OUT_04_the_job_list_shows_the_code_beside_the_text(api, world, rules_v2):
+def test_SCHR_OUT_04_the_job_list_shows_the_code_beside_the_text(api, world):
     sc = _capacity_short(world)
     sc.db.commit()
     admin, _run = _post_run(api, world)
@@ -59,7 +59,7 @@ def test_SCHR_OUT_04_the_job_list_shows_the_code_beside_the_text(api, world, rul
     assert job["reason"] == ReasonCode.CAPACITY_SHORT.text
 
 
-def test_SCHR_HARD_13_a_job_no_cleaner_window_fits_is_unassigned_with_its_reason(world, rules_v2):
+def test_SCHR_HARD_13_a_job_no_cleaner_window_fits_is_unassigned_with_its_reason(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 500))  # 20 minutes: too short for a 30 minute Exterior
@@ -70,7 +70,7 @@ def test_SCHR_HARD_13_a_job_no_cleaner_window_fits_is_unassigned_with_its_reason
     assert res.unassigned[0].note == ReasonCode.SHIFT_TOO_SHORT.text
 
 
-def test_SCHR_HARD_13_a_day_with_no_cleaner_is_reported_too(world, rules_v2):
+def test_SCHR_HARD_13_a_day_with_no_cleaner_is_reported_too(world):
     sc = Scenario(world)
     sc.slots()
     sc.car()
@@ -80,7 +80,6 @@ def test_SCHR_HARD_13_a_day_with_no_cleaner_is_reported_too(world, rules_v2):
 
 
 def test_SCHR_HARD_09_a_car_that_cannot_be_covered_is_named_in_the_findings(world, site_cfg):
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -92,7 +91,7 @@ def test_SCHR_HARD_09_a_car_that_cannot_be_covered_is_named_in_the_findings(worl
     assert finding is not None and finding.detail == ReasonCode.CUSTOMER_CUTOFF.text
 
 
-def test_SCHR_EXT_01_a_job_placed_on_a_later_run_loses_its_code(world, rules_v2):
+def test_SCHR_EXT_01_a_job_placed_on_a_later_run_loses_its_code(world):
     sc = _capacity_short(world)
     assert sc.run(SUNDAY).reasons() == ["capacity_short"]
     sc.cleaner("Meena", shift=(480, 540))
@@ -100,12 +99,3 @@ def test_SCHR_EXT_01_a_job_placed_on_a_later_run_loses_its_code(world, rules_v2)
     assert res.unassigned == [] and len(res.placed) == 3
     assert world.db.scalars(select(Job.reason_code)).all() == [None, None, None]
 
-
-def test_kill_switch_version_1_writes_no_code_no_finding_and_no_shortfall(api, world):
-    sc = _capacity_short(world)
-    sc.db.commit()
-    _admin, run = _post_run(api, world)
-    assert run["unscheduled"] == 1
-    assert run["unassigned_exteriors"] is None and run["shortfall_cars"] is None
-    assert world.db.scalars(select(Job.reason_code)).all() == [None, None, None]
-    assert world.db.scalars(select(ScheduleFinding)).all() == []

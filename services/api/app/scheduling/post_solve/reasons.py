@@ -3,9 +3,8 @@
 After a day is solved, every job the solver left unassigned gets the stable code
 of its reason (`codes.ReasonCode`) on `Job.reason_code` and a finding with the
 same code, and a job that was placed loses any code it carried. The text stays
-in `Job.note`. Runs only at `scheduler.rules_version` 2 (the hook is skipped
-otherwise). The shortfall of a run, in cars and minutes, is `run_shortfall`;
-the run endpoint adds it to its answer for a site on version 2."""
+in `Job.note`. The shortfall of a run, in cars and minutes, is `run_shortfall`;
+the run endpoint adds it to its answer."""
 from __future__ import annotations
 
 import uuid
@@ -13,7 +12,6 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.scheduling import hooks
 from app.scheduling.entitlements import INTERIOR
 from app.scheduling.models import SERVICES, Job, Schedule, Visit
 
@@ -39,10 +37,8 @@ def after_solve(ctx, day, items, result) -> None:
 
 def run_shortfall(db: Session, schedule: Schedule) -> dict:
     """Unassigned Exteriors of a schedule, the cars they belong to and their
-    minutes. All null when the site is not on rules version 2. A job the admin
-    took off by hand is the admin's choice and is not counted."""
-    if hooks._version(db, schedule.society_id) != 2:
-        return {"unassigned_exteriors": None, "shortfall_cars": None, "shortfall_minutes": None}
+    minutes. A job the admin took off by hand is the admin's choice and is not
+    counted."""
     exterior = SERVICES[0]
     rows = db.execute(
         select(Visit.vehicle_id, Job.duration_minutes)

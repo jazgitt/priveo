@@ -8,8 +8,7 @@ one calendar week are fine when they are on separate days for different service
 weeks: the days are separate solves, and the entitlement ledger holds one row for
 each service week (`demand_providers/entitlement.py`), so no week is planned twice.
 
-The caller marks a job `interior` only for a site on `scheduler.rules_version` 2,
-so at version 1 this rule does nothing. A job that this rule leaves out is
+The caller marks a job `interior` only when the job uses the entitlement. A job that this rule leaves out is
 reported as `entitlement_used`.
 """
 from __future__ import annotations

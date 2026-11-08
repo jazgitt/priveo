@@ -4,8 +4,7 @@ After a day is solved, every Interior job of the plan that holds no row yet gets
 one: the row the demand provider chose for that car and day
 (`ctx.interior_rows`), else the oldest Pending row of the car (an Interior placed
 by hand, or a next-day retry). The row becomes Planned and the job carries the
-row's service week. Runs only at `scheduler.rules_version` 2 (the hook is
-skipped otherwise)."""
+row's service week."""
 from __future__ import annotations
 
 from sqlalchemy import select

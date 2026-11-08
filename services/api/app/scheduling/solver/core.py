@@ -38,20 +38,24 @@ class SolverParams:
     max_seconds: float = field(default_factory=lambda: float(_default("scheduler.solve_seconds")))
     seed: int = field(default_factory=lambda: _default("scheduler.seed"))
     workers: int = field(default_factory=lambda: _default("scheduler.workers"))
-    # The run's settings snapshot (version 2 only; empty at version 1). Rule
+    # The run's settings snapshot (empty for a direct call). Rule
     # modules read weights, the objective order and times from it (SCHS-33).
     settings: dict[str, Any] = field(default_factory=dict, compare=False)
 
     @classmethod
-    def load(cls, db) -> SolverParams:
-        """The global settings, read through the lookup."""
-        from app.directory import lookup
+    def load(cls, db, society_id) -> SolverParams:
+        """The scheduler's settings for a site, read from the stored values
+        (`site_settings.read`): no cache and no default in code (SCHR-CFG-04)."""
+        from app.directory import site_settings
+
+        def read(key: str):
+            return site_settings.read(db, society_id, key)
 
         return cls(
-            step=int(lookup.setting(db, "scheduler.grid_minutes")),
-            max_seconds=float(lookup.setting(db, "scheduler.solve_seconds")),
-            seed=int(lookup.setting(db, "scheduler.seed")),
-            workers=int(lookup.setting(db, "scheduler.workers")),
+            step=int(read("scheduler.grid_minutes")),
+            max_seconds=float(read("scheduler.solve_seconds")),
+            seed=int(read("scheduler.seed")),
+            workers=int(read("scheduler.workers")),
         )
 
 
@@ -71,7 +75,7 @@ class SolverJob:
     fixed: tuple[str, int] | None = None  # (crew key, start minute)
     windows: tuple[tuple[int, int], ...] | None = None
     hard_cutoff: bool = False  # finish_by is a hard limit (SCHS-19)
-    # The plan's own Interior, set by the caller only at version 2: at most one a
+    # The plan's own Interior, set by the caller: at most one a
     # day for a car, and one for a service week (SCHS-37).
     interior: bool = False
     week: date | None = None  # the service week it counts against, when known
@@ -87,7 +91,8 @@ class SolverResult:
 
 
 def _unplace(result: SolverResult, key: str, code: ReasonCode) -> None:
-    result.unplaced[key] = code.text
+    # A code without a text yet stores an empty note (Job.note is not null).
+    result.unplaced[key] = code.text or ""
     result.unplaced_codes[key] = code
 
 
@@ -122,8 +127,8 @@ class ModelContext:
 
     def add_term(self, name: str, expr) -> None:
         """Add a term to a named objective. The flat objective gets it times the
-        weight (the single weighted solve of version 1); the ordered solve of
-        version 2 takes the terms by name (`rules/objective_order.py`)."""
+        weight (the single weighted solve, used by direct calls); the ordered
+        solve of a run takes the terms by name (`rules/objective_order.py`)."""
         self.terms.setdefault(name, []).append(expr)
         self.objective.append(self.weight(name) * expr)
 

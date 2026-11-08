@@ -3,7 +3,6 @@
 After a day is solved, every placed job whose car is in a zone other than the
 home zone of its cleaner gets `Job.cross_zone_reason`; any other job loses a
 reason it carried. The facts come from the solver rule `zones` (`ctx.zone_days`).
-Runs only at `scheduler.rules_version` 2 (the hook is skipped otherwise).
 
 The reason is one of four texts (SCHR-ZONE-06):
 
@@ -65,14 +64,14 @@ def after_solve(ctx, day, items, result) -> None:
         zone = cars.get(str(visit.vehicle_id))
         if zone is None or job.crew_id is None or job.start_minute is None or job.status == "Skipped":
             continue
-        mine = {home.get(k) for k in home if cleaner(k) == job.crew_id} - {None}
+        mine = {z for k in home if cleaner(k) == job.crew_id for z in home[k]}
         if not mine or zone in mine:
-            continue  # no home zone for this cleaner, or the job is in it
-        owners = {cleaner(k) for k, z in home.items() if z == zone}
+            continue  # no home zone for this cleaner, or the job is in one of them
+        owners = {cleaner(k) for k, z in home.items() if zone in z}
         if not owners:
             job.cross_zone_reason = ABSENT
             continue
-        windows = [data["crew"][k] for k, z in home.items() if z == zone]
+        windows = [data["crew"][k] for k, z in home.items() if zone in z]
         busy = [span for cid in owners for span in held.get(cid, ())]
         room, in_time = _fits(windows, busy, job.duration_minutes, job.finish_by_minute)
         if not room:

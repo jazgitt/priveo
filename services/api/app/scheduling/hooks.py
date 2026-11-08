@@ -20,14 +20,11 @@ Folder, function a module may define, and when it runs:
 Each module may also set `ORDER` (default 100; lower runs first, ties by
 module name). A name that starts with an underscore is skipped.
 
-Kill switch: the run hooks run only when the site is on `scheduler.rules_version`
-2 (`ctx.active`). Handlers can read the version from `ctx.rules_version`.
 """
 from __future__ import annotations
 
 import importlib
 import pkgutil
-import uuid
 from types import ModuleType
 
 DEFAULT_ORDER = 100
@@ -54,8 +51,6 @@ def _each(folder: str, function: str):
 
 
 def demand_providers(ctx, demand: list) -> list:
-    if not ctx.active:
-        return demand
     extra: list = []
     for fn in _each("demand_providers", "provide"):
         extra.extend(fn(ctx, demand) or [])
@@ -63,49 +58,16 @@ def demand_providers(ctx, demand: list) -> list:
 
 
 def sync_existing_job(ctx, job, item) -> None:
-    if not ctx.active:
-        return
     for fn in _each("job_sync", "sync"):
         fn(ctx, job, item)
 
 
 def after_solve(ctx, day, items, result) -> None:
-    if not ctx.active:
-        return
     for fn in _each("post_solve", "after_solve"):
         fn(ctx, day, items, result)
 
 
-def job_rules_version(db, job) -> int:
-    """The rules version of the site a job belongs to (1 when unknown)."""
-    from sqlalchemy import select
-
-    from app.scheduling.models import Schedule, Visit
-
-    society_id = db.scalar(
-        select(Schedule.society_id).join(Visit, Visit.schedule_id == Schedule.id)
-        .where(Visit.id == job.visit_id))
-    return 1 if society_id is None else _version(db, society_id)
-
-
 def job_status_changed(db, job, source: str) -> None:
-    """Nothing is read from the database unless a handler exists and the job's
-    site is on rules version 2."""
-    handlers = list(_each("hook_handlers", "on_status_change"))
-    if not handlers:
-        return
-    if job_rules_version(db, job) != 2:
-        return
-    for fn in handlers:
+    """Nothing is read from the database unless a handler exists."""
+    for fn in _each("hook_handlers", "on_status_change"):
         fn(db, job, source)
-
-
-def _version(db, society_id: uuid.UUID) -> int:
-    """The site's rules version; a missing setting means 1 (the old rules)."""
-    from app.directory import lookup
-    from app.directory.site_settings import SettingMissing
-
-    try:
-        return int(lookup.rules_version(db, society_id))
-    except SettingMissing:
-        return 1

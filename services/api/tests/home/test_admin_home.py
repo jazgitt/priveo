@@ -78,9 +78,10 @@ def test_day_schedule_groups_jobs_by_crew_and_hides_the_customer(api, admin, wor
                 params={"date": SUNDAY.isoformat(), "society_id": str(world.society.id)})
     assert r.status_code == 200, r.text
     day = r.json()
-    assert day["date"] == SUNDAY.isoformat() and day["total"] == 4
+    # Four cars, each with an Exterior and an Interior (SCHS-36).
+    assert day["date"] == SUNDAY.isoformat() and day["total"] == 8
     assert day["schedule_status"] == "Draft"
-    assert day["done"] == 0 and day["left"] == 4
+    assert day["done"] == 0 and day["left"] == 8
     names = [c["crew_name"] for c in day["crew"] if c["crew_id"]]
     assert names == sorted(names) and {"Ravi", "Sita"} <= set(names)
     ravi = next(c for c in day["crew"] if c["crew_id"] == str(crew.id))
@@ -95,7 +96,7 @@ def test_day_schedule_without_a_society_and_with_an_empty_day(api, admin, world,
     run_week()
     day = api.get("/v1/admin/schedule/day", headers=admin,
                   params={"date": SUNDAY.isoformat()}).json()
-    assert day["society_id"] is None and day["total"] == 1
+    assert day["society_id"] is None and day["total"] == 2  # the Exterior and the Interior
     empty = api.get("/v1/admin/schedule/day", headers=admin,
                     params={"date": "2030-01-01"}).json()
     assert empty["total"] == 0 and empty["schedule_status"] is None and empty["crew"] == []

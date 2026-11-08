@@ -158,6 +158,23 @@ def move_job(
     return rows[0]
 
 
+class HandLockIn(BaseModel):
+    locked: bool
+
+
+@admin.put("/jobs/{job_id}/hand-lock", response_model=AdminJob)
+def put_hand_lock(
+    job_id: uuid.UUID,
+    body: HandLockIn,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Locks (true) or unlocks (false) a job placed by hand (item 15). A run keeps a
+    locked placement; an unlocked one may move. 422 for a job not placed by hand."""
+    job = service.set_hand_lock(db, job_id, body.locked, user.id)
+    return service.job_rows(db, Job.id == job.id)[0]
+
+
 class MoveDateResult(BaseModel):
     original: AdminJob
     moved: AdminJob

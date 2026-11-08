@@ -12,7 +12,7 @@ from tests.scheduling import scenarios as s
 from tests.scheduling.builders import INTERNAL, Scenario
 
 
-def _sc(world, rules_v2):
+def _sc(world):
     return Scenario(world)
 
 
@@ -27,8 +27,8 @@ def _row(sc, car, week):
         InteriorEntitlement.service_week_start == week))
 
 
-def test_schr_par_02_nothing_is_planned_on_the_weekly_off(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_par_02_nothing_is_planned_on_the_weekly_off(world):
+    sc = _sc(world)
     built = s.weekly_off_wednesday(sc)
     result = sc.run(*built["run"])
     wed = [p for p in result.placed if p.day == s.WEDNESDAY] + \
@@ -37,8 +37,8 @@ def test_schr_par_02_nothing_is_planned_on_the_weekly_off(world, rules_v2):
     assert result.placed_on(s.TUESDAY) and result.placed_on(s.THURSDAY)
 
 
-def test_schr_zone_03_home_zone_first_then_one_cross_zone_job_with_a_reason(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_zone_03_home_zone_first_then_one_cross_zone_job_with_a_reason(world):
+    sc = _sc(world)
     b = s.home_zones_absent_and_zoneless_car(sc)
     sc.run(*b["run"])
     crew_of = {v.vehicle_id: j.crew_id for j, v in _job_rows(sc) if j.crew_id is not None}
@@ -56,8 +56,8 @@ def test_schr_zone_03_home_zone_first_then_one_cross_zone_job_with_a_reason(worl
     assert b["chetan"].id not in crew_of.values()
 
 
-def test_schr_brk_06_break_comes_from_the_most_specific_rule(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_brk_06_break_comes_from_the_most_specific_rule(world):
+    sc = _sc(world)
     b = s.breaks_site_crew_and_date_range(sc)
     site = effective_break(sc.db, b["site"], b["monday"])
     crew = effective_break(sc.db, b["crew"], b["monday"])
@@ -69,8 +69,8 @@ def test_schr_brk_06_break_comes_from_the_most_specific_rule(world, rules_v2):
     assert (tuesday.start_minute, tuesday.end_minute, tuesday.source) == (540, 570, "date")
 
 
-def test_schr_zone_09_trainee_follows_the_member_and_adds_no_capacity(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_zone_09_trainee_follows_the_member_and_adds_no_capacity(world):
+    sc = _sc(world)
     b = s.trainee_follows_member(sc)
     result = sc.run(*b["run"])
     placed = result.placed_on(s.MONDAY)
@@ -80,8 +80,8 @@ def test_schr_zone_09_trainee_follows_the_member_and_adds_no_capacity(world, rul
     assert len(unplaced) == 1 and unplaced[0].reason_code == ReasonCode.CAPACITY_SHORT
 
 
-def test_schr_int_12_oldest_service_week_gets_the_one_interior(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_int_12_oldest_service_week_gets_the_one_interior(world):
+    sc = _sc(world)
     b = s.interior_oldest_week_first(sc)
     result = sc.run(*b["run"])
     interiors = [p for p in result.placed if p.service == INTERNAL and p.day == s.TUESDAY]
@@ -93,15 +93,15 @@ def test_schr_int_12_oldest_service_week_gets_the_one_interior(world, rules_v2):
 @pytest.mark.xfail(strict=True, reason="Open: an Interior the planner could not place "
                    "keeps its ledger row as Planned; SCHR-CUT-03 and INT-21 say it stays owed "
                    "(Pending). Remove the marker when the link step leaves unplaced rows Pending.")
-def test_schr_int_21_an_interior_left_unplaced_stays_pending(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_int_21_an_interior_left_unplaced_stays_pending(world):
+    sc = _sc(world)
     b = s.interior_oldest_week_first(sc)
     sc.run(*b["run"])
     assert _row(sc, b["new"], s.WEEK2).status == "Pending"
 
 
-def test_schr_wke_01_saturday_cutoff_is_late_not_lost(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_wke_01_saturday_cutoff_is_late_not_lost(world):
+    sc = _sc(world)
     b = s.weekend_cutoff_is_soft(sc)
     sat = sc.run(s.SATURDAY, 1)
     placed = [p for p in sat.placed_on(s.SATURDAY, car=b["car"])]
@@ -113,8 +113,8 @@ def test_schr_wke_01_saturday_cutoff_is_late_not_lost(world, rules_v2):
     assert [u.reason_code for u in unplaced] == [ReasonCode.CUSTOMER_CUTOFF]
 
 
-def test_schr_cut_01_weekday_cutoff_is_a_hard_end(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_cut_01_weekday_cutoff_is_a_hard_end(world):
+    sc = _sc(world)
     b = s.weekday_cutoff_is_hard(sc)
     result = sc.run(*b["run"])
     assert result.placed_on(s.MONDAY, car=b["car"]) == []
@@ -122,8 +122,8 @@ def test_schr_cut_01_weekday_cutoff_is_a_hard_end(world, rules_v2):
     assert [u.reason_code for u in unplaced] == [ReasonCode.CUSTOMER_CUTOFF]
 
 
-def test_schr_hard_01_sick_leave_and_late_start_limit_the_crew(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_hard_01_sick_leave_and_late_start_limit_the_crew(world):
+    sc = _sc(world)
     b = s.sick_leave_and_late_start(sc)
     result = sc.run(*b["run"])
     placed = result.placed_on(s.MONDAY)
@@ -133,8 +133,8 @@ def test_schr_hard_01_sick_leave_and_late_start_limit_the_crew(world, rules_v2):
     assert all(p.start >= 600 for p in chetan_jobs)
 
 
-def test_schr_hier_08_hand_placement_past_cutoff_is_kept_and_flagged(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_hier_08_hand_placement_past_cutoff_is_kept_and_flagged(world):
+    sc = _sc(world)
     b = s.hand_placement_past_cutoff(sc)
     result = sc.run(*b["run"])
     placed = result.placed_on(s.MONDAY, car=b["car"])
@@ -142,8 +142,8 @@ def test_schr_hier_08_hand_placement_past_cutoff_is_kept_and_flagged(world, rule
     assert placed[0].late  # the job is marked Late, as ADM-SCH-07 says
 
 
-def test_schr_def_03_deferred_interior_goes_back_to_its_week(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_def_03_deferred_interior_goes_back_to_its_week(world):
+    sc = _sc(world)
     b = s.deferred_interior_returns_to_pending(sc)
     service.set_job_status(sc.db, b["job"].id, "Deferred")
     sc.db.expire_all()
@@ -151,8 +151,8 @@ def test_schr_def_03_deferred_interior_goes_back_to_its_week(world, rules_v2):
     assert row.status == "Pending" and row.service_week_start == s.WEEK1
 
 
-def test_schr_ext_04_schr_ext_01_shortfall_serves_exteriors_first_and_reports_the_rest(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_ext_04_schr_ext_01_shortfall_serves_exteriors_first_and_reports_the_rest(world):
+    sc = _sc(world)
     b = s.exterior_shortfall(sc)
     result = sc.run(*b["run"])
     day = result.placed_on(s.TUESDAY)
@@ -165,8 +165,8 @@ def test_schr_ext_04_schr_ext_01_shortfall_serves_exteriors_first_and_reports_th
     assert [u.reason_code for u in interior] == [ReasonCode.CAPACITY_SHORT]
 
 
-def test_schr_hard_13_a_window_too_short_for_the_job_is_reported(world, rules_v2):
-    sc = _sc(world, rules_v2)
+def test_schr_hard_13_a_window_too_short_for_the_job_is_reported(world):
+    sc = _sc(world)
     b = s.shift_too_short(sc)
     result = sc.run(*b["run"])
     assert result.placed_on(s.TUESDAY, car=b["car"]) == []

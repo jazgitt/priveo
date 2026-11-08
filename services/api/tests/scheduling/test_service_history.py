@@ -45,7 +45,11 @@ def test_the_six_states_and_the_filter(world, api, admin):
         .where(Visit.vehicle_id == vehicle.id, Job.service == "Cleaning-External"))}
     service.set_job_status(world.db, jobs["Cleaning-External"].id, "Completed")
     missed(world, jobs["Cleaning-Internal"])           # Sunday: Partially Completed
+    int_job = {v.date: j for j, v in world.db.execute(
+        select(Job, Visit).join(Visit, Visit.id == Job.visit_id)
+        .where(Visit.vehicle_id == vehicle.id, Job.service == "Cleaning-Internal"))}
     service.set_job_status(world.db, day_job[monday].id, "Completed")      # Monday: Completed
+    service.set_job_status(world.db, int_job[monday].id, "Completed")      # and its Interior (SCHS-36)
     missed(world, day_job[tuesday])                    # Tuesday: Not Completed
     service.set_job_status(world.db, day_job[wednesday].id, "Skipped")     # Wednesday: Cancelled
     world.db.expire_all()

@@ -119,7 +119,9 @@ def test_next_day_internal_retry_preserves_frozen_work_and_calendar_link(world, 
     result = resolve(api, admin, job, "Reschedule")
     assert result.status_code == 200, result.text
     assert result.json()["rescheduled_on"] == (SUNDAY + timedelta(days=1)).isoformat()
-    assert result.json()["replacement_assigned"]
+    # The car already has its own Interior on Monday, and one Interior a day is a hard rule (SCHR-HARD-11),
+    # so the retry is not placed.
+    assert not result.json()["replacement_assigned"]
     assert resolve(api, admin, job, "Reschedule").status_code == 200
     assert not any(
         j["id"] == str(job.id)
@@ -131,7 +133,7 @@ def test_next_day_internal_retry_preserves_frozen_work_and_calendar_link(world, 
     )
     world.db.expire_all()
     redo = world.db.scalar(select(Job).where(Job.source_job_id == job.id))
-    assert redo and redo.crew_id
+    assert redo and redo.crew_id is None  # the car has its own Interior that day (SCHR-HARD-11)
     assert world.db.get(Job, job.id).status == "Could not complete"
     for jid, placement in before.items():
         original = world.db.get(Job, jid)

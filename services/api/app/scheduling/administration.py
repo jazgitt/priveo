@@ -130,7 +130,8 @@ def preview(db, schedule):
                     else service.service_windows(db, schedule.society_id, job.service, day),
                 )
             )
-        result = solve_day(service.solver_crews(windows), jobs, SolverParams.load(db))
+        result = solve_day(service.solver_crews(windows), jobs,
+                           SolverParams.load(db, schedule.society_id))
         for job, visit in rows:
             proposed = result.placed.get(str(job.id))
             if proposed:

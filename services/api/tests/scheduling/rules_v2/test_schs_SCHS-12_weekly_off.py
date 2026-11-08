@@ -1,10 +1,9 @@
 """SCHS-12: the site's closed weekday gives no cleaner window, no job window and
-no capacity, for all three services, and only at rules version 2."""
+no capacity, for all three services, and for the day."""
 from datetime import timedelta
 
 import pytest
 
-from app.directory import lookup, rule_seed, site_settings
 from app.directory.models import WorkingSlot
 from app.scheduling import capacity, service, windows
 from tests.scheduling.conftest import SUNDAY
@@ -23,17 +22,10 @@ def _slots(world, closed_weekday, services=SERVICES):
                                  start_minute=300, end_minute=660, days=days))
 
 
-def _version(world, value):
-    rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", value, None)
-    lookup.invalidate()
-
-
-def _site(world, closed_weekday=2, version=2, services=SERVICES):
+def _site(world, closed_weekday=2, services=SERVICES):
     world.add_crew()
     _slots(world, closed_weekday, services)
     world.db.commit()
-    _version(world, version)
     return service.load_crew(world.db, world.society.id)
 
 
@@ -104,26 +96,11 @@ def test_schr_par_02_a_service_slot_on_the_day_keeps_it_open(world):
 def test_schr_par_02_a_site_without_slots_has_no_closed_day(world):
     world.add_crew()
     world.db.commit()
-    _version(world, 2)
     crew = service.load_crew(world.db, world.society.id)
     assert service.availability(world.db, crew, WEEK)[WEDNESDAY]
 
 
-def test_schr_par_02_at_rules_version_1_nothing_changes(world):
-    crew = _site(world, version=1)
-    assert service.availability(world.db, crew, WEEK)[WEDNESDAY]
-    assert _cap(world, WEDNESDAY)["capacity_minutes"] == 60
-
-
-def test_schr_par_02_without_the_version_setting_nothing_changes(world):
-    world.add_crew()
-    _slots(world, 2)
-    world.db.commit()
-    crew = service.load_crew(world.db, world.society.id)
-    assert service.availability(world.db, crew, WEEK)[WEDNESDAY]
-
-
-def test_schr_par_16_a_site_with_no_slots_plans_no_work(world, rules_v2):
+def test_schr_par_16_a_site_with_no_slots_plans_no_work(world):
     # Option A (owner, 06-Nov-26): no slot means no work. The old 05:00 to 11:00
     # fallback no longer gives a site without slots any window.
     from tests.scheduling.builders import Scenario

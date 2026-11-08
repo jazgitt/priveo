@@ -45,6 +45,11 @@ def engine():
     engine = make_engine(os.environ.get("TEST_DATABASE_URL", "sqlite://"))
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    # The scheduler's global defaults, as the seed tool leaves them in every database (SCHR-CFG-04).
+    from app.directory import rule_seed
+    with Session(engine) as session:
+        rule_seed.seed_rule_keys(session)
+        session.commit()
     yield engine
     Base.metadata.drop_all(engine)
     engine.dispose()

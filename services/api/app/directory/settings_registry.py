@@ -91,9 +91,6 @@ OBJECTIVE_NAMES: tuple[str, ...] = (
 )
 DEFAULT_OBJECTIVE_ORDER = ",".join(OBJECTIVE_NAMES)
 RULE_DEFINITIONS: tuple[SettingDef, ...] = (
-    # Kill switch (build stories, rule 7): behaviour of v2 runs only at 2.
-    SettingDef("scheduler.rules_version", "int", "Scheduling rules version (1 old, 2 new)",
-               "scheduler", 1, minimum=1, maximum=2, site=True),
     SettingDef("scheduler.grid_minutes", "int", "Planning grid step in minutes", "schedule", 5,
                minimum=1, maximum=60),
     SettingDef("scheduler.solve_seconds", "int", "Solver time limit in seconds", "schedule", 10,

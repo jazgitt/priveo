@@ -1,34 +1,6 @@
 {
  "DLF Meadows:availability": {
-  "2026-10-18": [
-   [
-    "Asha",
-    [
-     [
-      360,
-      420
-     ]
-    ]
-   ],
-   [
-    "Bala",
-    [
-     [
-      300,
-      780
-     ]
-    ]
-   ],
-   [
-    "Dev",
-    [
-     [
-      330,
-      720
-     ]
-    ]
-   ]
-  ],
+  "2026-10-18": [],
   "2026-10-19": [
    [
     "Asha",
@@ -76,7 +48,7 @@
     "Bala",
     [
      [
-      300,
+      330,
       780
      ]
     ]
@@ -105,7 +77,7 @@
     "Bala",
     [
      [
-      300,
+      330,
       780
      ]
     ]
@@ -125,7 +97,7 @@
     "Bala",
     [
      [
-      300,
+      330,
       780
      ]
     ]
@@ -154,7 +126,7 @@
     "Bala",
     [
      [
-      300,
+      330,
       780
      ]
     ]
@@ -183,7 +155,7 @@
     "Bala",
     [
      [
-      300,
+      330,
       780
      ]
     ]
@@ -204,25 +176,15 @@
    "availability": [
     {
      "crew_id": "Asha",
-     "reason": "Works 06:00-07:00.",
+     "reason": "Works .",
      "status": "Working",
-     "windows": [
-      {
-       "end": 420,
-       "start": 360
-      }
-     ]
+     "windows": []
     },
     {
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works .",
      "status": "Working",
-     "windows": [
-      {
-       "end": 780,
-       "start": 300
-      }
-     ]
+     "windows": []
     },
     {
      "crew_id": "Chitra",
@@ -232,37 +194,13 @@
     },
     {
      "crew_id": "Dev",
-     "reason": "Works 05:30-12:00.",
+     "reason": "Works .",
      "status": "Working",
-     "windows": [
-      {
-       "end": 720,
-       "start": 330
-      }
-     ]
+     "windows": []
     }
    ],
-   "capacity_minutes": 930,
-   "crew": [
-    {
-     "minutes": 60,
-     "name": "Asha",
-     "role": "Member",
-     "slots": "06:00-07:00"
-    },
-    {
-     "minutes": 480,
-     "name": "Bala",
-     "role": "Member",
-     "slots": "05:00-13:00"
-    },
-    {
-     "minutes": 390,
-     "name": "Dev",
-     "role": "Member",
-     "slots": "05:30-12:00"
-    }
-   ],
+   "capacity_minutes": 0,
+   "crew": [],
    "date": "2026-10-18",
    "demand": [],
    "demand_minutes": 0,
@@ -283,6 +221,8 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
      "reason": "Late start from 07:00. Works 07:00-13:00.",
      "status": "Partial",
@@ -300,6 +240,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Dev",
      "reason": "Works 05:30-12:00, 16:00-18:00.",
      "status": "Working",
@@ -315,7 +257,7 @@
      ]
     }
    ],
-   "capacity_minutes": 930,
+   "capacity_minutes": 870,
    "crew": [
     {
      "minutes": 60,
@@ -324,16 +266,16 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 360,
+     "minutes": 330,
      "name": "Bala",
      "role": "Member",
-     "slots": "07:00-13:00"
+     "slots": "07:00-09:30, 10:00-13:00"
     },
     {
-     "minutes": 510,
+     "minutes": 480,
      "name": "Dev",
      "role": "Member",
-     "slots": "05:30-12:00, 16:00-18:00"
+     "slots": "05:30-09:30, 10:00-12:00, 16:00-18:00"
     }
    ],
    "date": "2026-10-19",
@@ -363,13 +305,15 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works 05:30-13:00.",
      "status": "Working",
      "windows": [
       {
        "end": 780,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -380,6 +324,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Dev",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -391,7 +337,7 @@
      ]
     }
    ],
-   "capacity_minutes": 930,
+   "capacity_minutes": 840,
    "crew": [
     {
      "minutes": 60,
@@ -400,16 +346,16 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 480,
+     "minutes": 420,
      "name": "Bala",
      "role": "Member",
-     "slots": "05:00-13:00"
+     "slots": "05:30-09:30, 10:00-13:00"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Dev",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-20",
@@ -445,13 +391,15 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works 05:30-13:00.",
      "status": "Working",
      "windows": [
       {
        "end": 780,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -468,7 +416,7 @@
      "windows": []
     }
    ],
-   "capacity_minutes": 540,
+   "capacity_minutes": 480,
    "crew": [
     {
      "minutes": 60,
@@ -477,10 +425,10 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 480,
+     "minutes": 420,
      "name": "Bala",
      "role": "Member",
-     "slots": "05:00-13:00"
+     "slots": "05:30-09:30, 10:00-13:00"
     }
    ],
    "date": "2026-10-21",
@@ -510,13 +458,15 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works 05:30-13:00.",
      "status": "Working",
      "windows": [
       {
        "end": 780,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -527,6 +477,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Dev",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -538,7 +490,7 @@
      ]
     }
    ],
-   "capacity_minutes": 930,
+   "capacity_minutes": 840,
    "crew": [
     {
      "minutes": 60,
@@ -547,16 +499,16 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 480,
+     "minutes": 420,
      "name": "Bala",
      "role": "Member",
-     "slots": "05:00-13:00"
+     "slots": "05:30-09:30, 10:00-13:00"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Dev",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-22",
@@ -586,13 +538,15 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works 05:30-13:00.",
      "status": "Working",
      "windows": [
       {
        "end": 780,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -603,6 +557,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Dev",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -614,7 +570,7 @@
      ]
     }
    ],
-   "capacity_minutes": 930,
+   "capacity_minutes": 840,
    "crew": [
     {
      "minutes": 60,
@@ -623,16 +579,16 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 480,
+     "minutes": 420,
      "name": "Bala",
      "role": "Member",
-     "slots": "05:00-13:00"
+     "slots": "05:30-09:30, 10:00-13:00"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Dev",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-23",
@@ -662,13 +618,15 @@
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Bala",
-     "reason": "Works 05:00-13:00.",
+     "reason": "Works 05:30-13:00.",
      "status": "Working",
      "windows": [
       {
        "end": 780,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -679,6 +637,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Dev",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -690,7 +650,7 @@
      ]
     }
    ],
-   "capacity_minutes": 930,
+   "capacity_minutes": 840,
    "crew": [
     {
      "minutes": 60,
@@ -699,16 +659,16 @@
      "slots": "06:00-07:00"
     },
     {
-     "minutes": 480,
+     "minutes": 420,
      "name": "Bala",
      "role": "Member",
-     "slots": "05:00-13:00"
+     "slots": "05:30-09:30, 10:00-13:00"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Dev",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-24",
@@ -794,7 +754,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -814,7 +774,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -845,7 +805,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -856,7 +816,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -876,7 +836,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -896,7 +856,7 @@
     "Esha",
     [
      [
-      300,
+      330,
       600
      ]
     ]
@@ -916,17 +876,21 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -938,19 +902,19 @@
      ]
     }
    ],
-   "capacity_minutes": 690,
+   "capacity_minutes": 600,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-18",
@@ -962,17 +926,21 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -984,19 +952,19 @@
      ]
     }
    ],
-   "capacity_minutes": 690,
+   "capacity_minutes": 600,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-19",
@@ -1014,6 +982,8 @@
      "windows": []
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -1025,13 +995,13 @@
      ]
     }
    ],
-   "capacity_minutes": 390,
+   "capacity_minutes": 360,
    "crew": [
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-20",
@@ -1043,13 +1013,15 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
@@ -1060,13 +1032,13 @@
      "windows": []
     }
    ],
-   "capacity_minutes": 300,
+   "capacity_minutes": 240,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     }
    ],
    "date": "2026-10-21",
@@ -1078,17 +1050,21 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -1100,19 +1076,19 @@
      ]
     }
    ],
-   "capacity_minutes": 690,
+   "capacity_minutes": 600,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-22",
@@ -1124,17 +1100,21 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -1146,19 +1126,19 @@
      ]
     }
    ],
-   "capacity_minutes": 690,
+   "capacity_minutes": 600,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-23",
@@ -1170,17 +1150,21 @@
   {
    "availability": [
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Esha",
-     "reason": "Works 05:00-10:00.",
+     "reason": "Works 05:30-10:00.",
      "status": "Working",
      "windows": [
       {
        "end": 600,
-       "start": 300
+       "start": 330
       }
      ]
     },
     {
+     "break_end": 600,
+     "break_start": 570,
      "crew_id": "Farid",
      "reason": "Works 05:30-12:00.",
      "status": "Working",
@@ -1192,19 +1176,19 @@
      ]
     }
    ],
-   "capacity_minutes": 690,
+   "capacity_minutes": 600,
    "crew": [
     {
-     "minutes": 300,
+     "minutes": 240,
      "name": "Esha",
      "role": "Member",
-     "slots": "05:00-10:00"
+     "slots": "05:30-09:30"
     },
     {
-     "minutes": 390,
+     "minutes": 360,
      "name": "Farid",
      "role": "Member",
-     "slots": "05:30-12:00"
+     "slots": "05:30-09:30, 10:00-12:00"
     }
    ],
    "date": "2026-10-24",

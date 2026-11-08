@@ -34,6 +34,7 @@ from app.scheduling.models import (
     ScheduleFinding,
     SchedulingCrew,
     SchedulingCrewException,
+    SchedulingCrewHomeZone,
     SocietySetting,
     Visit,
 )
@@ -169,7 +170,7 @@ class Scenario:
                 reporting=None, first_job=None, paired=None) -> SchedulingCrew:
         """A cleaner. `shift` is (start, end) minutes; it defaults to the model
         default. `days` limits the weekdays worked (Monday 0). `zone` is the
-        home zone name. `reporting` and `first_job` are the per-crew minutes."""
+        home zone name, or a list of them. `reporting` and `first_job` are the per-crew minutes."""
         member = self.world.add_crew(name=name, role=role, paired=paired,
                                      **({"start": shift[0], "end": shift[1]} if shift else {}))
         if days is not None:
@@ -177,9 +178,10 @@ class Scenario:
             member.working_hours = [
                 {"day": WEEKDAYS[i], "working": i in days, "start": s, "end": e}
                 for i in ALL_DAYS]
-        if zone:
-            member.home_zone_id = self.zone(zone).id
         member.reporting_minute, member.first_job_minute = reporting, first_job
+        self.db.flush()
+        for zone_name in ([zone] if isinstance(zone, str) else (zone or [])):
+            self.db.add(SchedulingCrewHomeZone(crew_id=member.id, zone_id=self.zone(zone_name).id))
         self.db.flush()
         self.cleaners[name] = member
         return member
@@ -260,7 +262,7 @@ class Scenario:
             self.db.add(visit)
             self.db.flush()
         job = Job(visit_id=visit.id, service=service_name, crew_id=cleaner.id,
-                  start_minute=start, manual=True,
+                  start_minute=start, manual=True, hand_locked=True,
                   duration_minutes=duration or lookup.durations(self.db)[service_name])
         self.db.add(job)
         self.db.flush()

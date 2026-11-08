@@ -64,7 +64,7 @@ def test_schr_int_17_the_catch_up_example_shows_one_overdue_day_and_the_completi
     assert week2["carry_over"]["carried_in"] == 1 and week2["carry_over"]["still_owed"] == 0
 
 
-def test_schr_out_02_totals_match_a_hand_computed_week(api, world, rules_v2):
+def test_schr_out_02_totals_match_a_hand_computed_week(api, world):
     sc = Scenario(world)
     a, b, c = sc.cars(3)
     for car, day, status in [(a, MON2, "Completed"), (b, MON2, "Completed"),

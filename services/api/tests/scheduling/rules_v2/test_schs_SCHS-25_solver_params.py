@@ -1,6 +1,7 @@
 """SCHS-25: grid step, time limit, seed and workers come from settings."""
 import inspect
 import re
+import uuid
 
 from ortools.sat.python import cp_model
 
@@ -61,5 +62,5 @@ def test_seed_changes_tie_breaks_only():
 def test_load_reads_the_settings(db):
     from app.directory.service import save_settings
     save_settings(db, None, {"scheduler.grid_minutes": 10, "scheduler.seed": 3})
-    p = SolverParams.load(db)
+    p = SolverParams.load(db, uuid.uuid4())  # no site value: the stored global one
     assert (p.step, p.seed, p.max_seconds, p.workers) == (10, 3, 10.0, 1)

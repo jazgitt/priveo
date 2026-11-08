@@ -1,6 +1,8 @@
 """SCHS-04: cleaner windows, job windows and capacity come from small rule
-modules found in app/scheduling/window_rules. The base rules reproduce the old
-behaviour exactly, which a golden file captured before the refactor proves."""
+modules found in app/scheduling/window_rules. A golden file pins their output.
+It was first captured before the refactor; it was re-recorded when the version 1
+rules were removed (SCHS-14), because the weekly off day (SCHR-PAR-02) is now
+always applied."""
 import importlib
 import json
 import os
@@ -87,7 +89,7 @@ def _snapshot(world, sites):
         cap = json.loads(json.dumps(service.capacity(db, site.id, week[0], week[-1]), default=str))
         by_id = {str(k): v for k, v in names.items()}
         for day in cap:  # crew ids are random: name them and sort
-            # Fields added later (SCHS-34) are zero at version 1 and tested in their own file.
+            # Fields added later (SCHS-34) are zero when no rule applies and are tested in their own file.
             day.pop("break_minutes", None)
             day.pop("early_band_free_minutes", None)
             for row in day["availability"]:

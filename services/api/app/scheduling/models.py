@@ -22,8 +22,7 @@ from app.platform.db import Base, UtcDateTime, utcnow
 
 SERVICES = ("Cleaning-External", "Cleaning-Internal", "Deep Spa")
 # "Deferred" (SCHS-31): the car or keys were not available, so the job was put off
-# and is planned again. Only a reason marked "defers" gives it, and only on a
-# site at `scheduler.rules_version` 2.
+# and is planned again. Only a reason marked "defers" gives it.
 JOB_STATUSES = (
     "Scheduled", "In progress", "Completed", "Skipped", "Could not complete", "Deferred")
 CREW_ROLES = ("Member", "Trainee", "Manager")
@@ -52,11 +51,22 @@ class SchedulingCrew(Base):
     # A Trainee is paired with a Member and sees that Member's jobs (CRW-SCH-10).
     paired_member_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("scheduling_crew.id"))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    # Scheduler rules v1.2 (unused until their stories): per-crew reporting and
-    # first-job minutes, and the home zone. Null means "use the site setting".
+    # Scheduler rules v1.2: per-crew reporting and first-job minutes. Null means
+    # "use the site setting". The home zones are in SchedulingCrewHomeZone.
     reporting_minute: Mapped[int | None] = mapped_column(Integer)
     first_job_minute: Mapped[int | None] = mapped_column(Integer)
-    home_zone_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("zones.id"))
+
+
+class SchedulingCrewHomeZone(Base):
+    """A zone a cleaner fills first (SCHS-29). A cleaner may have several, and
+    several cleaners may share one. A Trainee has none of its own."""
+
+    __tablename__ = "scheduling_crew_home_zones"
+
+    crew_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("scheduling_crew.id"), primary_key=True)
+    zone_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("zones.id"), primary_key=True, index=True)
 
 
 class SchedulingCrewException(Base):
@@ -146,6 +156,9 @@ class Job(Base):
     )
     # Set when the admin placed or removed it by hand. A re-run keeps it (ADM-SCH-14).
     manual: Mapped[bool] = mapped_column(Boolean, default=False)
+    # A hand placement is locked by default (item 15): a run keeps it where it
+    # is. Unlocked, a run may move it. Only meaningful when `manual` is set.
+    hand_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Placed, but it finishes after the customer's cutoff time (ADM-SCH-07).
     late: Mapped[bool] = mapped_column(Boolean, default=False)
     # Why it is Unscheduled (ADM-SCH-08).

@@ -50,7 +50,7 @@ def test_schr_hard_11_a_job_not_marked_interior_is_not_limited():
     assert len(solve_day(CREW, jobs).placed) == 2
 
 
-def test_schr_int_18_a_catch_up_week_has_two_interiors_on_separate_days(world, rules_v2):
+def test_schr_int_18_a_catch_up_week_has_two_interiors_on_separate_days(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(360, 660))

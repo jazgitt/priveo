@@ -10,8 +10,7 @@ SATURDAY = THURSDAY + timedelta(days=2)
 
 
 class Ctx:
-    def __init__(self, active=True, flexible=True, hard=True):
-        self.active = active
+    def __init__(self, flexible=True, hard=True):
         self._s = {"site.weekday_cutoff_hard": hard, "site.weekend_cutoff_flexible": flexible,
                    "site.weekend_weekdays": [5, 6]}
 
@@ -26,8 +25,7 @@ def test_SCHR_WKE_flag_states_on_a_weekday_and_a_weekend_day(flexible, weekday, 
     assert is_strict_day(ctx, SATURDAY) is weekend
 
 
-def test_SCHR_WKE_version_1_and_the_weekday_switch_off_stay_soft():
-    assert not is_strict_day(Ctx(active=False, flexible=False), SATURDAY)
+def test_SCHR_WKE_the_weekday_switch_off_stays_soft():
     assert not is_strict_day(Ctx(flexible=False, hard=False), SATURDAY)
     assert not is_strict_day(Ctx(hard=False), THURSDAY)
 
@@ -37,7 +35,7 @@ def test_SCHR_WKE_a_weekend_job_that_misses_the_cutoff_is_unassigned_when_not_fl
 
     from app.scheduling.codes import ReasonCode
     from tests.scheduling.builders import Scenario
-    site_cfg({"scheduler.rules_version": 2, "site.weekend_cutoff_flexible": False})
+    site_cfg({"site.weekend_cutoff_flexible": False})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))

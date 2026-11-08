@@ -10,11 +10,11 @@ from app.platform.db import Base, make_engine
 
 NEW_TABLES = {
     "society_settings", "break_rules", "interior_entitlements",
-    "schedule_run_config", "schedule_findings",
+    "schedule_run_config", "schedule_findings", "scheduling_crew_home_zones",
 }
 NEW_COLUMNS = {
     "jobs": {"service_week_start", "cross_zone_reason", "reason_code"},
-    "scheduling_crew": {"reporting_minute", "first_job_minute", "home_zone_id"},
+    "scheduling_crew": {"reporting_minute", "first_job_minute"},
     "cnc_reasons": {"defers"},
 }
 

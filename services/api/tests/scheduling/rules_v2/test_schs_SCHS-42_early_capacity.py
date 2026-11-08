@@ -49,7 +49,7 @@ def test_schr_ext_05_no_pending_interior_adds_no_objective():
     assert _starts(result) == [330, 360, 390, 420, 450]
 
 
-def test_schr_ext_05_version_1_settings_add_nothing():
+def test_schr_ext_05_a_direct_call_without_settings_adds_nothing():
     result = solve_day(CREW, _exteriors(), SolverParams(), "exterior", _pending())
     assert _starts(result) == [330, 360, 390, 420, 450]
 
