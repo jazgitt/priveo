@@ -42,7 +42,8 @@ def quick_solver(monkeypatch):
     original = passes.solve_day
 
     def quick(crew, jobs, params=None, *args, **kwargs):
-        return original(crew, jobs, replace(params, max_seconds=0.3, debug_log=True), *args, **kwargs)  # DEBUG-SOLVER-LOG (temporary)
+        # DEBUG-SOLVER-LOG (temporary)
+        return original(crew, jobs, replace(params, max_seconds=0.3, debug_log=True), *args, **kwargs)
 
     monkeypatch.setattr(passes, "solve_day", quick)
 
