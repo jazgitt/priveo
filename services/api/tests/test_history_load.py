@@ -144,7 +144,7 @@ def test_a_day_with_a_live_visit_is_not_loaded(db, world, tmp_path):
     schedule = Schedule(society_id=db.scalar(select(Society.id)), start_date=d(0), end_date=d(0), status="Draft")
     db.add(schedule)
     db.flush()
-    db.add(Visit(schedule_id=schedule.id, vehicle_id=vehicle.id, date=d(0)))
+    db.add(Visit(schedule_id=schedule.id, vehicle_id=vehicle.id, date=d(0), status="Completed"))
     db.commit()
     path = sheet(tmp_path, {"AB12CD0001": {d(0): "ext", d(1): "ext"}})
     report = load_service_history(db, path, apply=True)

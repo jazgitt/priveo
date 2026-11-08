@@ -27,6 +27,7 @@ today's date and message the customer about work that is already done.
 from __future__ import annotations
 
 import uuid
+from collections import Counter
 from datetime import date
 
 from sqlalchemy import func, select
@@ -142,3 +143,95 @@ def write_record(db: Session, vehicle: Vehicle, day: date, *, services: str, out
             _record_interior(db, vehicle, job, day, society_id)
     scheduling.refresh_visit_status(db, visit.id)
     return WRITTEN
+
+
+# ---- the sheet's status for a day that already has a scheduled visit ----------
+# The owner's answers (9 Nov 2026): a "Priveo Missed" cell is Could not complete;
+# "int,ext" on a visit with no Interior adds a completed Interior; "ext" on a visit
+# with an Interior marks the Interior skipped; a skip keeps the sheet's reason text.
+# Nothing here sends a notification: the status hooks that do are not called.
+
+MISSED = "Missed"
+MISSED_STATUS = "Could not complete"
+
+
+def parse_cell(value: str) -> tuple[str, str, str] | None:
+    """(services, outcome, reason) for a sheet cell, or None when it is not a
+    service value. Any "skipped - <text>" is accepted: the text is kept as the reason."""
+    text = " ".join(value.split())
+    low = text.lower()
+    if low == "ext":
+        return EXTERIOR_LABEL, "Completed", ""
+    if low == "int,ext":
+        return BOTH_LABEL, "Completed", ""
+    if low == "skipped":
+        return "", "Skipped", ""
+    if "priveo missed" in low:
+        return "", MISSED, ""
+    if low.startswith("skipped"):
+        return "", "Skipped", text[len("skipped"):].lstrip(" -").strip()
+    return None
+
+
+def scheduled_visit(db: Session, vehicle_id: uuid.UUID, day: date) -> Visit | None:
+    """The plan visit of the car that day, while it is still Scheduled."""
+    return db.scalar(select(Visit).where(
+        Visit.vehicle_id == vehicle_id, Visit.date == day, Visit.addon_key == "",
+        Visit.status == "Scheduled"))
+
+
+def _add_interior(db: Session, visit: Visit) -> Job:
+    from app.directory import lookup
+
+    job = Job(visit_id=visit.id, service=INTERIOR, status="Scheduled",
+              duration_minutes=lookup.duration_minutes(db, INTERIOR))
+    db.add(job)
+    db.flush()
+    return job
+
+
+def apply_status(db: Session, visit: Visit, services: str, outcome: str, reason: str,
+                 admin_id: uuid.UUID) -> Counter:
+    """Set the jobs of a scheduled visit to what the sheet says. Returns counts."""
+    from app.scheduling import service as scheduling
+    from app.scheduling.hook_handlers import ledger
+
+    counts: Counter = Counter()
+    jobs = {j.service: j for j in db.scalars(select(Job).where(Job.visit_id == visit.id))}
+    if EXTERIOR not in jobs:
+        counts["no_exterior_job"] += 1
+        return counts
+    if outcome == "Completed":
+        want = {EXTERIOR: "Completed"}
+        if services == BOTH_LABEL:
+            if INTERIOR not in jobs:
+                jobs[INTERIOR] = _add_interior(db, visit)
+                counts["interior_added"] += 1
+            want[INTERIOR] = "Completed"
+        elif INTERIOR in jobs:
+            want[INTERIOR] = "Skipped"
+            counts["interior_skipped"] += 1
+    elif outcome == "Skipped":
+        want = {service: "Skipped" for service in jobs}
+    else:  # Missed
+        want = {service: MISSED_STATUS for service in jobs}
+    for service, status in want.items():
+        job = jobs[service]
+        if job.status == status:
+            continue
+        job.status = status
+        db.flush()
+        if status in ("Skipped", MISSED_STATUS):
+            kind = "skipped" if status == "Skipped" else "could_not_complete"
+            note = reason if status == "Skipped" else ""
+            db.add(JobOutcome(job_id=job.id, kind=kind, reason_key=None, note=note,
+                              by_login_id=admin_id))
+            db.flush()
+        ledger.on_status_change(db, job, "sheet")
+        if service == INTERIOR and status == "Completed":
+            row = ledger.row_of(db, job)  # the live hook stamps today: the sheet dates it to the day done
+            if row is not None:
+                row.completed_on = visit.date
+        counts[status] += 1
+    scheduling.refresh_visit_status(db, visit.id)
+    return counts
