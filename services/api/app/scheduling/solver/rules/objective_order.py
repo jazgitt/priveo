@@ -46,6 +46,7 @@ def optimise(ctx: ModelContext):
     names = order_of(ctx)
     solver = cp_model.CpSolver()
     solver.parameters.num_workers = params.workers
+    solver.parameters.log_search_progress = bool(params.debug_log)  # DEBUG-SOLVER-LOG (temporary)
     solver.parameters.random_seed = params.seed
     if names is None:
         model.Maximize(sum(ctx.objective))
