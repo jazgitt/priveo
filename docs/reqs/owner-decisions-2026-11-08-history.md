@@ -16,3 +16,13 @@ repeatable, so later catch-up days can be loaded the same way.
 
 Open: the customer app still offers a rating button on a migrated visit; the server refuses it
 (409 visit_not_rateable). Hiding the button needs a flag on the visit detail, a contract change.
+
+## Sheet status for 4 to 7 Nov 2026 (owner answers, 9 Nov 2026)
+
+| # | Decision | Requirement |
+|---|---|---|
+| 7 | A Scheduled visit on a day the sheet covers takes the sheet's status. "ext" completes the Exterior; "skipped - <text>" skips it and keeps the text as the reason; "Priveo Missed" is Could not complete. | ADM-CUS-36 |
+| 8 | "int,ext" on a visit with no Interior adds a completed Interior. "ext" on a visit with an Interior marks the Interior skipped. | ADM-CUS-36, SCHR-INT-29 |
+| 9 | Any reason text is accepted and kept as written. The reason keys in the configuration are the reference list; no text is refused. | ADM-CUS-36 |
+| 10 | Updates made from the sheet send no notification. | ADM-CUS-36 |
+| 11 | 3 Nov is not changed by this step. | ADM-CUS-36 |

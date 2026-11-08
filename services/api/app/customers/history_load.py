@@ -22,9 +22,18 @@ Owner's rules (3-4 Nov 2026):
 - any other text in a day cell is ignored but reported.
 
 It can run again: a vehicle and day that is already loaded is left as it is. A
-day that already has a live visit from the app is not loaded and is reported.
+day that already has a completed or other non-scheduled visit from the app is not
+loaded and is reported.
+
+From a start day (`since`, 9 Nov 2026 on: columns 4 to 7 Nov) the sheet is the
+status of the day: a day with a Scheduled plan visit takes the sheet's status
+(see `history_convert.apply_status`), a day without a visit is written as live
+history, an empty cell means nothing was recorded and is counted, and a Scheduled
+visit with no sheet entry is listed in `report.scheduled_without_entry`. No
+notification is sent for any of it.
+
 Every cell that is not loaded is listed in `report.not_loaded` with the reason.
-The console report holds counts only; the list (with car numbers) goes to a CSV
+The console report holds counts only; the lists (with car numbers) go to CSV files
 the caller writes.
 """
 import csv
@@ -37,7 +46,14 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customers.history_convert import LIVE, WEEKLY_OFF, admin_login_id, write_record
+from app.customers.history_convert import (
+    LIVE,
+    WEEKLY_OFF,
+    admin_login_id,
+    apply_status,
+    parse_cell,
+    write_record,
+)
 from app.customers.importer import _compact, _text
 from app.customers.models import Vehicle
 from app.scheduling.models import Job, Visit
@@ -73,7 +89,12 @@ class HistoryReport:
     before_start: int = 0       # empty cells before the vehicle's first record
     owner_fills: int = 0
     weekly_off: int = 0         # weekly-off days: counted, no visit is written (owner rule)
+    no_entry: int = 0           # empty cells in the window: nothing recorded, counted only
+    updated: Counter = field(default_factory=Counter)   # scheduled visits set to the sheet's status
+    updated_jobs: Counter = field(default_factory=Counter)  # the job statuses written
     not_loaded: list[NotLoaded] = field(default_factory=list)
+    # Scheduled plan visits in the window that the sheet does not cover: (car, day, visit id).
+    scheduled_without_entry: list[tuple[str, date, str]] = field(default_factory=list)
 
     def reasons(self) -> Counter:
         return Counter(n.reason for n in self.not_loaded)
@@ -81,16 +102,7 @@ class HistoryReport:
 
 def _classify(value) -> tuple[str, str, str] | None:
     """(services, outcome, reason) for a recognised cell, or None."""
-    text = _text(value).lower()
-    if text == "ext":
-        return EXTERIOR, "Completed", ""
-    if text == "int,ext":
-        return BOTH, "Completed", ""
-    if text == "skipped":
-        return "", "Skipped", ""
-    if text == "skipped - rain":
-        return "", "Skipped", "Rain"
-    return None
+    return parse_cell(_text(value))
 
 
 def read_fills(path: str | Path) -> dict[tuple[str, date], str]:
@@ -106,15 +118,17 @@ def read_fills(path: str | Path) -> dict[tuple[str, date], str]:
                 raise ValueError(f"Fills file, line {line}: need car_number and day as YYYY-MM-DD.") from problem
             value = _text(row.get("value"))
             if _classify(value) is None:
-                raise ValueError(f"Fills file, line {line}: the value must be ext, int,ext, skipped or skipped - rain.")
+                raise ValueError(
+                    f"Fills file, line {line}: the value must be ext, int,ext, or skipped (with an optional reason).")
             fills[key] = value
     return fills
 
 
 def load_service_history(db: Session, path: str | Path, *, apply: bool,
                          fills: dict[tuple[str, date], str] | None = None,
-                         through: date = LAST_DAY) -> HistoryReport:
-    """Load the sheet's day columns up to and including `through`."""
+                         through: date = LAST_DAY, since: date | None = None) -> HistoryReport:
+    """Load the sheet's day columns up to and including `through`. With `since`, only
+    the columns from that day on are read, in status mode (see the module notes)."""
     book = load_workbook(path, data_only=True, read_only=True)
     if SHEET not in book.sheetnames:
         raise ValueError(f'The workbook has no "{SHEET}" sheet.')
@@ -124,7 +138,8 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
         raise ValueError("The calendar sheet is empty.")
     header = rows[0]
     day_cols = [(i, h.date()) for i, h in enumerate(header)
-                if isinstance(h, datetime) and h.date() <= through]
+                if isinstance(h, datetime) and h.date() <= through
+                and (since is None or h.date() >= since)]
     if not day_cols:
         raise ValueError("The calendar sheet has no date columns.")
     columns = {d for _, d in day_cols}
@@ -135,11 +150,22 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
     converted = {(vid, d) for vid, d, snap in db.execute(
         select(Visit.vehicle_id, Visit.date, Job.checklist_snapshot)
         .join(Job, Job.visit_id == Visit.id)) if snap and snap.get("legacy")}
-    live_days = {(vid, d) for vid, d in db.execute(select(Visit.vehicle_id, Visit.date))} - converted
-    admin = admin_login_id(db) if apply else None
+    scheduled: dict[tuple, Visit] = {}
+    live_days = set()
+    for visit in db.scalars(select(Visit)):
+        key = (visit.vehicle_id, visit.date)
+        if key in converted:
+            continue
+        in_window = (since is None or visit.date >= since) and visit.date <= through
+        if visit.status == "Scheduled" and visit.addon_key == "" and in_window:
+            scheduled[key] = visit
+        else:
+            live_days.add(key)
+    admin = admin_login_id(db)
 
     report = HistoryReport()
     seen: set[tuple] = set()
+    handled: set[tuple] = set()
 
     def add(vid, row_no, day, cell, car, services, outcome, reason):
         key = (vid, day)
@@ -148,6 +174,13 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
             return
         if key in converted or key in seen:
             report.already_loaded += 1
+            return
+        if key in scheduled:
+            seen.add(key)
+            handled.add(key)
+            report.updated[outcome] += 1
+            report.updated_jobs.update(apply_status(
+                db, scheduled[key], services, outcome, reason, admin))
             return
         if key in live_days:
             report.not_loaded.append(NotLoaded(row_no, day, cell, R_LIVE_VISIT, car))
@@ -187,6 +220,9 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
             got = parsed[day]
             if got and day in WEEKLY_OFF_DAYS and got[1] == "Skipped" and not got[2]:
                 got = (got[0], got[1], WEEKLY_OFF)
+            if got is None and raw == "" and since is not None:
+                report.no_entry += 1  # status mode: an empty cell records nothing
+                continue
             if got is None and raw == "":
                 if first is None or day < first:
                     report.before_start += 1
@@ -205,13 +241,20 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
         for off_day in WEEKLY_OFF_DAYS:
             if off_day in columns or first is None or first >= off_day:
                 continue
+            if since is not None and off_day < since:
+                continue
             if vid is None:
                 report.not_loaded.append(NotLoaded(offset, off_day, "(no column)", R_NO_VEHICLE, car))
                 continue
             add(vid, offset, off_day, "(no column)", car, "", "Skipped", WEEKLY_OFF)
 
+    for key, visit in scheduled.items():
+        if key not in handled:
+            reg = db.get(Vehicle, key[0]).registration or ""
+            report.scheduled_without_entry.append((reg, key[1], str(visit.id)))
+
     if apply:
         db.commit()
     else:
-        db.rollback()
+        db.rollback()  # a trial run changes nothing, including the scheduled visits
     return report
