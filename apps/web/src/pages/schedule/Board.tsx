@@ -64,7 +64,8 @@ export interface CardPart { kind: CardPiece; text: string }
  * The status flags and notes are added by the card itself.
  */
 export function cardLines(job: AdminJob, density: Density): CardPart[][] {
-  const zone: CardPart | null = job.zone ? { kind: "zone", text: job.zone } : null;
+  // The zone slot is always there: a job with no zone shows an empty box, so the lines do not shift (owner, 8-Nov-26).
+  const zone: CardPart = { kind: "zone", text: job.zone ?? "" };
   const reg: CardPart = { kind: "reg", text: job.registration };
   const cutoff: CardPart | null = job.finish_by ? { kind: "cutoff", text: `Cutoff ${job.finish_by}` } : null;
   const code: CardPart = { kind: "code", text: serviceCode(job.service) };

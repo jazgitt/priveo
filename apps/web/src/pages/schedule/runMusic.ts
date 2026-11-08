@@ -32,7 +32,8 @@ export function startRunMusic(): void {
     a.muted = muted;
     a.currentTime = 0;
     const playing = a.play();
-    if (playing) playing.catch(() => { /* Blocked or unavailable: the run still shows its fireworks. */ });
+    // Blocked or unavailable: the run still shows its fireworks. The reason goes to the console, so a silent run can be traced.
+    if (playing) playing.catch((err: unknown) => { console.warn("Run music did not start:", err); });
   } catch {
     /* No audio support: nothing to play. */
   }

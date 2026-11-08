@@ -12,7 +12,7 @@ import { EVENTS } from "@/analytics/events";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { useTasks } from "@/blocks/tasks";
-import { Tabs } from "@/components";
+import { HoverTip, Tabs } from "@/components";
 import { cn } from "@/lib/utils";
 import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
@@ -51,7 +51,7 @@ import "./schedule.css";
 /** How far back the day strip goes (ADM-SCH-35). */
 const DAYS_BACK = 30;
 
-const DENSITIES: [Density, string][] = [["compact", "Compact"], ["standard", "Standard"], ["detailed", "Detailed"]];
+const DENSITIES: [Density, string][] = [["compact", "Compact"], ["standard", "Standard"], ["detailed", "Detail"]];
 const DENSITY_KEY = "priveo.schedule.card-density";
 
 /** How much each card shows, remembered in the browser. */
@@ -414,10 +414,10 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <span className={cn("inline-flex", schedule.status === "Frozen" && view === "cards" && "text-foreground")}
-                        role="note" title={hint} aria-label={hint} tabIndex={0}>
-                    <Info className="size-4 text-muted-foreground" aria-hidden />
-                  </span>
+                  {/* The hint shows at once on hover or focus, unlike a native title, which waits (owner, 8-Nov-26). */}
+                  <HoverTip label={<Info className="size-4 text-muted-foreground" aria-hidden />} ariaLabel={hint}>
+                    <span className="block max-w-xs">{hint}</span>
+                  </HoverTip>
                   <span className="ml-auto flex items-center gap-1.5">
                     {skippedCount > 0 && !boardOnly && (
                       <Button size="sm" variant="link" className="mr-2 h-auto p-0" onClick={() => setParam("tab", "skipped")}>
