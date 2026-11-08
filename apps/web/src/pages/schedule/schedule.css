@@ -132,6 +132,8 @@
 
   /* The kind of work sets the card's colour; the status is an icon and a word, so the two never fight (ADM-SCH-34). */
   .sch-card, .sch-detail { --type: var(--c-ok); --type-bg: #eef8f1; --type-line: #bfe0cd;
+    /* A card takes the height its lines need. In its column it must not shrink, or its text runs out of the box (owner, 8-Nov-26). */
+    flex: 0 0 auto;
     position: relative; display: flex; flex-direction: column; gap: 0.15rem; padding: 0.4rem 0.55rem 0.45rem 0.65rem;
     border: 1px solid var(--type-line); border-left: 5px solid var(--type); border-radius: 8px; background: var(--type-bg);
     font-size: 0.75rem; line-height: 1.25; cursor: grab; user-select: none;
