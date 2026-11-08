@@ -3,7 +3,7 @@ from datetime import time, timedelta
 
 from sqlalchemy import select
 
-from app.scheduling.models import Job, Schedule, ScheduleFinding, Visit
+from app.scheduling.models import Job, Schedule, ScheduleFinding
 from tests.scheduling.builders import Scenario
 from tests.scheduling.conftest import SUNDAY
 from tests.test_api import auth, login
@@ -25,7 +25,7 @@ def kinds(r):
     return {k["kind"]: k["rows"] for k in r.json()["kinds"]}
 
 
-def test_SCHR_OUT_03_every_kind_is_present_and_empty_when_nothing_is_wrong(api, world, rules_v2):
+def test_SCHR_OUT_03_every_kind_is_present_and_empty_when_nothing_is_wrong(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -37,7 +37,7 @@ def test_SCHR_OUT_03_every_kind_is_present_and_empty_when_nothing_is_wrong(api, 
     assert all(rows == [] for rows in kinds(r).values())
 
 
-def test_SCHR_OUT_03_an_unassigned_exterior_has_date_car_code_and_no_cleaner(api, world, rules_v2):
+def test_SCHR_OUT_03_an_unassigned_exterior_has_date_car_code_and_no_cleaner(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 540))
@@ -51,7 +51,7 @@ def test_SCHR_OUT_03_an_unassigned_exterior_has_date_car_code_and_no_cleaner(api
     assert row["cleaner_id"] is None and row["cleaner_name"] == ""
 
 
-def test_SCHR_OUT_03_a_cutoff_that_cannot_be_met_is_also_listed_as_infeasible(api, world, rules_v2):
+def test_SCHR_OUT_03_a_cutoff_that_cannot_be_met_is_also_listed_as_infeasible(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -62,7 +62,7 @@ def test_SCHR_OUT_03_a_cutoff_that_cannot_be_met_is_also_listed_as_infeasible(ap
     assert [x["code"] for x in kinds(r)["unassigned_exteriors"]] == ["customer_cutoff"]
 
 
-def test_SCHR_OUT_03_unplanned_interiors_cross_zone_and_stored_findings_are_listed(api, world, rules_v2):
+def test_SCHR_OUT_03_unplanned_interiors_cross_zone_and_stored_findings_are_listed(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 510))
@@ -91,7 +91,7 @@ def test_SCHR_OUT_03_unplanned_interiors_cross_zone_and_stored_findings_are_list
     assert [x["code"] for x in k["infeasible"]] == ["no_plan"] and k["infeasible"][0]["date"] is None
 
 
-def test_SCHR_WKE_06_a_late_job_on_a_weekend_day_is_reported(api, world, rules_v2):
+def test_SCHR_WKE_06_a_late_job_on_a_weekend_day_is_reported(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
@@ -102,7 +102,7 @@ def test_SCHR_WKE_06_a_late_job_on_a_weekend_day_is_reported(api, world, rules_v
     assert kinds(get(api, world))["unassigned_exteriors"] == []
 
 
-def test_SCHR_OUT_03_hand_placement_breaches_are_listed(api, world, rules_v2):
+def test_SCHR_OUT_03_hand_placement_breaches_are_listed(api, world):
     sc = Scenario(world)
     sc.slots()
     cleaner = sc.cleaner(shift=(480, 600))
@@ -120,7 +120,7 @@ def test_SCHR_OUT_03_hand_placement_breaches_are_listed(api, world, rules_v2):
     assert rows[0]["cleaner_name"] and rows[0]["registration"]
 
 
-def test_dates_outside_the_range_and_bad_ranges_and_non_admins(api, world, rules_v2):
+def test_dates_outside_the_range_and_bad_ranges_and_non_admins(api, world):
     sc = Scenario(world)
     sc.slots()
     sc.car()
@@ -133,15 +133,3 @@ def test_dates_outside_the_range_and_bad_ranges_and_non_admins(api, world, rules
                                            "start_date": SUNDAY.isoformat(), "end_date": SUNDAY.isoformat()})
     assert r.status_code == 403
 
-
-def test_kill_switch_version_1_reports_no_weekend_lateness_and_is_read_only(api, world):
-    sc = Scenario(world)
-    sc.slots()
-    sc.cleaner(shift=(480, 600))
-    sc.cars(2, cutoff=time(8, 30))
-    sc.run(SUNDAY)
-    before = world.db.scalar(select(ScheduleFinding.id).limit(1))
-    k = kinds(get(api, world))
-    assert k["weekend_lateness"] == [] and k["hand_placement"] == []
-    assert world.db.scalar(select(ScheduleFinding.id).limit(1)) == before
-    assert world.db.scalars(select(Visit.id)).first() is not None

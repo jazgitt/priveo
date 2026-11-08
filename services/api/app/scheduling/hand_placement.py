@@ -1,7 +1,6 @@
 """Hand placement warns and flags (SCHS-22, SCHR-HIER-08, SCHR-CUT-05).
 
-On a site at `scheduler.rules_version` 2 the admin may place a job against any
-rule (owner, 05-Nov-26): the screen is warned of each breach, the admin
+The admin may place a job against any rule (owner, 05-Nov-26): the screen is warned of each breach, the admin
 confirms with `override`, and every breach is stored as a finding
 (`schedule_findings`) with a code that starts with `PREFIX`. The planner never
 produces such a placement. Findings with this prefix are kept when a run
@@ -10,8 +9,8 @@ replaced when the same job is placed again or taken off.
 
 A breach is a (code, message) pair. The codes are the refusal codes `move_job`
 has always used for a rule (outside the hours, outside the slot, the crew member
-not working), plus `break` (the job overlaps the cleaner's break on a version 2
-site) and `customer_cutoff` (the job ends after the Customer cutoff on a strict
+not working), plus `break` (the job overlaps the cleaner's break) and
+`customer_cutoff` (the job ends after the Customer cutoff on a strict
 day, SCHR-CUT-05). An overlap with another job is not a breach: it is refused
 outright (owner, 8-Nov-26), so it is never stored here.
 """

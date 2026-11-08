@@ -1016,6 +1016,8 @@ class AdminJob {
     required this.finishBy,
     required this.late,
     required this.manual,
+    this.placedByHand,
+    this.handLocked,
     required this.reason,
     required this.movedToDate,
     required this.movedFromDate,
@@ -1029,6 +1031,7 @@ class AdminJob {
     required this.reasonCode,
     required this.crossZoneReason,
     this.handBreaches,
+    required this.interiorDay,
   });
 
   final String id;
@@ -1053,6 +1056,8 @@ class AdminJob {
   final String? finishBy;
   final bool late;
   final bool manual;
+  final bool? placedByHand;
+  final bool? handLocked;
   final String reason;
   final DateTime? movedToDate;
   final DateTime? movedFromDate;
@@ -1066,6 +1071,7 @@ class AdminJob {
   final String? reasonCode;
   final String? crossZoneReason;
   final List<String>? handBreaches;
+  final String? interiorDay;
 
   factory AdminJob.fromJson(Map<String, dynamic> j) => AdminJob(
         id: j['id'] as String,
@@ -1090,6 +1096,8 @@ class AdminJob {
         finishBy: j['finish_by'] == null ? null : j['finish_by'] as String,
         late: j['late'] as bool,
         manual: j['manual'] as bool,
+        placedByHand: j['placed_by_hand'] == null ? null : j['placed_by_hand'] as bool,
+        handLocked: j['hand_locked'] == null ? null : j['hand_locked'] as bool,
         reason: j['reason'] as String,
         movedToDate: j['moved_to_date'] == null ? null : DateTime.parse(j['moved_to_date'] as String),
         movedFromDate: j['moved_from_date'] == null ? null : DateTime.parse(j['moved_from_date'] as String),
@@ -1103,6 +1111,7 @@ class AdminJob {
         reasonCode: j['reason_code'] == null ? null : j['reason_code'] as String,
         crossZoneReason: j['cross_zone_reason'] == null ? null : j['cross_zone_reason'] as String,
         handBreaches: j['hand_breaches'] == null ? null : [for (final x in j['hand_breaches'] as List) x as String],
+        interiorDay: j['interior_day'] == null ? null : j['interior_day'] as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -1128,6 +1137,8 @@ class AdminJob {
         'finish_by': finishBy,
         'late': late,
         'manual': manual,
+        'placed_by_hand': placedByHand,
+        'hand_locked': handLocked,
         'reason': reason,
         'moved_to_date': movedToDate == null ? null : _date(movedToDate!),
         'moved_from_date': movedFromDate == null ? null : _date(movedFromDate!),
@@ -1141,6 +1152,7 @@ class AdminJob {
         'reason_code': reasonCode,
         'cross_zone_reason': crossZoneReason,
         'hand_breaches': handBreaches == null ? null : [for (final x in handBreaches!) x],
+        'interior_day': interiorDay,
       };
 }
 
@@ -5812,6 +5824,22 @@ class FreezeDue {
       };
 }
 
+class HandLockIn {
+  const HandLockIn({
+    required this.locked,
+  });
+
+  final bool locked;
+
+  factory HandLockIn.fromJson(Map<String, dynamic> j) => HandLockIn(
+        locked: j['locked'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'locked': locked,
+      };
+}
+
 class Health {
   const Health({
     required this.status,
@@ -5926,42 +5954,42 @@ class HistoryMetaOut {
 
 class HomeZoneIn {
   const HomeZoneIn({
-    required this.homeZoneId,
+    this.homeZoneIds,
   });
 
-  final String? homeZoneId;
+  final List<String>? homeZoneIds;
 
   factory HomeZoneIn.fromJson(Map<String, dynamic> j) => HomeZoneIn(
-        homeZoneId: j['home_zone_id'] == null ? null : j['home_zone_id'] as String,
+        homeZoneIds: j['home_zone_ids'] == null ? null : [for (final x in j['home_zone_ids'] as List) x as String],
       );
 
   Map<String, dynamic> toJson() => {
-        'home_zone_id': homeZoneId,
+        'home_zone_ids': homeZoneIds == null ? null : [for (final x in homeZoneIds!) x],
       };
 }
 
 class HomeZoneOut {
   const HomeZoneOut({
-    required this.homeZoneId,
+    required this.homeZoneIds,
     required this.followsMember,
     required this.editable,
     required this.zones,
   });
 
-  final String? homeZoneId;
+  final List<String> homeZoneIds;
   final String? followsMember;
   final bool editable;
   final List<ZoneChoice> zones;
 
   factory HomeZoneOut.fromJson(Map<String, dynamic> j) => HomeZoneOut(
-        homeZoneId: j['home_zone_id'] == null ? null : j['home_zone_id'] as String,
+        homeZoneIds: [for (final x in j['home_zone_ids'] as List) x as String],
         followsMember: j['follows_member'] == null ? null : j['follows_member'] as String,
         editable: j['editable'] as bool,
         zones: [for (final x in j['zones'] as List) ZoneChoice.fromJson(x as Map<String, dynamic>)],
       );
 
   Map<String, dynamic> toJson() => {
-        'home_zone_id': homeZoneId,
+        'home_zone_ids': [for (final x in homeZoneIds) x],
         'follows_member': followsMember,
         'editable': editable,
         'zones': [for (final x in zones) x.toJson()],
@@ -7956,7 +7984,7 @@ class RunRequest {
   const RunRequest({
     required this.societyId,
     required this.startDate,
-    required this.days,
+    this.days,
   });
 
   final String? societyId;
@@ -8103,6 +8131,7 @@ class SchedulingCrewOut {
     required this.role,
     required this.startMinute,
     required this.endMinute,
+    this.homeZones,
   });
 
   final String id;
@@ -8110,6 +8139,7 @@ class SchedulingCrewOut {
   final String role;
   final int startMinute;
   final int endMinute;
+  final List<ZoneRef>? homeZones;
 
   factory SchedulingCrewOut.fromJson(Map<String, dynamic> j) => SchedulingCrewOut(
         id: j['id'] as String,
@@ -8117,6 +8147,7 @@ class SchedulingCrewOut {
         role: j['role'] as String,
         startMinute: j['start_minute'] as int,
         endMinute: j['end_minute'] as int,
+        homeZones: j['home_zones'] == null ? null : [for (final x in j['home_zones'] as List) ZoneRef.fromJson(x as Map<String, dynamic>)],
       );
 
   Map<String, dynamic> toJson() => {
@@ -8125,6 +8156,7 @@ class SchedulingCrewOut {
         'role': role,
         'start_minute': startMinute,
         'end_minute': endMinute,
+        'home_zones': homeZones == null ? null : [for (final x in homeZones!) x.toJson()],
       };
 }
 
@@ -10022,6 +10054,26 @@ class ZoneChoice {
   final String name;
 
   factory ZoneChoice.fromJson(Map<String, dynamic> j) => ZoneChoice(
+        id: j['id'] as String,
+        name: j['name'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+      };
+}
+
+class ZoneRef {
+  const ZoneRef({
+    required this.id,
+    required this.name,
+  });
+
+  final String id;
+  final String name;
+
+  factory ZoneRef.fromJson(Map<String, dynamic> j) => ZoneRef(
         id: j['id'] as String,
         name: j['name'] as String,
       );

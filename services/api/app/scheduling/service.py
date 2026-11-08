@@ -22,7 +22,7 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import entitlements, hand_placement, hooks, passes, queue, rules, run_context, run_counts
+from app.scheduling import entitlements, hand_placement, home_zone, hooks, passes, queue, rules, run_context, run_counts
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -32,7 +32,7 @@ from app.scheduling.models import (
     SchedulingEvent,
     Visit,
 )
-from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
+from app.scheduling.solver import SolverCrew, SolverJob, SolverParams
 from app.scheduling.solver.rules.job_cutoff import is_strict_day
 
 DAY_DONE = ("Completed", "Skipped")
@@ -65,7 +65,7 @@ class RunSummary:
     placed: int
     unscheduled: int
     late: int
-    # Rules version 2 (SCHS-40); 0 at version 1.
+    # SCHS-40.
     deferred_interiors: int = 0
     cross_zone_jobs: int = 0
     missed_breaks: int = 0
@@ -589,7 +589,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     # Where each job sits now, to renumber only the crew days that change (S-13).
     before_place = {job.id: (job.crew_id, job.start_minute, visit.date) for job, visit in rows}
 
-    solver_params = SolverParams.load(db)
+    solver_params = SolverParams.load(db, schedule.society_id)
+    released_ids: set[uuid.UUID] = set()  # unlocked hand placements the run may move (item 15)
     for day, items in by_day.items():
         day_windows = windows.get(day, {})
         free: list[tuple[Job, Visit]] = []
@@ -602,9 +603,18 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             if job.crew_id is not None and job.crew_id not in day_windows:
                 # The crew member is away that day: the job goes back to the pool.
                 job.crew_id, job.start_minute, job.manual = None, None, False
+            # An unlocked hand placement is planned again like any open job (item 15).
+            released = (
+                not frozen and job.manual and not job.hand_locked
+                and job.status == "Scheduled" and job.crew_id is not None
+            )
+            if released:
+                job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
+                hand_placement.clear(db, job.id)
+                released_ids.add(job.id)
             if not frozen and not job.manual and job.status == "Scheduled":
                 job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
-            if job.crew_id is None and job.manual:
+            if job.crew_id is None and job.manual and not released:
                 job.note = "Taken off the schedule by the admin."
                 continue
             if job.crew_id is None and job.status != "Scheduled":
@@ -633,17 +643,15 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     fixed,
                     slots,
                     hard_cutoff=is_strict_day(ctx, day),
-                    interior=ctx.active and entitlements.uses_entitlement(job),
+                    interior=entitlements.uses_entitlement(job),
                     week=job.service_week_start,
                     service=job.service,
                 )
             )
         if not solver_jobs:
             continue
-        if ctx.active:  # two passes, Exterior then Interior (SCHS-32)
-            result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
-        else:
-            result = solve_day(solver_crews(day_windows), solver_jobs, solver_params)
+        # Two passes, Exterior then Interior (SCHS-32).
+        result = passes.solve_two_pass(ctx, day, solver_crews(day_windows), solver_jobs, solver_params)
         for job, _visit in items:
             key = str(job.id)
             if key in result.placed:
@@ -654,6 +662,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             elif key in result.unplaced:
                 job.crew_id, job.start_minute = None, None
                 job.note = result.unplaced[key]
+                if job.id in released_ids:
+                    job.manual = False  # back in the pool: no longer a hand placement (item 15)
             job.late = key in result.late
         hooks.after_solve(ctx, day, items, result)
     db.flush()
@@ -698,24 +708,12 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
 def run(
     db: Session,
     society_id: uuid.UUID | None,
-    start: date,
-    days: int | None,
+    day: date,
     admin_id: uuid.UUID | None,
 ) -> list[RunSummary]:
-    """Start scheduling for one society, or all active societies (ADM-SCH-01)."""
-    if days is None:
-        import calendar
+    """Start scheduling for one day, for one society or all active societies (ADM-SCH-01).
 
-        period = lookup.setting(db, "schedule.period")
-        if period == "Daily":
-            days = 1
-        elif period == "Monthly":
-            start = start.replace(day=1)
-            days = calendar.monthrange(start.year, start.month)[1]
-        else:
-            week_start = lookup.setting(db, "schedule.week_start")
-            start -= timedelta(days=(start.weekday() - week_start) % 7)
-            days = 7
+    A run covers the chosen day only (ADM-SCH-09, owner 08-Nov-26)."""
     if society_id is not None:
         society_ids = [society_id]
     else:
@@ -726,7 +724,7 @@ def run(
         )
     out = []
     for sid in society_ids:
-        schedule = get_or_create_schedule(db, sid, start, days)
+        schedule = get_or_create_schedule(db, sid, day, 1)
         out.append(run_schedule(db, schedule, admin_id))
     return out
 
@@ -752,10 +750,10 @@ def move_job(
     moving needs the schedule unfrozen with the code (ADM-SCH-17).
 
     `override` is None for the bulk tools: a placement against a rule is refused
-    as it always was. The Board passes True or False (SCHS-22): on a site at
-    rules version 2 a placement against a rule is then answered with a
-    `placement_warning` (409) until it is repeated with `override` True, and each
-    breach is stored as a finding (`hand_placement`)."""
+    as it always was. The Board passes True or False (SCHS-22): a placement
+    against a rule is then answered with a `placement_warning` (409) until it is
+    repeated with `override` True, and each breach is stored as a finding
+    (`hand_placement`)."""
     job = db.get(Job, job_id)
     if job is None:
         raise ApiError("not_found", "That job does not exist.", 404)
@@ -795,7 +793,7 @@ def move_job(
     member = crew.get(crew_id)
     if member is None:
         raise ApiError("crew_not_found", "That crew member is not in this society.", 404)
-    warn = override is not None and hooks._version(db, schedule.society_id) == 2
+    warn = override is not None
     breaches: list[hand_placement.Breach] = []
 
     def breach(code: str, message: str) -> None:
@@ -841,7 +839,7 @@ def move_job(
                 {"overlap": f"{car} is in the way at {span}."},
             )
     if warn:
-        # The cleaner's break is a rule on a version 2 site (SCHR-BRK-09); the Board marks a job that takes it.
+        # The cleaner's break is a rule (SCHR-BRK-09); the Board marks a job that takes it.
         from app.scheduling.window_rules import capacity_break
 
         brk = capacity_break.visible_break(db, member, visit.date)
@@ -857,6 +855,7 @@ def move_job(
     before = (job.crew_id, job.start_minute)
     old_crew_id = job.crew_id
     job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
+    job.hand_locked = True  # locked by default (item 15)
     job.late = job.finish_by_minute is not None and end > job.finish_by_minute
     job.queue_unlocked = False
     # The moved job takes its place by start time on its new day (Derived).
@@ -871,6 +870,33 @@ def move_job(
         db.commit()
     else:
         db.flush()
+    return job
+
+
+def set_hand_lock(db: Session, job_id: uuid.UUID, locked: bool, admin_id: uuid.UUID | None) -> Job:
+    """Locks or unlocks a hand placement (item 15). A locked placement keeps its
+    crew, day and time through a run; an unlocked one may be moved. Only a job
+    placed by hand can change; a frozen schedule refuses the change."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise ApiError("not_found", "That job does not exist.", 404)
+    visit = db.get(Visit, job.visit_id)
+    schedule = db.get(Schedule, visit.schedule_id)
+    if not (job.manual and job.crew_id is not None):
+        raise ApiError("not_hand_placed", "Only a job placed by hand can be locked or unlocked.",
+                       422, {"locked": "This job is not placed by hand."})
+    if job.status != "Scheduled":
+        raise ApiError("job_not_open", "That job has already started or finished.", 409)
+    if schedule.status == "Frozen":
+        raise ApiError("schedule_frozen",
+                       "This schedule is frozen. Unfreeze it with the code to change a lock.", 409)
+    before = bool(job.hand_locked)
+    job.hand_locked = locked
+    if before != locked:
+        record(db, schedule.id, admin_id, "hand-lock",
+               f"job {job.id} {'locked' if locked else 'unlocked'}",
+               {"job": str(job.id), "hand_locked": [before, locked]})
+    db.commit()
     return job
 
 
@@ -992,6 +1018,8 @@ def _job_dict(
         "finish_by": rules.hhmm(job.finish_by_minute),
         "late": job.late,
         "manual": job.manual,
+        "placed_by_hand": bool(job.manual and job.crew_id is not None),
+        "hand_locked": bool(job.hand_locked),
         "reason": job.note,
         "reason_code": job.reason_code,
         "cross_zone_reason": job.cross_zone_reason,
@@ -1047,9 +1075,14 @@ def job_rows(db: Session, *where) -> list[dict]:
     result = [_job_dict(j, v, veh, c, name, s) for j, v, veh, c, s, name in rows]
     on = parking_slots(db, [(veh, v.date) for _, v, veh, *_ in rows])
     zones = zone_names(db, [veh for _, _, veh, *_ in rows])
+    # The preferred Interior day is on the car's subscription (one per vehicle).
+    interior = dict(db.execute(
+        select(Subscription.vehicle_id, Subscription.interior_day)
+        .where(Subscription.vehicle_id.in_({veh.id for _, _, veh, *_ in rows}))).all())
     for r, (_, v, veh, *_) in zip(result, rows, strict=True):
         r["zone"] = zones.get(veh.id, "")
         r["parking"] = with_zone(r["zone"], parking_label(on[(veh.id, v.date)]))
+        r["interior_day"] = interior.get(veh.id)
     from app.scheduling.outcomes import visit_outcomes
 
     derived = visit_outcomes(db, {r["visit_id"] for r in result})
@@ -1108,6 +1141,9 @@ def board(db: Session, schedule: Schedule) -> dict:
                 "role": c.role,
                 "start_minute": c.start_minute,
                 "end_minute": c.end_minute,
+                "home_zones": [
+                    {"id": z.id, "name": z.name} for z in home_zone.effective_zones(db, c)
+                ],
             }
             for c in crew.values()
         ],
@@ -1218,7 +1254,7 @@ def crew_day(db: Session, login_id: uuid.UUID, day: date) -> dict:
         .where(Job.crew_id == target, Visit.date == day, Schedule.status == "Frozen")
     ).all()
     # The break of the Member whose jobs are shown, as a block that holds no job
-    # (SCHR-BRK-09, version 2 only).
+    # (SCHR-BRK-09).
     from app.scheduling.window_rules import capacity_break
 
     target_crew = me if target == me.id else db.get(SchedulingCrew, target)

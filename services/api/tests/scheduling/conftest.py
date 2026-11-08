@@ -127,17 +127,28 @@ def admin(api):
     return auth(login(api, "admin")["access_token"])
 
 
+def run_day(api, admin, society_id, day):
+    """One scheduler run for one day: the admin run covers one day only (ADM-SCH-09)."""
+    r = api.post("/v1/admin/scheduling/run", headers=admin,
+                 json={"society_id": str(society_id), "start_date": day.isoformat(), "days": 1})
+    assert r.status_code == 200, r.text
+    return r.json()["schedules"][0]
+
+
+def run_days(api, admin, society_id, start, days=7):
+    """A run of `days` days, made one day at a time. Returns each day's schedule, in date order."""
+    return [run_day(api, admin, society_id, start.fromordinal(start.toordinal() + i))
+            for i in range(days)]
+
+
 @pytest.fixture
 def run_week(api, admin, world):
-    def _run(**extra):
-        r = api.post("/v1/admin/scheduling/run", headers=admin, json={
-            "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), **extra})
-        assert r.status_code == 200, r.text
-        return r.json()["schedules"][0]
+    def _run(days=7):
+        return run_days(api, admin, world.society.id, SUNDAY, days)[0]
     return _run
 
 
-__all__ = ["SUNDAY", "World", "time"]
+__all__ = ["SUNDAY", "World", "run_day", "run_days", "time"]
 
 
 # ---- SCHS-07: scenario fixtures ----------------------------------------------
@@ -162,8 +173,3 @@ def site_cfg(world):
     yield _set
     builders.restore_site_values(world.db, world.society.id, saved)
 
-
-@pytest.fixture
-def rules_v2(site_cfg):
-    """Flip the test site's scheduler.rules_version to 2 for this test."""
-    site_cfg({"scheduler.rules_version": 2})

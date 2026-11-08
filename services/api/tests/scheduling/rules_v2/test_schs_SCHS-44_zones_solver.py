@@ -21,9 +21,10 @@ def _job(key, zone, **kw):
 
 def _solve(crew, specs, home, allowed=True, owned=None):
     jobs = [s[0] for s in specs]
+    home = {k: [v] if isinstance(v, str) else list(v or []) for k, v in home.items()}
     data = {
         "home": home, "vehicle_zone": {v: z for _j, (v, z) in specs if z},
-        "owned": sorted(owned if owned is not None else {z for z in home.values() if z}),
+        "owned": sorted(owned if owned is not None else {z for zs in home.values() for z in zs}),
         "cross_allowed": allowed,
     }
     return solve_day(crew, jobs, _params(), "exterior", {"zones": data})
@@ -112,7 +113,7 @@ def test_schr_zone_05_no_travel_minutes_are_added():
     assert sorted(s for _c, s in result.placed.values()) == [360, 390, 420, 450]
 
 
-def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world, rules_v2):
+def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 600), zone="Z1")
@@ -124,7 +125,7 @@ def test_schr_zone_10_a_run_with_home_zones_fills_the_home_zone_first(world, rul
     assert by_car[cars[2].id] == by_car[cars[3].id] == sc.cleaners["Bala"].id
 
 
-def test_schr_zone_11_a_site_with_no_home_zones_records_no_cross_zone_job(world, rules_v2):
+def test_schr_zone_11_a_site_with_no_home_zones_records_no_cross_zone_job(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 600))
@@ -143,7 +144,7 @@ def test_schr_zone_02_a_kept_job_in_another_zone_counts_as_that_zone():
     crew = [SolverCrew("a", 360, 480)]
     kept = SolverJob("k", "vk", 30, service=EXT, fixed=("a", 360))
     free = SolverJob("f", "vf", 30, service=EXT)
-    data = {"home": {"a": "Z1"}, "vehicle_zone": {"vk": "Z2", "vf": "Z1"},
+    data = {"home": {"a": ["Z1"]}, "vehicle_zone": {"vk": "Z2", "vf": "Z1"},
             "owned": ["Z1"], "cross_allowed": True}
     result = solve_day(crew, [kept, free], _params(), "exterior", {"zones": data})
     assert result.placed["k"] == ("a", 360)
@@ -156,10 +157,19 @@ def test_schr_hier_04_placing_a_job_ranks_above_zone_in_the_seeded_order():
     # Put zone first and the cross-zone assignment is refused, so the job stays out.
     crew = [SolverCrew("a", 360, 390)]
     specs = [SolverJob("j", "vj", 30, service=EXT)]
-    data = {"home": {"a": "Z1"}, "vehicle_zone": {"vj": "Z2"}, "owned": ["Z1"], "cross_allowed": True}
+    data = {"home": {"a": ["Z1"]}, "vehicle_zone": {"vj": "Z2"}, "owned": ["Z1"], "cross_allowed": True}
     seeded = solve_day(crew, specs, _params(), "exterior", {"zones": data})
     zone_order = "zone,placed,break,fifo,late,early_capacity,early"
     zone_first = solve_day(crew, specs, SolverParams(settings={"scheduler.objective_order": zone_order}),
                            "exterior", {"zones": data})
     assert set(seeded.placed) == {"j"}
     assert not zone_first.placed
+
+
+def test_schr_zone_02_a_car_in_any_of_the_home_zones_is_in_zone():
+    # Asha has Z1 and Z2, Bala has Z3. Each car is in one of Asha's zones, so
+    # neither car is cross-zone work and Asha takes both (SCHS-29, several zones).
+    crew = [SolverCrew("a", 360, 480), SolverCrew("b", 360, 480)]
+    specs = [_job("a1", "Z2"), _job("a2", "Z1")]
+    result = _solve(crew, specs, {"a": ["Z1", "Z2"], "b": ["Z3"]})
+    assert {k: result.placed[k][0] for k in ("a1", "a2")} == {"a1": "a", "a2": "a"}

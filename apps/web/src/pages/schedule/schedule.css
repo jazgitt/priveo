@@ -285,6 +285,17 @@
 .sch-detail.wine { color: #fdf2f4; }
 .sch-detail.wine .text-muted-foreground { color: #f3dfe3; }
 .sch-detail.wine .bg-muted { color: #fdf2f4; }
+/* The red card detail: the controls keep dark text on white, or the white text of the dialog hides them (owner, item 5). */
+.sch-detail.wine [data-slot="select-trigger"], .sch-detail.wine input, .sch-detail.wine select {
+  color: #16151a; background: #ffffff; border-color: #d9c6ca; }
+.sch-detail.wine [data-slot="select-trigger"] [data-slot="select-value"] { color: #16151a; }
+.sch-detail.wine [data-slot="select-trigger"] svg { color: #16151a; opacity: 0.7; }
+/* The card detail never scrolls sideways (owner, item 2): long text wraps and the buttons wrap under each other. */
+.sch-detail { overflow-x: hidden; overflow-wrap: anywhere; max-width: min(42rem, calc(100vw - 2rem)); }
+.sch-detail form, .sch-detail form > * { min-width: 0; max-width: 100%; }
+.sch-detail form > div:last-child { flex-wrap: wrap; }
+.sch-detail .mr-auto { flex-wrap: wrap; }
+.sch-detail input, .sch-detail select, .sch-detail button { max-width: 100%; }
 
 /* Running and celebration overlay: it never takes clicks, so the page stays usable under it. */
 .sch-fireworks { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
@@ -307,3 +318,37 @@
 @media (prefers-reduced-motion: reduce) {
   .sch-rain { display: none; }
 }
+
+/* ux9 (ADM-SCH-17 legend): Draft is dark yellow, Frozen dark green, Needs Attention deep red. */
+.dot.draft { background: #9a6513; box-shadow: none; }
+.dot.frozen { background: #1f6b43; box-shadow: none; }
+.sch-day .flag, .sch-day-key .flag { background: #8b1a1a; }
+
+/* ux9 (timeline, items 11 and 12): the track keeps its fixed width (REM_PER_MINUTE), so blocks keep their length and the ruler lines up. */
+.sch-tl .sch-tl-track { flex: 0 0 auto; }
+
+/* ux9 (item 4): the Mute control on the run overlay. The overlay never takes clicks, so only this button does. */
+.sch-fireworks-mute { position: absolute; top: 1rem; right: 1rem; pointer-events: auto; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.8rem; border-radius: 999px; border: 1px solid var(--c-line); background: var(--c-card); color: var(--c-text);
+  box-shadow: 0 4px 14px rgba(22, 21, 26, 0.16); font-size: 0.8rem; cursor: pointer; }
+.sch-fireworks-mute:hover { background: #fbf6e9; }
+/* Card tools: the lock (placed by hand) and the take-off icon. Bottom right on standard and detailed, right on compact (items 6, 15). */
+.sch-card.has-tools, .sch-card.has-tools.compact { padding-right: 2.25rem; }
+.sch-card-tools { position: absolute; right: 0.2rem; bottom: 0.15rem; display: flex; gap: 0.1rem; }
+.sch-card.compact .sch-card-tools { top: 50%; bottom: auto; transform: translateY(-50%); }
+.sch-tool { display: grid; place-items: center; width: 1.2rem; height: 1.2rem; padding: 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--c-mute); cursor: pointer; }
+.sch-tool:hover { background: rgba(22, 21, 26, 0.08); color: var(--c-text); }
+.sch-tool:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
+.sch-tool svg { width: 0.8rem; height: 0.8rem; }
+.sch-tool.lock[aria-pressed="true"] { color: var(--c-text); }
+.sch-tool.lock[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.sch-tool.del:hover { color: var(--c-error); }
+.sch-card.wine .sch-tool { color: #fdf2f4; }
+.sch-card.wine .sch-tool:hover { background: rgba(253, 242, 244, 0.16); color: #fdf2f4; }
+
+/* The crew name and its home zones share the header line; a long list is cut, the full text is in the tip (item 9). */
+.sch-name-line { display: flex; align-items: baseline; gap: 0; min-width: 0; max-width: 100%; overflow: hidden; }
+.sch-name-line > strong { flex: none; }
+.sch-home-zones { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--c-mute); }
+

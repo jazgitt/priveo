@@ -12,7 +12,7 @@ from app.notifications.models import Notification
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, SchedulingCrewException, Visit
 from app.visits.models import JobOutcome, OperationsDecision
-from tests.scheduling.conftest import PINNED_NOW, SUNDAY
+from tests.scheduling.conftest import PINNED_NOW, SUNDAY, run_days
 from tests.test_api import auth, login
 
 
@@ -26,18 +26,11 @@ def setup(world, api, admin):
     world.add_crew(start=360, end=840)
     vehicle = world.add_vehicle(interior_day="Sunday")
     world.db.commit()
-    response = api.post(
-        "/v1/admin/scheduling/run",
-        headers=admin,
-        json={
-            "society_id": str(world.society.id),
-            "start_date": SUNDAY.isoformat(),
-            "days": 7,
-        },
-    )
-    assert response.status_code == 200, response.text
-    sid = response.json()["schedules"][0]["schedule_id"]
-    api.post(f"/v1/admin/scheduling/schedules/{sid}/freeze", headers=admin)
+    # A week, one daily run at a time (ADM-SCH-09); every day is frozen, as a week used to be.
+    days = run_days(api, admin, world.society.id, SUNDAY)
+    sid = days[0]["schedule_id"]
+    for day in days:
+        api.post(f"/v1/admin/scheduling/schedules/{day['schedule_id']}/freeze", headers=admin)
     visit = world.db.scalar(
         select(Visit).where(Visit.vehicle_id == vehicle.id, Visit.date == SUNDAY)
     )
@@ -119,7 +112,9 @@ def test_next_day_internal_retry_preserves_frozen_work_and_calendar_link(world, 
     result = resolve(api, admin, job, "Reschedule")
     assert result.status_code == 200, result.text
     assert result.json()["rescheduled_on"] == (SUNDAY + timedelta(days=1)).isoformat()
-    assert result.json()["replacement_assigned"]
+    # The car already has its own Interior on Monday, and one Interior a day is a hard rule (SCHR-HARD-11),
+    # so the retry is not placed.
+    assert not result.json()["replacement_assigned"]
     assert resolve(api, admin, job, "Reschedule").status_code == 200
     assert not any(
         j["id"] == str(job.id)
@@ -131,7 +126,7 @@ def test_next_day_internal_retry_preserves_frozen_work_and_calendar_link(world, 
     )
     world.db.expire_all()
     redo = world.db.scalar(select(Job).where(Job.source_job_id == job.id))
-    assert redo and redo.crew_id
+    assert redo and redo.crew_id is None  # the car has its own Interior that day (SCHR-HARD-11)
     assert world.db.get(Job, job.id).status == "Could not complete"
     for jid, placement in before.items():
         original = world.db.get(Job, jid)

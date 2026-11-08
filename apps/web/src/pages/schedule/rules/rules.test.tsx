@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,9 +8,9 @@ import { withSite } from "../../../site/testSite";
 import { PortalProviders } from "../../../test/portal";
 import { CrewDetailPage } from "../../crew/CrewDetailPage";
 import { collectSections as collectCrew } from "../../crew/rules";
-import { collectSections as collectReports } from "../../schedule/reports";
-import { SchedulePage } from "../../schedule/SchedulePage";
-import { ReferencePage } from "../ReferencePage";
+import { ReferencePage } from "../../reference/ReferencePage";
+import { collectSections as collectReports } from "../reports";
+import { SchedulePage } from "../SchedulePage";
 import { collectSections } from ".";
 
 // The section lists the three pages read. Each test sets what the folder would hold.
@@ -20,7 +19,7 @@ const folders = vi.hoisted(() => ({
 }));
 vi.mock("./index", async (orig) => ({ ...(await orig<object>()), get RULES_SECTIONS() { return folders.rules; } }));
 vi.mock("../../crew/rules", async (orig) => ({ ...(await orig<object>()), get CREW_RULES_SECTIONS() { return folders.crew; } }));
-vi.mock("../../schedule/reports", async (orig) => ({ ...(await orig<object>()), get REPORT_SECTIONS() { return folders.reports; } }));
+vi.mock("../reports", async (orig) => ({ ...(await orig<object>()), get REPORT_SECTIONS() { return folders.reports; } }));
 
 const fetchMock = vi.fn();
 const json = (status: number, body?: unknown) => new Response(body === undefined ? null : JSON.stringify(body), { status });
@@ -73,20 +72,32 @@ describe("collecting sections from a folder", () => {
   });
 });
 
-describe("Scheduling rules tab (Site Setup)", () => {
+describe("Rules tab (Scheduler)", () => {
+  it("is a tab of the Schedule page", async () => {
+    wrap(<SchedulePage />, "/schedule?date=2026-11-08");
+    expect(await screen.findByRole("tab", { name: "Rules" })).toBeInTheDocument();
+  });
+
   it("shows an empty state when the folder has no section files", async () => {
-    wrap(<ReferencePage />, "/reference");
-    await userEvent.click(await screen.findByRole("tab", { name: "Scheduling rules" }));
+    wrap(<SchedulePage />, "/schedule?date=2026-11-08&tab=rules");
     expect(await screen.findByText("No scheduling rules yet")).toBeInTheDocument();
   });
 
   it("shows a section file added to the folder with no other edit", async () => {
     folders.rules = collectSections({ "./XSection.tsx": { section: { id: "x", title: "Freeze rules", order: 1, component: Fake("freeze") } } });
-    wrap(<ReferencePage />, "/reference");
-    await userEvent.click(await screen.findByRole("tab", { name: "Scheduling rules" }));
+    wrap(<SchedulePage />, "/schedule?date=2026-11-08&tab=rules");
     expect(await screen.findByRole("heading", { name: "Freeze rules" })).toBeInTheDocument();
     expect(screen.getByText("freeze body")).toBeInTheDocument();
     expect(screen.queryByText("No scheduling rules yet")).not.toBeInTheDocument();
+  });
+});
+
+describe("Site Setup", () => {
+  it("no longer has a Scheduling rules tab; the rules are on the Scheduler", async () => {
+    folders.rules = collectSections({ "./XSection.tsx": { section: { id: "x", title: "Freeze rules", order: 1, component: Fake("freeze") } } });
+    wrap(<ReferencePage />, "/reference");
+    expect(await screen.findByRole("tab", { name: "Zones" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Scheduling rules" })).not.toBeInTheDocument();
   });
 });
 

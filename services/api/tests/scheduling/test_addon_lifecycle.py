@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.addons.models import AddonBooking
 from app.scheduling import service
 from app.scheduling.models import Job, Schedule, Visit
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 from tests.test_api import auth, login
 
 
@@ -56,13 +56,7 @@ def request(api, customer, vehicle, finish="12:00"):
 
 
 def run(api, admin, world):
-    r = api.post(
-        "/v1/admin/scheduling/run",
-        headers=admin,
-        json={"society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 7},
-    )
-    assert r.status_code == 200, r.text
-    return r.json()["schedules"][0]["schedule_id"]
+    return run_days(api, admin, world.society.id, SUNDAY)[0]["schedule_id"]
 
 
 def test_booking_reaches_scheduler_without_payment_and_has_its_own_visit(
@@ -85,8 +79,8 @@ def test_booking_reaches_scheduler_without_payment_and_has_its_own_visit(
     )
     spa = world.db.get(Visit, job.visit_id)
     assert spa.id != plan.id and spa.addon_key == b["id"]
-    plan_job = world.db.scalar(select(Job).where(Job.visit_id == plan.id))
-    service.set_job_status(world.db, plan_job.id, "Completed")
+    for plan_job in world.db.scalars(select(Job).where(Job.visit_id == plan.id)).all():
+        service.set_job_status(world.db, plan_job.id, "Completed")  # the Exterior and the Interior
     assert world.db.get(Visit, plan.id).status == "Completed"
     assert world.db.get(Visit, spa.id).status == "Scheduled"
     service.set_job_status(world.db, job.id, "Completed")

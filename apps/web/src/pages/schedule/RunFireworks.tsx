@@ -1,4 +1,4 @@
-import { Loader2, PartyPopper } from "lucide-react";
+import { Loader2, PartyPopper, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 /** A spark of a firework: it moves, slows under a little gravity and fades. */
@@ -21,15 +21,18 @@ const reducedMotion = () =>
 /**
  * An overlay that shows fireworks while the scheduler runs ("running") and a
  * celebration when it has finished ("celebrate", with the result as its caption).
- * It never takes clicks, so the page stays usable under it. With reduced motion
- * it shows the caption only.
+ * It never takes clicks, except its Mute control, so the page stays usable under it.
+ * With reduced motion it shows the caption only. The music is started by the page.
  */
-export function Fireworks({ mode, message, onEnd }: {
+export function Fireworks({ mode, message, onEnd, muted, onToggleMute }: {
   mode: "running" | "celebrate";
   /** The result of the run, shown under the celebration. */
   message?: string;
   /** Called once the celebration has finished. */
   onEnd?: () => void;
+  /** Whether the run music is muted, and the control that toggles it (ux9). Without a toggle there is no control. */
+  muted?: boolean;
+  onToggleMute?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const endRef = useRef(onEnd);
@@ -111,6 +114,12 @@ export function Fireworks({ mode, message, onEnd }: {
   return (
     <div className="sch-fireworks" data-mode={mode}>
       {!reduced && <canvas ref={canvasRef} className="sch-fireworks-canvas" aria-hidden />}
+      {onToggleMute && (
+        <button type="button" className="sch-fireworks-mute" onClick={onToggleMute}>
+          {muted ? <VolumeX className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />}
+          <span>{muted ? "Unmute music" : "Mute music"}</span>
+        </button>
+      )}
       <div role="status" className="sch-fireworks-caption">
         {mode === "running" ? (
           <><Loader2 className="size-4 animate-spin" aria-hidden /> <span>Scheduling the jobs…</span></>

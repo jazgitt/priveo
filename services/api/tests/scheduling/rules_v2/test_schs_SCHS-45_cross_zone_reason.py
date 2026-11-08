@@ -27,7 +27,7 @@ def _two(world):
     return sc
 
 
-def test_schr_zone_06_a_cleaner_away_means_home_zone_cleaner_absent(world, rules_v2):
+def test_schr_zone_06_a_cleaner_away_means_home_zone_cleaner_absent(world):
     sc = _two(world)
     car = sc.car(zone="Z1")
     sc.exception(sc.cleaners["Asha"], MONDAY)
@@ -35,7 +35,7 @@ def test_schr_zone_06_a_cleaner_away_means_home_zone_cleaner_absent(world, rules
     assert _reasons(sc)[car.id] == zone_reason.ABSENT
 
 
-def test_schr_zone_06_a_full_home_zone_means_home_zone_full(world, rules_v2):
+def test_schr_zone_06_a_full_home_zone_means_home_zone_full(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 390), zone="Z1")  # room for one Exterior
@@ -47,7 +47,7 @@ def test_schr_zone_06_a_full_home_zone_means_home_zone_full(world, rules_v2):
     assert all(c.id in found for c in cars)
 
 
-def test_schr_zone_06_a_job_for_a_cleaner_with_room_is_spare_capacity_used(world, rules_v2):
+def test_schr_zone_06_a_job_for_a_cleaner_with_room_is_spare_capacity_used(world):
     sc = _two(world)
     car = sc.car(zone="Z1")
     sc.fixed(car, MONDAY, sc.cleaners["Bala"], 360)  # placed by hand on the other zone's cleaner
@@ -55,7 +55,7 @@ def test_schr_zone_06_a_job_for_a_cleaner_with_room_is_spare_capacity_used(world
     assert _reasons(sc)[car.id] == zone_reason.SPARE
 
 
-def test_schr_zone_06_a_cutoff_the_home_cleaner_cannot_meet_is_named(world, rules_v2):
+def test_schr_zone_06_a_cutoff_the_home_cleaner_cannot_meet_is_named(world):
     sc = _two(world)
     busy, early = sc.cars(2, zone="Z1"), sc.car(zone="Z1", cutoff=time(7, 0))
     for i, car in enumerate(busy):  # Asha is busy from 06:00 to 07:00
@@ -65,7 +65,7 @@ def test_schr_zone_06_a_cutoff_the_home_cleaner_cannot_meet_is_named(world, rule
     assert [_reasons(sc)[c.id] for c in busy] == [None, None]
 
 
-def test_schr_zone_06_a_job_in_the_home_zone_has_no_reason_and_a_rerun_clears_it(world, rules_v2):
+def test_schr_zone_06_a_job_in_the_home_zone_has_no_reason_and_a_rerun_clears_it(world):
     sc = _two(world)
     car = sc.car(zone="Z1")
     sc.exception(sc.cleaners["Asha"], MONDAY)
@@ -79,7 +79,7 @@ def test_schr_zone_06_a_job_in_the_home_zone_has_no_reason_and_a_rerun_clears_it
     assert _reasons(sc)[car.id] is None
 
 
-def test_schr_zone_06_a_site_without_home_zones_stores_no_reason(world, rules_v2):
+def test_schr_zone_06_a_site_without_home_zones_stores_no_reason(world):
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Asha", shift=(360, 600))
@@ -95,7 +95,7 @@ def test_schr_zone_06_the_interior_reason_when_the_home_zone_is_full():
     assert zone_reason._fits([(360, 480)], [(360, 420)], 30, 440) == (True, False)
 
 
-def test_schr_zone_06_the_board_and_the_daily_view_carry_the_reason(api, world, rules_v2):
+def test_schr_zone_06_the_board_and_the_daily_view_carry_the_reason(api, world):
     sc = _two(world)
     sc.car(zone="Z1", cutoff=time(9, 0))  # the daily view needs a cutoff to show a job
     sc.exception(sc.cleaners["Asha"], MONDAY)
@@ -139,7 +139,21 @@ def test_schr_zone_06_a_skipped_job_is_given_no_reason():
                           finish_by_minute=None, status="Skipped", cross_zone_reason="old")
     visit = SimpleNamespace(vehicle_id=vehicle)
     ctx = SimpleNamespace(zone_days={SUNDAY: {
-        "home": {key: "Z1"}, "vehicle_zone": {str(vehicle): "Z2"},
+        "home": {key: ["Z1"]}, "vehicle_zone": {str(vehicle): "Z2"},
         "crew": {key: [(360, 600)]}}})
     zone_reason.after_solve(ctx, SUNDAY, [(job, visit)], None)
     assert job.cross_zone_reason is None
+
+
+def test_schr_zone_06_a_car_in_any_home_zone_has_no_reason_and_one_outside_has_one(world):
+    sc = Scenario(world)
+    sc.slots()
+    sc.cleaner("Asha", shift=(360, 600), zone=["Z1", "Z2"])
+    sc.cleaner("Bala", shift=(360, 600), zone="Z3")
+    in_zone = sc.car(zone="Z2")
+    outside = sc.car(zone="Z3")
+    sc.exception(sc.cleaners["Bala"], MONDAY)
+    sc.run(MONDAY)
+    reasons = _reasons(sc)
+    assert reasons.get(in_zone.id) is None
+    assert reasons[outside.id] == zone_reason.ABSENT

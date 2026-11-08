@@ -15,6 +15,7 @@ def _job(key, zone):
 
 
 def _solve(crew, specs, home, owned):
+    home = {k: [v] if isinstance(v, str) else list(v or []) for k, v in home.items()}
     data = {
         "home": home,
         "vehicle_zone": {v: z for _j, (v, z) in specs if z},

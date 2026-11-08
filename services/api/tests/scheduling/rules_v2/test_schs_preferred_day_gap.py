@@ -40,7 +40,7 @@ def _interior_on(sc, car, day):
                Job.status == "Scheduled", Job.manual.is_(False))).scalars().all()
 
 
-def test_schr_int_27_small_gap_keeps_the_preferred_day(world, rules_v2):
+def test_schr_int_27_small_gap_keeps_the_preferred_day(world):
     sc, car, cleaner = _scenario(world)
     _completed_interior(sc, car, cleaner, TUESDAY)  # one day after Monday: a small gap
     res = sc.run(WEEK1, days=7)
@@ -49,7 +49,7 @@ def test_schr_int_27_small_gap_keeps_the_preferred_day(world, rules_v2):
     assert not any("Preferred Interior day moved" in (u.note or "") for u in res.unassigned)
 
 
-def test_schr_int_27_large_gap_holds_the_interior_as_optional_and_unscheduled(world, rules_v2):
+def test_schr_int_27_large_gap_holds_the_interior_as_optional_and_unscheduled(world):
     sc, car, cleaner = _scenario(world)
     _completed_interior(sc, car, cleaner, SATURDAY)  # five days after Monday: a large gap
     res = sc.run(WEEK1, days=7)
@@ -59,7 +59,7 @@ def test_schr_int_27_large_gap_holds_the_interior_as_optional_and_unscheduled(wo
     assert any(u.day == MONDAY and u.vehicle_id == car.id for u in res.unassigned)
 
 
-def test_schr_int_28_no_completed_interior_in_the_week_keeps_the_preferred_day(world, rules_v2):
+def test_schr_int_28_no_completed_interior_in_the_week_keeps_the_preferred_day(world):
     # Changed 08-Nov-26 (owner rule): the last actual Interior is the most recent
     # completed one, not one in the plan week. With no completed Interior at all
     # the preferred day is kept and nothing is held.

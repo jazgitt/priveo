@@ -1,7 +1,7 @@
 """Interior earliest start: a Cleaning-Internal job may not start before the
 site's Interior-earliest time, on any day, weekday or weekend (SCHR-PAR-08,
 SCHR-HARD-05, SCHR-INT-03). The band before it stays for Exterior jobs
-(SCHR-EXT-08). Runs only at `scheduler.rules_version` 2."""
+(SCHR-EXT-08)."""
 from app.directory import lookup
 from app.directory.site_settings import SettingMissing
 
@@ -14,8 +14,6 @@ def job_windows(db, society_id, service, day, windows):
     if service != INTERIOR or not windows:
         return windows
     try:
-        if int(lookup.rules_version(db, society_id)) != 2:
-            return windows
         earliest = int(lookup.site_setting(db, society_id, "site.interior_earliest_minute"))
     except SettingMissing:
         return windows

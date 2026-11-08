@@ -11,7 +11,6 @@ from app.customers.models import Customer, Subscription, Vehicle
 from app.directory.models import AddonCatalogueItem, Plan, Society
 from app.directory.seed import seed_defaults
 from app.identity.seed import seed_logins
-from app.scheduling import service as scheduling
 from app.scheduling.models import Job, SchedulingCrew
 from app.support.models import Complaint
 from scripts import seed_two_societies as seed
@@ -35,10 +34,19 @@ def clean_tool_tables(engine):
 
 @pytest.fixture(autouse=True)
 def quick_solver(monkeypatch):
-    """The solver's real limit is 10 seconds a day; a fraction of a second is enough here."""
-    original = scheduling.solve_day
-    monkeypatch.setattr(scheduling, "solve_day",
-                        lambda crew, jobs, max_seconds=0.3: original(crew, jobs, max_seconds))
+    """The solver's real limit is 10 seconds a day. A tiny budget gives each stage a slice of about
+    0.01 s, which is the case that aborted OR-Tools while hint repair was on (see objective_order).
+    Keep this budget as the regression test for that abort."""
+    from dataclasses import replace
+
+    from app.scheduling import passes
+
+    original = passes.solve_day
+
+    def quick(crew, jobs, params=None, *args, **kwargs):
+        return original(crew, jobs, replace(params, max_seconds=0.03), *args, **kwargs)
+
+    monkeypatch.setattr(passes, "solve_day", quick)
 
 
 @pytest.fixture

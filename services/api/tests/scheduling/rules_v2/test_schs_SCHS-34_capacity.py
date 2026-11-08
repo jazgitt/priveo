@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.directory import lookup, rule_seed, site_settings
+from app.directory import lookup, rule_seed
 from app.directory.models import WorkingSlot
 from app.scheduling import capacity
 from app.scheduling.capacity_lines import early_band
@@ -14,17 +14,15 @@ from tests.scheduling.conftest import SUNDAY
 SERVICES = ["Cleaning-External", "Cleaning-Internal", "Deep Spa"]
 
 
-def _site(world, version=2, start=300, end=660):
+def _site(world, start=300, end=660):
     member = world.add_crew(start=start, end=end)
     for name in SERVICES:
         world.db.add(WorkingSlot(society_id=world.society.id, service=name,
                                  start_minute=start, end_minute=end, days=list(range(7))))
     world.db.commit()
     rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", version, None)
     lookup.invalidate()
     return member
-
 
 
 def _day(world):
@@ -75,13 +73,6 @@ def test_schr_ext_09_busy_minutes_and_the_break_are_not_free():
     assert ctx.windows == {}
 
 
-def test_schr_ext_09_nothing_changes_at_rules_version_1(world):
-    _site(world, version=1)
-    day = _day(world)
-    assert day["break_minutes"] == 0 and day["early_band_free_minutes"] == 0
-    assert day["capacity_minutes"] == 660 - 300
-
-
 # ---- SCHR-BRK-08: the break is taken out of each working window (gap check) ---
 
 
@@ -97,19 +88,8 @@ def test_schr_brk_08_the_break_is_taken_out_of_each_window(monkeypatch, windows,
     from app.scheduling import breaks
     from app.scheduling.window_rules import capacity_break
 
-    monkeypatch.setattr(capacity_break, "_active", lambda db, society_id: True)
     brk = None if found is None else SimpleNamespace(start_minute=found[0], end_minute=found[1])
     monkeypatch.setattr(breaks, "effective_break", lambda db, crew, day: brk)
     crew = SimpleNamespace(society_id=1, id=1)
     assert capacity_break.capacity_windows(None, crew, SUNDAY, windows) == expected
 
-
-def test_schr_brk_08_version_1_keeps_the_windows_whole(monkeypatch):
-    from app.scheduling import breaks
-    from app.scheduling.window_rules import capacity_break
-
-    monkeypatch.setattr(capacity_break, "_active", lambda db, society_id: False)
-    monkeypatch.setattr(breaks, "effective_break", lambda db, crew, day: SimpleNamespace(
-        start_minute=510, end_minute=540))
-    crew = SimpleNamespace(society_id=1, id=1)
-    assert capacity_break.capacity_windows(None, crew, SUNDAY, [(480, 600)]) == [(480, 600)]

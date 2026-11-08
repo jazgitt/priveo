@@ -1,15 +1,15 @@
 """Ordered objectives and weights from configuration (SCHR-PAR-15, SCHR-HIER-03
 to 06).
 
-Rule modules add their terms by objective name (`ctx.add_term`). At rules
-version 2 the run's settings carry `scheduler.objective_order`, a comma list of
+Rule modules add their terms by objective name (`ctx.add_term`). A run's
+settings carry `scheduler.objective_order`, a comma list of
 objective names, highest first, and this module solves one stage per objective:
 it maximises the objective, fixes the best value it reached as a floor, and goes
 on to the next one. So a lower objective never worsens a higher one, whatever
 the weights. The weight of an objective (`scheduler.weight_<name>`) scales its
 own terms only.
 
-Without `scheduler.objective_order` in the settings (version 1, direct calls)
+Without `scheduler.objective_order` in the settings (direct calls)
 the terms are summed with their weights and solved once, as before.
 
 Derived: an objective with terms that the order does not list runs after the
@@ -56,7 +56,15 @@ def optimise(ctx: ModelContext):
         return solver.Solve(model), solver
     remaining = float(params.max_seconds)
     _greedy_hint(ctx)
-    solver.parameters.repair_hint = True
+    # repair_hint stays off. With it on, OR-Tools 9.15 can abort the whole process (a native
+    # CHECK failure, `heuristics.fixed_search != nullptr`) when a stage's time limit ends during
+    # hint repair. Stage slices can be very short, and a slower machine reaches the repair
+    # sooner, so the abort is intermittent. Regression: tests/test_seed_two_societies.py at 0.03 s.
+    # A hint never changes what is allowed, so this changes only how fast a plan is found.
+    # Measured 08-Nov-26 at the 10 s limit (early-stage penalty, higher is better):
+    #   60 cars: repair off -1764, repair on -1782 (off is better)
+    #   120 cars: repair off -3773, repair on -3606 (on is better, by about 4.6%)
+    solver.parameters.repair_hint = False
     best = None
     for i, name in enumerate(names):
         stage = sum(ctx.weight(name) * t for t in ctx.terms[name])

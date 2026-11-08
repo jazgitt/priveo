@@ -91,7 +91,7 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
               const [, m, dd] = d.split("-");
               return (
                 <button key={d} type="button" aria-pressed={d === date} onClick={() => onChange(d)}
-                        aria-label={`${weekday(d)} ${fmtDate(d)}, ${s ? s.status : "no schedule"}${d === today ? ", today" : ""}${attention.has(d) ? ", needs you" : ""}`}
+                        aria-label={`${weekday(d)} ${fmtDate(d)}, ${s ? s.status : "no schedule"}${d === today ? ", today" : ""}${attention.has(d) ? ", Needs Attention" : ""}`}
                         className={cn("sch-day", d < today && "past", d === today && "today", weekday(d) === "Sun" && "week")}>
                   <span className="dow">{d === today ? "Today" : weekday(d)}</span>
                   <span className="dom">{dd}</span>
@@ -106,7 +106,7 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
             <span className="sch-day-key"><i className="dot draft" /> Draft</span>
             <span className="sch-day-key"><i className="dot frozen" /> Frozen</span>
             <span className="sch-day-key"><i className="dot" /> No schedule</span>
-            <span className="sch-day-key"><i className="flag" /> Needs you</span>
+            <span className="sch-day-key"><i className="flag" /> Needs Attention</span>
           </p>
         </div>
       )}

@@ -48,6 +48,8 @@ export interface SchedulingCrew {
   role: string;
   start_minute: number;
   end_minute: number;
+  /** The zones the crew member works in at home, shown after the name. Empty when none. */
+  home_zones?: { id: string; name: string }[];
 }
 
 export interface AdminJob {
@@ -93,6 +95,11 @@ export interface AdminJob {
   cross_zone_reason?: string | null;
   /** The rules a job was placed against by hand and the admin confirmed (SCHS-22): the card is marked wine. */
   hand_breaches?: string[];
+  /** The car's preferred Interior day: a weekday, "Custom", or null when not set. Shown on Interior cards. */
+  interior_day?: string | null;
+  /** The job was placed by hand, and the admin can lock it there (lock icon). */
+  placed_by_hand?: boolean;
+  hand_locked?: boolean;
 }
 
 export interface Board {
@@ -270,12 +277,6 @@ export function nextSunday(from: Date = new Date()): string {
   const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
   return toIso(d);
-}
-
-/** Days from this date to the end of its month (a Monthly run). */
-export function daysInMonthFrom(iso: string): number {
-  const [y, m, d] = parts(iso);
-  return new Date(y, m, 0).getDate() - d + 1;
 }
 
 /** Minutes after midnight -> "HH:MM". */

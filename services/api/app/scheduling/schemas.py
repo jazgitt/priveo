@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -8,8 +9,8 @@ class RunRequest(BaseModel):
     # Empty means every active society (ADM-SCH-01).
     society_id: uuid.UUID | None = None
     start_date: date
-    # A week by default (ADM-SCH-09).
-    days: int | None = Field(default=None, ge=1, le=31)
+    # One run covers one day (ADM-SCH-09, owner 08-Nov-26). Any other length is refused.
+    days: Literal[1] = 1
 
 
 class RunResult(BaseModel):
@@ -19,13 +20,12 @@ class RunResult(BaseModel):
     placed: int
     unscheduled: int
     late: int
-    # Rules version 2 only (SCHS-21): unassigned Exteriors, the cars they belong
-    # to and their minutes. Null on a site still on version 1.
+    # SCHS-21: unassigned Exteriors, the cars they belong to and their minutes.
     unassigned_exteriors: int | None = None
     shortfall_cars: int | None = None
     shortfall_minutes: int | None = None
-    # Rules version 2 (SCHS-40): Interiors deferred or not planned, jobs placed
-    # outside the cleaner's home zone, and missed breaks. 0 on a site on version 1.
+    # SCHS-40: Interiors deferred or not planned, jobs placed outside the
+    # cleaner's home zone, and missed breaks.
     deferred_interiors: int = 0
     cross_zone_jobs: int = 0
     missed_breaks: int = 0
@@ -40,7 +40,7 @@ class MoveRequest(BaseModel):
     crew_id: uuid.UUID | None = None
     # Minutes after midnight.
     start_minute: int | None = Field(default=None, ge=0, lt=1440)
-    # Rules version 2 (SCHS-22): place the job although it breaks a rule. Without
+    # SCHS-22: place the job although it breaks a rule. Without
     # it a breach is answered with a placement_warning that lists the breaches.
     override: bool = False
 
@@ -111,12 +111,19 @@ class DayCapacity(BaseModel):
     availability: list[CrewDayAvailability] = []
 
 
+class ZoneRef(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
 class SchedulingCrewOut(BaseModel):
     id: uuid.UUID
     name: str
     role: str
     start_minute: int
     end_minute: int
+    # The home zones the planner uses (SCHS-29); a Trainee shows the Member's.
+    home_zones: list[ZoneRef] = Field(default_factory=list)
 
 
 class AdminJob(BaseModel):
@@ -144,6 +151,9 @@ class AdminJob(BaseModel):
     finish_by: str | None
     late: bool
     manual: bool
+    # Placed by hand with a crew member and start (item 15), and whether a run keeps it.
+    placed_by_hand: bool = False
+    hand_locked: bool = False
     reason: str
     # S-05: a moved service keeps both dates. `moved_to_date` is on the closed
     # original, `moved_from_date` on the job on the new date.
@@ -161,12 +171,14 @@ class AdminJob(BaseModel):
     # Place in the crew member's day, and whether the admin unlocked it (S-13, C-04).
     sequence: int | None = None
     queue_unlocked: bool = False
-    # Rules version 2 only (SCHS-21): the code of the reason an unassigned job has no place.
+    # SCHS-21: the code of the reason an unassigned job has no place.
     reason_code: str | None = None
-    # Rules version 2 only (SCHS-45): why the job sits outside its cleaner's home zone.
+    # SCHS-45: why the job sits outside its cleaner's home zone.
     cross_zone_reason: str | None = None
     # SCHS-22: the rules a job was placed against by hand and the admin confirmed; the Board marks it wine.
     hand_breaches: list[str] = []
+    # The car's preferred Interior day as set on its subscription: a weekday, "Custom", or null when not set.
+    interior_day: str | None = None
 
 
 class Board(BaseModel):

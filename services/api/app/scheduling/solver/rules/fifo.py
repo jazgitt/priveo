@@ -42,8 +42,6 @@ NO_CUTOFF = 10**9
 
 def day_inputs(run_ctx, day: date, crew: list[SolverCrew]) -> dict | None:
     """The service week and the age of the ledger row chosen for each car on `day`."""
-    if not run_ctx.active:
-        return None
     chosen = {v: r for (v, d), r in getattr(run_ctx, "interior_rows", {}).items() if d == day}
     if not chosen:
         return None

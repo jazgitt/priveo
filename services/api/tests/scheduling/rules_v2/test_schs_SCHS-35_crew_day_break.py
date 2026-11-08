@@ -1,20 +1,19 @@
 """SCHS-35: the break is drawn in the crew day and on the Board as a block that holds
-no job (SCHR-BRK-09). Version 2 only."""
-from app.directory import lookup, rule_seed, site_settings
+no job (SCHR-BRK-09)."""
+from app.directory import lookup, rule_seed
 from app.directory.models import WorkingSlot
 from app.scheduling import capacity, service
 from app.scheduling.models import BreakRule
 from tests.scheduling.conftest import SUNDAY
 
 
-def _site(world, version=2, end=660, role="Member", paired=None):
+def _site(world, end=660, role="Member", paired=None):
     member = world.add_crew(start=300, end=end, role=role, paired=paired)
     for name in ("Cleaning-External", "Cleaning-Internal", "Deep Spa"):
         world.db.add(WorkingSlot(society_id=world.society.id, service=name,
                                  start_minute=300, end_minute=end, days=list(range(7))))
     world.db.commit()
     rule_seed.seed_rule_keys(world.db)
-    site_settings.write(world.db, world.society.id, "scheduler.rules_version", version, None)
     lookup.invalidate()
     return member
 
@@ -36,11 +35,6 @@ def test_schr_brk_09_a_date_rule_moves_the_break(world):
 
 def test_schr_brk_09_a_cleaner_without_a_break_shows_none(world):
     member = _site(world, end=540)  # the shift ends before 09:30
-    assert service.crew_day(world.db, member.login_id, SUNDAY)["day_break"] is None
-
-
-def test_schr_brk_09_nothing_is_drawn_at_rules_version_1(world):
-    member = _site(world, version=1)
     assert service.crew_day(world.db, member.login_id, SUNDAY)["day_break"] is None
 
 

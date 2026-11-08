@@ -24,8 +24,7 @@ block that holds every old and new value; save it, and pass it to --revert to
 put the old values back (a value is put back only if it still has the new value).
 
 Reads DATABASE_URL (the database it works on: check the host it prints first).
-Run it by hand, on test first. Nothing in any workflow runs it. It does not set
-`scheduler.rules_version`.
+Run it by hand, on test first. Nothing in any workflow runs it.
 """
 import json
 import sys

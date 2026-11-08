@@ -34,7 +34,7 @@ beforeEach(() => vi.stubGlobal("fetch", fetchMock));
 afterEach(() => { fetchMock.mockReset(); vi.unstubAllGlobals(); });
 
 describe("GeneralSection", () => {
-  it("is a section file the Scheduling rules tab finds by itself", () => {
+  it("is a section file the Scheduler Rules tab finds by itself", () => {
     expect(collectSections({ "./GeneralSection.tsx": module }).map((s) => s.id)).toContain(module.section.id);
   });
 

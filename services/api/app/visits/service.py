@@ -21,7 +21,6 @@ from app.media.store import get_object_store
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import hooks as scheduling_hooks
 from app.scheduling import queue, rules
 from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 from app.scheduling.outcomes import visit_outcomes
@@ -448,9 +447,8 @@ def could_not_complete(db: Session, job: Job, body: s.CouldNotComplete, by: uuid
     _stamp(db, job, finished=True)
     # A reason marked "defers" in configuration puts the job off instead of
     # ending it: Deferred, planned again at the next run (SCHR-DEF-01 to DEF-05).
-    # Version 2 only; a partial completion keeps the ADM-CNC-10 next-day decision.
-    deferred = lookup.reason_defers(db, body.reason_key) and scheduling_hooks.job_rules_version(
-        db, job) == 2
+    # A partial completion keeps the ADM-CNC-10 next-day decision.
+    deferred = lookup.reason_defers(db, body.reason_key)
     new_status = "Deferred" if deferred else "Could not complete"
     _audit_job(db, by, job, "not_done", {
         "status": [job.status, new_status], "reason_key": body.reason_key,
@@ -542,6 +540,7 @@ def manager_reassign(
         "crew_id": [None if job.crew_id is None else str(job.crew_id), str(target.id)]})
     job.crew_id = target.id
     job.manual = True
+    job.hand_locked = True  # a hand placement is locked by default (item 15)
     job.queue_unlocked = False
     queue.resequence_all(db, {(target.id, visit.date), (previous_crew_id, visit.date)})
     db.commit()

@@ -12,7 +12,7 @@ from app.customers.models import SchedulePattern, Subscription
 from app.directory.models import DirectoryAudit, Plan
 from app.scheduling import service
 from app.scheduling.models import Visit
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 from tests.test_api import auth, login
 
 EXT, INT = "Cleaning-External", "Cleaning-Internal"
@@ -126,9 +126,12 @@ def test_the_calendar_projection_agrees_with_the_scheduler_on_every_day(world, a
     world.db.expire_all()
     for vehicle in world.vehicles:
         sub = sub_of(world, vehicle)
-        want = {d: s for d, s in demand(world, vehicle, start, 75).items()}
+        # Under rules v2 an Interior is ledger demand, not a weekday (SCHS-36, SCHS-38), so the
+        # Exterior days are compared here; the Interiors are tested in their own files.
+        want = {d: [x for x in s_ if x == "Cleaning-External"] for d, s_ in demand(world, vehicle, start, 75).items()}
         for day, services in want.items():
-            assert day_services(sub, day) == services, (vehicle.registration, day)
+            got = [x for x in day_services(sub, day) if x == "Cleaning-External"]
+            assert got == services, (vehicle.registration, day)
 
 
 def test_a_plan_without_interior_refuses_interior_days_and_the_scheduler_drops_them(world, api, admin):
@@ -211,9 +214,10 @@ def test_a_planned_week_follows_the_pattern(world, api, admin):
     assert put(api, admin, sub_of(world, vehicle), kind="Weekly",
                exterior_weekdays=["Monday", "Wednesday"], interior_weekdays=["Wednesday"]
                ).status_code == 200
-    r = api.post("/v1/admin/scheduling/run", headers=admin, json={
-        "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 7})
-    assert r.status_code == 200, r.text
+    run_days(api, admin, world.society.id, SUNDAY)
     world.db.expire_all()
     dates = sorted(v.date for v in world.db.scalars(select(Visit).where(Visit.vehicle_id == vehicle.id)))
-    assert dates == [SUNDAY + timedelta(days=1), SUNDAY + timedelta(days=3)]
+    # Exteriors on Monday and Wednesday. The Interiors come from the ledger (SCHS-36): the one of the
+    # week before, which the run places on the first day of this run (SUNDAY), and the one of this week,
+    # on the first feasible day (its preferred day is a tie-break only, SCHR-INT-05).
+    assert dates == [SUNDAY, SUNDAY + timedelta(days=1), SUNDAY + timedelta(days=3)]

@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "../../../components";
-import { choose } from "../../../test/portal";
 import type { Crew } from "../api";
 import { collectSections } from ".";
 import * as module from "./HomeZoneSection";
@@ -14,20 +13,21 @@ const crew: Crew = {
   role: "Member", active: true, locked: false, working_hours: [],
   paired_member_id: null, paired_member: "", exceptions: [],
 };
-const zones = [{ id: "z1", name: "Zone 1" }, { id: "z2", name: "Zone 2" }];
+const zones = [{ id: "z1", name: "Zone 1" }, { id: "z2", name: "Zone 2" }, { id: "z3", name: "Zone 3" }];
 const json = (status: number, body?: unknown) => new Response(JSON.stringify(body), { status });
 const fetchMock = vi.fn();
 
 function show(data: object) {
   fetchMock.mockImplementation(async (_p: string, init?: RequestInit) => {
-    if (init?.method === "PUT") return json(200, { home_zone_id: null, follows_member: null, editable: true, zones, ...JSON.parse(String(init.body)) });
-    return json(200, { home_zone_id: null, follows_member: null, editable: true, zones, ...data });
+    if (init?.method === "PUT") return json(200, { home_zone_ids: [], follows_member: null, editable: true, zones, ...JSON.parse(String(init.body)) });
+    return json(200, { home_zone_ids: [], follows_member: null, editable: true, zones, ...data });
   });
   const Part = module.section.component;
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={qc}><ToastProvider><Part crew={crew} /></ToastProvider></QueryClientProvider>);
 }
 const puts = () => fetchMock.mock.calls.filter(([, i]) => i?.method === "PUT");
+const zoneBox = (name: string) => screen.getByRole("checkbox", { name });
 
 beforeEach(() => vi.stubGlobal("fetch", fetchMock));
 afterEach(() => { fetchMock.mockReset(); vi.unstubAllGlobals(); });
@@ -37,29 +37,48 @@ describe("HomeZoneSection", () => {
     expect(collectSections({ "./HomeZoneSection.tsx": module }).map((s) => s.id)).toContain("home-zone");
   });
 
-  it("picks a zone of the society and saves its id", async () => {
+  it("picks several zones of the society and saves their ids", async () => {
     show({});
-    await screen.findByRole("combobox", { name: "Home zone" });
-    await choose("Home zone", "Zone 2");
+    await screen.findByRole("group", { name: "Home zones" });
+    await userEvent.click(zoneBox("Zone 2"));
+    await userEvent.click(zoneBox("Zone 3"));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0][0]).toBe("/v1/admin/crew/c1/home-zone");
-    expect(JSON.parse(puts()[0][1].body)).toEqual({ home_zone_id: "z2" });
+    expect(JSON.parse(puts()[0][1].body)).toEqual({ home_zone_ids: ["z2", "z3"] });
   });
 
-  it("saves null for no home zone", async () => {
-    show({ home_zone_id: "z1" });
-    await screen.findByRole("combobox", { name: "Home zone" });
-    await choose("Home zone", "No home zone");
+  it("shows the zones in force as checked and saves a change to them", async () => {
+    show({ home_zone_ids: ["z1"] });
+    await screen.findByRole("group", { name: "Home zones" });
+    expect(zoneBox("Zone 1")).toBeChecked();
+    expect(zoneBox("Zone 2")).not.toBeChecked();
+    await userEvent.click(zoneBox("Zone 2"));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(puts()).toHaveLength(1));
-    expect(JSON.parse(puts()[0][1].body)).toEqual({ home_zone_id: null });
+    expect(JSON.parse(puts()[0][1].body)).toEqual({ home_zone_ids: ["z1", "z2"] });
   });
 
-  it("shows a Trainee the Member's zone and does not allow an edit", async () => {
-    show({ home_zone_id: "z1", follows_member: "Asha", editable: false });
-    expect(await screen.findByText(/follows Asha's home zone/i)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Home zone" })).toBeDisabled();
+  it("saves an empty list when every zone is cleared", async () => {
+    show({ home_zone_ids: ["z1"] });
+    await screen.findByRole("group", { name: "Home zones" });
+    await userEvent.click(zoneBox("Zone 1"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(JSON.parse(puts()[0][1].body)).toEqual({ home_zone_ids: [] });
+  });
+
+  it("does not offer Save until the zones change", async () => {
+    show({ home_zone_ids: ["z1"] });
+    await screen.findByRole("group", { name: "Home zones" });
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("shows a Trainee the Member's zones and does not allow an edit", async () => {
+    show({ home_zone_ids: ["z1"], follows_member: "Asha", editable: false });
+    expect(await screen.findByText(/follows Asha's home zones/i)).toBeInTheDocument();
+    expect(zoneBox("Zone 1")).toBeChecked();
+    expect(zoneBox("Zone 1")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
   });
 });

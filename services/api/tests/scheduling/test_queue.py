@@ -16,6 +16,7 @@ BASE = "/v1/admin/scheduling"
 
 
 def _setup(api, admin, world, run_week, cars=3):
+    # Each car owes an Interior too (SCHS-36): three cars make six jobs on the day.
     crew_login = world.db.query(Login).filter_by(role="crew").first()
     member = world.add_crew(login_id=crew_login.id, end=600)
     for _ in range(cars):
@@ -36,7 +37,7 @@ def _day(api, crew):
 def test_planner_sets_a_sequence_in_start_order(api, admin, world, run_week):
     _, _, crew = _setup(api, admin, world, run_week)
     jobs = _day(api, crew)
-    assert [j["sequence"] for j in jobs] == [1, 2, 3]
+    assert [j["sequence"] for j in jobs] == [1, 2, 3, 4, 5, 6]
     starts = [j["start_time"] for j in jobs]
     assert starts == sorted(starts)
 
@@ -44,8 +45,7 @@ def test_planner_sets_a_sequence_in_start_order(api, admin, world, run_week):
 def test_day_marks_current_and_locked(api, admin, world, run_week):
     _, _, crew = _setup(api, admin, world, run_week)
     jobs = _day(api, crew)
-    assert [(j["current"], j["locked"]) for j in jobs] == [
-        (True, False), (False, True), (False, True)]
+    assert [(j["current"], j["locked"]) for j in jobs] == [(True, False)] + [(False, True)] * 5
 
 
 def test_locked_job_is_refused_on_every_crew_route(api, admin, world, run_week):
@@ -114,7 +114,7 @@ def test_unlock_needs_admin(api, world, admin, run_week):
 def test_reorder_audits_notifies_and_changes_the_queue(api, admin, world, run_week):
     member, _, crew = _setup(api, admin, world, run_week)
     ids = [j["id"] for j in _day(api, crew)]
-    new = [ids[2], ids[0], ids[1]]
+    new = [ids[2], ids[0], ids[1], *ids[3:]]
     body = {"crew_id": str(member.id), "date": SUNDAY.isoformat(),
             "ordered_job_ids": new, "reason": "Customer asked"}
     assert api.post(f"{BASE}/queue/reorder", headers=admin,
@@ -138,7 +138,7 @@ def test_taking_a_job_off_keeps_the_sequence_consistent(api, admin, world, run_w
     jobs = _day(api, crew)
     r = api.post(f"{BASE}/jobs/{jobs[1]['id']}/move", headers=admin, json={"crew_id": None})
     assert r.status_code == 200
-    assert [j["sequence"] for j in _day(api, crew)] == [1, 2]
+    assert [j["sequence"] for j in _day(api, crew)] == [1, 2, 3, 4, 5]
     world.db.expire_all()
     assert world.db.get(Job, uuid.UUID(jobs[1]["id"])).sequence is None
 
@@ -151,10 +151,10 @@ def test_moving_a_job_to_another_crew_member_renumbers_both(api, admin, world, r
     r = api.post(f"{BASE}/schedules/{sid}/unfreeze", headers=admin, json={"code": "unfreeze"})
     assert r.status_code == 200, r.text
     r = api.post(f"{BASE}/jobs/{jobs[0]['id']}/move", headers=admin,
-                 json={"crew_id": str(other.id), "start_minute": 400})
+                 json={"crew_id": str(other.id), "start_minute": 380})  # clear of the car's Interior at 420
     assert r.status_code == 200, r.text
     world.db.expire_all()
     moved = world.db.get(Job, uuid.UUID(jobs[0]["id"]))
     assert moved.crew_id == other.id and moved.sequence == 1
     rest = [world.db.get(Job, uuid.UUID(j["id"])).sequence for j in jobs[1:]]
-    assert rest == [1, 2]
+    assert rest == [1, 2, 3, 4, 5]

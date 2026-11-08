@@ -148,7 +148,7 @@ async function openDay(date = "2026-11-08", extra = "") {
 }
 
 const column = (id: string) => screen.findByTestId(`col-${id}`);
-const bodyOf = (col: HTMLElement) => col.querySelector(".sch-col-body")!;
+const bodyOf = (col: HTMLElement) => col.querySelector<HTMLElement>(".sch-col-body")!;
 
 /** Drags a card onto a column body, at a pointer height (jsdom has no DragEvent). */
 function dragTo(card: Element, target: Element, clientY = 0) {
@@ -331,6 +331,119 @@ describe("the card board (ADM-SCH-33)", () => {
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(ravi), 100);
     await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
     expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 620 });
+  });
+
+  describe("moving a card within its own crew lane (ADM-SCH-33)", () => {
+    const rect = (top: number, height: number) => () => ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) });
+    /** Asha has three cards: 09:00 (moved), 10:20 and 11:00. */
+    const lane = () => server({ jobs: [
+      job(),
+      job({ id: "j2", registration: "KA02ZZ0001", start_minute: 620, start_time: "10:20", end_time: "10:40" }),
+      job({ id: "j3", registration: "KA03ZZ0001", start_minute: 660, start_time: "11:00", end_time: "11:20" }),
+    ] });
+    const moved = () => JSON.parse(callsTo("/move")[0][1].body);
+
+    it("drops a card between two cards of its lane", async () => {
+      lane();
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      within(body).getByRole("button", { name: /KA02ZZ0001/ }).getBoundingClientRect = rect(0, 40);
+      within(body).getByRole("button", { name: /KA03ZZ0001/ }).getBoundingClientRect = rect(100, 40);
+      dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, 60);
+      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+      expect(moved()).toEqual({ crew_id: "c1", start_minute: 640 });
+    });
+
+    it("drops a card above the first card of its lane", async () => {
+      lane();
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, -1);
+      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+      expect(moved()).toEqual({ crew_id: "c1", start_minute: 480 });
+    });
+
+    it("drops a card below the last card of its lane", async () => {
+      lane();
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, 500);
+      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+      expect(moved()).toEqual({ crew_id: "c1", start_minute: 680 });
+    });
+
+    it("drops a card into a free slot of its own lane at the pointer's 5 minutes", async () => {
+      lane();
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      const slot = within(body).getByLabelText("Free 11:20-12:00");
+      slot.getBoundingClientRect = rect(0, 100);
+      dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), slot, 50);
+      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+      expect(moved()).toEqual({ crew_id: "c1", start_minute: 690 });
+    });
+  });
+
+  describe("card tools, lock, zones and folding (items 6, 7, 9, 10, 15)", () => {
+    it("shows a lock on a card placed by hand, and a click locks or unlocks it through the server", async () => {
+      serverWith({ "/v1/admin/scheduling/jobs/j1/hand-lock": () => json(200, job({ placed_by_hand: true, hand_locked: true })) },
+        { jobs: [job({ placed_by_hand: true, hand_locked: false })] });
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      const lock = within(body).getByRole("button", { name: /Unlocked\. The next scheduler run may move this card/ });
+      expect(lock).toHaveAttribute("title", "Unlocked. The next scheduler run may move this card. Click to lock it here.");
+      await userEvent.click(lock);
+      await waitFor(() => expect(callsTo("/hand-lock")).toHaveLength(1));
+      expect(JSON.parse(callsTo("/hand-lock")[0][1].body)).toEqual({ locked: true });
+      expect(callsTo("/hand-lock")[0][1].method).toBe("PUT");
+    });
+
+    it("shows the locked tip on a locked card, and no lock on a card not placed by hand", async () => {
+      server({ jobs: [job({ placed_by_hand: true, hand_locked: true }), job({ id: "j2", registration: "KA02ZZ0001", start_minute: 620, start_time: "10:20", end_time: "10:40" })] });
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      expect(within(body).getByRole("button", { name: /^Locked\. The scheduler keeps this card here on every run/ })).toBeInTheDocument();
+      expect(within(body).getAllByRole("button", { name: /^(Locked|Unlocked)\./ })).toHaveLength(1);
+    });
+
+    it("takes a card off the day from its delete icon, after a confirmation, and does not open the card", async () => {
+      server();
+      await openDay();
+      const body = bodyOf(await column("c1"));
+      await userEvent.click(within(body).getByRole("button", { name: "Take off the day" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(callsTo("/move")).toHaveLength(0);
+      await confirmWith("Take off the day");
+      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
+      expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
+    });
+
+    it("shows a short marker for a cross-zone cleaner, with the full reason in its tip", async () => {
+      server({ jobs: [job({ cross_zone_reason: "Zone 5 car with a Zone 2 cleaner; no Zone 5 slot is free" })] });
+      await openDay();
+      const marker = within(await column("c1")).getByText("Outside zone");
+      expect(marker).toHaveAttribute("title", "Zone 5 car with a Zone 2 cleaner; no Zone 5 slot is free");
+      expect(marker).toHaveAttribute("aria-label", "Zone 5 car with a Zone 2 cleaner; no Zone 5 slot is free");
+    });
+
+    it("shows the home zones after the crew name in the lane header, and nothing when there are none", async () => {
+      const b = board();
+      serverWith({ "/v1/admin/scheduling/board": () => json(200, { ...b, crew: [
+        { ...b.crew[0], home_zones: [{ id: "z2", name: "Zone 2" }, { id: "z5", name: "Zone 5" }] }, b.crew[1]] }) });
+      await openDay();
+      expect((await column("c1")).querySelector(".sch-name-line")).toHaveTextContent("Asha · Zone 2, Zone 5");
+      expect((await column("c2")).querySelector(".sch-home-zones")).toBeNull();
+    });
+
+    it("folds the Unscheduled lane like a crew lane and remembers it", async () => {
+      server();
+      await openDay();
+      await userEvent.click(await screen.findByRole("button", { name: "Fold the Unscheduled lane" }));
+      expect(screen.getByRole("region", { name: /Unscheduled \(0\), folded/ })).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem("priveo.schedule.folded-lanes")!)).toContain("unscheduled");
+      await userEvent.click(screen.getByRole("button", { name: "Show the Unscheduled lane" }));
+      expect(screen.getByRole("region", { name: "Unscheduled (0)" })).toBeInTheDocument();
+    });
   });
 
   it("starts a card where it is dropped inside a free slot, at any 5 minutes", async () => {
@@ -793,17 +906,17 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(screen.getByLabelText("Day")).toHaveValue(toIso(new Date()));
   });
 
-  it("runs the scheduler for the period that contains the chosen day", async () => {
-    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that week.")) });
+  it("runs the scheduler for the chosen day only (daily runs only, ADM-SCH-09)", async () => {
+    server({ boardReply: () => json(404, err("not_found", "No schedule has been run for that day.")) });
     await openDay("2026-11-11");
     // No schedule covers the day, so the board offers to run the scheduler.
     await userEvent.click(await screen.findByRole("button", { name: "Run the scheduler" }));
     expect(await screen.findByText("Run the scheduler, Palm Grove")).toBeInTheDocument();
-    expect(screen.getByText("Sun 08-Nov-26 to Sat 14-Nov-26")).toBeInTheDocument();
+    expect(screen.getByText("Wed 11-Nov-26")).toBeInTheDocument();
     expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Run scheduler" }));
     await waitFor(() => expect(callsTo("/run")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-08", days: 7 });
+    expect(JSON.parse(callsTo("/run")[0][1].body)).toEqual({ society_id: SOC, start_date: "2026-11-11", days: 1 });
   });
 
   it("marks days that need the admin, and has no Needs scheduling tab (the Board's Unscheduled column shows those jobs)", async () => {
@@ -814,7 +927,7 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     ] });
     await openDay();
     const days = await screen.findByRole("group", { name: "Days" });
-    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, needs you/ })).toBeInTheDocument();
+    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, Needs Attention/ })).toBeInTheDocument();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     expect(within(tabs).queryByRole("tab", { name: /Needs scheduling/ })).not.toBeInTheDocument();
   });
@@ -931,6 +1044,10 @@ describe("skipped and finished jobs cannot be placed or moved", () => {
   });
 });
 
+// The run plays its music (ux9, item 4), and jsdom has no media element to play it: stub play and pause.
+HTMLMediaElement.prototype.play = () => Promise.resolve();
+HTMLMediaElement.prototype.pause = () => {};
+
 describe("schedule tabs and unavailable crew time", () => {
   const avail = [
     { crew_id: "c1", status: "Partial", windows: [{ start: 480, end: 600 }],
@@ -944,7 +1061,7 @@ describe("schedule tabs and unavailable crew time", () => {
     await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Board", "Needs Attention (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Reports"]));
+      "Board", "Needs Attention (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Rules", "Reports"]));
     expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
     // Run is a button in the top bar and opens a dialog.
@@ -1036,15 +1153,14 @@ describe("long runs, confirmations and the action tabs", () => {
     expect((await screen.findAllByText("3 placed, 1 unscheduled, 0 late.")).length).toBeGreaterThan(0);
   });
 
-  it("does not change the default period unless asked", async () => {
+  it("offers no weekly or monthly run, and changes no default period (ADM-SCH-09)", async () => {
     server();
     await openDay();
     await userEvent.click(await screen.findByRole("button", { name: "Run" }));
-    await choose("Period", "Daily");
-    expect(screen.getByText("Period to schedule").nextSibling).toHaveTextContent(/^Sun 08-Nov-26$/);
+    expect(screen.getByText("Day to schedule")).toBeInTheDocument();
+    expect(screen.queryByText("Period")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /the default$/ })).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Make daily the default" }));
-    await waitFor(() => expect(fetchMock.mock.calls.some(([p, i]) => String(p).includes("settings/schedule.period") && i?.method === "PUT")).toBe(true));
   });
 
   it("shows the chosen day's cutoff requests, links to other days and applies or rejects after a confirmation", async () => {
@@ -1189,6 +1305,15 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     expect(dialog).toHaveAttribute("style", expect.stringContaining("var(--type-bg)"));
     expect(dialog).toHaveTextContent("Zone");
     expect(within(dialog).queryByRole("button", { name: "Cancel" })).toBeNull();
+  });
+
+  it("shows the preferred Interior day in the card detail of an Interior card only", async () => {
+    server({ jobs: [job({ service: "Cleaning-Internal", interior_day: "Tuesday" })] });
+    await openDay();
+    await userEvent.click(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Preferred Interior day")).toBeInTheDocument();
+    expect(within(dialog).getByText("Tuesday")).toBeInTheDocument();
   });
 
   it("refuses a drop that overlaps another job, naming the job in the way", async () => {

@@ -329,6 +329,8 @@
     "finish_by": "wire-value",
     "late": true,
     "manual": true,
+    "placed_by_hand": true,
+    "hand_locked": true,
     "reason": "wire-value",
     "moved_to_date": "2026-10-20",
     "moved_from_date": "2026-10-20",
@@ -347,7 +349,8 @@
     "cross_zone_reason": "wire-value",
     "hand_breaches": [
       "wire-value"
-    ]
+    ],
+    "interior_day": "wire-value"
   },
   "AdminPaymentIn": {
     "vehicle_id": "wire-value",
@@ -483,7 +486,13 @@
         "name": "wire-value",
         "role": "wire-value",
         "start_minute": 1,
-        "end_minute": 1
+        "end_minute": 1,
+        "home_zones": [
+          {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "name": "wire-value"
+          }
+        ]
       }
     ],
     "jobs": [
@@ -510,6 +519,8 @@
         "finish_by": "wire-value",
         "late": true,
         "manual": true,
+        "placed_by_hand": true,
+        "hand_locked": true,
         "reason": "wire-value",
         "moved_to_date": "2026-10-20",
         "moved_from_date": "2026-10-20",
@@ -528,7 +539,8 @@
         "cross_zone_reason": "wire-value",
         "hand_breaches": [
           "wire-value"
-        ]
+        ],
+        "interior_day": "wire-value"
       }
     ]
   },
@@ -2313,6 +2325,9 @@
       }
     ]
   },
+  "HandLockIn": {
+    "locked": true
+  },
   "Health": {
     "status": "wire-value",
     "version": "wire-value",
@@ -2352,10 +2367,14 @@
     "earliest_month": "wire-value"
   },
   "HomeZoneIn": {
-    "home_zone_id": "11111111-1111-1111-1111-111111111111"
+    "home_zone_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
   },
   "HomeZoneOut": {
-    "home_zone_id": "wire-value",
+    "home_zone_ids": [
+      "wire-value"
+    ],
     "follows_member": "wire-value",
     "editable": true,
     "zones": [
@@ -2698,6 +2717,8 @@
       "finish_by": "wire-value",
       "late": true,
       "manual": true,
+      "placed_by_hand": true,
+      "hand_locked": true,
       "reason": "wire-value",
       "moved_to_date": "2026-10-20",
       "moved_from_date": "2026-10-20",
@@ -2716,7 +2737,8 @@
       "cross_zone_reason": "wire-value",
       "hand_breaches": [
         "wire-value"
-      ]
+      ],
+      "interior_day": "wire-value"
     },
     "moved": {
       "id": "11111111-1111-1111-1111-111111111111",
@@ -2741,6 +2763,8 @@
       "finish_by": "wire-value",
       "late": true,
       "manual": true,
+      "placed_by_hand": true,
+      "hand_locked": true,
       "reason": "wire-value",
       "moved_to_date": "2026-10-20",
       "moved_from_date": "2026-10-20",
@@ -2759,7 +2783,8 @@
       "cross_zone_reason": "wire-value",
       "hand_breaches": [
         "wire-value"
-      ]
+      ],
+      "interior_day": "wire-value"
     }
   },
   "MoveRequest": {
@@ -2792,6 +2817,8 @@
         "finish_by": "wire-value",
         "late": true,
         "manual": true,
+        "placed_by_hand": true,
+        "hand_locked": true,
         "reason": "wire-value",
         "moved_to_date": "2026-10-20",
         "moved_from_date": "2026-10-20",
@@ -2810,7 +2837,8 @@
         "cross_zone_reason": "wire-value",
         "hand_breaches": [
           "wire-value"
-        ]
+        ],
+        "interior_day": "wire-value"
       }
     ],
     "pending_addons": [
@@ -3287,7 +3315,13 @@
     "name": "wire-value",
     "role": "wire-value",
     "start_minute": 1,
-    "end_minute": 1
+    "end_minute": 1,
+    "home_zones": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "wire-value"
+      }
+    ]
   },
   "SendMessageIn": {
     "text": "wire-value"
@@ -3945,6 +3979,10 @@
   },
   "ZoneChoice": {
     "id": "wire-value",
+    "name": "wire-value"
+  },
+  "ZoneRef": {
+    "id": "11111111-1111-1111-1111-111111111111",
     "name": "wire-value"
   }
 }

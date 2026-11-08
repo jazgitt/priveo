@@ -85,7 +85,6 @@ def test_schr_brk_01_no_break_input_changes_nothing():
 
 
 def test_schr_brk_04_a_missed_break_is_stored_with_the_cleaner_the_date_and_the_reason(world, site_cfg):
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(570, 600))  # the only half hour is the break itself
@@ -97,7 +96,6 @@ def test_schr_brk_04_a_missed_break_is_stored_with_the_cleaner_the_date_and_the_
 
 
 def test_schr_brk_04_an_exterior_on_the_break_is_flagged(world, site_cfg):
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(540, 630))  # 09:00 to 10:30: 90 minutes, one Exterior takes 60
@@ -110,7 +108,6 @@ def test_schr_brk_04_an_exterior_on_the_break_is_flagged(world, site_cfg):
 
 
 def test_schr_brk_02_the_run_keeps_the_interior_off_the_break(world, site_cfg):
-    site_cfg({"scheduler.rules_version": 2})
     sc = Scenario(world)
     sc.slots()
     sc.cleaner("Ravi", shift=(540, 660))

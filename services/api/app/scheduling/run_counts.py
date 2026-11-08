@@ -1,10 +1,9 @@
 """The extra counts of a run summary and of the schedule history (SCHS-40,
 SCHR-OUT-07).
 
-Besides placed, unscheduled and late, a run at `scheduler.rules_version` 2
-reports the Interiors that are deferred or not planned, the jobs placed outside
-the cleaner's home zone and the missed breaks. At version 1 every count is 0 and
-the history text is unchanged.
+Besides placed, unscheduled and late, a run reports the Interiors that are
+deferred or not planned, the jobs placed outside the cleaner's home zone and the
+missed breaks.
 
 DERIVED: "deferred Interiors" are the Interior jobs of the plan that sit in the
 Deferred state, plus the open ones nobody was assigned to (the "Interiors not
@@ -17,12 +16,9 @@ from app.scheduling import entitlements
 
 BREAK_MISSED = "break_missed"
 EXTERIOR = "Cleaning-External"
-EMPTY = {"deferred_interiors": 0, "cross_zone_jobs": 0, "missed_breaks": 0}
 
 
 def counts(ctx, jobs: list) -> dict[str, int]:
-    if not ctx.active:
-        return dict(EMPTY)
     interiors = [j for j in jobs if entitlements.uses_entitlement(j)]
     return {
         "deferred_interiors": sum(
@@ -35,9 +31,7 @@ def counts(ctx, jobs: list) -> dict[str, int]:
 
 
 def detail(ctx, found: dict, jobs: list) -> str:
-    """The text added to the history record. Empty at version 1."""
-    if not ctx.active:
-        return ""
+    """The text added to the history record."""
     exteriors = sum(
         1 for j in jobs if j.service == EXTERIOR and j.status == "Scheduled"
         and j.crew_id is None and not j.manual)

@@ -20,7 +20,7 @@ from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
-from app.scheduling import hand_placement, hooks, service
+from app.scheduling import hand_placement, service
 from app.scheduling.codes import ReasonCode
 from app.scheduling.models import SERVICES, Job, Schedule, ScheduleFinding, Visit
 
@@ -74,9 +74,7 @@ def _row(r: dict, code: str, detail: str = "") -> ExceptionRow:
 
 
 def _weekend_days(db: Session, society_id: uuid.UUID) -> set[int]:
-    """The weekend days of a site on rules version 2; none otherwise."""
-    if hooks._version(db, society_id) != 2:
-        return set()
+    """The weekend days of a site."""
     try:
         return set(lookup.site_setting(db, society_id, "site.weekend_weekdays"))
     except SettingMissing:

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 
 from app.changes.models import ScheduleChange
 from app.customers.models import Subscription
-from app.directory import lookup
+from app.directory import lookup, site_settings
 from app.directory.models import Plan, SystemSetting
 from app.scheduling import entitlements
 from app.scheduling.models import InteriorEntitlement, Job, Visit
@@ -74,16 +74,29 @@ def _job(world, sub, service="Cleaning-Internal", **kw):
 
 # ---- service week (SCHR-PAR-13) --------------------------------------------
 
+def test_schr_par_13_the_week_start_is_read_from_the_stored_setting_with_no_default(world):
+    # The key is the same for every site: its stored value is read, and a missing one
+    # raises rather than falling back to a value in code (SCHR-CFG-04).
+    row = world.db.get(SystemSetting, "schedule.service_week_start")
+    row.value = "0"
+    world.db.flush()
+    assert entitlements.week_start(world.db, SUNDAY, world.society.id) == SUNDAY - timedelta(days=6)
+    world.db.delete(row)
+    world.db.flush()
+    with pytest.raises(site_settings.SettingMissing):
+        entitlements.week_start(world.db, SUNDAY, world.society.id)
+
+
 def test_schr_par_13_a_service_week_runs_monday_to_sunday(world):
     for offset in range(7):
-        assert entitlements.week_start(world.db, MONDAY + timedelta(days=offset)) == MONDAY
-    assert entitlements.week_start(world.db, SUNDAY) == MONDAY - timedelta(days=7)
+        assert entitlements.week_start(world.db, MONDAY + timedelta(days=offset), world.society.id) == MONDAY
+    assert entitlements.week_start(world.db, SUNDAY, world.society.id) == MONDAY - timedelta(days=7)
 
 
 def test_schr_par_13_the_week_start_is_its_own_setting(world):
     _setting(world.db, "schedule.service_week_start", 6)
-    assert entitlements.week_start(world.db, SUNDAY) == SUNDAY
-    assert entitlements.week_start(world.db, MONDAY) == SUNDAY
+    assert entitlements.week_start(world.db, SUNDAY, world.society.id) == SUNDAY
+    assert entitlements.week_start(world.db, MONDAY, world.society.id) == SUNDAY
 
 
 # ---- creation (SCHR-INT-19) -------------------------------------------------

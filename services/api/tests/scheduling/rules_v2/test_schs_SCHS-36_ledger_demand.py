@@ -1,4 +1,4 @@
-"""SCHS-36: at version 2 Interior jobs come from pending entitlements."""
+"""SCHS-36: Interior jobs come from pending entitlements."""
 from datetime import date, timedelta
 
 from sqlalchemy import select
@@ -33,23 +33,25 @@ def _rows(sc, car):
 
 
 def test_schr_int_01_an_interior_is_planned_for_the_pending_entitlement_of_the_week(
-        world, rules_v2):
+        world):
+    # Daily runs (ADM-SCH-09): the Interior is planned on the first run day with a pending
+    # entitlement and room, not on the preferred Thursday (SCHR-INT-05, owner 08-Nov-26).
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
     ((day, job),) = _interiors(sc)
-    assert day == THURSDAY and job.service_week_start == WEEK1
+    assert day == WEEK1 and job.service_week_start == WEEK1
     (row,) = _rows(sc, car)
     assert (row.status, row.job_id) == ("Planned", job.id)
 
 
-def test_schr_int_01_no_entitlement_means_no_interior(world, rules_v2):
+def test_schr_int_01_no_entitlement_means_no_interior(world):
     sc, car = _scenario(world, interior_day="Thursday")
     sc.entitlement(car, WEEK1, status="Completed")
     sc.run(WEEK1, days=7)
     assert _interiors(sc) == []
 
 
-def test_schr_int_05_the_preferred_day_is_a_tie_break_only(world, rules_v2):
+def test_schr_int_05_the_preferred_day_is_a_tie_break_only(world):
     # Thursday is the car's day, but the site has no Interior slot on Thursday (3).
     sc, car = _scenario(world, interior_day="Thursday")
     sc.db.query(WorkingSlot).filter_by(service=INTERNAL).update({"days": [0, 1, 2, 4, 5, 6]})
@@ -59,14 +61,16 @@ def test_schr_int_05_the_preferred_day_is_a_tie_break_only(world, rules_v2):
     assert _rows(sc, car)[0].status == "Planned"
 
 
-def test_schr_int_05_without_a_preference_the_first_feasible_day_is_used(world, rules_v2):
+def test_schr_int_05_without_a_preference_the_first_feasible_day_is_used(world):
     sc, _car = _scenario(world, interior=True)
     sc.run(WEEK1, days=7)
     ((day, _job),) = _interiors(sc)
     assert day == WEEK1
 
 
-def test_schr_int_26_a_weekly_pattern_feeds_the_preference(world, rules_v2):
+def test_schr_int_26_a_weekly_pattern_does_not_add_an_entitlement(world):
+    # The pattern's Interior days name a preference, which a one-day run cannot act on
+    # (owner 08-Nov-26): the Interior is planned on the first run day.
     sc, car = _scenario(world, interior=True)
     sub = sc.db.scalar(select(Subscription).where(Subscription.vehicle_id == car.id))
     sc.db.add(SchedulePattern(subscription_id=sub.id, kind="Weekly",
@@ -74,11 +78,11 @@ def test_schr_int_26_a_weekly_pattern_feeds_the_preference(world, rules_v2):
                               interior_weekdays=["Friday"]))
     sc.run(WEEK1, days=7)
     ((day, _job),) = _interiors(sc)
-    assert day == WEEK1 + timedelta(days=4)  # Friday
+    assert day == WEEK1
     assert len(_rows(sc, car)) == 1  # the pattern did not add a second entitlement
 
 
-def test_schr_int_13_an_overdue_week_is_planned_before_the_new_week(world, rules_v2):
+def test_schr_int_13_an_overdue_week_is_planned_before_the_new_week(world):
     sc, car = _scenario(world, interior_day="Monday")
     sc.entitlement(car, WEEK1)  # week 1 was missed and is still owed
     sc.run(WEEK2, days=7)
@@ -88,7 +92,7 @@ def test_schr_int_13_an_overdue_week_is_planned_before_the_new_week(world, rules
     assert {r.status for r in _rows(sc, car)} == {"Planned"}
 
 
-def test_schr_hard_11_one_interior_for_a_car_on_a_day(world, rules_v2):
+def test_schr_hard_11_one_interior_for_a_car_on_a_day(world):
     sc, car = _scenario(world, interior_day="Monday")
     sc.entitlement(car, WEEK1)
     sc.entitlement(car, WEEK1 - timedelta(days=7))
@@ -97,7 +101,7 @@ def test_schr_hard_11_one_interior_for_a_car_on_a_day(world, rules_v2):
     assert len(days) == len(set(days)) == 3
 
 
-def test_schr_int_06_a_rerun_keeps_the_planned_interior_and_adds_none(world, rules_v2):
+def test_schr_int_06_a_rerun_keeps_the_planned_interior_and_adds_none(world):
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
     first = _interiors(sc)
@@ -107,21 +111,23 @@ def test_schr_int_06_a_rerun_keeps_the_planned_interior_and_adds_none(world, rul
     assert len(_rows(sc, car)) == 1
 
 
-def test_schr_def_03_a_deferred_interior_is_planned_again_on_a_later_day(world, rules_v2):
+def test_schr_def_03_a_deferred_interior_is_planned_again_on_a_later_day(world):
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
-    ((_day, job),) = _interiors(sc)
+    ((first_day, job),) = _interiors(sc)
     from app.scheduling import service
     service.set_job_status(sc.db, job.id, "Could not complete")
     sc.run(WEEK1, days=7)
     live = [(d, j) for d, j in _interiors(sc) if j.status == "Scheduled"]
-    assert len(live) == 1 and live[0][0] > THURSDAY
+    assert len(live) == 1 and live[0][0] > first_day
     assert live[0][1].service_week_start == WEEK1
 
 
-def test_schr_ext_11_version_1_keeps_the_weekday_demand_and_makes_no_ledger(world):
+def test_schr_ext_11_the_exterior_is_planned_each_day_and_is_not_ledger_demand(world):
     sc, car = _scenario(world, interior_day="Thursday")
     sc.run(WEEK1, days=7)
-    ((day, _job),) = _interiors(sc)
-    assert day == THURSDAY
-    assert _rows(sc, car) == []
+    sc.db.expire_all()
+    days = sc.db.scalars(select(Visit.date).join(Job, Job.visit_id == Visit.id).where(
+        Visit.vehicle_id == car.id, Job.service == "Cleaning-External")).all()
+    assert sorted(set(days)) == [WEEK1 + timedelta(days=i) for i in range(7)]
+    assert all(r.service_week_start.weekday() == 0 for r in _rows(sc, car))

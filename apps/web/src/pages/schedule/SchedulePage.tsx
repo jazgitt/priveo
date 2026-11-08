@@ -25,7 +25,7 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { breached, isOpen, JobFlags, matches, parkingPlace, StatusSummary, typeClass, TypeKey } from "./Board";
+import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass, TypeKey } from "./Board";
 import { CrewPicker, FlagKey } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
@@ -34,22 +34,19 @@ import { NameRain } from "./NameRain";
 import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
+import { RulesPanel } from "./rules/RulesPanel";
 import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
 import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
 import { Fireworks } from "./RunFireworks";
+import { isRunMusicMuted, setRunMusicMuted, startRunMusic, stopRunMusic } from "./runMusic";
 import {
-  datesOf, daysInMonthFrom, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
+  datesOf, fmtDate, hhmm, minuteOf, toIso, useCutoffRequests, useInteriorDayMissing, useNeedsScheduling,
   useAutoFreezeOn, useScheduleBoard, useSchedules, weekday,
   type AdminJob, type Board, type RunResult, type ScheduleOut,
 } from "./api";
 import "./schedule.css";
-
-type Period = "daily" | "weekly" | "monthly";
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" },
-];
 
 /** How far back the day strip goes (ADM-SCH-35). */
 const DAYS_BACK = 30;
@@ -81,6 +78,8 @@ const SCHEDULE_TABS = (n: { attention: number; skipped: number; cutoff: number }
   { id: "cutoff", label: count("Cutoff requests", n.cutoff) },
   { id: "queue", label: "Crew queue" },
   { id: "improve", label: "Draft improvements" },
+  // The per-site scheduling rules (moved from Site Setup).
+  { id: "rules", label: "Rules" },
   // Shown only when a report section file exists in ./reports.
   ...(REPORT_SECTIONS.length ? [{ id: "reports", label: "Reports" }] : []),
 ] as const;
@@ -98,22 +97,6 @@ function ReportsPanel({ societyId, date }: { societyId: string; date: string }) 
       ))}
     </div>
   );
-}
-
-function periodDays(period: Period, start: string): number {
-  if (period === "daily") return 1;
-  if (period === "monthly") return daysInMonthFrom(start);
-  return 7;
-}
-
-/** The first day of the period that contains `date`. */
-function periodStart(period: Period, date: string, weekStart: number): string {
-  if (period === "monthly") return `${date.slice(0, 7)}-01`;
-  if (period !== "weekly") return date;
-  const d = new Date(`${date}T00:00:00Z`);
-  const mondayDay = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - (mondayDay - weekStart + 7) % 7);
-  return d.toISOString().slice(0, 10);
 }
 
 const dayText = (iso: string) => `${weekday(iso)} ${fmtDate(iso)}`;
@@ -174,13 +157,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   const autoFreeze = useAutoFreezeOn();
   const preferences = useQuery({ queryKey: ["admin-settings"], queryFn: () => api<{ key: string; value: string | number }[]>("/v1/admin/directory/settings") });
-  const configured = String(preferences.data?.find((p) => p.key === "schedule.period")?.value ?? "Weekly").toLowerCase();
-  const configuredPeriod: Period = configured === "daily" ? "daily" : configured === "monthly" ? "monthly" : "weekly";
-  const [chosenPeriod, setPeriod] = useState<Period | null>(null);
-  const period = chosenPeriod ?? configuredPeriod;
-  const weekStart = Number(preferences.data?.find((p) => p.key === "schedule.week_start")?.value ?? 6);
-  const runStart = periodStart(period, date, weekStart);
-  const runDays = periodDays(period, runStart);
+  // Runs are daily only (ADM-SCH-09): the run covers the chosen day.
+  const runStart = date;
+  const runDays = 1;
 
   const [focusStatus, setFocusStatus] = useState("");
   const [focusType, setFocusType] = useState("");
@@ -191,6 +170,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [density, setDensity] = useDensity();
   // The result of the last run, shown as a celebration until it ends.
   const [celebration, setCelebration] = useState<string | null>(null);
+  // The run music (ux9): it starts from the Run click and stops when the celebration ends or the run fails.
+  const [musicMuted, setMusicMuted] = useState(isRunMusicMuted);
+  useEffect(() => () => stopRunMusic(), []);
   const [search, setSearch] = useState("");
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
@@ -262,15 +244,15 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     qc.invalidateQueries({ queryKey: ["capacity"] }),
   ]);
 
-  const savePeriod = useAppMutation<Period>({
-    mutationFn: (value) => api("/v1/admin/directory/settings/schedule.period", {
-      method: "PUT", body: { value: value[0].toUpperCase() + value.slice(1) },
-    }),
-    success: (_d, v) => `${v[0].toUpperCase() + v.slice(1)} is now the default period.`,
-    invalidate: [["admin-settings"]],
-  });
+  const toggleMusic = () => {
+    const next = !musicMuted;
+    setRunMusicMuted(next);
+    setMusicMuted(next);
+  };
 
   const run = () => {
+    // Called from the click, so the browser allows the sound to start.
+    startRunMusic();
     setRunOpen(false);
     setCelebration(null);
     const start = runStart;
@@ -293,7 +275,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       setProblem(null);
       setParams({ date: day, tab: "board" }, { replace: true });
       setCelebration(runSummary(r));
-    }, () => { /* The task tray and a toast say why it failed. */ });
+    }, () => { stopRunMusic(); /* The task tray and a toast say why it failed. */ });
   };
 
   // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
@@ -553,6 +535,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
           ? <QueuePanel key={date} crew={board.crew} jobs={dayJobs} date={date} refresh={refresh} />
           : <EmptyState title="No schedule for this day">Run the scheduler for this day to make a draft first.</EmptyState>)}
         {tab === "improve" && <DraftImprovements key={date} board={board} date={date} refresh={refresh} />}
+        {tab === "rules" && <RulesPanel />}
         {tab === "reports" && REPORT_SECTIONS.length > 0 && <ReportsPanel societyId={societyId} date={date} />}
       </Tabs>}
 
@@ -584,28 +567,15 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       )}
       {runOpen && (
         <FormDialog open onOpenChange={(o) => !o && setRunOpen(false)} title={`Run the scheduler, ${site.name || "no site chosen"}`}
-                    description="It runs for the chosen site and the period that contains the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member."
+                    description="It runs for the chosen site and the chosen day. A run keeps every change made by hand. On a frozen schedule it places only the jobs that have no crew member."
                     size="lg" submitLabel={schedule ? "Run again" : "Run scheduler"} disabled={!societyId || running}
                     onSubmit={run}>
-          <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
-            <Field label="Period">
-              {(p) => <SelectBox {...p} value={period} onChange={(v) => setPeriod(v as Period)} choices={PERIODS} />}
-            </Field>
-            <div className="flex min-h-9 flex-col justify-center text-sm">
-              <span className="text-xs font-medium text-muted-foreground">Period to schedule</span>
-              <span>{runDays === 1 ? dayText(runStart) : `${dayText(runStart)} to ${dayText(addDays(runStart, runDays - 1))}`}</span>
-            </div>
+          <div className="flex min-h-9 flex-col justify-center text-sm">
+            <span className="text-xs font-medium text-muted-foreground">Day to schedule</span>
+            <span>{dayText(runStart)}</span>
           </div>
           <p className="m-0 text-sm text-muted-foreground">
-            To schedule another period, choose one of its days at the top.
-            {period !== configuredPeriod && (
-              <> This run uses {period}; the default is {configuredPeriod}.{" "}
-                <Button type="button" variant="link" size="sm" className="h-auto p-0" disabled={savePeriod.isPending}
-                        onClick={() => savePeriod.mutate(period)}>
-                  Make {period} the default
-                </Button>
-              </>
-            )}
+            To schedule another day, choose it at the top.
           </p>
           {preferences.error ? <ErrorState message={errorMessage(preferences.error)} /> : null}
         </FormDialog>
@@ -613,8 +583,9 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       {/* Last in the page, so it never takes the first child's place in the focus view. Under an open focus
           view the rain falls on that view instead, so it is not drawn twice. */}
       <NameRain names={rainNames} active={running && !focusOpen} />
-      {running && <Fireworks mode="running" />}
-      {celebration && <Fireworks mode="celebrate" message={celebration} onEnd={() => setCelebration(null)} />}
+      {running && <Fireworks mode="running" muted={musicMuted} onToggleMute={toggleMusic} />}
+      {celebration && <Fireworks mode="celebrate" message={celebration} muted={musicMuted} onToggleMute={toggleMusic}
+                                 onEnd={() => { stopRunMusic(); setCelebration(null); }} />}
     </div>
   );
 }
@@ -701,6 +672,8 @@ function JobDialog({ job, board, busy, onClose, onMove, onMoveDate }: {
         { label: "Status", value: <StatusBadge status={job.status} /> },
         { label: "Now", value: job.crew_name ? `${job.crew_name} at ${job.start_time}` : "Unscheduled" },
         { label: "Finish by", value: job.finish_by },
+        // The car's preferred Interior day, on Interior cards only (owner, item 1).
+        ...(serviceCode(job.service) === "INT" ? [{ label: "Preferred Interior day", value: job.interior_day ?? "Not set" }] : []),
         ...(job.moved_to_date ? [{ label: "Moved", wide: true, value: `Moved to ${dayText(job.moved_to_date)}.` }] : []),
         ...(job.moved_from_date ? [{ label: "Moved", wide: true, value: `Moved from ${dayText(job.moved_from_date)}.` }] : []),
         ...(job.visit_outcome === "Partially Completed" ? [{

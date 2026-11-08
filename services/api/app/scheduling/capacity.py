@@ -68,7 +68,7 @@ def capacity(
             line[0] += extra["jobs"]
             line[1] += extra["minutes"]
             demand_minutes[day] += extra["minutes"]
-    # What capacity counts: the windows minus the break (SCHR-BRK-08, version 2 only).
+    # What capacity counts: the windows minus the break (SCHR-BRK-08).
     usable = {
         day: {cid: wins for cid, wins in
               ((cid, windows_module.capacity_windows(db, crew[cid], day, w))

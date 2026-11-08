@@ -102,7 +102,7 @@ def crew_day(date: date, user: User = Depends(require_role("crew")), db: Session
 def run(
     body: RunRequest, user: User = Depends(require_role("admin")), db: Session = Depends(get_db)
 ):
-    done = service.run(db, body.society_id, body.start_date, body.days, user.id)
+    done = service.run(db, body.society_id, body.start_date, user.id)
     schedules = {s.id: s for s in db.scalars(
         select(Schedule).where(Schedule.id.in_([d.schedule_id for d in done])))}
     return {"schedules": [
@@ -156,6 +156,23 @@ def move_job(
                            override=body.override)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
+
+
+class HandLockIn(BaseModel):
+    locked: bool
+
+
+@admin.put("/jobs/{job_id}/hand-lock", response_model=AdminJob)
+def put_hand_lock(
+    job_id: uuid.UUID,
+    body: HandLockIn,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Locks (true) or unlocks (false) a job placed by hand (item 15). A run keeps a
+    locked placement; an unlocked one may move. 422 for a job not placed by hand."""
+    job = service.set_hand_lock(db, job_id, body.locked, user.id)
+    return service.job_rows(db, Job.id == job.id)[0]
 
 
 class MoveDateResult(BaseModel):

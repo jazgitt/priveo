@@ -12,6 +12,7 @@ from app.crew.models import CrewMember
 from app.platform.clock import today_ist
 from app.scheduling import rules, service
 from app.scheduling.models import Job, SchedulingCrew, SchedulingCrewException
+from tests.scheduling.conftest import run_days
 from tests.test_api import auth
 
 CREW = "/v1/admin/crew"
@@ -51,12 +52,11 @@ def sc_of(db: Session, crew_id: str) -> SchedulingCrew:
 
 def run_and_freeze(api, admin, world, days=3):
     start = today_ist() + timedelta(days=1)
-    r = api.post(f"{SCHED}/run", headers=admin, json={
-        "society_id": str(world.society.id), "start_date": start.isoformat(), "days": days})
-    assert r.status_code == 200, r.text
-    schedule_id = r.json()["schedules"][0]["schedule_id"]
-    f = api.post(f"{SCHED}/schedules/{schedule_id}/freeze", headers=admin)
-    assert f.status_code == 200, f.text
+    days_run = run_days(api, admin, world.society.id, start, days)
+    schedule_id = days_run[0]["schedule_id"]
+    for day in days_run:
+        f = api.post(f"{SCHED}/schedules/{day['schedule_id']}/freeze", headers=admin)
+        assert f.status_code == 200, f.text
     return start, schedule_id
 
 
@@ -82,13 +82,13 @@ def test_an_onboarded_crew_member_gets_jobs(api, admin, world, directory):
     world.add_vehicle(cutoff=time(9, 0))
     world.db.commit()
     start, _ = run_and_freeze(api, admin, world, days=1)
-    jobs = world.db.scalars(select(Job).where(Job.crew_id == sc.id)).all()
-    assert len(jobs) == 1 and jobs[0].start_minute is not None
+    jobs = world.db.scalars(select(Job).where(Job.crew_id == sc.id, Job.service == "Cleaning-External")).all()
+    assert len(jobs) == 1 and jobs[0].start_minute is not None  # the Exterior (the car's Interior is planned too)
 
     token = sign_in(api, created).json()["access_token"]
     r = api.get("/v1/crew/visits", headers=auth(token), params={"date": start.isoformat()})
     assert r.status_code == 200, r.text
-    assert len(r.json()["jobs"]) == 1
+    assert len(r.json()["jobs"]) == 2  # the Exterior and the Interior
 
 
 def test_weekday_hours_and_exceptions_shape_the_window(world):
@@ -131,8 +131,8 @@ def test_a_day_off_in_new_hours_sends_open_jobs_to_needs_scheduling(
     r = api.put(f"{CREW}/{created['crew']['id']}/working-hours", headers=admin,
                 json={"working_hours": hours(off=(day,))})
     assert r.status_code == 200, r.text
-    assert len(r.json()["released_jobs"]) == 1
-    assert len(needs(api, admin, world)) == 1
+    assert len(r.json()["released_jobs"]) == 2  # the Exterior and the Interior
+    assert len(needs(api, admin, world)) == 2  # the Exterior and the Interior
 
 
 def test_an_exception_releases_jobs_and_can_be_edited_and_removed(
@@ -148,8 +148,8 @@ def test_an_exception_releases_jobs_and_can_be_edited_and_removed(
     assert r.status_code == 201, r.text
     body = r.json()
     assert [e["kind"] for e in body["exceptions"]] == ["Sick"]
-    assert len(body["released_jobs"]) == 1
-    assert len(needs(api, admin, world)) == 1
+    assert len(body["released_jobs"]) == 2  # the Exterior and the Interior
+    assert len(needs(api, admin, world)) == 2  # the Exterior and the Interior
     ex_id = body["exceptions"][0]["id"]
 
     again = api.post(f"{CREW}/{crew_id}/exceptions", headers=admin,
@@ -199,8 +199,8 @@ def test_a_deactivated_crew_member_is_not_scheduled_and_cannot_sign_in(
     r = api.post(f"{CREW}/{crew_id}/deactivate", headers=admin,
                  json={"release_jobs": True})
     assert r.status_code == 200, r.text
-    assert r.json()["crew"]["active"] is False and len(r.json()["released_jobs"]) == 1
-    assert len(needs(api, admin, world)) == 1
+    assert r.json()["crew"]["active"] is False and len(r.json()["released_jobs"]) == 2
+    assert len(needs(api, admin, world)) == 2  # the Exterior and the Interior
     assert sc_of(world.db, crew_id).active is False
 
     assert sign_in(api, created).status_code in (401, 403)
@@ -210,7 +210,7 @@ def test_a_deactivated_crew_member_is_not_scheduled_and_cannot_sign_in(
     start = today_ist() + timedelta(days=1)
     api.post(f"{SCHED}/run", headers=admin, json={
         "society_id": str(world.society.id), "start_date": start.isoformat(), "days": 1})
-    assert len(needs(api, admin, world)) == 1
+    assert len(needs(api, admin, world)) == 2  # the Exterior and the Interior
 
     back = api.post(f"{CREW}/{crew_id}/reactivate", headers=admin)
     assert back.status_code == 200 and back.json()["active"] is True
@@ -224,7 +224,7 @@ def test_a_job_in_progress_stops_deactivation(api, admin, world, directory):
     world.db.commit()
     run_and_freeze(api, admin, world, days=1)
     mine = sc_of(world.db, created["crew"]["id"])
-    job = world.db.scalars(select(Job).where(Job.crew_id == mine.id)).one()
+    job = world.db.scalars(select(Job).where(Job.crew_id == mine.id, Job.service == "Cleaning-External")).one()
     job.status = "In progress"
     world.db.commit()
     r = api.post(f"{CREW}/{created['crew']['id']}/deactivate", headers=admin,
@@ -251,7 +251,7 @@ def test_a_trainee_is_paired_with_a_member_and_gets_their_jobs(
     start, _ = run_and_freeze(api, admin, world, days=1)
     token = sign_in(api, trainee).json()["access_token"]
     r = api.get("/v1/crew/visits", headers=auth(token), params={"date": start.isoformat()})
-    assert r.status_code == 200 and len(r.json()["jobs"]) == 1
+    assert r.status_code == 200 and len(r.json()["jobs"]) == 2  # the Exterior and the Interior
 
     # The Member's role is fixed while a Trainee is paired (ADM-CRW-19).
     blocked = api.put(f"{CREW}/{member['crew']['id']}/role", headers=admin,
@@ -301,14 +301,14 @@ def test_a_member_made_trainee_loses_open_jobs(api, admin, world, directory):
     world.add_vehicle(cutoff=time(9, 0))
     world.db.commit()
     run_and_freeze(api, admin, world, days=1)
-    holder = world.db.scalars(select(Job)).one().crew_id
+    holder = world.db.scalars(select(Job).where(Job.service == "Cleaning-External")).one().crew_id
     holder_crew = keep if sc_of(world.db, keep["crew"]["id"]).id == holder else mate
     other = mate if holder_crew is keep else keep
     r = api.put(f"{CREW}/{holder_crew['crew']['id']}/role", headers=admin,
                 json={"role": "Trainee", "paired_member_id": other["crew"]["id"]})
     assert r.status_code == 200, r.text
-    assert len(r.json()["released_jobs"]) == 1
-    assert len(needs(api, admin, world)) == 1
+    assert len(r.json()["released_jobs"]) == 2  # the Exterior and the Interior
+    assert len(needs(api, admin, world)) == 2  # the Exterior and the Interior
 
 
 def test_edit_details_and_login_id(api, admin, directory):

@@ -9,7 +9,7 @@ from app.directory.models import DirectoryAudit
 from app.notifications.models import Notification
 from app.scheduling.models import Job, Visit
 from app.visits.models import JobReassignment
-from tests.scheduling.conftest import PINNED_NOW, SUNDAY
+from tests.scheduling.conftest import PINNED_NOW, SUNDAY, run_days
 from tests.scheduling.test_operations import setup
 
 
@@ -85,9 +85,7 @@ def two_crew(world, api, admin):
     b = world.add_crew(start=360, end=840, name="Sunil")
     vehicle = world.add_vehicle(interior_day="Sunday")
     world.db.commit()
-    r = api.post("/v1/admin/scheduling/run", headers=admin, json={
-        "society_id": str(world.society.id), "start_date": SUNDAY.isoformat(), "days": 7})
-    assert r.status_code == 200, r.text
+    run_days(api, admin, world.society.id, SUNDAY)
     world.db.expire_all()
     jobs = list(world.db.scalars(
         select(Job).join(Visit, Visit.id == Job.visit_id)

@@ -17,7 +17,7 @@ charged on the middle of the job, so a job that starts before the range is free
 even if it ends inside it.
 The range ends at the latest cutoff of the pending Interiors, or at the end of the
 last shift when one of them has no cutoff. Nothing is added when no Interior is
-pending, or when the run carries no Interior-earliest time (version 1).
+pending, or when the run carries no Interior-earliest time.
 """
 
 from __future__ import annotations

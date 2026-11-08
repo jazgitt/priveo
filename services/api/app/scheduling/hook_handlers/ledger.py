@@ -17,7 +17,6 @@ A job with no row yet (placed by hand, or a next-day retry made by the admin)
 that is completed is counted against the oldest Pending week of the car
 (INT-24). The Deferred status is handled by `deferral.py` (SCHS-47).
 
-The module runs only for a site on `scheduler.rules_version` 2 (`hooks`).
 It does not commit.
 """
 from __future__ import annotations

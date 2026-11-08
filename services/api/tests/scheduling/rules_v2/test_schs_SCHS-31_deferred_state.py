@@ -45,7 +45,7 @@ def _not_done(sc, job, key):
         sc.db, job, s.CouldNotComplete(reason_key=key, note="Car locked"), sc.world.customer_login.id)
 
 
-def test_schr_def_01_a_reason_that_defers_gives_deferred_never_completed(world, reasons, rules_v2):
+def test_schr_def_01_a_reason_that_defers_gives_deferred_never_completed(world, reasons):
     sc = Scenario(world)
     visit, jobs = _visit_jobs(sc)
     job = _not_done(sc, jobs[INTERNAL], "car_locked")
@@ -54,7 +54,7 @@ def test_schr_def_01_a_reason_that_defers_gives_deferred_never_completed(world, 
     assert visit.status != "Completed"
 
 
-def test_schr_def_04_the_reasons_are_read_from_the_table(world, reasons, rules_v2):
+def test_schr_def_04_the_reasons_are_read_from_the_table(world, reasons):
     sc = Scenario(world)
     _visit, jobs = _visit_jobs(sc)
     assert _not_done(sc, jobs[INTERNAL], "other").status == "Could not complete"
@@ -65,13 +65,7 @@ def test_schr_def_04_the_reasons_are_read_from_the_table(world, reasons, rules_v
     assert _not_done(sc, jobs[INTERNAL], "other").status == "Deferred"
 
 
-def test_schr_def_05_version_1_keeps_could_not_complete(world, reasons):
-    sc = Scenario(world)
-    _visit, jobs = _visit_jobs(sc)
-    assert _not_done(sc, jobs[INTERNAL], "car_locked").status == "Could not complete"
-
-
-def test_schr_def_05_a_partial_visit_still_offers_the_next_day_decision(world, reasons, rules_v2):
+def test_schr_def_05_a_partial_visit_still_offers_the_next_day_decision(world, reasons):
     """Partial completion (ADM-CNC-10) is the Could not complete path: a reason
     that does not defer leaves the job open to the admin's resolve."""
     sc = Scenario(world)
@@ -90,7 +84,7 @@ def test_schr_def_01_a_deferred_job_is_not_done_in_the_visit_outcome():
     assert rules.visit_status(["Deferred"]) != "Completed"
 
 
-def test_schr_def_01_the_deferred_job_is_closed_to_the_crew(world, reasons, rules_v2):
+def test_schr_def_01_the_deferred_job_is_closed_to_the_crew(world, reasons):
     from app.platform.errors import ApiError
     sc = Scenario(world)
     _visit, jobs = _visit_jobs(sc)
