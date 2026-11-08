@@ -547,7 +547,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       {focusOpen && (
         <Dialog open onOpenChange={(o) => { if (!o) setFocusOpen(false); }}>
           <DialogContent aria-describedby={undefined}
-                         className="top-0 left-0 h-dvh w-screen max-w-none translate-x-0 translate-y-0 gap-0 rounded-none border-0 bg-background p-3 sm:max-w-none">
+                         className="top-0 left-0 h-dvh w-screen max-w-none translate-x-0 translate-y-0 grid-cols-[minmax(0,1fr)] gap-0 rounded-none border-0 bg-background p-3 sm:max-w-none">
             <DialogTitle className="sr-only">Schedule board, focus view</DialogTitle>
             <DialogDescription className="sr-only">The board alone, filling the screen. Press Escape to go back to the page.</DialogDescription>
             <SchedulePage mode="focus" />

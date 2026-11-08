@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,5 +71,14 @@ describe("run music", () => {
   it("the overlay has no Mute control without a toggle", () => {
     render(<Fireworks mode="celebrate" message="Done" />);
     expect(screen.queryByRole("button", { name: /mute/i })).toBeNull();
+  });
+});
+
+describe("the run music file", () => {
+  // The portal is served under its base path, so a root URL is a 404 and nothing plays (owner, 8-Nov-26).
+  it("is a file in public/, reached from the base path", () => {
+    expect(RUN_MUSIC_SRC.startsWith(import.meta.env.BASE_URL)).toBe(true);
+    const rel = RUN_MUSIC_SRC.slice(import.meta.env.BASE_URL.length);
+    expect(existsSync(resolve(process.cwd(), "public", rel))).toBe(true); // the web tests run from apps/web
   });
 });

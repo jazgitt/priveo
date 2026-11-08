@@ -8,7 +8,9 @@
  * celebration ends or the run fails. Every call is safe without audio: a blocked
  * or missing file leaves the fireworks and captions working.
  */
-export const RUN_MUSIC_SRC = "/audio/mozart-minuet-k525-excerpt.mp3";
+// The portal is served under the base path (/portal/), so the file is found from the base, not the domain root.
+// A root path returned 404 on test and production, and the music never played (owner, 8-Nov-26).
+export const RUN_MUSIC_SRC = `${import.meta.env.BASE_URL}audio/mozart-minuet-k525-excerpt.mp3`;
 
 let audio: HTMLAudioElement | null = null;
 let muted = false;
