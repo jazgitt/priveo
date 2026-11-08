@@ -1061,7 +1061,7 @@ describe("schedule tabs and unavailable crew time", () => {
     await openDay();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     await waitFor(() => expect(within(tabs).getAllByRole("tab").map((x) => x.textContent)).toEqual([
-      "Board", "Needs Attention (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Reports"]));
+      "Board", "Needs Attention (1)", "Skipped and paused", "Cutoff requests", "Crew queue", "Draft improvements", "Rules", "Reports"]));
     expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Run the scheduler, Palm Grove")).not.toBeInTheDocument();
     // Run is a button in the top bar and opens a dialog.

@@ -133,6 +133,37 @@ describe("crew list", () => {
     await userEvent.click(screen.getByRole("button", { name: "I have noted it" }));
     expect(screen.queryByTestId("issued-password")).not.toBeInTheDocument();
   });
+
+  it("onboards a Member with home zones and saves the chosen zones on the new crew", async () => {
+    const zoneRows = [{ id: "z1", society_id: "s1", name: "Zone 1", active: true, vehicles: 0 },
+      { id: "z2", society_id: "s1", name: "Zone 2", active: true, vehicles: 0 }];
+    fetchMock.mockImplementation(async (p: string, init?: RequestInit) => {
+      if (p === "/v1/admin/directory/societies/s1/zones") return json(200, zoneRows);
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p.startsWith("/v1/admin/crew/default-hours")) return json(200, defaultHours());
+      if (p === "/v1/admin/crew" && init?.method === "POST") {
+        return json(201, { crew: { ...raj, id: "c9", name: "Sam Lee" }, login_id: "9000000009", password: "Sam4821$" });
+      }
+      if (p === "/v1/admin/crew/c9/home-zone" && init?.method === "PUT") {
+        return json(200, { home_zone_ids: ["z2"], follows_member: null, editable: true, zones: [] });
+      }
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew");
+    await userEvent.click(await screen.findByRole("button", { name: "Onboard crew" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Sam Lee");
+    await userEvent.type(within(dialog).getByLabelText("Mobile number"), "9000000009");
+    await choose("Society", "Lake View");
+    await userEvent.click(await within(dialog).findByRole("checkbox", { name: "Zone 2" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Onboard" }));
+    expect(await screen.findByTestId("issued-password")).toHaveTextContent("Sam4821$");
+    const put = fetchMock.mock.calls.find((c) => c[1]?.method === "PUT")!;
+    expect(put[0]).toBe("/v1/admin/crew/c9/home-zone");
+    expect(JSON.parse(put[1].body)).toEqual({ home_zone_ids: ["z2"] });
+    await userEvent.click(screen.getByRole("button", { name: "I have noted it" }));
+  });
 });
 
 describe("crew detail", () => {

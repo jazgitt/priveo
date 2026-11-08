@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 
 /**
- * A section of the Site Setup "Scheduling rules" tab. A section is a file in this folder named
+ * A section of the Scheduler "Rules" tab (per site). A section is a file in this folder named
  * `*Section.tsx` that exports `section`. Later stories add a file here and edit nothing else.
  */
 export interface RulesSection {

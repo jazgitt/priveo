@@ -1,5 +1,5 @@
 /**
- * The names the Scheduling rules panel uses (SCHR-CUT-06). The three cutoffs are named the same
+ * The names the Scheduler Rules tab uses (SCHR-CUT-06). The three cutoffs are named the same
  * way in screens and reports: Customer cutoff, Freeze and 9 PM rule.
  */
 export const CUTOFF_NAMES = [
