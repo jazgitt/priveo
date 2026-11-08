@@ -50,6 +50,11 @@ jobs:
       # in-memory (SQLite) tests duplicated it. tools/dev/check-local.sh still runs both before a merge.
       # - name: Test (in-memory database)
       #   run: pytest -q
+      - name: DEBUG solver log (temporary)
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/priveo_test
+          CPSAT_DEBUG: "1"
+        run: pytest -s -q tests/test_seed_two_societies.py -k test_add_builds
       - name: Test (PostgreSQL)
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/priveo_test
