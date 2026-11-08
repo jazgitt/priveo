@@ -6,6 +6,8 @@
   python scripts/load_service_history_upto3nov.py "<file.xlsx>" --fills fills.csv  empty cells the owner filled in
 
   python scripts/load_service_history_upto3nov.py "<file.xlsx>" --through 2026-11-10  day columns up to that date
+  python scripts/load_service_history_upto3nov.py "<file.xlsx>" --alias 2001=XXXXXX2001 --alias 7577=XXXXXX7577
+      a car number on the sheet that is registered under another number in the database
   python scripts/load_service_history_upto3nov.py "<file.xlsx>" --from 2026-11-04 --through 2026-11-07
       status mode: the sheet sets the status of each Scheduled visit in those days, a day with no
       visit is written as live history, an empty cell records nothing. Nothing is notified.
@@ -59,6 +61,14 @@ def main() -> None:
             raise SystemExit(__doc__)
         fills_path = Path(args[at + 1])
         del args[at:at + 2]
+    aliases = {}
+    while "--alias" in args:
+        at = args.index("--alias")
+        if at + 1 >= len(args) or "=" not in args[at + 1]:
+            raise SystemExit(__doc__)
+        sheet_car, registration = args[at + 1].split("=", 1)
+        aliases[sheet_car.strip()] = registration.strip()
+        del args[at:at + 2]
     since = None
     if "--from" in args:
         at = args.index("--from")
@@ -82,7 +92,7 @@ def main() -> None:
         try:
             fills = read_fills(fills_path) if fills_path else None
             report = load_service_history(db, args[0], apply=apply, fills=fills, through=through,
-                                          since=since)
+                                          since=since, aliases=aliases)
         except ValueError as problem:
             raise SystemExit(f"Stopped: {problem}") from problem
     print("SAVED" if apply else "TRIAL RUN: nothing was saved")

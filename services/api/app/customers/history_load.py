@@ -126,9 +126,12 @@ def read_fills(path: str | Path) -> dict[tuple[str, date], str]:
 
 def load_service_history(db: Session, path: str | Path, *, apply: bool,
                          fills: dict[tuple[str, date], str] | None = None,
-                         through: date = LAST_DAY, since: date | None = None) -> HistoryReport:
+                         through: date = LAST_DAY, since: date | None = None,
+                         aliases: dict[str, str] | None = None) -> HistoryReport:
     """Load the sheet's day columns up to and including `through`. With `since`, only
-    the columns from that day on are read, in status mode (see the module notes)."""
+    the columns from that day on are read, in status mode (see the module notes).
+    `aliases` maps a car number on the sheet to the registration in the database when
+    they differ (for example 2001 -> XXXXXX2001); the vehicle records are not changed."""
     book = load_workbook(path, data_only=True, read_only=True)
     if SHEET not in book.sheetnames:
         raise ValueError(f'The workbook has no "{SHEET}" sheet.')
@@ -146,6 +149,11 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
 
     vehicles = {_compact(r): vid for r, vid in db.execute(
         select(Vehicle.registration, Vehicle.id).where(Vehicle.registration.is_not(None)))}
+    for sheet_car, registration in (aliases or {}).items():
+        target = vehicles.get(_compact(registration))
+        if target is None:
+            raise ValueError(f"Alias {sheet_car} -> {registration}: no vehicle has that registration.")
+        vehicles[_compact(sheet_car)] = target
     # Visits made by an earlier run of this load carry the legacy marker on their jobs.
     converted = {(vid, d) for vid, d, snap in db.execute(
         select(Visit.vehicle_id, Visit.date, Job.checklist_snapshot)
