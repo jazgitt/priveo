@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartGantt, Columns3, ExternalLink, Info, Maximize2, Rows3, Table2, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
+import { ChartGantt, Columns3, ExternalLink, Info, Maximize2, Table2, Loader2, Lock, LockOpen, Play, Search, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useHref, useSearchParams } from "react-router-dom";
 
@@ -16,9 +16,6 @@ import { HoverTip, Tabs } from "@/components";
 import { cn } from "@/lib/utils";
 import { useSite } from "@/site/SiteContext";
 import { Button } from "@/ui/button";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,
-} from "@/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogDescription, DialogTitle,
 } from "@/ui/dialog";
@@ -401,19 +398,11 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
                   <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />
                   {/* The card detail switch works for all three views (ADM-SCH-32). */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="outline" className="size-8" aria-label={`Card detail: ${density}`} title="How much each job shows">
-                        <Rows3 aria-hidden />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuLabel>Card detail</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
-                        {DENSITIES.map(([id, label]) => <DropdownMenuRadioItem key={id} value={id}>{label}</DropdownMenuRadioItem>)}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="sch-views" role="group" aria-label="Card detail" title="How much each job shows">
+                    {DENSITIES.map(([id, label]) => (
+                      <button key={id} type="button" aria-pressed={density === id} onClick={() => setDensity(id)}>{label}</button>
+                    ))}
+                  </div>
                   {/* The hint shows at once on hover or focus, unlike a native title, which waits (owner, 8-Nov-26). */}
                   <HoverTip label={<Info className="size-4 text-muted-foreground" aria-hidden />} ariaLabel={hint}>
                     <span className="block max-w-xs">{hint}</span>
