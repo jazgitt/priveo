@@ -589,7 +589,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     # Where each job sits now, to renumber only the crew days that change (S-13).
     before_place = {job.id: (job.crew_id, job.start_minute, visit.date) for job, visit in rows}
 
-    solver_params = SolverParams.load(db)
+    solver_params = SolverParams.load(db, schedule.society_id)
     released_ids: set[uuid.UUID] = set()  # unlocked hand placements the run may move (item 15)
     for day, items in by_day.items():
         day_windows = windows.get(day, {})

@@ -26,8 +26,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.changes.models import ScheduleChange
-from app.customers.models import Subscription
-from app.directory import lookup
+from app.customers.models import Customer, Subscription, Vehicle
+from app.directory import site_settings
 from app.directory.models import Plan
 from app.scheduling.models import InteriorEntitlement, Job
 
@@ -40,14 +40,22 @@ _OPEN = (PENDING, PLANNED)
 
 # ---- the service week (SCHR-PAR-13) ---------------------------------------
 
-def week_start(db: Session, day: date) -> date:
-    """The first date of the service week that holds `day`."""
-    first = lookup.setting(db, "schedule.service_week_start")
+def society_of(db: Session, vehicle_id: uuid.UUID) -> uuid.UUID:
+    """The society a car belongs to: its own, else its customer's (legacy rows)."""
+    vehicle = db.get(Vehicle, vehicle_id)
+    customer = db.get(Customer, vehicle.customer_id)
+    return vehicle.society_id or customer.society_id
+
+
+def week_start(db: Session, day: date, society_id: uuid.UUID) -> date:
+    """The first date of the service week that holds `day`, for the site's own
+    `schedule.service_week_start` (its value, else the global one)."""
+    first = int(site_settings.read(db, society_id, "schedule.service_week_start"))
     return day - timedelta(days=(day.weekday() - first) % 7)
 
 
-def _weeks(db: Session, first: date, through: date) -> list[date]:
-    out, week = [], week_start(db, first)
+def _weeks(db: Session, first: date, through: date, society_id: uuid.UUID) -> list[date]:
+    out, week = [], week_start(db, first, society_id)
     while week <= through:
         out.append(week)
         week += timedelta(days=7)
@@ -97,11 +105,13 @@ def ensure(db: Session, sub: Subscription, through: date,
     rows it created."""
     if sub.status != "Active":
         return []
-    count = lookup.setting(db, "schedule.interior_entitlement_per_week")
+    society_id = society_of(db, sub.vehicle_id)
+    count = int(site_settings.read(db, society_id, "schedule.interior_entitlement_per_week"))
     have = {(r.service_week_start, r.seq) for r in db.scalars(
         select(InteriorEntitlement).where(InteriorEntitlement.vehicle_id == sub.vehicle_id))}
     created = []
-    for week in _weeks(db, max(sub.first_service_date, since or sub.first_service_date), through):
+    for week in _weeks(db, max(sub.first_service_date, since or sub.first_service_date), through,
+                        society_id):
         if not _owes(db, sub, week):
             continue
         for seq in range(1, count + 1):

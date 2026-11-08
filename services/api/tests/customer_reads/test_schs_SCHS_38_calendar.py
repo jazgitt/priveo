@@ -44,7 +44,7 @@ def test_a_week_the_ledger_has_completed_or_waived_is_not_flagged(api, asha, clo
     vehicle = db.get(Vehicle, uuid.UUID(asha["vehicles"][0]))
     sub = db.scalar(select(Subscription).where(Subscription.vehicle_id == vehicle.id))
     entitlements.ensure(db, sub, date(2026, 12, 31))
-    week = entitlements.week_start(db, date(2026, 12, 14))
+    week = entitlements.week_start(db, date(2026, 12, 14), entitlements.society_of(db, vehicle.id))
     for row in db.scalars(select(InteriorEntitlement).where(
             InteriorEntitlement.vehicle_id == vehicle.id, InteriorEntitlement.service_week_start == week)):
         row.status = entitlements.COMPLETED

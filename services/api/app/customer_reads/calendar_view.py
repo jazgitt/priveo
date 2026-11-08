@@ -33,6 +33,7 @@ from app.customer_reads.schemas import (
 from app.customers.models import Subscription, Vehicle
 from app.customers.service import show_time
 from app.directory import lookup
+from app.scheduling import entitlements
 
 # How far ahead the Home card looks for the next visit.
 NEXT_SERVICE_DAYS = 60
@@ -282,8 +283,8 @@ class CalendarView:
                 if day not in planned and services:
                     item = self._day(ctx, day, None, [], services, now)
                     # Once a week, on its first open day: the Interior is owed but not planned.
-                    week = day - timedelta(days=(day.weekday() - lookup.setting(
-                        self._db, "schedule.service_week_start")) % 7)
+                    week = entitlements.week_start(
+                        self._db, day, entitlements.society_of(self._db, sub.vehicle_id))
                     if (item.status == "Projected" and week not in said_weeks
                             and not any(week <= d < week + timedelta(days=7) for d in interior_planned)
                             and interior_this_week(sub, day)):

@@ -43,15 +43,19 @@ class SolverParams:
     settings: dict[str, Any] = field(default_factory=dict, compare=False)
 
     @classmethod
-    def load(cls, db) -> SolverParams:
-        """The global settings, read through the lookup."""
-        from app.directory import lookup
+    def load(cls, db, society_id) -> SolverParams:
+        """The scheduler's settings for a site, read from the stored values
+        (`site_settings.read`): no cache and no default in code (SCHR-CFG-04)."""
+        from app.directory import site_settings
+
+        def read(key: str):
+            return site_settings.read(db, society_id, key)
 
         return cls(
-            step=int(lookup.setting(db, "scheduler.grid_minutes")),
-            max_seconds=float(lookup.setting(db, "scheduler.solve_seconds")),
-            seed=int(lookup.setting(db, "scheduler.seed")),
-            workers=int(lookup.setting(db, "scheduler.workers")),
+            step=int(read("scheduler.grid_minutes")),
+            max_seconds=float(read("scheduler.solve_seconds")),
+            seed=int(read("scheduler.seed")),
+            workers=int(read("scheduler.workers")),
         )
 
 

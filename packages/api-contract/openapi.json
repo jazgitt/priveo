@@ -6452,6 +6452,76 @@
         }
       }
     },
+    "/v1/admin/scheduling/jobs/{job_id}/hand-lock": {
+      "put": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Put Hand Lock",
+        "description": "Locks (true) or unlocks (false) a job placed by hand (item 15). A run keeps a\nlocked placement; an unlocked one may move. 422 for a job not placed by hand.",
+        "operationId": "put_hand_lock_v1_admin_scheduling_jobs__job_id__hand_lock_put",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandLockIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/jobs/{job_id}/move-date": {
       "post": {
         "tags": [
@@ -7713,7 +7783,7 @@
           "admin"
         ],
         "summary": "Get Home Zone",
-        "description": "The home zone in force and the zones of the cleaner's society to pick from.",
+        "description": "The home zones in force and the zones of the cleaner's society to pick from.",
         "operationId": "get_home_zone_v1_admin_crew__crew_id__home_zone_get",
         "parameters": [
           {
@@ -7771,7 +7841,7 @@
           "admin"
         ],
         "summary": "Put Home Zone",
-        "description": "Sets or clears the home zone (SCHR-ZONE-07) and audits the change.",
+        "description": "Replaces the home zones (SCHR-ZONE-07) and audits the change.",
         "operationId": "put_home_zone_v1_admin_crew__crew_id__home_zone_put",
         "parameters": [
           {
@@ -21845,6 +21915,16 @@
             "type": "boolean",
             "title": "Manual"
           },
+          "placed_by_hand": {
+            "type": "boolean",
+            "title": "Placed By Hand",
+            "default": false
+          },
+          "hand_locked": {
+            "type": "boolean",
+            "title": "Hand Locked",
+            "default": false
+          },
           "reason": {
             "type": "string",
             "title": "Reason"
@@ -28273,6 +28353,19 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HandLockIn": {
+        "properties": {
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "locked"
+        ],
+        "title": "HandLockIn"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -28443,35 +28536,27 @@
       },
       "HomeZoneIn": {
         "properties": {
-          "home_zone_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Home Zone Id"
+          "home_zone_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Home Zone Ids"
           }
         },
         "type": "object",
         "title": "HomeZoneIn",
-        "description": "null clears the home zone."
+        "description": "The cleaner's home zones. An empty list clears them."
       },
       "HomeZoneOut": {
         "properties": {
-          "home_zone_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Home Zone Id"
+          "home_zone_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Home Zone Ids"
           },
           "follows_member": {
             "anyOf": [
@@ -28498,7 +28583,7 @@
         },
         "type": "object",
         "required": [
-          "home_zone_id",
+          "home_zone_ids",
           "follows_member",
           "editable",
           "zones"
@@ -31294,6 +31379,13 @@
           "end_minute": {
             "type": "integer",
             "title": "End Minute"
+          },
+          "home_zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneRef"
+            },
+            "type": "array",
+            "title": "Home Zones"
           }
         },
         "type": "object",
@@ -34011,6 +34103,25 @@
           "name"
         ],
         "title": "ZoneChoice"
+      },
+      "ZoneRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ZoneRef"
       }
     }
   }

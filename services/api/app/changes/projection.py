@@ -44,7 +44,7 @@ def interior_this_week(sub: Subscription | None, day: date) -> bool:
         return False
     from app.scheduling import entitlements
 
-    week = entitlements.week_start(session, day)
+    week = entitlements.week_start(session, day, _society_id(session, sub))
     if week + timedelta(days=7) <= sub.first_service_date:
         return False
     rows = entitlements.rows_for_week(session, sub.vehicle_id, week)

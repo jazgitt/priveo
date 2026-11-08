@@ -112,7 +112,7 @@ def _line(row: InteriorEntitlement, registration: str, week_start: date, as_of: 
 def weekly_summary(db: Session, society_id: uuid.UUID, on: date,
                    as_of: date | None = None) -> WeeklySummary:
     as_of = as_of or clock.today_ist()
-    start = entitlements.week_start(db, on)
+    start = entitlements.week_start(db, on, society_id)
     end = start + timedelta(days=6)
 
     jobs = [r for r in service.job_rows(

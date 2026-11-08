@@ -147,7 +147,8 @@ def provide(ctx, demand: list):
         held_prefix = HELD_NOTE.split(":", 1)[0]
         used -= {d for j, d in mine if (j.note or "").startswith(held_prefix)}
         pattern = patterns.get(sub.id)
-        last_week = entitlements.week_start(db, days[-1])
+        society = entitlements.society_of(db, sub.vehicle_id)
+        last_week = entitlements.week_start(db, days[-1], society)
         # A job of the week that was not done (missed or deferred) is tried again
         # on a later day, never on or before the day it failed.
         failed = {}
@@ -161,11 +162,11 @@ def provide(ctx, demand: list):
             feasible = [
                 d for d in days
                 if d >= sub.first_service_date and d not in off and d not in used and d > after
-                and entitlements.week_start(db, d) >= row.service_week_start
+                and entitlements.week_start(db, d, society) >= row.service_week_start
                 and (interior_open is None or d.weekday() in interior_open)]
             if not feasible:
                 continue
-            own = [d for d in feasible if entitlements.week_start(db, d) == row.service_week_start]
+            own = [d for d in feasible if entitlements.week_start(db, d, society) == row.service_week_start]
             pool = own or feasible
             # Weekdays before the weekend (INT-10), Derived: the weekend is the
             # fallback. An overdue row (no day of its own week) takes the first
