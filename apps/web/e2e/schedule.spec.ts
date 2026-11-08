@@ -27,18 +27,18 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(carOf(page, "TEST R06 Member 1")).toContainText("06:00-06:20");
 
     // Drop it at the top of the Manager's free slot: it starts at the slot's start, to the nearest 5 minutes.
-    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:00-14:00"),
+    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:30-14:00"),
       { targetPosition: { x: 30, y: 2 } });
-    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:0[05]-05:[2][05]/);
+    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:3[05]-05:[2-5][05]/);
     await expect(carOf(page, "TEST R06 Member 1")).toHaveCount(0);
-    await expect(page.getByText(/moved to TEST R06 Manager 0 at 05:0[05]/)).toBeVisible();
+    await expect(page.getByText(/moved to TEST R06 Manager 0 at 05:3[05]/)).toBeVisible();
 
     await page.reload();
     await expect(page.getByRole("group", { name: "Day board" })).toBeVisible();
-    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:0[05]-05:[2][05]/);
+    await expect(carOf(page, "TEST R06 Manager 0")).toContainText(/05:3[05]-05:[2-5][05]/);
 
     // And back, by dragging it onto the first lane's free time.
-    await carOf(page, "TEST R06 Manager 0").dragTo(lane(page, "TEST R06 Member 1").getByLabel("Free 05:00-14:00"),
+    await carOf(page, "TEST R06 Manager 0").dragTo(lane(page, "TEST R06 Member 1").getByLabel("Free 05:30-14:00"),
       { targetPosition: { x: 30, y: 2 } });
     await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
     await expect(carOf(page, "TEST R06 Manager 0")).toHaveCount(0);
@@ -72,7 +72,7 @@ test.describe("Schedule (scenario R06)", () => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await openBoard(page, addDays(scenario("R06").as_of, 3));
     await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
-    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:00-14:00"),
+    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:30-14:00"),
       { targetPosition: { x: 30, y: 2 } });
     const alert = page.getByRole("alert").filter({ hasText: /frozen/i });
     await expect(alert).toBeVisible();

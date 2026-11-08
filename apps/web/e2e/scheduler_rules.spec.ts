@@ -135,7 +135,7 @@ test.describe("Hand placement warning (SCHS-22)", () => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await openScheduleDay(page, addDays(scenario("R06").as_of, 1));
     await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
-    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:00-14:00"),
+    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:30-14:00"),
       { targetPosition: { x: 30, y: 2 } });
   }
 
