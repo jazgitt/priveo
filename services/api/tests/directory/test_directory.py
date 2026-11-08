@@ -749,7 +749,14 @@ def test_audit_scope_follows_the_row_an_entry_points_at(engine):
 
 # ---- seed ------------------------------------------------------------------------
 
+def _no_settings(db):
+    # The shared fixture seeds the scheduler rule keys; these tests need an empty settings table.
+    db.query(SystemSetting).delete()
+    db.commit()
+
+
 def test_seed_defaults_inserts_the_stated_defaults(engine, client, db):
+    _no_settings(db)
     added = seed_defaults(db)
     assert added["services"] == 3 and added["reasons"] == len(defaults.REASONS) and added["plans"] == 1
     assert added["checklist_items"] == 5 + 4 + 6
@@ -811,6 +818,7 @@ def test_a_renamed_default_plan_is_not_added_again(client, admin, engine):
 
 
 def test_seed_leaves_a_table_alone_once_it_has_rows(engine, client, db):
+    _no_settings(db)
     seed_defaults(db)
     db.delete(db.scalar(select(DirectoryService).where(DirectoryService.name == "Deep Spa")))
     db.delete(db.scalar(select(SystemSetting).where(SystemSetting.key == "support.hours")))

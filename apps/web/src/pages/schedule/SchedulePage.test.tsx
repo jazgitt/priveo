@@ -148,7 +148,7 @@ async function openDay(date = "2026-11-08", extra = "") {
 }
 
 const column = (id: string) => screen.findByTestId(`col-${id}`);
-const bodyOf = (col: HTMLElement) => col.querySelector(".sch-col-body")!;
+const bodyOf = (col: HTMLElement) => col.querySelector<HTMLElement>(".sch-col-body")!;
 
 /** Drags a card onto a column body, at a pointer height (jsdom has no DragEvent). */
 function dragTo(card: Element, target: Element, clientY = 0) {
