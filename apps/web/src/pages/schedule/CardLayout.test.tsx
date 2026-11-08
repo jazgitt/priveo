@@ -34,9 +34,10 @@ describe("card lines by layout (owner review, 8-Nov-26)", () => {
     expect(lines(base, "compact")).toEqual(["Zone 3 | EXT | Cutoff 10:00"]);
   });
 
-  it("drops a piece that is missing rather than showing a blank", () => {
+  it("keeps the zone's place when a job has no zone, and drops the other pieces that are missing", () => {
+    // The zone slot stays (an empty box with a cross on the card), so the lines do not shift (owner, 8-Nov-26).
     const bare = { ...base, zone: "", finish_by: null, customer_name: "" } as unknown as AdminJob;
-    expect(lines(bare, "detailed")).toEqual(["Honda City", "EXT | 09:00-09:20", "KA01AB1234"]);
+    expect(lines(bare, "detailed")).toEqual([" | Honda City", "EXT | 09:00-09:20", "KA01AB1234"]);
   });
 
   it("shows the duration in place of the slot for a job with no time yet", () => {

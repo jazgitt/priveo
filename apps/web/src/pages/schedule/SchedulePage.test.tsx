@@ -300,7 +300,7 @@ describe("the card board (ADM-SCH-33)", () => {
     const card = () => within(screen.getByTestId("col-c1")).getByRole("button", { name: /KA01AB1234/ });
     expect(card()).not.toHaveTextContent("Meena");
     await userEvent.click(await screen.findByRole("button", { name: "Card detail: standard" }));
-    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Detailed" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "Detail" }));
     expect(card()).toHaveTextContent("Meena");
     expect(localStorage.getItem("priveo.schedule.card-density")).toBe("detailed");
     await userEvent.click(await screen.findByRole("button", { name: "Card detail: detailed" }));
@@ -431,7 +431,8 @@ describe("the card board (ADM-SCH-33)", () => {
       serverWith({ "/v1/admin/scheduling/board": () => json(200, { ...b, crew: [
         { ...b.crew[0], home_zones: [{ id: "z2", name: "Zone 2" }, { id: "z5", name: "Zone 5" }] }, b.crew[1]] }) });
       await openDay();
-      expect((await column("c1")).querySelector(".sch-name-line")).toHaveTextContent("Asha · Zone 2, Zone 5");
+      // The header shows the short labels (owner, 8-Nov-26); the full names are in the tip.
+      expect((await column("c1")).querySelector(".sch-name-line")).toHaveTextContent("Asha · Z2, Z5");
       expect((await column("c2")).querySelector(".sch-home-zones")).toBeNull();
     });
 
@@ -822,12 +823,13 @@ describe("the timeline view (ADM-SCH-33)", () => {
     expect(screen.queryByRole("group", { name: "Day board" })).not.toBeInTheDocument();
 
     await userEvent.hover(block);
-    const tip = screen.getByRole("tooltip");
+    // The job tip is the timeline's own tooltip; the (i) hint has a tooltip of its own now.
+    const tip = document.getElementById("sch-tl-tip") as HTMLElement;
     expect(tip).toHaveTextContent("Honda City");
     expect(tip).toHaveTextContent("Meena");
     expect(tip).toHaveTextContent("Finish by10:00");
     await userEvent.unhover(block);
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(document.getElementById("sch-tl-tip")).toBeNull();
   });
 
   it("switches between Cards and Timeline", async () => {

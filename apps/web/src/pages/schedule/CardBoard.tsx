@@ -23,6 +23,8 @@ const FOLD_KEY = "priveo.schedule.folded-lanes";
 
 /** A crew member's home zone names, in the order the API gives them: "Zone 2, Zone 5". */
 export const homeZonesText = (member: SchedulingCrew): string => (member.home_zones ?? []).map((z) => z.name).join(", ");
+/** The home zones as short labels on the header line, such as Z1, Z2 (owner, 8-Nov-26). The full names stay in the tip. */
+export const homeZonesShort = (member: SchedulingCrew): string => (member.home_zones ?? []).map((z) => zoneShort(z.name)).join(", ");
 
 /** What the lock icon of a card placed by hand says it will do when clicked (owner, item 15). */
 export const LOCK_TIP = {
@@ -71,7 +73,9 @@ export function slotTime(el: HTMLElement, y: number, duration: number, step = 5)
 function Piece({ part, zones }: { part: CardPart; zones: string[] }) {
   switch (part.kind) {
     case "zone":
-      return <span className="sch-zone" style={zoneStyle(part.text, zones)} title={part.text}>{zoneShort(part.text)}</span>;
+      return part.text
+        ? <span className="sch-zone" style={zoneStyle(part.text, zones)} title={part.text}>{zoneShort(part.text)}</span>
+        : <span className="sch-zone sch-zone-none" role="img" aria-label="No zone" title="No zone"><X aria-hidden /></span>;
     case "reg":
       return <strong className="reg sch-reg">{part.text}</strong>;
     case "model":
@@ -493,7 +497,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
                 <span className="flex items-baseline justify-between gap-2">
                   <HoverTip label={<span className="sch-name-line"><strong>{member.name}</strong>
                               {(member.home_zones ?? []).length > 0 && (
-                                <span className="sch-home-zones" title={homeZonesText(member)}> · {homeZonesText(member)}</span>
+                                <span className="sch-home-zones" title={homeZonesText(member)}> · {homeZonesShort(member)}</span>
                               )}</span>}
                             ariaLabel={`${member.name}, ${member.role}. Hover for how jobs are allocated.`}>
                     <Reasoning member={member} avail={avail} jobs={mine} />
