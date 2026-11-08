@@ -18,7 +18,7 @@ const DAY_END = 22 * 60;
  * so a block is as long as its job and sits under its own time on the ruler (ux9).
  * The track is this wide at every layout, so a short job keeps its whole card in view.
  */
-export const REM_PER_MINUTE = 0.5;
+export const REM_PER_MINUTE = 0.8;
 
 interface Tip { job: AdminJob; x: number; y: number }
 
