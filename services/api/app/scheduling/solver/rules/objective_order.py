@@ -19,7 +19,6 @@ with the zone and FIFO stories.
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 from ortools.sat.python import cp_model
@@ -47,7 +46,6 @@ def optimise(ctx: ModelContext):
     names = order_of(ctx)
     solver = cp_model.CpSolver()
     solver.parameters.num_workers = params.workers
-    solver.parameters.log_search_progress = bool(os.environ.get("CPSAT_DEBUG"))  # DEBUG (temporary)
     solver.parameters.random_seed = params.seed
     if names is None:
         model.Maximize(sum(ctx.objective))
