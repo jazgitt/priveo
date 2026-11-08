@@ -113,20 +113,21 @@ def test_admin_only_unknown_vehicle_and_no_customer_details(world, api, admin):
     assert "Asha" not in text and "9876543210" not in text
 
 
-def test_days_from_before_the_app_join_the_history_and_a_skip_is_cancelled(world, api, admin):
+def test_migrated_days_are_live_history_labelled_imported(world, api, admin):
     from datetime import date
 
-    from app.customers.models import LegacyServiceRecord
+    from app.customers.history_convert import admin_login_id, write_record
 
     vehicle, *_ = setup(world, api, admin)
-    world.db.add_all([
-        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 9),
-                            services="Exterior + Interior", outcome="Completed"),
-        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 10),
-                            services="Exterior", outcome="Completed"),
-        LegacyServiceRecord(vehicle_id=vehicle.id, service_date=date(2026, 10, 11),
-                            services="", outcome="Skipped", skip_reason="Rain"),
-    ])
+    who = admin_login_id(world.db)
+    write_record(world.db, vehicle, date(2026, 10, 9), services="Exterior + Interior",
+                 outcome="Completed", skip_reason="", admin_id=who)
+    write_record(world.db, vehicle, date(2026, 10, 10), services="Exterior",
+                 outcome="Completed", skip_reason="", admin_id=who)
+    write_record(world.db, vehicle, date(2026, 10, 11), services="", outcome="Skipped",
+                 skip_reason="Rain", admin_id=who)
+    write_record(world.db, vehicle, date(2026, 10, 12), services="", outcome="Skipped",
+                 skip_reason="Weekly off", admin_id=who)  # no visit
     world.db.commit()
     body = history(api, admin, vehicle)
     assert body["total"] == 10 and body["counts"]["Completed"] == 2 and body["counts"]["Cancelled"] == 1
@@ -134,7 +135,8 @@ def test_days_from_before_the_app_join_the_history_and_a_skip_is_cancelled(world
     assert old["2026-10-09"]["source"] == "imported" and old["2026-10-09"]["state"] == "Completed"
     assert old["2026-10-09"]["planned"] == ["Cleaning-External", "Cleaning-Internal"]
     assert old["2026-10-11"]["state"] == "Cancelled" and old["2026-10-11"]["reason"] == "Rain"
-    assert old["2026-10-11"]["planned"] == []
+    assert old["2026-10-11"]["planned"] == ["Cleaning-External"]
+    assert "2026-10-12" not in old
     assert all(i["source"] == "live" for i in body["items"] if i["date"] >= SUNDAY.isoformat())
     dates = [i["date"] for i in body["items"]]
     assert dates == sorted(dates, reverse=True)

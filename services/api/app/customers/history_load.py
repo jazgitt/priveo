@@ -1,5 +1,7 @@
-"""One-time load of the service history up to 3 Nov 2026 from the owner's
-"calendar" sheet (workbook v4.1), into `legacy_service_records`.
+"""Load the service history up to 3 Nov 2026 from the owner's "calendar" sheet
+(workbook v4.1) as live history: each day becomes a visit with its jobs and, for
+an Interior, its entitlement (see `history_convert`). The days are live and
+actual, the same as work done in the app.
 
 The sheet has one row for each vehicle (column B is the car number, the link to
 the database) and one column for each day from 14 Sep to 3 Nov 2026. A cell says:
@@ -20,9 +22,10 @@ Owner's rules (3-4 Nov 2026):
 - any other text in a day cell is ignored but reported.
 
 It can run again: a vehicle and day that is already loaded is left as it is. A
-day that already has a live visit is not loaded. Every cell that is not loaded
-is listed in `report.not_loaded` with the reason. The console report holds
-counts only; the list (with car numbers) goes to a CSV the caller writes.
+day that already has a live visit from the app is not loaded and is reported.
+Every cell that is not loaded is listed in `report.not_loaded` with the reason.
+The console report holds counts only; the list (with car numbers) goes to a CSV
+the caller writes.
 """
 import csv
 from collections import Counter
@@ -34,13 +37,13 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.customers.history_convert import LIVE, WEEKLY_OFF, admin_login_id, write_record
 from app.customers.importer import _compact, _text
-from app.customers.models import LegacyServiceRecord, Vehicle
-from app.scheduling.models import Visit
+from app.customers.models import Vehicle
+from app.scheduling.models import Job, Visit
 
 SHEET = "calendar"
 LAST_DAY = date(2026, 11, 3)
-WEEKLY_OFF = "Weekly off"
 WEEKLY_OFF_DAYS = (date(2026, 10, 21), date(2026, 10, 28))
 EXTERIOR, BOTH = "Exterior", "Exterior + Interior"
 
@@ -66,10 +69,10 @@ class HistoryReport:
     to_load: int = 0            # new rows (saved only with apply)
     completed: int = 0
     skipped: int = 0
-    already_loaded: int = 0
+    already_loaded: int = 0     # days converted by an earlier run
     before_start: int = 0       # empty cells before the vehicle's first record
     owner_fills: int = 0
-    weekly_off_added: int = 0   # the 21 Oct days that have no column
+    weekly_off: int = 0         # weekly-off days: counted, no visit is written (owner rule)
     not_loaded: list[NotLoaded] = field(default_factory=list)
 
     def reasons(self) -> Counter:
@@ -109,7 +112,9 @@ def read_fills(path: str | Path) -> dict[tuple[str, date], str]:
 
 
 def load_service_history(db: Session, path: str | Path, *, apply: bool,
-                         fills: dict[tuple[str, date], str] | None = None) -> HistoryReport:
+                         fills: dict[tuple[str, date], str] | None = None,
+                         through: date = LAST_DAY) -> HistoryReport:
+    """Load the sheet's day columns up to and including `through`."""
     book = load_workbook(path, data_only=True, read_only=True)
     if SHEET not in book.sheetnames:
         raise ValueError(f'The workbook has no "{SHEET}" sheet.')
@@ -119,23 +124,29 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
         raise ValueError("The calendar sheet is empty.")
     header = rows[0]
     day_cols = [(i, h.date()) for i, h in enumerate(header)
-                if isinstance(h, datetime) and h.date() <= LAST_DAY]
+                if isinstance(h, datetime) and h.date() <= through]
     if not day_cols:
         raise ValueError("The calendar sheet has no date columns.")
     columns = {d for _, d in day_cols}
 
     vehicles = {_compact(r): vid for r, vid in db.execute(
         select(Vehicle.registration, Vehicle.id).where(Vehicle.registration.is_not(None)))}
-    live_days = {(vid, d) for vid, d in db.execute(select(Visit.vehicle_id, Visit.date))}
-    loaded_days = {(vid, d) for vid, d in db.execute(
-        select(LegacyServiceRecord.vehicle_id, LegacyServiceRecord.service_date))}
+    # Visits made by an earlier run of this load carry the legacy marker on their jobs.
+    converted = {(vid, d) for vid, d, snap in db.execute(
+        select(Visit.vehicle_id, Visit.date, Job.checklist_snapshot)
+        .join(Job, Job.visit_id == Visit.id)) if snap and snap.get("legacy")}
+    live_days = {(vid, d) for vid, d in db.execute(select(Visit.vehicle_id, Visit.date))} - converted
+    admin = admin_login_id(db) if apply else None
 
     report = HistoryReport()
     seen: set[tuple] = set()
 
     def add(vid, row_no, day, cell, car, services, outcome, reason):
         key = (vid, day)
-        if (vid, day) in loaded_days or key in seen:
+        if reason == WEEKLY_OFF:
+            report.weekly_off += 1  # no visit: a weekly off is not work (owner rule)
+            return
+        if key in converted or key in seen:
             report.already_loaded += 1
             return
         if key in live_days:
@@ -146,8 +157,13 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
         report.completed += outcome == "Completed"
         report.skipped += outcome == "Skipped"
         if apply:
-            db.add(LegacyServiceRecord(vehicle_id=vid, service_date=day, services=services,
-                                       outcome=outcome, skip_reason=reason))
+            result = write_record(db, db.get(Vehicle, vid), day, services=services, outcome=outcome,
+                                  skip_reason=reason, admin_id=admin)
+            if result == LIVE:  # written by another path after the check above
+                report.not_loaded.append(NotLoaded(row_no, day, cell, R_LIVE_VISIT, car))
+                report.to_load -= 1
+                report.completed -= outcome == "Completed"
+                report.skipped -= outcome == "Skipped"
 
     for offset, row in enumerate(rows[1:], start=2):
         car = _compact(row[1]) if len(row) > 1 else ""
@@ -192,9 +208,7 @@ def load_service_history(db: Session, path: str | Path, *, apply: bool,
             if vid is None:
                 report.not_loaded.append(NotLoaded(offset, off_day, "(no column)", R_NO_VEHICLE, car))
                 continue
-            before = report.to_load
             add(vid, offset, off_day, "(no column)", car, "", "Skipped", WEEKLY_OFF)
-            report.weekly_off_added += report.to_load - before
 
     if apply:
         db.commit()

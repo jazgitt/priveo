@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.customers.history_convert import is_imported_visit
 from app.customers.models import Customer, Subscription, Vehicle
 from app.directory import lookup
 from app.directory.models import Society
@@ -448,6 +449,8 @@ class SupportService:
         visit = self.db.get(Visit, uuid.UUID(visit_id))
         if visit.status != "Completed":
             raise ApiError("visit_not_completed", "Rate a completed visit.", 409)
+        if is_imported_visit(self.db, visit.id):  # migrated history is not rateable
+            raise ApiError("visit_not_rateable", "This visit cannot be rated.", 409)
         # Canonical IDs prevent multiple ratings via alternate UUID spellings.
         visit_id = str(visit.id)
         tags = list(dict.fromkeys(t.strip() for t in tags if t.strip()))

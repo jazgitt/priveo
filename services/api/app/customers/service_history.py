@@ -9,15 +9,15 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customers.models import LegacyServiceRecord, Vehicle
+from app.customers.models import Vehicle
+from app.directory import lookup
 from app.identity.service import User
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
 from app.scheduling.models import Job, Schedule, Visit
 from app.scheduling.outcomes import OUTCOMES, visit_outcomes
-
-LEGACY_SERVICES = {"Exterior": ["Cleaning-External"], "Exterior + Interior": ["Cleaning-External", "Cleaning-Internal"]}
+from app.visits.models import JobOutcome
 
 admin = APIRouter(prefix="/v1/admin", tags=["customer-administration"])
 
@@ -54,27 +54,27 @@ def service_history(
                 .where(Job.source_job_id.in_(list(missed_ids)))):
             visit_id = missed_ids[source]
             revised[visit_id] = min(day, revised.get(visit_id, day))
-    # Days from before the app (loaded once from the owner's sheet). A skipped day is Cancelled.
-    legacy = db.scalars(select(LegacyServiceRecord).where(LegacyServiceRecord.vehicle_id == vehicle_id)).all()
-    legacy_state = {r.id: "Completed" if r.outcome == "Completed" else "Cancelled" for r in legacy}
-    for r in legacy:
-        counts[legacy_state[r.id]] += 1
-    merged = [(v.date, "live", (v, s)) for v, s in rows if state is None or outcomes[v.id].outcome == state]
-    merged += [(r.service_date, "legacy", r) for r in legacy if state is None or legacy_state[r.id] == state]
+    # Days migrated from the owner's sheet are live visits; their jobs carry the legacy marker
+    # (customers.history_convert). They show as "imported" with the reason of a skipped day.
+    visit_ids = [v.id for v, _ in rows]
+    jobs_of: dict[uuid.UUID, list[Job]] = {}
+    for j in db.scalars(select(Job).where(Job.visit_id.in_(visit_ids))) if visit_ids else []:
+        jobs_of.setdefault(j.visit_id, []).append(j)
+    imported = {vid for vid, js in jobs_of.items()
+                if any((j.checklist_snapshot or {}).get("legacy") for j in js)}
+    skip_reason: dict[uuid.UUID, str] = {}
+    if imported:
+        for visit_id, key, note in db.execute(
+                select(Job.visit_id, JobOutcome.reason_key, JobOutcome.note)
+                .join(JobOutcome, JobOutcome.job_id == Job.id)
+                .where(Job.visit_id.in_(list(imported)), JobOutcome.kind == "skipped")):
+            skip_reason[visit_id] = (lookup.reason_label(db, key) if key else None) or note
+    merged = [(v.date, (v, s)) for v, s in rows if state is None or outcomes[v.id].outcome == state]
     merged.sort(key=lambda m: m[0], reverse=True)
     items = []
-    for _day, kind, entry in merged[offset:offset + limit]:
-        if kind == "legacy":
-            done = LEGACY_SERVICES.get(entry.services, [])
-            items.append({
-                "visit_id": f"legacy-{entry.id}", "date": entry.service_date.isoformat(),
-                "state": legacy_state[entry.id], "planned": done, "delivered": done, "missed": [],
-                "original_date": None, "revised_date": None, "schedule_status": None,
-                "source": "imported", "reason": entry.skip_reason,
-            })
-            continue
-        v, schedule_status = entry
+    for _day, (v, schedule_status) in merged[offset:offset + limit]:
         o = outcomes[v.id]
+        is_imported = v.id in imported
         items.append({
             "visit_id": str(v.id), "date": v.date.isoformat(), "state": o.outcome,
             "planned": o.planned, "delivered": o.delivered,
@@ -83,6 +83,7 @@ def service_history(
             "original_date": v.date.isoformat() if v.id in revised else None,
             "revised_date": revised[v.id].isoformat() if v.id in revised else None,
             "schedule_status": schedule_status,
-            "source": "live", "reason": "",
+            "source": "imported" if is_imported else "live",
+            "reason": skip_reason.get(v.id, "") if is_imported else "",
         })
     return {"counts": counts, "total": len(merged), "items": items}
