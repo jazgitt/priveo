@@ -540,6 +540,7 @@ def manager_reassign(
         "crew_id": [None if job.crew_id is None else str(job.crew_id), str(target.id)]})
     job.crew_id = target.id
     job.manual = True
+    job.hand_locked = True  # a hand placement is locked by default (item 15)
     job.queue_unlocked = False
     queue.resequence_all(db, {(target.id, visit.date), (previous_crew_id, visit.date)})
     db.commit()

@@ -156,6 +156,9 @@ class Job(Base):
     )
     # Set when the admin placed or removed it by hand. A re-run keeps it (ADM-SCH-14).
     manual: Mapped[bool] = mapped_column(Boolean, default=False)
+    # A hand placement is locked by default (item 15): a run keeps it where it
+    # is. Unlocked, a run may move it. Only meaningful when `manual` is set.
+    hand_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Placed, but it finishes after the customer's cutoff time (ADM-SCH-07).
     late: Mapped[bool] = mapped_column(Boolean, default=False)
     # Why it is Unscheduled (ADM-SCH-08).

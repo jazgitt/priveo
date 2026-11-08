@@ -150,6 +150,9 @@ class AdminJob(BaseModel):
     finish_by: str | None
     late: bool
     manual: bool
+    # Placed by hand with a crew member and start (item 15), and whether a run keeps it.
+    placed_by_hand: bool = False
+    hand_locked: bool = False
     reason: str
     # S-05: a moved service keeps both dates. `moved_to_date` is on the closed
     # original, `moved_from_date` on the job on the new date.

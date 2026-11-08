@@ -590,6 +590,7 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
     before_place = {job.id: (job.crew_id, job.start_minute, visit.date) for job, visit in rows}
 
     solver_params = SolverParams.load(db)
+    released_ids: set[uuid.UUID] = set()  # unlocked hand placements the run may move (item 15)
     for day, items in by_day.items():
         day_windows = windows.get(day, {})
         free: list[tuple[Job, Visit]] = []
@@ -602,9 +603,18 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             if job.crew_id is not None and job.crew_id not in day_windows:
                 # The crew member is away that day: the job goes back to the pool.
                 job.crew_id, job.start_minute, job.manual = None, None, False
+            # An unlocked hand placement is planned again like any open job (item 15).
+            released = (
+                not frozen and job.manual and not job.hand_locked
+                and job.status == "Scheduled" and job.crew_id is not None
+            )
+            if released:
+                job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
+                hand_placement.clear(db, job.id)
+                released_ids.add(job.id)
             if not frozen and not job.manual and job.status == "Scheduled":
                 job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
-            if job.crew_id is None and job.manual:
+            if job.crew_id is None and job.manual and not released:
                 job.note = "Taken off the schedule by the admin."
                 continue
             if job.crew_id is None and job.status != "Scheduled":
@@ -652,6 +662,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             elif key in result.unplaced:
                 job.crew_id, job.start_minute = None, None
                 job.note = result.unplaced[key]
+                if job.id in released_ids:
+                    job.manual = False  # back in the pool: no longer a hand placement (item 15)
             job.late = key in result.late
         hooks.after_solve(ctx, day, items, result)
     db.flush()
@@ -855,6 +867,7 @@ def move_job(
     before = (job.crew_id, job.start_minute)
     old_crew_id = job.crew_id
     job.crew_id, job.start_minute, job.manual, job.note = crew_id, start_minute, True, ""
+    job.hand_locked = True  # locked by default (item 15)
     job.late = job.finish_by_minute is not None and end > job.finish_by_minute
     job.queue_unlocked = False
     # The moved job takes its place by start time on its new day (Derived).
@@ -869,6 +882,33 @@ def move_job(
         db.commit()
     else:
         db.flush()
+    return job
+
+
+def set_hand_lock(db: Session, job_id: uuid.UUID, locked: bool, admin_id: uuid.UUID | None) -> Job:
+    """Locks or unlocks a hand placement (item 15). A locked placement keeps its
+    crew, day and time through a run; an unlocked one may be moved. Only a job
+    placed by hand can change; a frozen schedule refuses the change."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise ApiError("not_found", "That job does not exist.", 404)
+    visit = db.get(Visit, job.visit_id)
+    schedule = db.get(Schedule, visit.schedule_id)
+    if not (job.manual and job.crew_id is not None):
+        raise ApiError("not_hand_placed", "Only a job placed by hand can be locked or unlocked.",
+                       422, {"locked": "This job is not placed by hand."})
+    if job.status != "Scheduled":
+        raise ApiError("job_not_open", "That job has already started or finished.", 409)
+    if schedule.status == "Frozen":
+        raise ApiError("schedule_frozen",
+                       "This schedule is frozen. Unfreeze it with the code to change a lock.", 409)
+    before = bool(job.hand_locked)
+    job.hand_locked = locked
+    if before != locked:
+        record(db, schedule.id, admin_id, "hand-lock",
+               f"job {job.id} {'locked' if locked else 'unlocked'}",
+               {"job": str(job.id), "hand_locked": [before, locked]})
+    db.commit()
     return job
 
 
@@ -990,6 +1030,8 @@ def _job_dict(
         "finish_by": rules.hhmm(job.finish_by_minute),
         "late": job.late,
         "manual": job.manual,
+        "placed_by_hand": bool(job.manual and job.crew_id is not None),
+        "hand_locked": bool(job.hand_locked),
         "reason": job.note,
         "reason_code": job.reason_code,
         "cross_zone_reason": job.cross_zone_reason,

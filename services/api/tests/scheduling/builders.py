@@ -262,7 +262,7 @@ class Scenario:
             self.db.add(visit)
             self.db.flush()
         job = Job(visit_id=visit.id, service=service_name, crew_id=cleaner.id,
-                  start_minute=start, manual=True,
+                  start_minute=start, manual=True, hand_locked=True,
                   duration_minutes=duration or lookup.durations(self.db)[service_name])
         self.db.add(job)
         self.db.flush()
