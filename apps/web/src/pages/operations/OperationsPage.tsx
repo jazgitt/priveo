@@ -31,6 +31,8 @@ export interface OperationJob {
   outcome_summary?: string; reported_by?: string | null; reported_at?: string | null;
 }
 type Reason = { key: string; label: string };
+/** The statuses the crew app sets, and the could-not-complete reasons with whether each defers the job. */
+type CompletionOptions = { statuses: string[]; reasons: (Reason & { defers: boolean })[] };
 
 const QUEUES = [
   { id: "missed", label: "Missed jobs" },
@@ -58,9 +60,12 @@ export function OperationsPage() {
   const [reason, setReason] = useState("");
   const [unresolved, setUnresolved] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  // S-12: visits picked for a bulk skip (one visit can hold several jobs).
+  // Jobs picked in the table. A bulk skip acts on the visits of the picked jobs (S-12);
+  // a bulk status acts on the picked jobs (P1-3).
   const [picked, setPicked] = useState<string[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  // The jobs for a status change: one from its row, or the picked jobs in bulk.
+  const [statusFor, setStatusFor] = useState<{ jobs: OperationJob[]; bulk: boolean } | null>(null);
   const params = new URLSearchParams({ queue });
   if (site.id) params.set("society_id", site.id);
   if (from) params.set("date_from", from);
@@ -69,7 +74,11 @@ export function OperationsPage() {
   if (unresolved && queue === "missed") params.set("unresolved", "true");
   const jobs = useQuery({ queryKey: ["operations", params.toString()], queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
   const reasons = useQuery({ queryKey: ["operations-reasons"], queryFn: () => api<Reason[]>("/v1/admin/operations/reasons") });
+  const options = useQuery({ queryKey: ["operations-completion-options"], enabled: queue === "scheduled",
+    queryFn: () => api<CompletionOptions>("/v1/admin/operations/completion-options") });
   const open = jobs.data?.find((j) => j.id === openId) ?? null;
+  const pickedRows = (jobs.data ?? []).filter((j) => picked.includes(j.id));
+  const pickedVisitIds = [...new Set(pickedRows.map((j) => j.visit_id))];
 
   return (
     <>
@@ -91,9 +100,14 @@ export function OperationsPage() {
                 {(p) => <SelectBox {...p} value={reason || NONE} onChange={(v) => setReason(v === NONE ? "" : v)}
                                    choices={[{ value: NONE, label: "All reasons" }, ...(reasons.data ?? []).map((r) => ({ value: r.key, label: r.label }))]} />}
               </Field>
+              {queue === "scheduled" && (
+                <Button type="button" variant="outline" disabled={pickedRows.length === 0} onClick={() => setStatusFor({ jobs: pickedRows, bulk: true })}>
+                  Set status ({pickedRows.length})
+                </Button>
+              )}
               {queue !== "history" && (
-                <Button type="button" variant="destructive" disabled={picked.length === 0} onClick={() => setBulkOpen(true)}>
-                  Skip selected ({picked.length})
+                <Button type="button" variant="destructive" disabled={pickedVisitIds.length === 0} onClick={() => setBulkOpen(true)}>
+                  Skip selected ({pickedVisitIds.length})
                 </Button>
               )}
               {queue === "missed" && (
@@ -107,8 +121,8 @@ export function OperationsPage() {
           empty={<EmptyState title="No jobs match these filters" />}
           columns={[
             ...(queue === "history" ? [] : [{ key: "sel", header: "", width: "3rem", cell: (j: OperationJob) => (
-              <Checkbox aria-label={`Select ${j.registration} ${j.service}`} checked={picked.includes(j.visit_id)}
-                        onCheckedChange={(on) => setPicked((p) => (on ? [...new Set([...p, j.visit_id])] : p.filter((v) => v !== j.visit_id)))} />
+              <Checkbox aria-label={`Select ${j.registration} ${j.service}`} checked={picked.includes(j.id)}
+                        onCheckedChange={(on) => setPicked((p) => (on ? [...new Set([...p, j.id])] : p.filter((v) => v !== j.id)))} />
             ) }]),
             { key: "date", header: "Date", width: "7rem", cell: (j) => showDate(j.date) },
             { key: "veh", header: "Vehicle", width: "17%", cell: (j) => (
@@ -119,12 +133,21 @@ export function OperationsPage() {
             { key: "why", header: "Reason", wrap: true, cell: (j) => (j.reason || j.note ? <>{j.reason}{j.reason && j.note ? " · " : ""}<span className="text-muted-foreground">{j.note}</span></> : "-") },
             { key: "status", header: "Status", width: "11rem", wrap: true, cell: (j) => (
               <span className="flex flex-wrap gap-1.5"><StatusBadge status={shownStatus(j)} />{j.partial && <StatusBadge status="Partially Completed" tone="warn" />}{j.resolved_at && <StatusBadge status={j.outcome ?? "Resolved"} tone="ok" />}</span>) },
-            { key: "act", header: "", width: "6rem", align: "right", cell: (j) => <Button size="sm" variant="outline" onClick={() => setOpenId(j.id)}>Open</Button> },
+            { key: "act", header: "", width: queue === "scheduled" ? "11rem" : "6rem", align: "right", cell: (j) => (
+              <span className="flex justify-end gap-2">
+                {queue === "scheduled" && (
+                  <Button size="sm" variant="outline" aria-label={`Set status for ${j.registration} ${j.service}`}
+                          onClick={(e) => { e.stopPropagation(); setStatusFor({ jobs: [j], bulk: false }); }}>Set status</Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setOpenId(j.id)}>Open</Button>
+              </span>) },
           ]}
         />
       </Tabs>
-      {bulkOpen && <BulkSkipDialog visitIds={picked} reasons={reasons.data ?? []} onClose={() => setBulkOpen(false)}
+      {bulkOpen && <BulkSkipDialog visitIds={pickedVisitIds} reasons={reasons.data ?? []} onClose={() => setBulkOpen(false)}
                                    onDone={() => { setBulkOpen(false); setPicked([]); }} />}
+      {statusFor && <CompletionDialog jobs={statusFor.jobs} bulk={statusFor.bulk} options={options.data} onClose={() => setStatusFor(null)}
+                                      onDone={() => { setStatusFor(null); setPicked([]); }} />}
       {open && <JobDialog key={`${open.id}:${open.resolved_at ?? "open"}`} job={open} reasons={reasons.data ?? []} onClose={() => setOpenId(null)} />}
     </>
   );
@@ -211,6 +234,58 @@ function JobDialog({ job, reasons, onClose }: { job: OperationJob; reasons: Reas
             )}
           </div>
         </section>
+      )}
+    </FormDialog>
+  );
+}
+
+/**
+ * P1-3: set the completion status of one scheduled job, or of the picked jobs. Not completed
+ * needs a reason and a remark (ADM-CNC-07). A deferring reason is Deferred and any other reason
+ * is Could not complete, as for the crew. Works on a Draft or a Frozen schedule.
+ */
+function CompletionDialog({ jobs, bulk, options, onClose, onDone }: {
+  jobs: OperationJob[]; bulk: boolean; options: CompletionOptions | undefined; onClose: () => void; onDone: () => void;
+}) {
+  const qc = useQueryClient();
+  const [status, setStatus] = useState("");
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const notCompleted = status !== "" && status !== "Completed";
+  // Deferred takes only the reasons that defer the job; Could not complete takes the others.
+  const reasonChoices = (options?.reasons ?? []).filter((r) => (status === "Deferred" ? r.defers : !r.defers));
+  const valid = status !== "" && (!notCompleted || (reason !== "" && note.trim() !== ""));
+  const label = bulk ? `${jobs.length} jobs` : `${jobs[0].service}, ${jobs[0].registration}`;
+  const save = useAppMutation<void, unknown>({
+    mutationFn: () => {
+      const body = { status, ...(notCompleted ? { reason_key: reason, note: note.trim() } : {}) };
+      return !bulk
+        ? api(`/v1/admin/operations/jobs/${jobs[0].id}/completion`, { method: "POST", body })
+        : api("/v1/admin/operations/bulk-completion", { method: "POST", body: { ...body, job_ids: jobs.map((j) => j.id) } });
+    },
+    pending: "Saving…",
+    success: `${label} set to ${status}.`,
+    onSuccess: () => { for (const key of ["operations", "board", "needs-scheduling"]) void qc.invalidateQueries({ queryKey: [key] }); onDone(); },
+  });
+  return (
+    <FormDialog open onOpenChange={(o) => !o && onClose()} title={`Set status, ${label}`} size="md"
+                submitLabel="Save status" busy={save.isPending} disabled={!valid}
+                description="A job that is not completed goes to the Missed list until the admin decides what happens to it."
+                onSubmit={() => save.mutate()}>
+      <Field label="Completion status">
+        {(p) => <SelectBox {...p} value={status || NONE} onChange={(v) => { setStatus(v === NONE ? "" : v); setReason(""); }}
+                           choices={[{ value: NONE, label: "Choose a status" }, ...(options?.statuses ?? []).map((s) => ({ value: s, label: s }))]} />}
+      </Field>
+      {notCompleted && (
+        <>
+          <Field label="Reason">
+            {(p) => <SelectBox {...p} value={reason || NONE} onChange={(v) => setReason(v === NONE ? "" : v)}
+                               choices={[{ value: NONE, label: "Choose a reason" }, ...reasonChoices.map((r) => ({ value: r.key, label: r.label }))]} />}
+          </Field>
+          <Field label="Remark">
+            {(p) => <Textarea {...p} rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />}
+          </Field>
+        </>
       )}
     </FormDialog>
   );
