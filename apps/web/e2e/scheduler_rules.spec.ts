@@ -131,18 +131,25 @@ test.describe("Hand placement warning (SCHS-22)", () => {
     });
   }
 
-  async function dragCar(page: Page) {
+  // A drop saves at once with no dialog (scheduler board fixes build plan, section 3, decision 4), and the
+  // drop path does not ask the rule question. The single-move dialog still asks, so the card is moved from
+  // the keyboard instead: Alt and the down arrow move a placed card 5 minutes, and that is one single move.
+  // Returns the card's title (its time and state) as it was before the move, to check the card goes back.
+  async function nudgeCar(page: Page): Promise<string> {
     await page.setViewportSize({ width: 1366, height: 768 });
     await openScheduleDay(page, addDays(scenario("R06").as_of, 1));
-    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
-    await carOf(page, "TEST R06 Member 1").dragTo(lane(page, "TEST R06 Manager 0").getByLabel("Free 05:30-14:00"),
-      { targetPosition: { x: 30, y: 2 } });
+    const car = carOf(page, "TEST R06 Member 1");
+    await expect(car).toBeVisible();
+    const before = (await car.getAttribute("title")) ?? "";
+    await car.focus();
+    await page.keyboard.press("Alt+ArrowDown");
+    return before;
   }
 
-  test("a drop that breaks a rule lists what is breached and places the job only after Place anyway [SCHR-HIER-08, SCHR-CUT-05, ADM-SCH-33]", async ({ page }) => {
+  test("a move that breaks a rule lists what is breached and places the job only after Place anyway [SCHR-HIER-08, SCHR-CUT-05, ADM-SCH-33]", async ({ page }) => {
     const bodies: Record<string, unknown>[] = [];
     await routeMoves(page, bodies);
-    await dragCar(page);
+    await nudgeCar(page);
 
     const dialog = page.getByRole("alertdialog", { name: /against the rules\?$/ });
     await expect(dialog).toContainText("TS35TT0001");
@@ -158,15 +165,15 @@ test.describe("Hand placement warning (SCHS-22)", () => {
   test("cancelling the warning sends no second move [SCHR-HIER-08, SCHR-CUT-05, ADM-SCH-33]", async ({ page }) => {
     const bodies: Record<string, unknown>[] = [];
     await routeMoves(page, bodies);
-    await dragCar(page);
+    const before = await nudgeCar(page);
 
     const dialog = page.getByRole("alertdialog", { name: /against the rules\?$/ });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toHaveCount(0);
     expect(bodies).toHaveLength(1);
-    // The card is back in its lane: the server never moved it.
-    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
+    // The card is back where it was, and the server never moved it.
+    await expect(carOf(page, "TEST R06 Member 1")).toHaveAttribute("title", before);
   });
 });
 

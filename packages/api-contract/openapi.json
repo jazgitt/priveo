@@ -4077,6 +4077,179 @@
         }
       }
     },
+    "/v1/admin/operations/completion-options": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Completion Options",
+        "description": "The statuses an admin can set, and the reasons with whether each defers the job.",
+        "operationId": "completion_options_v1_admin_operations_completion_options_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/operations/jobs/{job_id}/completion": {
+      "post": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Set Completion",
+        "operationId": "set_completion_v1_admin_operations_jobs__job_id__completion_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/operations/bulk-completion": {
+      "post": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Bulk Completion",
+        "description": "One status for many jobs, in one transaction. If any job is missing or already\nclosed, nothing changes and the answer lists those job ids.",
+        "operationId": "bulk_completion_v1_admin_operations_bulk_completion_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCompletionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/home": {
       "get": {
         "tags": [
@@ -6452,6 +6625,66 @@
         }
       }
     },
+    "/v1/admin/scheduling/jobs/batch-move": {
+      "post": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Batch Move Jobs",
+        "description": "Applies several moves in one transaction (scheduler board, P0-5, P0-7, P0-8).\nAny overlap refuses the whole batch: 409 with body {\"detail\": {\"code\": \"overlap\",\n\"job_ids\": [...]}}. Crew-hours and service-hours crossings are returned as warnings.",
+        "operationId": "batch_move_jobs_v1_admin_scheduling_jobs_batch_move_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchMoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchMoveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/scheduling/jobs/{job_id}/hand-lock": {
       "put": {
         "tags": [
@@ -7889,6 +8122,445 @@
                 "schema": {
                   "$ref": "#/components/schemas/HomeZoneOut"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/crew/{crew_id}/role-periods": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Role Periods",
+        "description": "The dated roles that have not ended, soonest first.",
+        "operationId": "list_role_periods_v1_admin_crew__crew_id__role_periods_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RolePeriodOut"
+                  },
+                  "title": "Response List Role Periods V1 Admin Crew  Crew Id  Role Periods Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Add Role Period",
+        "description": "Adds a dated role and frees the open jobs it no longer fits. Days already\nrun are not changed (owner decision 7).",
+        "operationId": "add_role_period_v1_admin_crew__crew_id__role_periods_post",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePeriodIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolePeriodResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/crew/{crew_id}/role-periods/{period_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Cancel Role Period",
+        "description": "Removes a dated role that has not ended. The permanent role applies again.",
+        "operationId": "cancel_role_period_v1_admin_crew__crew_id__role_periods__period_id__delete",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "period_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Period Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RolePeriodOut"
+                  },
+                  "title": "Response Cancel Role Period V1 Admin Crew  Crew Id  Role Periods  Period Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/demand": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "Demand For Day",
+        "operationId": "demand_for_day_v1_admin_scheduling_demand_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DemandItem"
+                  },
+                  "title": "Response Demand For Day V1 Admin Scheduling Demand Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/job-cards/pdf": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "All Crew Cards",
+        "operationId": "all_crew_cards_v1_admin_scheduling_job_cards_pdf_get",
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schedule Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/scheduling/job-cards/crews/{crew_id}/pdf": {
+      "get": {
+        "tags": [
+          "scheduling"
+        ],
+        "summary": "One Crew Cards",
+        "operationId": "one_crew_cards_v1_admin_scheduling_job_cards_crews__crew_id__pdf_get",
+        "parameters": [
+          {
+            "name": "crew_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Crew Id"
+            }
+          },
+          {
+            "name": "schedule_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schedule Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -17007,6 +17679,271 @@
         }
       }
     },
+    "/v1/admin/directory/societies/{society_id}/slot-exceptions": {
+      "get": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "List Slot Exceptions",
+        "operationId": "list_slot_exceptions_v1_admin_directory_societies__society_id__slot_exceptions_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SlotExceptionOut"
+                  },
+                  "title": "Response List Slot Exceptions V1 Admin Directory Societies  Society Id  Slot Exceptions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Create Slot Exception",
+        "operationId": "create_slot_exception_v1_admin_directory_societies__society_id__slot_exceptions_post",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotExceptionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotExceptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/directory/slot-exceptions/{exception_id}": {
+      "patch": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Update Slot Exception",
+        "operationId": "update_slot_exception_v1_admin_directory_slot_exceptions__exception_id__patch",
+        "parameters": [
+          {
+            "name": "exception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Exception Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotExceptionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotExceptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "directory"
+        ],
+        "summary": "Delete Slot Exception",
+        "operationId": "delete_slot_exception_v1_admin_directory_slot_exceptions__exception_id__delete",
+        "parameters": [
+          {
+            "name": "exception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Exception Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/directory/plans": {
       "get": {
         "tags": [
@@ -22449,6 +23386,116 @@
         "title": "AutomaticPlanningSettings",
         "description": "The planning time only. On or off is the `automatic-planning` switch on the\nScheduled jobs page (ADM-OPS-05)."
       },
+      "BatchMove": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "crew_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crew Id"
+          },
+          "start_minute": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMaximum": 1440.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Minute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "BatchMove"
+      },
+      "BatchMoveOut": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminJob"
+            },
+            "type": "array",
+            "title": "Jobs"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/BatchWarning"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "warnings"
+        ],
+        "title": "BatchMoveOut"
+      },
+      "BatchMoveRequest": {
+        "properties": {
+          "moves": {
+            "items": {
+              "$ref": "#/components/schemas/BatchMove"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Moves"
+          },
+          "override": {
+            "type": "boolean",
+            "title": "Override",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "moves"
+        ],
+        "title": "BatchMoveRequest"
+      },
+      "BatchWarning": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "code",
+          "message"
+        ],
+        "title": "BatchWarning"
+      },
       "Board": {
         "properties": {
           "schedule": {
@@ -22712,6 +23759,54 @@
         },
         "type": "object",
         "title": "BreakRuleUpdate"
+      },
+      "BulkCompletionIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "Completed",
+              "Could not complete",
+              "Deferred"
+            ],
+            "title": "Status"
+          },
+          "reason_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Key"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          },
+          "job_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Job Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "job_ids"
+        ],
+        "title": "BulkCompletionIn"
       },
       "BulkReassign": {
         "properties": {
@@ -23833,6 +24928,43 @@
           "latest_note"
         ],
         "title": "ComplaintSummary"
+      },
+      "CompletionIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "Completed",
+              "Could not complete",
+              "Deferred"
+            ],
+            "title": "Status"
+          },
+          "reason_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Key"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CompletionIn"
       },
       "ConversationDetailOut": {
         "properties": {
@@ -24982,6 +26114,14 @@
             "type": "string",
             "title": "Paired Member",
             "default": ""
+          },
+          "home_zones": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Home Zones",
+            "default": []
           },
           "exceptions": {
             "items": {
@@ -26226,6 +27366,62 @@
           "more"
         ],
         "title": "DaySummaryState"
+      },
+      "DemandItem": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "service_label": {
+            "type": "string",
+            "title": "Service Label"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "vehicle": {
+            "type": "string",
+            "title": "Vehicle"
+          },
+          "cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "service",
+          "service_label",
+          "vehicle_id",
+          "registration",
+          "vehicle",
+          "cutoff",
+          "source"
+        ],
+        "title": "DemandItem"
       },
       "DemandLine": {
         "properties": {
@@ -31088,6 +32284,40 @@
         ],
         "title": "RefreshRequest"
       },
+      "ReleasedJobOut": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "vehicle_id": {
+            "type": "string",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "date",
+          "service",
+          "vehicle_id",
+          "registration"
+        ],
+        "title": "ReleasedJobOut"
+      },
       "Requirements": {
         "properties": {
           "photos_required": {
@@ -31163,6 +32393,105 @@
           "apply"
         ],
         "title": "ResolveCutoff"
+      },
+      "RolePeriodIn": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "RolePeriodIn",
+        "description": "A role for a date range (P2-4). Both dates are optional, but at least one\nis needed: with no dates the role is changed on the crew member's page.\nNo start date means from today. No end date means until the role is changed."
+      },
+      "RolePeriodOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "start_date",
+          "end_date"
+        ],
+        "title": "RolePeriodOut"
+      },
+      "RolePeriodResult": {
+        "properties": {
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/RolePeriodOut"
+            },
+            "type": "array",
+            "title": "Periods"
+          },
+          "released_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/ReleasedJobOut"
+            },
+            "type": "array",
+            "title": "Released Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periods",
+          "released_jobs"
+        ],
+        "title": "RolePeriodResult"
       },
       "RunRequest": {
         "properties": {
@@ -31580,6 +32909,203 @@
         "additionalProperties": false,
         "type": "object",
         "title": "SkipVisit"
+      },
+      "SlotExceptionCreate": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "days": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Days",
+            "description": "Monday to Sunday"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/SlotExceptionWindow"
+            },
+            "type": "array",
+            "title": "Windows"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "start_date",
+          "end_date",
+          "days"
+        ],
+        "title": "SlotExceptionCreate"
+      },
+      "SlotExceptionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "society_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Society Id"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "days": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/SlotExceptionWindow"
+            },
+            "type": "array",
+            "title": "Windows"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "society_id",
+          "service",
+          "start_date",
+          "end_date",
+          "days",
+          "windows",
+          "note"
+        ],
+        "title": "SlotExceptionOut"
+      },
+      "SlotExceptionUpdate": {
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "windows": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SlotExceptionWindow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Windows"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "title": "SlotExceptionUpdate"
+      },
+      "SlotExceptionWindow": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "description": "HH:MM"
+          },
+          "end": {
+            "type": "string",
+            "title": "End",
+            "description": "HH:MM, or 24:00 for midnight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "SlotExceptionWindow"
       },
       "SourceOut": {
         "properties": {

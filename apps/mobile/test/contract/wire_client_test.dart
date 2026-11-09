@@ -239,6 +239,21 @@ void main() {
     http.status=409;
     await expectLater(api.bulkSkipVisits(wire.BulkSkip.fromJson((http.examples['BulkSkip'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
+  test('GET /v1/admin/operations/completion-options uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.completionOptions();
+    expect(http.requests.last.path, '/v1/admin/operations/completion-options'); expect(http.requests.last.method, 'GET');
+    http.status=409;
+    await expectLater(api.completionOptions(), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('POST /v1/admin/operations/bulk-completion uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.bulkCompletion(wire.BulkCompletionIn.fromJson((http.examples['BulkCompletionIn'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/operations/bulk-completion'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['BulkCompletionIn']);
+    http.status=409;
+    await expectLater(api.bulkCompletion(wire.BulkCompletionIn.fromJson((http.examples['BulkCompletionIn'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
   test('GET /v1/admin/home uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
     await api.adminHome();
@@ -291,6 +306,14 @@ void main() {
     expect(http.requests.last.data, http.examples['RunRequest']);
     http.status=409;
     await expectLater(api.run(wire.RunRequest.fromJson((http.examples['RunRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
+  });
+  test('POST /v1/admin/scheduling/jobs/batch-move uses the published wire contract', () async {
+    final http=ContractHttp(); final api=wire.PriveoApi(http.dio());
+    await api.batchMoveJobs(wire.BatchMoveRequest.fromJson((http.examples['BatchMoveRequest'] as Map).cast<String,dynamic>()));
+    expect(http.requests.last.path, '/v1/admin/scheduling/jobs/batch-move'); expect(http.requests.last.method, 'POST');
+    expect(http.requests.last.data, http.examples['BatchMoveRequest']);
+    http.status=409;
+    await expectLater(api.batchMoveJobs(wire.BatchMoveRequest.fromJson((http.examples['BatchMoveRequest'] as Map).cast<String,dynamic>())), throwsA(isA<ApiFailure>().having((e)=>e.statusCode,'status',409)));
   });
   test('POST /v1/admin/scheduling/reassign uses the published wire contract', () async {
     final http=ContractHttp(); final api=wire.PriveoApi(http.dio());

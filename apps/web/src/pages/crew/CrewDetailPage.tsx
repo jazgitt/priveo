@@ -15,7 +15,6 @@ import { SocietyPanel } from "./SocietyPanel";
 /** The sections of a crew member's page, one tab each. */
 export const CREW_TABS = [
   { id: "details", label: "Details" },
-  { id: "society", label: "Society" },
   { id: "role", label: "Role and pairing" },
   { id: "hours", label: "Working hours" },
   { id: "exceptions", label: "Exceptions" },
@@ -45,14 +44,19 @@ function Section({ tab, crew }: { tab: string; crew: Crew }) {
   // The key resets a section's form when the saved record changes.
   const v = JSON.stringify([crew.name, crew.mobile, crew.role, crew.paired_member_id, crew.working_hours]);
   switch (tab) {
-    case "society": return <SocietyPanel key={`s-${crew.society_id}`} crew={crew} />;
     case "role": return <RolePanel key={`r-${v}`} crew={crew} />;
     case "hours": return <HoursPanel key={`h-${v}`} crew={crew} />;
     case "exceptions": return <ExceptionsPanel crew={crew} />;
     case "account": return <AccountPanel crew={crew} />;
     case "sessions": return <SessionsPanel crew={crew} />;
     case "scheduling": return <SchedulingPanel crew={crew} />;
-    default: return <DetailsPanel key={`d-${v}`} crew={crew} />;
+    default: return (
+      // One Details tab: the details, then the society over time and moves (ADM-CRW-22, P2-3).
+      <div className="flex flex-col gap-6">
+        <DetailsPanel key={`d-${v}`} crew={crew} />
+        <SocietyPanel key={`s-${crew.society_id}`} crew={crew} />
+      </div>
+    );
   }
 }
 

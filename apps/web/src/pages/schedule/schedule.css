@@ -93,6 +93,10 @@
   .sch-board .sch-col-head { cursor: grab; }
   .sch-board.panning .sch-col-head { cursor: grabbing; }
   .sch-col.folded { flex: 0 0 3rem; width: 3rem; align-items: center; gap: 0.5rem; padding: 0.5rem 0; }
+  /* Narrower columns in each density, so more of the day fits on screen (P2-6). */
+  .sch-board.compact .sch-col:not(.folded) { flex-basis: 13rem; width: 13rem; }
+  .sch-board.standard .sch-col:not(.folded) { flex-basis: 15.5rem; width: 15.5rem; }
+  .sch-board.detailed .sch-col:not(.folded) { flex-basis: 17.5rem; width: 17.5rem; }
   .sch-fold-name { writing-mode: vertical-rl; transform: rotate(180deg); max-height: 14rem; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; font-weight: 600; }
   .sch-col.folded.closed .sch-fold-name { color: var(--c-mute); }
@@ -140,9 +144,14 @@
     box-shadow: 0 1px 2px rgba(22, 21, 26, 0.06); transition: box-shadow 120ms, opacity 120ms, transform 120ms; }
   .sch-card:hover { box-shadow: 0 4px 12px rgba(22, 21, 26, 0.14); transform: translateY(-1px); }
   .sch-card:active { cursor: grabbing; }
+  /* A draggable card on touch: the page must not scroll under the press, so the drag engine gets the pointer (P0-1). */
+  .sch-card:not(.locked) { touch-action: none; }
   .sch-card:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
   .sch-card.dragging { opacity: 0.35; transform: none; box-shadow: none; }
   .sch-card.dim { opacity: 0.3; }
+  /* A card shown in disabled form under "Show all" (P1-4): it cannot be dragged or opened. */
+  .sch-card[aria-disabled="true"] { cursor: default; }
+  .sch-row-dim { opacity: 0.4; }
   .sch-card.locked { cursor: pointer; }
   /* The colour of a kind of work: the card and the card detail dialog share these (ADM-SCH-34). */
   .sch-card.t-int, .sch-detail.t-int { --type: var(--c-info); --type-bg: #ebf2fb; --type-line: #bdd3ee; }

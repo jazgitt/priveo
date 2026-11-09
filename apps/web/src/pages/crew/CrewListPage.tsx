@@ -130,6 +130,7 @@ export function CrewListPage() {
           { key: "mobile", header: "Mobile", width: "9rem", cell: (c) => <span className="tabular-nums">{c.mobile}</span> },
           { key: "role", header: "Role", wrap: true, cell: (c) => (c.paired_member
             ? <span>{c.role} <span className="text-muted-foreground">(with {c.paired_member})</span></span> : c.role) },
+          { key: "zones", header: "Home zones", wrap: true, cell: (c) => (c.home_zones.length ? c.home_zones.join(", ") : "None") },
           { key: "hours", header: "Working days/hrs", width: "11rem", cell: (c) => <WorkingDaysCell crew={c} /> },
           { key: "ex", header: "Exceptions", width: "7rem", align: "right", cell: (c) => String(c.exceptions.length) },
           { key: "status", header: "Status", width: "9rem", cell: (c) => (

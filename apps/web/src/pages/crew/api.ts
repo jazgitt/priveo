@@ -26,6 +26,8 @@ export interface Crew {
   working_hours: DayHours[];
   paired_member_id: string | null;
   paired_member: string;
+  /** The home zones in force, by name. A Trainee shows the paired Member's (P2-5). */
+  home_zones: string[];
   exceptions: CrewException[];
 }
 
@@ -40,6 +42,10 @@ export interface CrewPassword { crew: Crew; login_id: string; password: string }
 export interface CrewSession { id: string; channel: string; signed_in_at: string; last_active_at: string;
   device_name?: string; platform?: string; app_version?: string }
 export interface Society { id: string; name: string; active: boolean }
+
+/** A role for a date range (P2-4). An empty end date lasts until the role is changed. */
+export interface RolePeriod { id: string; role: string; start_date: string; end_date: string | null }
+export interface RolePeriodResult { periods: RolePeriod[]; released_jobs: ReleasedJob[] }
 
 /** One stay of a crew member in a society (ADM-CRW-22). */
 export interface SocietyStay {
@@ -108,6 +114,13 @@ export function useSocietyHistory(id: string) {
   });
 }
 
+export function useRolePeriods(id: string) {
+  return useQuery({
+    queryKey: ["crew", id, "role-periods"],
+    queryFn: () => api<RolePeriod[]>(`${base}/${id}/role-periods`),
+  });
+}
+
 export function useSessions(id: string) {
   return useQuery({
     queryKey: ["crew", id, "sessions"],
@@ -135,6 +148,10 @@ export function useCrewActions(id: string) {
       call<CrewChange>("/society", "POST", v)),
     cancelMove: useCrewMutation((assignmentId: string) =>
       call<Crew>(`/society-moves/${assignmentId}`, "DELETE")),
+    addRolePeriod: useCrewMutation((v: { role: string; start_date: string | null; end_date: string | null }) =>
+      call<RolePeriodResult>("/role-periods", "POST", v)),
+    cancelRolePeriod: useCrewMutation((periodId: string) =>
+      call<RolePeriod[]>(`/role-periods/${periodId}`, "DELETE")),
     hours: useCrewMutation((v: DayHours[]) =>
       call<CrewChange>("/working-hours", "PUT", { working_hours: hoursBody(v) })),
     addException: useCrewMutation((v: { kind: string; from_date: string; to_date: string | null; start: string }) =>

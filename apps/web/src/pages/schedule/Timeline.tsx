@@ -1,12 +1,17 @@
-import { useState, type CSSProperties } from "react";
+import type { QueryKey } from "@tanstack/react-query";
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 import { cn } from "@/lib/utils";
 
 import {
-  breached, gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf, zonesOf,
+  breached, gaps, isOpen, isShown, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf, zonesOf,
   type Density,
 } from "./Board";
 import { CardFace } from "./CardBoard";
+import {
+  DragEngineProvider, minuteAt, movesFor, planFreeDrop, useDragSource,
+  type DragItem, type DropHit, type DropOutcome, type LaneCard,
+} from "./dnd";
 import { Scroller } from "./Scroller";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
 
@@ -22,17 +27,39 @@ export const REM_PER_MINUTE = 0.8;
 
 interface Tip { job: AdminJob; x: number; y: number }
 
+/** What a dragged timeline block carries: the job, and the grab point in px from the block's left edge. */
+interface TimelineDrag {
+  job: AdminJob;
+  grab: { dx: number };
+}
+
+/** The root font size in px, which is what one rem is on the timeline. */
+function remPx(): number {
+  const px = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return Number.isFinite(px) && px > 0 ? px : 16;
+}
+
+/** A job as the drag engine's geometry sees it: its start and its length in minutes. */
+function laneCardOf(job: AdminJob): LaneCard {
+  return { id: job.id, start: job.start_minute ?? 0, duration: job.duration_minutes };
+}
+
 /**
- * The chosen day as a compact, view-only Gantt chart: one thin row for each
+ * The chosen day as a Gantt chart: one thin row for each
  * crew member against an hour ruler that spans the day's working hours, so a
  * large crew fits on one screen. Each job is a small block at its start time,
  * as wide as its duration and coloured by its status. Hovering or focusing a
- * block shows its details. Nothing can be moved here (ADM-SCH-33).
+ * block shows its details. A block can be dragged along the time axis (snapped to
+ * 5 minutes, decision 10) and onto another crew row, with the same drop rules as the
+ * Cards view (P0-6). The filters hide the blocks they do not keep; "Show all" brings
+ * them back in disabled form (P1-4).
  */
-export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", now }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, now, boardKey, onDropSettled }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
+  /** The board query the drop refreshes and the other tabs of this browser re-read (P0-9). */
+  boardKey: QueryKey;
   focus: string;
   search: string;
   /** EXT, INT or SPA keeps only that kind bright; empty shows all. */
@@ -41,8 +68,12 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   flag?: string;
   /** How much a block shows, as on the cards: compact, standard or detailed. */
   density?: Density;
+  /** Off, the filters hide the blocks they do not keep; on, those blocks show in disabled form (P1-4). */
+  showAll?: boolean;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
+  /** Gets the error of a refused drop (a frozen day offers the code), or null once a drop is saved. */
+  onDropSettled?: (error: unknown) => void;
 }) {
   const [tip, setTip] = useState<Tip | null>(null);
   const zones = zonesOf(jobs);
@@ -75,7 +106,26 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
     setTip({ job, x: Math.min(r.left, window.innerWidth - 300), y: r.bottom + 6 });
   };
 
+  // A drop on a crew row (P0-6). The block starts where its left edge is on the time axis,
+  // snapped to 5 minutes. The same planner as the Cards view decides the other moves (P0-5, P0-7).
+  const planDrop = (drop: DropHit, item: DragItem): DropOutcome => {
+    const { job: dragged, grab } = item.data as TimelineDrag;
+    const member = crew.find((c) => c.id === drop.laneId);
+    if (!member) return null;
+    const track = drop.laneEl.querySelector<HTMLElement>(".sch-tl-track") ?? drop.laneEl;
+    const blockLeft = drop.clientX - grab.dx;
+    const minute = minuteAt(blockLeft, { top: track.getBoundingClientRect().left, pxPerMinute: REM_PER_MINUTE * remPx(), dayStart: first });
+    const lane = placed.filter((j) => j.crew_id === member.id).map(laneCardOf);
+    // The drop position among the row's blocks: the blocks that start before the drop come first.
+    const index = lane.filter((c) => c.id !== dragged.id && c.start < minute).length;
+    const startTop = windowsOf(member, availOf(member.id))[0]?.start ?? first;
+    const plan = planFreeDrop(lane, laneCardOf(dragged), minute, index, { top: startTop });
+    if (member.id === dragged.crew_id && plan.start === dragged.start_minute && plan.shifts.length === 0) return null;
+    return { moves: movesFor(member.id, dragged.id, plan) };
+  };
+
   return (
+    <DragEngineProvider boardKey={boardKey} plan={planDrop} onSettled={onDropSettled}>
     <div className="sch-fill">
       <Scroller className={cn("sch-tl", density)} role="group" aria-label="Day timeline">
         <div className="sch-tl-row sch-tl-head">
@@ -93,7 +143,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
           const booked = mine.reduce((n, j) => n + j.duration_minutes, 0);
           const closed = avail?.status === "Off";
           return (
-            <div key={member.id} className={cn("sch-tl-row", closed && "closed")} data-testid={`row-${member.id}`}>
+            <div key={member.id} className={cn("sch-tl-row", closed && "closed")} data-testid={`row-${member.id}`} data-dnd-lane={member.id}>
               <div className="sch-tl-name" title={`${member.name}, ${member.role}. ${avail?.reason ?? ""}`.trim()}>
                 <span className="truncate">{member.name}</span>
                 <span className="tabular-nums">{closed ? "Off" : `${booked}/${minutesOf(wins)}`}</span>
@@ -103,19 +153,10 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                   <div key={g.start} className="sch-off" data-testid="grey" title={avail?.reason}
                        style={{ left: pos(g.start), width: len(g.end - g.start) }} />
                 ))}
-                {mine.map((job) => (
-                  <div key={job.id} tabIndex={0} aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
-                       aria-describedby={tip?.job.id === job.id ? "sch-tl-tip" : undefined}
-                       className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
-                         breached(job) && "wine", !matches(job, focus, search, type, flag) && "dim")}
-                       style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
-                       onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
-                       onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
-                    {/* The block shows the lines of the card at this layout, so its height is the card's height. */}
-                    <span className="sch-tl-face">
-                      <CardFace job={job} density={density} zones={zones} />
-                    </span>
-                  </div>
+                {mine.filter((job) => isShown(job, showAll, focus, search, type, flag)).map((job) => (
+                  <TimelineBlock key={job.id} job={job} kept={matches(job, focus, search, type, flag)} density={density} zones={zones}
+                                 left={pos(job.start_minute!)} width={len(job.duration_minutes)} tipped={tip?.job.id === job.id}
+                                 onShow={show} onHide={() => setTip(null)} />
                 ))}
                 {now !== undefined && now >= first && now <= last && (
                   <div className="sch-tl-now" style={{ left: pos(now) }} aria-hidden />
@@ -137,6 +178,46 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
         {unplaced > 0 && <span className="font-medium text-[#9a6513]">{unplaced} unscheduled, not on the timeline</span>}
       </div>
       {tip && <JobTip tip={tip} />}
+    </div>
+    </DragEngineProvider>
+  );
+}
+
+/** One job on a crew row. It can be dragged along the time axis and onto another row (P0-6). */
+function TimelineBlock({ job, kept, density, zones, left, width, tipped, onShow, onHide }: {
+  job: AdminJob;
+  kept: boolean;
+  density: Density;
+  zones: string[];
+  left: string;
+  width: string;
+  /** The job tip is open for this block. */
+  tipped: boolean;
+  onShow: (job: AdminJob, el: HTMLElement) => void;
+  onHide: () => void;
+}) {
+  const grab = useRef({ dx: 0 });
+  const payload: TimelineDrag = { job, grab: grab.current };
+  // Only a Scheduled job can move, as on the cards (isOpen).
+  const drag = useDragSource(job.id, payload, !isOpen(job));
+  const press = (e: ReactPointerEvent<HTMLDivElement>) => {
+    grab.current.dx = e.clientX - e.currentTarget.getBoundingClientRect().left;
+    drag.onPointerDown(e);
+  };
+  return (
+    <div tabIndex={0} data-dnd-card={job.id} onPointerDown={press}
+         aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
+         aria-describedby={tipped ? "sch-tl-tip" : undefined}
+         aria-disabled={!kept || undefined}
+         className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
+           breached(job) && "wine", !kept && "dim")}
+         style={{ left, width }}
+         onMouseEnter={(e) => onShow(job, e.currentTarget)} onMouseLeave={onHide}
+         onFocus={(e) => onShow(job, e.currentTarget)} onBlur={onHide}>
+      {/* The block shows the lines of the card at this layout, so its height is the card's height. */}
+      <span className="sch-tl-face">
+        <CardFace job={job} density={density} zones={zones} />
+      </span>
     </div>
   );
 }

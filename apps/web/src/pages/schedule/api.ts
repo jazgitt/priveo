@@ -246,6 +246,47 @@ export function useCapacity(societyId: string, startDate: string, days: number) 
   });
 }
 
+/** One job's new place in a batch move. A null crew takes the job to Unscheduled (pinned contract, batch move). */
+export interface BatchMove {
+  job_id: string;
+  crew_id: string | null;
+  start_minute: number | null;
+}
+
+/** A crew-hours or service-hours crossing: the move still happens, and the board shows it in red. */
+export interface BatchWarning {
+  job_id: string;
+  code: "crew_hours" | "service_hours" | string;
+  message: string;
+}
+
+export interface BatchMoveResult {
+  jobs: AdminJob[];
+  warnings: BatchWarning[];
+}
+
+const OVERLAP_TEXT = "That move overlaps another job, so nothing was moved. The card is back where it was.";
+
+/**
+ * Moves several jobs in one transaction (POST /v1/admin/scheduling/jobs/batch-move).
+ * Any overlap refuses the whole batch with HTTP 409, and the caller puts every card back.
+ * Late placements are allowed; crew-hours and service-hours crossings come back as warnings.
+ */
+export async function batchMoveJobs(moves: BatchMove[], override: boolean): Promise<BatchMoveResult> {
+  try {
+    return await api<BatchMoveResult>("/v1/admin/scheduling/jobs/batch-move", {
+      method: "POST", body: { moves, override },
+    });
+  } catch (e) {
+    // The overlap body is {"detail": {"code": "overlap"}}, which the client reads as "http_error", so that
+    // code is worded here too. Other coded 409s (schedule_frozen, job_not_open) keep their code and message.
+    if (e instanceof ApiError && e.status === 409 && (e.code === "overlap" || e.code === "http_error")) {
+      throw new ApiError(409, "overlap", e.code === "overlap" && e.message ? e.message : OVERLAP_TEXT);
+    }
+    throw e;
+  }
+}
+
 // ---- helpers ---------------------------------------------------------------
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -311,4 +352,16 @@ export function useAutoFreezeOn(): boolean {
     queryFn: () => api<{ key: string; enabled: boolean }[]>("/v1/admin/features"),
   });
   return flags.data?.find((f) => f.key === "scheduler.auto_freeze")?.enabled ?? false;
+}
+
+/**
+ * The job cards of one day as a PDF (P1-2): every crew in one file when `crewId` is
+ * not given, or the cards of one crew member when it is.
+ */
+export function jobCardsPdf(scheduleId: string, date: string, crewId?: string): Promise<Blob> {
+  const query = `schedule_id=${scheduleId}&date=${date}`;
+  const path = crewId
+    ? `/v1/admin/scheduling/job-cards/crews/${crewId}/pdf?${query}`
+    : `/v1/admin/scheduling/job-cards/pdf?${query}`;
+  return api<Blob>(path, { binary: true });
 }

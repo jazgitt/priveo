@@ -12,7 +12,7 @@ function crew(over: Partial<Crew> = {}): Crew {
     ? { ...h, working: false, start: "", end: "" } : { ...h, start: "05:00", end: "14:00" }));
   hours[0] = { ...hours[0], extra_slots: [{ start: "19:00", end: "20:30" }] };
   return {
-    id: "c1", name: "Crew1", mobile: "9000000001", society_id: "s1", society: "Lake View",
+    id: "c1", name: "Crew1", mobile: "9000000001", society_id: "s1", society: "Lake View", home_zones: [],
     role: "Member", active: true, locked: false, working_hours: hours,
     paired_member_id: null, paired_member: "", exceptions: [], ...over,
   };

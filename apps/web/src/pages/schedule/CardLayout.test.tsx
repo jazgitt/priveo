@@ -2,25 +2,25 @@ import { describe, expect, it } from "vitest";
 
 import { slotTime } from "./CardBoard";
 import {
-  breached, cardLines, clashMessage, clashOf, freeStart, matches, parkingPlace, stepOf, typeClass,
+  breached, cardLines, clashMessage, clashOf, freeStart, matches, modelOf, parkingPlace, stepOf, typeClass,
 } from "./Board";
 import type { AdminJob } from "./api";
 
 const base = {
-  id: "j1", registration: "KA01AB1234", vehicle: "Honda City", parking: "Zone 3 · B1-24", zone: "Zone 3",
+  id: "j1", registration: "KA01AB1234", vehicle: "Honda City", model: "City", parking: "Zone 3 · B1-24", zone: "Zone 3",
   customer_name: "Meena", crew_name: "Asha", service: "Cleaning-External", status: "Scheduled",
   duration_minutes: 20, start_minute: 540, start_time: "09:00", end_time: "09:20", finish_by: "10:00",
   late: false, manual: false, reason: "", crew_id: "c1",
-} as AdminJob;
+} as unknown as AdminJob;
 
 /** The text of each line, one string per line of the card. */
 const lines = (job: AdminJob, density: "compact" | "standard" | "detailed") =>
   cardLines(job, density).map((line) => line.map((p) => p.text).join(" | "));
 
 describe("card lines by layout (owner review, 8-Nov-26)", () => {
-  it("detailed: zone, make and model and cutoff; EXT and slot; car number and customer", () => {
+  it("detailed: zone, model and cutoff; EXT and slot; car number and customer", () => {
     expect(lines(base, "detailed")).toEqual([
-      "Zone 3 | Honda City | Cutoff 10:00",
+      "Zone 3 | City | Cutoff 10:00",
       "EXT | 09:00-09:20",
       "KA01AB1234 | Meena",
     ]);
@@ -37,7 +37,7 @@ describe("card lines by layout (owner review, 8-Nov-26)", () => {
   it("keeps the zone's place when a job has no zone, and drops the other pieces that are missing", () => {
     // The zone slot stays (an empty box with a cross on the card), so the lines do not shift (owner, 8-Nov-26).
     const bare = { ...base, zone: "", finish_by: null, customer_name: "" } as unknown as AdminJob;
-    expect(lines(bare, "detailed")).toEqual([" | Honda City", "EXT | 09:00-09:20", "KA01AB1234"]);
+    expect(lines(bare, "detailed")).toEqual([" | City", "EXT | 09:00-09:20", "KA01AB1234"]);
   });
 
   it("shows the duration in place of the slot for a job with no time yet", () => {
@@ -52,6 +52,19 @@ describe("card lines by layout (owner review, 8-Nov-26)", () => {
     expect(kinds("detailed")).toContain("zone");
     expect(kinds("standard")).toContain("reg");
     expect(kinds("detailed")).toContain("reg");
+  });
+});
+
+describe("the vehicle line shows the model only (P2-7)", () => {
+  it("shows the model, never the make", () => {
+    expect(modelOf(base)).toBe("City");
+    expect(lines(base, "detailed")[0]).not.toContain("Honda");
+  });
+
+  it("leaves the line out when the job row has no model, rather than showing the make", () => {
+    const noModel = { ...base, model: undefined, vehicle: "Honda City" } as AdminJob;
+    expect(modelOf(noModel)).toBe("");
+    expect(lines(noModel, "detailed")[0]).toBe("Zone 3 | Cutoff 10:00");
   });
 });
 

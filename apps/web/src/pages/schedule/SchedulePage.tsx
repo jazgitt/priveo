@@ -23,7 +23,7 @@ import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
 import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass, TypeKey } from "./Board";
-import { CrewPicker, FlagKey } from "./BoardFilters";
+import { CrewPicker, FlagKey, ShowAll } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
@@ -32,10 +32,11 @@ import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
 import { RulesPanel } from "./rules/RulesPanel";
-import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { CutoffRequests, DraftImprovements, JobCardButtons, PendingAddons } from "./ScheduleActions";
 import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
+import { useBoardSync } from "./dnd";
 import { Fireworks } from "./RunFireworks";
 import { isRunMusicMuted, setRunMusicMuted, startRunMusic, stopRunMusic } from "./runMusic";
 import {
@@ -161,6 +162,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [focusStatus, setFocusStatus] = useState("");
   const [focusType, setFocusType] = useState("");
   const [focusFlag, setFocusFlag] = useState("");
+  // Off, the filters hide the cards, blocks and rows they do not keep; on, those show in disabled form (P1-4).
+  const [showAll, setShowAll] = useState(false);
   // Which crew members' lanes and rows are shown; none chosen shows everyone.
   const [crewSel, setCrewSel] = useState<string[]>([]);
   const [hideOff, setHideOff] = useState(false);
@@ -194,9 +197,10 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const view = params.get("view") === "timeline" ? "timeline" : params.get("view") === "table" ? "table" : "cards";
   const isOff = (id: string) => availability.find((a) => a.crew_id === id)?.status === "Off";
   const shownCrew = (board?.crew ?? []).filter((c) => (crewSel.length === 0 || crewSel.includes(c.id)) && !(hideOff && isOff(c.id)));
-  // The table lists only what the search and the chips keep; the board dims the rest instead.
-  const tableJobs = jobs.filter((j) => matches(j, focusStatus, search, focusType, focusFlag)
-    && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
+  // The table lists only what the search and the chips keep, unless "Show all" is on; then the rest show in disabled form.
+  const crewJobs = jobs.filter((j) => crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id)));
+  const keptByFilters = (j: AdminJob) => matches(j, focusStatus, search, focusType, focusFlag);
+  const tableJobs = showAll ? crewJobs : crewJobs.filter(keptByFilters);
 
   // An old link with tab=run opens the board with the Run dialog.
   // An old link with tab=needs (the Needs scheduling tab, now on the Board's Unscheduled column) opens the board.
@@ -277,6 +281,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
   const boardKey = ["board", "id", schedule?.id];
+  // Another tab of this browser that saves a change re-reads this board (P0-9, same browser only).
+  useBoardSync();
   const move = useAppMutation<{ job: AdminJob; crewId: string | null; startMinute: number | null; override?: boolean }, AdminJob>({
     mutationFn: (v) => api(`/v1/admin/scheduling/jobs/${v.job.id}/move`, {
       method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute, ...(v.override ? { override: true } : {}) },
@@ -331,6 +337,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     },
   });
   const onMove = (job: AdminJob, crewId: string | null, startMinute: number | null) => move.mutate({ job, crewId, startMinute });
+  // A refused drop (the card is already back) says why above the board; a frozen day offers the code there.
+  const onDropSettled = (e: unknown) => {
+    if (e instanceof ApiError && e.code === "schedule_frozen" && schedule) {
+      setProblem({ code: e.code, message: e.message, scheduleId: schedule.id });
+    } else {
+      setProblem(null);
+    }
+  };
 
   const freeze = useAppMutation<string>({
     event: EVENTS.scheduleFrozen,
@@ -396,6 +410,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
                   <TypeKey type={focusType} onType={setFocusType} />
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
+                  <ShowAll checked={showAll} onChange={setShowAll} />
                   <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />
                   {/* The card detail switch works for all three views (ADM-SCH-32). */}
                   <div className="sch-views" role="group" aria-label="Card detail" title="How much each job shows">
@@ -430,15 +445,15 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   </span>
                 </div>
                 {view === "table" ? (
-                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen} density={density}
+                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen} density={density} faded={(j) => !keptByFilters(j)}
                             fileName={`schedule-${(site.name || "site").replace(/[^A-Za-z0-9]+/g, "-")}-${date}.csv`} />
                 ) : view === "cards" ? (
                   <CardBoard crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
-                             type={focusType} flag={focusFlag} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
-                             onOpen={setOpen} onMove={onMove} />
+                             type={focusType} flag={focusFlag} density={density} showAll={showAll} savingId={move.isPending ? move.variables?.job.id ?? null : null}
+                             onOpen={setOpen} onMove={onMove} onDropSettled={onDropSettled} />
                 ) : (
-                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density}
-                            now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
+                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density} showAll={showAll} boardKey={boardKey}
+                            now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} onDropSettled={onDropSettled} />
                 )}
               </>
             )}
@@ -485,6 +500,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
               )}
               {schedule && (
                 <>
+                  <JobCardButtons scheduleId={schedule.id} date={date} jobs={dayJobs} />
                   {!boardOnly && <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>}
                   {schedule.status === "Draft" ? (
                     <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>

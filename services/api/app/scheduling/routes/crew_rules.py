@@ -3,6 +3,7 @@ The cleaner's own value is an override; null means the site value
 (`app.scheduling.crew_rules`). Admin only. Edit surface only: nothing here
 plans a day."""
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -13,11 +14,13 @@ from app.crew.models import CrewMember
 from app.directory import lookup
 from app.directory.service import audit
 from app.identity.service import User
+from app.platform.clock import today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
-from app.scheduling import crew_rules, home_zone
-from app.scheduling.models import SchedulingCrew
+from app.scheduling import crew_roles, crew_rules, home_zone
+from app.scheduling import service as scheduling
+from app.scheduling.models import SchedulingCrew, SchedulingCrewRolePeriod
 
 router = APIRouter(prefix="/v1/admin/crew", tags=["admin"])
 
@@ -128,3 +131,81 @@ def put_home_zone(crew_id: uuid.UUID, body: HomeZoneIn, user: User = Depends(req
         audit(db, user.id, "crew", member.id, "update", {"home_zone_ids": [old, new]})
     db.commit()
     return _zone_out(db, sc)
+
+
+class RolePeriodIn(BaseModel):
+    """A role for a date range (P2-4). Both dates are optional, but at least one
+    is needed: with no dates the role is changed on the crew member's page.
+    No start date means from today. No end date means until the role is changed."""
+    role: str
+    start_date: date | None = None
+    end_date: date | None = None
+
+
+class RolePeriodOut(BaseModel):
+    id: str
+    role: str
+    start_date: date
+    end_date: date | None
+
+
+class ReleasedJobOut(BaseModel):
+    job_id: str
+    date: date
+    service: str
+    vehicle_id: str
+    registration: str
+
+
+class RolePeriodResult(BaseModel):
+    periods: list[RolePeriodOut]
+    # Open jobs that no longer fit the new role went to the Needs scheduling list.
+    released_jobs: list[ReleasedJobOut]
+
+
+def _periods_out(db: Session, sc: SchedulingCrew) -> list[RolePeriodOut]:
+    return [RolePeriodOut(id=str(p.id), role=p.role, start_date=p.start_date, end_date=p.end_date)
+            for p in crew_roles.periods_of(db, sc)]
+
+
+@router.get("/{crew_id}/role-periods", response_model=list[RolePeriodOut])
+def list_role_periods(crew_id: uuid.UUID, _: User = Depends(require_role("admin")),
+                      db: Session = Depends(get_db)):
+    """The dated roles that have not ended, soonest first."""
+    return _periods_out(db, _load(db, crew_id)[1])
+
+
+@router.post("/{crew_id}/role-periods", response_model=RolePeriodResult, status_code=201)
+def add_role_period(crew_id: uuid.UUID, body: RolePeriodIn, user: User = Depends(require_role("admin")),
+                    db: Session = Depends(get_db)):
+    """Adds a dated role and frees the open jobs it no longer fits. Days already
+    run are not changed (owner decision 7)."""
+    member, sc = _load(db, crew_id)
+    today = today_ist()
+    row = crew_roles.add_period(db, sc, body.role, body.start_date, body.end_date, user.id)
+    crew_roles.attach(db, {sc.id: sc}, today)
+    released = scheduling.release_unfit(db, sc, today)
+    audit(db, user.id, "crew", member.id, "update", {"role_period": [None, {
+        "role": row.role, "start_date": row.start_date.isoformat(),
+        "end_date": row.end_date.isoformat() if row.end_date else None}]})
+    db.commit()
+    return RolePeriodResult(periods=_periods_out(db, sc), released_jobs=[
+        ReleasedJobOut(job_id=str(j["job_id"]), date=j["date"], service=j["service"],
+                       vehicle_id=str(j["vehicle_id"]), registration=j["registration"])
+        for j in released])
+
+
+@router.delete("/{crew_id}/role-periods/{period_id}", response_model=list[RolePeriodOut])
+def cancel_role_period(crew_id: uuid.UUID, period_id: uuid.UUID,
+                       user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    """Removes a dated role that has not ended. The permanent role applies again."""
+    member, sc = _load(db, crew_id)
+    old = db.get(SchedulingCrewRolePeriod, period_id)
+    crew_roles.cancel_period(db, sc, period_id)
+    crew_roles.attach(db, {sc.id: sc}, today_ist())
+    if old is not None:
+        audit(db, user.id, "crew", member.id, "update", {"role_period": [{
+            "role": old.role, "start_date": old.start_date.isoformat(),
+            "end_date": old.end_date.isoformat() if old.end_date else None}, None]})
+    db.commit()
+    return _periods_out(db, sc)

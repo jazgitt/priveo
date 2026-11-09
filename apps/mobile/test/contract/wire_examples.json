@@ -427,6 +427,83 @@
   "AutomaticPlanningSettings": {
     "time_ist": "wire-value"
   },
+  "BatchMove": {
+    "job_id": "11111111-1111-1111-1111-111111111111",
+    "crew_id": "11111111-1111-1111-1111-111111111111",
+    "start_minute": 1
+  },
+  "BatchMoveOut": {
+    "jobs": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "visit_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_id": "11111111-1111-1111-1111-111111111111",
+        "schedule_status": "wire-value",
+        "date": "2026-10-20",
+        "vehicle_id": "11111111-1111-1111-1111-111111111111",
+        "registration": "wire-value",
+        "vehicle": "wire-value",
+        "parking": "wire-value",
+        "zone": "wire-value",
+        "customer_name": "wire-value",
+        "service": "wire-value",
+        "status": "wire-value",
+        "duration_minutes": 1,
+        "crew_id": "11111111-1111-1111-1111-111111111111",
+        "crew_name": "wire-value",
+        "start_minute": 1,
+        "start_time": "wire-value",
+        "end_time": "wire-value",
+        "finish_by": "wire-value",
+        "late": true,
+        "manual": true,
+        "placed_by_hand": true,
+        "hand_locked": true,
+        "reason": "wire-value",
+        "moved_to_date": "2026-10-20",
+        "moved_from_date": "2026-10-20",
+        "skip_kind": "wire-value",
+        "skip_reason": "wire-value",
+        "visit_outcome": "Scheduled",
+        "planned_services": [
+          "wire-value"
+        ],
+        "delivered_services": [
+          "wire-value"
+        ],
+        "sequence": 1,
+        "queue_unlocked": true,
+        "reason_code": "wire-value",
+        "cross_zone_reason": "wire-value",
+        "hand_breaches": [
+          "wire-value"
+        ],
+        "interior_day": "wire-value"
+      }
+    ],
+    "warnings": [
+      {
+        "job_id": "11111111-1111-1111-1111-111111111111",
+        "code": "wire-value",
+        "message": "wire-value"
+      }
+    ]
+  },
+  "BatchMoveRequest": {
+    "moves": [
+      {
+        "job_id": "11111111-1111-1111-1111-111111111111",
+        "crew_id": "11111111-1111-1111-1111-111111111111",
+        "start_minute": 1
+      }
+    ],
+    "override": true
+  },
+  "BatchWarning": {
+    "job_id": "11111111-1111-1111-1111-111111111111",
+    "code": "wire-value",
+    "message": "wire-value"
+  },
   "Board": {
     "schedule": {
       "id": "11111111-1111-1111-1111-111111111111",
@@ -569,6 +646,14 @@
     "start_minute": 1,
     "end_minute": 1,
     "enabled": true
+  },
+  "BulkCompletionIn": {
+    "status": "Completed",
+    "reason_key": "wire-value",
+    "note": "wire-value",
+    "job_ids": [
+      "11111111-1111-1111-1111-111111111111"
+    ]
   },
   "BulkReassign": {
     "job_ids": [
@@ -888,6 +973,11 @@
     "updated_at": "2026-10-20T07:30:00+00:00",
     "latest_note": "wire-value"
   },
+  "CompletionIn": {
+    "status": "Completed",
+    "reason_key": "wire-value",
+    "note": "wire-value"
+  },
   "ConversationDetailOut": {
     "id": "11111111-1111-1111-1111-111111111111",
     "title": "wire-value",
@@ -981,6 +1071,9 @@
       ],
       "paired_member_id": "wire-value",
       "paired_member": "wire-value",
+      "home_zones": [
+        "wire-value"
+      ],
       "exceptions": [
         {
           "id": "wire-value",
@@ -1130,6 +1223,9 @@
       ],
       "paired_member_id": "wire-value",
       "paired_member": "wire-value",
+      "home_zones": [
+        "wire-value"
+      ],
       "exceptions": [
         {
           "id": "wire-value",
@@ -1377,6 +1473,9 @@
     ],
     "paired_member_id": "wire-value",
     "paired_member": "wire-value",
+    "home_zones": [
+      "wire-value"
+    ],
     "exceptions": [
       {
         "id": "wire-value",
@@ -1415,6 +1514,9 @@
       ],
       "paired_member_id": "wire-value",
       "paired_member": "wire-value",
+      "home_zones": [
+        "wire-value"
+      ],
       "exceptions": [
         {
           "id": "wire-value",
@@ -1889,6 +1991,16 @@
       }
     ],
     "more": 1
+  },
+  "DemandItem": {
+    "group": "wire-value",
+    "service": "wire-value",
+    "service_label": "wire-value",
+    "vehicle_id": "11111111-1111-1111-1111-111111111111",
+    "registration": "wire-value",
+    "vehicle": "wire-value",
+    "cutoff": "wire-value",
+    "source": "wire-value"
   },
   "DemandLine": {
     "service": "wire-value",
@@ -3248,6 +3360,13 @@
   "RefreshRequest": {
     "refresh_token": "wire-value"
   },
+  "ReleasedJobOut": {
+    "job_id": "wire-value",
+    "date": "2026-10-20",
+    "service": "wire-value",
+    "vehicle_id": "wire-value",
+    "registration": "wire-value"
+  },
   "Requirements": {
     "photos_required": 1,
     "videos_required": 1,
@@ -3262,6 +3381,36 @@
   },
   "ResolveCutoff": {
     "apply": true
+  },
+  "RolePeriodIn": {
+    "role": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20"
+  },
+  "RolePeriodOut": {
+    "id": "wire-value",
+    "role": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20"
+  },
+  "RolePeriodResult": {
+    "periods": [
+      {
+        "id": "wire-value",
+        "role": "wire-value",
+        "start_date": "2026-10-20",
+        "end_date": "2026-10-20"
+      }
+    ],
+    "released_jobs": [
+      {
+        "job_id": "wire-value",
+        "date": "2026-10-20",
+        "service": "wire-value",
+        "vehicle_id": "wire-value",
+        "registration": "wire-value"
+      }
+    ]
   },
   "RunRequest": {
     "society_id": "11111111-1111-1111-1111-111111111111",
@@ -3355,6 +3504,56 @@
   "SkipVisit": {
     "reason": "wire-value",
     "note": "wire-value"
+  },
+  "SlotExceptionCreate": {
+    "service": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "days": [
+      "wire-value"
+    ],
+    "windows": [
+      {
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ],
+    "note": "wire-value"
+  },
+  "SlotExceptionOut": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "society_id": "11111111-1111-1111-1111-111111111111",
+    "service": "wire-value",
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "days": [
+      "wire-value"
+    ],
+    "windows": [
+      {
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ],
+    "note": "wire-value"
+  },
+  "SlotExceptionUpdate": {
+    "start_date": "2026-10-20",
+    "end_date": "2026-10-20",
+    "days": [
+      "wire-value"
+    ],
+    "windows": [
+      {
+        "start": "wire-value",
+        "end": "wire-value"
+      }
+    ],
+    "note": "wire-value"
+  },
+  "SlotExceptionWindow": {
+    "start": "wire-value",
+    "end": "wire-value"
   },
   "SourceOut": {
     "path": "wire-value",

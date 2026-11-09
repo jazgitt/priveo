@@ -132,6 +132,38 @@ def delete_slot(slot_id: uuid.UUID, user: AdminUser, db: Db):
     return Response(status_code=204)
 
 
+# ---- working-slot exceptions (ADM-SVS-12) -----------------------------------------
+
+
+@admin.get("/societies/{society_id}/slot-exceptions", response_model=list[s.SlotExceptionOut])
+def list_slot_exceptions(
+    society_id: uuid.UUID,
+    user: AdminUser,
+    db: Db,
+    service_name: Annotated[str | None, Query(alias="service")] = None,
+):
+    service._get(db, Society, society_id, "society")
+    return [service.slot_exception_out(r)
+            for r in service.slot_exceptions(db, society_id, service_name)]
+
+
+@admin.post("/societies/{society_id}/slot-exceptions", response_model=s.SlotExceptionOut,
+            status_code=201)
+def create_slot_exception(society_id: uuid.UUID, body: s.SlotExceptionCreate, user: AdminUser, db: Db):
+    return service.slot_exception_out(service.create_slot_exception(db, user.id, society_id, body))
+
+
+@admin.patch("/slot-exceptions/{exception_id}", response_model=s.SlotExceptionOut)
+def update_slot_exception(exception_id: uuid.UUID, body: s.SlotExceptionUpdate, user: AdminUser, db: Db):
+    return service.slot_exception_out(service.update_slot_exception(db, user.id, exception_id, body))
+
+
+@admin.delete("/slot-exceptions/{exception_id}", status_code=204)
+def delete_slot_exception(exception_id: uuid.UUID, user: AdminUser, db: Db):
+    service.delete_slot_exception(db, user.id, exception_id)
+    return Response(status_code=204)
+
+
 # ---- plans -----------------------------------------------------------------------
 
 

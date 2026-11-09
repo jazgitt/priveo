@@ -1448,6 +1448,94 @@ class AutomaticPlanningSettings {
       };
 }
 
+class BatchMove {
+  const BatchMove({
+    required this.jobId,
+    required this.crewId,
+    required this.startMinute,
+  });
+
+  final String jobId;
+  final String? crewId;
+  final int? startMinute;
+
+  factory BatchMove.fromJson(Map<String, dynamic> j) => BatchMove(
+        jobId: j['job_id'] as String,
+        crewId: j['crew_id'] == null ? null : j['crew_id'] as String,
+        startMinute: j['start_minute'] == null ? null : j['start_minute'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'crew_id': crewId,
+        'start_minute': startMinute,
+      };
+}
+
+class BatchMoveOut {
+  const BatchMoveOut({
+    required this.jobs,
+    required this.warnings,
+  });
+
+  final List<AdminJob> jobs;
+  final List<BatchWarning> warnings;
+
+  factory BatchMoveOut.fromJson(Map<String, dynamic> j) => BatchMoveOut(
+        jobs: [for (final x in j['jobs'] as List) AdminJob.fromJson(x as Map<String, dynamic>)],
+        warnings: [for (final x in j['warnings'] as List) BatchWarning.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'jobs': [for (final x in jobs) x.toJson()],
+        'warnings': [for (final x in warnings) x.toJson()],
+      };
+}
+
+class BatchMoveRequest {
+  const BatchMoveRequest({
+    required this.moves,
+    this.override,
+  });
+
+  final List<BatchMove> moves;
+  final bool? override;
+
+  factory BatchMoveRequest.fromJson(Map<String, dynamic> j) => BatchMoveRequest(
+        moves: [for (final x in j['moves'] as List) BatchMove.fromJson(x as Map<String, dynamic>)],
+        override: j['override'] == null ? null : j['override'] as bool,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'moves': [for (final x in moves) x.toJson()],
+        'override': override,
+      };
+}
+
+class BatchWarning {
+  const BatchWarning({
+    required this.jobId,
+    required this.code,
+    required this.message,
+  });
+
+  final String jobId;
+  final String code;
+  final String message;
+
+  factory BatchWarning.fromJson(Map<String, dynamic> j) => BatchWarning(
+        jobId: j['job_id'] as String,
+        code: j['code'] as String,
+        message: j['message'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'code': code,
+        'message': message,
+      };
+}
+
 class Board {
   const Board({
     required this.schedule,
@@ -1589,6 +1677,34 @@ class BreakRuleUpdate {
         'start_minute': startMinute,
         'end_minute': endMinute,
         'enabled': enabled,
+      };
+}
+
+class BulkCompletionIn {
+  const BulkCompletionIn({
+    required this.status,
+    required this.reasonKey,
+    this.note,
+    required this.jobIds,
+  });
+
+  final String status;
+  final String? reasonKey;
+  final String? note;
+  final List<String> jobIds;
+
+  factory BulkCompletionIn.fromJson(Map<String, dynamic> j) => BulkCompletionIn(
+        status: j['status'] as String,
+        reasonKey: j['reason_key'] == null ? null : j['reason_key'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+        jobIds: [for (final x in j['job_ids'] as List) x as String],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'reason_key': reasonKey,
+        'note': note,
+        'job_ids': [for (final x in jobIds) x],
       };
 }
 
@@ -2369,6 +2485,30 @@ class ComplaintSummary {
         'created_at': createdAt,
         'updated_at': updatedAt,
         'latest_note': latestNote,
+      };
+}
+
+class CompletionIn {
+  const CompletionIn({
+    required this.status,
+    required this.reasonKey,
+    this.note,
+  });
+
+  final String status;
+  final String? reasonKey;
+  final String? note;
+
+  factory CompletionIn.fromJson(Map<String, dynamic> j) => CompletionIn(
+        status: j['status'] as String,
+        reasonKey: j['reason_key'] == null ? null : j['reason_key'] as String,
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'reason_key': reasonKey,
+        'note': note,
       };
 }
 
@@ -3285,6 +3425,7 @@ class CrewOut {
     required this.workingHours,
     required this.pairedMemberId,
     this.pairedMember,
+    this.homeZones,
     this.exceptions,
   });
 
@@ -3299,6 +3440,7 @@ class CrewOut {
   final List<DayHours> workingHours;
   final String? pairedMemberId;
   final String? pairedMember;
+  final List<String>? homeZones;
   final List<CrewExceptionOut>? exceptions;
 
   factory CrewOut.fromJson(Map<String, dynamic> j) => CrewOut(
@@ -3313,6 +3455,7 @@ class CrewOut {
         workingHours: [for (final x in j['working_hours'] as List) DayHours.fromJson(x as Map<String, dynamic>)],
         pairedMemberId: j['paired_member_id'] == null ? null : j['paired_member_id'] as String,
         pairedMember: j['paired_member'] == null ? null : j['paired_member'] as String,
+        homeZones: j['home_zones'] == null ? null : [for (final x in j['home_zones'] as List) x as String],
         exceptions: j['exceptions'] == null ? null : [for (final x in j['exceptions'] as List) CrewExceptionOut.fromJson(x as Map<String, dynamic>)],
       );
 
@@ -3328,6 +3471,7 @@ class CrewOut {
         'working_hours': [for (final x in workingHours) x.toJson()],
         'paired_member_id': pairedMemberId,
         'paired_member': pairedMember,
+        'home_zones': homeZones == null ? null : [for (final x in homeZones!) x],
         'exceptions': exceptions == null ? null : [for (final x in exceptions!) x.toJson()],
       };
 }
@@ -4309,6 +4453,50 @@ class DaySummaryState {
         'count': count,
         'items': [for (final x in items) x.toJson()],
         'more': more,
+      };
+}
+
+class DemandItem {
+  const DemandItem({
+    required this.group,
+    required this.service,
+    required this.serviceLabel,
+    required this.vehicleId,
+    required this.registration,
+    required this.vehicle,
+    required this.cutoff,
+    required this.source,
+  });
+
+  final String group;
+  final String service;
+  final String serviceLabel;
+  final String vehicleId;
+  final String registration;
+  final String vehicle;
+  final String? cutoff;
+  final String source;
+
+  factory DemandItem.fromJson(Map<String, dynamic> j) => DemandItem(
+        group: j['group'] as String,
+        service: j['service'] as String,
+        serviceLabel: j['service_label'] as String,
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        vehicle: j['vehicle'] as String,
+        cutoff: j['cutoff'] == null ? null : j['cutoff'] as String,
+        source: j['source'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'group': group,
+        'service': service,
+        'service_label': serviceLabel,
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'vehicle': vehicle,
+        'cutoff': cutoff,
+        'source': source,
       };
 }
 
@@ -7908,6 +8096,38 @@ class RefreshRequest {
       };
 }
 
+class ReleasedJobOut {
+  const ReleasedJobOut({
+    required this.jobId,
+    required this.date,
+    required this.service,
+    required this.vehicleId,
+    required this.registration,
+  });
+
+  final String jobId;
+  final DateTime date;
+  final String service;
+  final String vehicleId;
+  final String registration;
+
+  factory ReleasedJobOut.fromJson(Map<String, dynamic> j) => ReleasedJobOut(
+        jobId: j['job_id'] as String,
+        date: DateTime.parse(j['date'] as String),
+        service: j['service'] as String,
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'job_id': jobId,
+        'date': _date(date),
+        'service': service,
+        'vehicle_id': vehicleId,
+        'registration': registration,
+      };
+}
+
 class Requirements {
   const Requirements({
     required this.photosRequired,
@@ -7977,6 +8197,78 @@ class ResolveCutoff {
 
   Map<String, dynamic> toJson() => {
         'apply': apply,
+      };
+}
+
+class RolePeriodIn {
+  const RolePeriodIn({
+    required this.role,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final String role;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  factory RolePeriodIn.fromJson(Map<String, dynamic> j) => RolePeriodIn(
+        role: j['role'] as String,
+        startDate: j['start_date'] == null ? null : DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'role': role,
+        'start_date': startDate == null ? null : _date(startDate!),
+        'end_date': endDate == null ? null : _date(endDate!),
+      };
+}
+
+class RolePeriodOut {
+  const RolePeriodOut({
+    required this.id,
+    required this.role,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final String id;
+  final String role;
+  final DateTime startDate;
+  final DateTime? endDate;
+
+  factory RolePeriodOut.fromJson(Map<String, dynamic> j) => RolePeriodOut(
+        id: j['id'] as String,
+        role: j['role'] as String,
+        startDate: DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'role': role,
+        'start_date': _date(startDate),
+        'end_date': endDate == null ? null : _date(endDate!),
+      };
+}
+
+class RolePeriodResult {
+  const RolePeriodResult({
+    required this.periods,
+    required this.releasedJobs,
+  });
+
+  final List<RolePeriodOut> periods;
+  final List<ReleasedJobOut> releasedJobs;
+
+  factory RolePeriodResult.fromJson(Map<String, dynamic> j) => RolePeriodResult(
+        periods: [for (final x in j['periods'] as List) RolePeriodOut.fromJson(x as Map<String, dynamic>)],
+        releasedJobs: [for (final x in j['released_jobs'] as List) ReleasedJobOut.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'periods': [for (final x in periods) x.toJson()],
+        'released_jobs': [for (final x in releasedJobs) x.toJson()],
       };
 }
 
@@ -8317,6 +8609,138 @@ class SkipVisit {
   Map<String, dynamic> toJson() => {
         'reason': reason,
         'note': note,
+      };
+}
+
+class SlotExceptionCreate {
+  const SlotExceptionCreate({
+    required this.service,
+    required this.startDate,
+    required this.endDate,
+    required this.days,
+    this.windows,
+    this.note,
+  });
+
+  final String service;
+  final DateTime startDate;
+  final DateTime endDate;
+  final List<String> days;
+  final List<SlotExceptionWindow>? windows;
+  final String? note;
+
+  factory SlotExceptionCreate.fromJson(Map<String, dynamic> j) => SlotExceptionCreate(
+        service: j['service'] as String,
+        startDate: DateTime.parse(j['start_date'] as String),
+        endDate: DateTime.parse(j['end_date'] as String),
+        days: [for (final x in j['days'] as List) x as String],
+        windows: j['windows'] == null ? null : [for (final x in j['windows'] as List) SlotExceptionWindow.fromJson(x as Map<String, dynamic>)],
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'service': service,
+        'start_date': _date(startDate),
+        'end_date': _date(endDate),
+        'days': [for (final x in days) x],
+        'windows': windows == null ? null : [for (final x in windows!) x.toJson()],
+        'note': note,
+      };
+}
+
+class SlotExceptionOut {
+  const SlotExceptionOut({
+    required this.id,
+    required this.societyId,
+    required this.service,
+    required this.startDate,
+    required this.endDate,
+    required this.days,
+    required this.windows,
+    required this.note,
+  });
+
+  final String id;
+  final String societyId;
+  final String service;
+  final DateTime startDate;
+  final DateTime endDate;
+  final List<String> days;
+  final List<SlotExceptionWindow> windows;
+  final String note;
+
+  factory SlotExceptionOut.fromJson(Map<String, dynamic> j) => SlotExceptionOut(
+        id: j['id'] as String,
+        societyId: j['society_id'] as String,
+        service: j['service'] as String,
+        startDate: DateTime.parse(j['start_date'] as String),
+        endDate: DateTime.parse(j['end_date'] as String),
+        days: [for (final x in j['days'] as List) x as String],
+        windows: [for (final x in j['windows'] as List) SlotExceptionWindow.fromJson(x as Map<String, dynamic>)],
+        note: j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'society_id': societyId,
+        'service': service,
+        'start_date': _date(startDate),
+        'end_date': _date(endDate),
+        'days': [for (final x in days) x],
+        'windows': [for (final x in windows) x.toJson()],
+        'note': note,
+      };
+}
+
+class SlotExceptionUpdate {
+  const SlotExceptionUpdate({
+    required this.startDate,
+    required this.endDate,
+    required this.days,
+    required this.windows,
+    required this.note,
+  });
+
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final List<String>? days;
+  final List<SlotExceptionWindow>? windows;
+  final String? note;
+
+  factory SlotExceptionUpdate.fromJson(Map<String, dynamic> j) => SlotExceptionUpdate(
+        startDate: j['start_date'] == null ? null : DateTime.parse(j['start_date'] as String),
+        endDate: j['end_date'] == null ? null : DateTime.parse(j['end_date'] as String),
+        days: j['days'] == null ? null : [for (final x in j['days'] as List) x as String],
+        windows: j['windows'] == null ? null : [for (final x in j['windows'] as List) SlotExceptionWindow.fromJson(x as Map<String, dynamic>)],
+        note: j['note'] == null ? null : j['note'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start_date': startDate == null ? null : _date(startDate!),
+        'end_date': endDate == null ? null : _date(endDate!),
+        'days': days == null ? null : [for (final x in days!) x],
+        'windows': windows == null ? null : [for (final x in windows!) x.toJson()],
+        'note': note,
+      };
+}
+
+class SlotExceptionWindow {
+  const SlotExceptionWindow({
+    required this.start,
+    required this.end,
+  });
+
+  final String start;
+  final String end;
+
+  factory SlotExceptionWindow.fromJson(Map<String, dynamic> j) => SlotExceptionWindow(
+        start: j['start'] as String,
+        end: j['end'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'start': start,
+        'end': end,
       };
 }
 
@@ -10386,6 +10810,24 @@ class PriveoApi {
     }
   }
 
+  /// Completion Options
+  Future<void> completionOptions() async {
+    try {
+      await _dio.get<void>('/v1/admin/operations/completion-options');
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Bulk Completion
+  Future<void> bulkCompletion(BulkCompletionIn body) async {
+    try {
+      await _dio.post<void>('/v1/admin/operations/bulk-completion', data: body.toJson());
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
   /// Admin Home
   Future<AdminHome> adminHome() async {
     try {
@@ -10450,6 +10892,16 @@ class PriveoApi {
     try {
       final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/run', data: body.toJson());
       return RunResponse.fromJson(r.data!);
+    } on DioException catch (e) {
+      throw ApiFailure.fromDio(e);
+    }
+  }
+
+  /// Batch Move Jobs
+  Future<BatchMoveOut> batchMoveJobs(BatchMoveRequest body) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>('/v1/admin/scheduling/jobs/batch-move', data: body.toJson());
+      return BatchMoveOut.fromJson(r.data!);
     } on DioException catch (e) {
       throw ApiFailure.fromDio(e);
     }

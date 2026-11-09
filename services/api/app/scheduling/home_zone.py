@@ -27,6 +27,22 @@ def own_zones(db: Session, sc: SchedulingCrew) -> list[Zone]:
         .where(SchedulingCrewHomeZone.crew_id == sc.id).order_by(Zone.name)))
 
 
+def zone_names_by_crew(db: Session, crew_ids) -> dict[uuid.UUID, list[str]]:
+    """The home zone names of many cleaners at once, by name (P2-5, one query)."""
+    ids = [cid for cid in crew_ids if cid is not None]
+    out: dict[uuid.UUID, list[str]] = {}
+    if not ids:
+        return out
+    for crew_id, name in db.execute(
+        select(SchedulingCrewHomeZone.crew_id, Zone.name)
+        .join(Zone, Zone.id == SchedulingCrewHomeZone.zone_id)
+        .where(SchedulingCrewHomeZone.crew_id.in_(ids))
+        .order_by(Zone.name)
+    ):
+        out.setdefault(crew_id, []).append(name)
+    return out
+
+
 def effective_zones(db: Session, sc: SchedulingCrew) -> list[Zone]:
     """The zones the planner treats as home: own for a Member or Manager, the
     paired Member's for a Trainee."""

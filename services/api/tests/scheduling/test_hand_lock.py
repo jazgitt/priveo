@@ -77,3 +77,60 @@ def test_the_lock_can_be_toggled_and_only_a_hand_placement_takes_it(api, admin, 
     assert api.put(f"{BASE}/jobs/{planned_id}/hand-lock", headers=admin,
                    json={"locked": True}).json()["hand_locked"] is True
 
+
+
+def _exterior_id(api, admin, schedule_id):
+    return next(j["id"] for j in _board(api, admin, schedule_id).values()
+                if j["service"] == "Cleaning-External")
+
+
+def test_an_unlocked_hand_placement_loses_by_hand_when_a_run_places_it(api, admin, world, run_week):
+    # P2-2: the solver re-places an unlocked hand card, so it is no longer "By hand".
+    crew, sid = _one_cleaner_one_car(world, run_week)
+    job_id = _exterior_id(api, admin, sid)
+    r = _move(api, admin, job_id, crew, 540)
+    assert r.status_code == 200, r.text
+    assert r.json()["placed_by_hand"] is True
+    r = api.put(f"{BASE}/jobs/{job_id}/hand-lock", headers=admin, json={"locked": False})
+    assert r.status_code == 200, r.text
+
+    run_week(days=1)
+    moved = _board(api, admin, sid)[job_id]
+    assert moved["crew_id"] == str(crew.id)
+    assert moved["manual"] is False and moved["placed_by_hand"] is False
+
+
+def test_a_locked_hand_placement_keeps_by_hand_through_a_run(api, admin, world, run_week):
+    crew, sid = _one_cleaner_one_car(world, run_week)
+    job_id = _exterior_id(api, admin, sid)
+    assert _move(api, admin, job_id, crew, 540).status_code == 200
+
+    run_week(days=1)
+    kept = _board(api, admin, sid)[job_id]
+    assert kept["manual"] is True and kept["placed_by_hand"] is True
+    assert kept["hand_locked"] is True and kept["start_time"] == "09:00"
+
+
+def test_a_card_taken_off_by_hand_is_planned_again_by_a_later_run(api, admin, world, run_week):
+    # P2-9 (decision 2): an unlocked card taken off by hand goes back into the plan.
+    crew, sid = _one_cleaner_one_car(world, run_week)
+    job_id = _exterior_id(api, admin, sid)
+    r = api.post(f"{BASE}/jobs/{job_id}/move", headers=admin, json={"crew_id": None})
+    assert r.status_code == 200 and r.json()["crew_id"] is None
+
+    run_week(days=1)
+    back = _board(api, admin, sid)[job_id]
+    assert back["crew_id"] == str(crew.id)
+    assert back["manual"] is False and back["hand_locked"] is False
+
+
+def test_a_locked_card_taken_off_by_hand_stays_off_a_later_run(api, admin, world, run_week):
+    crew, sid = _one_cleaner_one_car(world, run_week)
+    job_id = _exterior_id(api, admin, sid)
+    assert _move(api, admin, job_id, crew, 540).status_code == 200  # locked by default
+    r = api.post(f"{BASE}/jobs/{job_id}/move", headers=admin, json={"crew_id": None})
+    assert r.status_code == 200 and r.json()["crew_id"] is None
+
+    run_week(days=1)
+    off = _board(api, admin, sid)[job_id]
+    assert off["crew_id"] is None and off["manual"] is True and off["hand_locked"] is True

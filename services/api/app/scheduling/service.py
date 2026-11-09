@@ -15,14 +15,25 @@ from app.customers.parking import label as parking_label
 from app.customers.parking import slots as parking_slots
 from app.customers.parking_rules import with_zone, zone_names
 from app.customers.schedule_pattern import day_flags, patterns_for
-from app.directory import lookup
+from app.directory import lookup, slot_resolver
 from app.directory.models import Plan, Society
 from app.features import service as features
 from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import entitlements, hand_placement, home_zone, hooks, passes, queue, rules, run_context, run_counts
+from app.scheduling import (
+    crew_roles,
+    entitlements,
+    hand_placement,
+    home_zone,
+    hooks,
+    passes,
+    queue,
+    rules,
+    run_context,
+    run_counts,
+)
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -125,11 +136,15 @@ def _customer_changes(
     return off, cutoffs
 
 
-def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[Demand]:
+def build_demand(
+    db: Session, society_id: uuid.UUID, days: list[date],
+    site: slot_resolver.SiteSlots | None = None,
+) -> list[Demand]:
     """Cleaning-External every day, Cleaning-Internal on the interior care day
     and a Deep Spa on the date the customer asked for (ADM-SVS-10). Only
-    Active subscriptions count (ADM-SUB-02). A weekday the site has no working
-    slot for a service gives no demand for it (ADM-CAP-08)."""
+    Active subscriptions count (ADM-SUB-02). A day the site has no working
+    slot for a service gives no demand for it (ADM-CAP-08). `site` is the
+    slot resolver's load of the site; it is read here when not given."""
     out: list[Demand] = []
     rows = db.execute(
         select(Subscription, Vehicle)
@@ -237,18 +252,13 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
                 job.source_job_id,
             )
         )
-    # The site's working slots say which weekdays it is off for each service:
-    # no slot on a weekday means no demand that day (owner, 04-Nov-26). A
-    # service with no slot at all is not filtered. Re-run jobs already exist
-    # and stay.
-    open_days: dict[str, set[int] | None] = {}
-    for slot in lookup.working_slots(db, society_id):
-        open_days.setdefault(slot.service, set()).update(slot.days)
+    # The slot resolver says whether a service is open on a day (owner, 04-Nov-26;
+    # ADM-SVS-12 exceptions count). A service with no slot at all is not filtered.
+    # Re-run jobs already exist and stay.
+    site = site or slot_resolver.load(db, society_id)
     return [
         d for d in out
-        if d.source_job_id is not None
-        or open_days.get(d.service) is None
-        or d.day.weekday() in open_days[d.service]
+        if d.source_job_id is not None or site.allows_demand(d.service, d.day)
     ]
 
 
@@ -268,7 +278,10 @@ def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingC
         .scalars()
         .all()
     )
-    return {c.id: c for c in rows}
+    crew = {c.id: c for c in rows}
+    # The dated roles still to run (P2-4): the scheduler reads each run day's role.
+    crew_roles.attach(db, crew, today_ist())
+    return crew
 
 
 def solver_crews(day_windows: dict[uuid.UUID, list[tuple[int, int]]]) -> list[SolverCrew]:
@@ -325,7 +338,7 @@ def day_availability(
         wins = windows.get(cid, [])
         base = rules.hours_windows(c.working_hours, day.weekday(), c.start_minute, c.end_minute)
         slots = ", ".join(f"{_clock(s)}-{_clock(e)}" for s, e in wins)
-        if c.role == "Trainee":
+        if crew_roles.role_on(c, day) == "Trainee":
             status = "Off"
             reason = "Trainee: adds no capacity and follows the paired Member's jobs."
         elif ex and ex.kind in ("Sick", "Leave"):
@@ -603,10 +616,11 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             if job.crew_id is not None and job.crew_id not in day_windows:
                 # The crew member is away that day: the job goes back to the pool.
                 job.crew_id, job.start_minute, job.manual = None, None, False
-            # An unlocked hand placement is planned again like any open job (item 15).
+            # An unlocked hand placement, or a card taken off by hand, is planned again
+            # like any open job (item 15, P2-9, decision 2). A locked card stays put.
             released = (
                 not frozen and job.manual and not job.hand_locked
-                and job.status == "Scheduled" and job.crew_id is not None
+                and job.status == "Scheduled"
             )
             if released:
                 job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
@@ -663,6 +677,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 job.crew_id = base_crew(crew_key)
                 job.start_minute = start
                 job.note = ""
+                if job.id in released_ids:
+                    job.manual = False  # the solver placed it again: no longer "By hand" (P2-2)
             elif key in result.unplaced:
                 job.crew_id, job.start_minute = None, None
                 job.note = result.unplaced[key]

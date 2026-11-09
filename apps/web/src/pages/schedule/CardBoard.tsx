@@ -1,5 +1,5 @@
-import { Check, ChevronsLeft, ChevronsRight, Lock, Trash2, Unlock, X } from "lucide-react";
-import { useEffect, useRef, useState, type DragEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
+import { Check, ChevronsLeft, ChevronsRight, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState, type Dispatch, type PointerEvent, type ReactNode, type SetStateAction, type WheelEvent } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
 import { useAppMutation } from "@/blocks/mutation";
@@ -7,13 +7,19 @@ import { cn } from "@/lib/utils";
 
 import { HoverTip } from "../../components";
 import {
-  breached, cardLines, clashMessage, clashOf, type CardPart, type Density, fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa,
-  isUnplaced, jobLabel, matches, minutesOf, Reasoning, stepOf, statusClass, typeClass, windowsOf, zoneShort, zonesOf, zoneStyle,
+  breached, cardLines, clashMessage, clashOf, type CardPart, type Density, fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isShown, isSpa,
+  isUnplaced, jobLabel, matches, minutesOf, Reasoning, stepOf, statusClass, typeClass, unscheduledOrder, windowsOf, zoneShort, zonesOf,
+  zoneStyle,
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
+import { LockGlyph } from "./LockGlyph";
 import { Scroller } from "./Scroller";
 import { api } from "@/api/client";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
+import {
+  DragEngineProvider, planFreeDrop, planInsertion, snapUpMinute, useDragSource, useDragState,
+  type DragItem, type DropHit, type DropOutcome, type DropPlan, type LaneCard, type Shift,
+} from "./dnd";
 
 export type { Density } from "./Board";
 
@@ -46,9 +52,6 @@ function useFoldedLanes(): [Set<string>, (id: string) => void] {
 }
 
 const byStart = (a: AdminJob, b: AdminJob) => (a.start_minute ?? 0) - (b.start_minute ?? 0);
-
-/** Where a dragged card would land: before the index-th card, or at a time in a free slot. */
-interface Over { col: string; index: number; gap?: number; at?: number }
 
 /** A free slot's height on the board, so a longer slot looks longer. */
 const gapHeight = (minutes: number) => Math.round(Math.min(360, Math.max(30, minutes * 1.4)));
@@ -119,18 +122,164 @@ export function CardFace({ job, density, zones }: { job: AdminJob; density: Dens
   );
 }
 
+/** The card's drag source, as a component, so the hook runs once per card. */
+function DragSource({ id, data, disabled, children }: {
+  id: string;
+  data: unknown;
+  disabled: boolean;
+  children: (drag: { dragging: boolean; onPointerDown: (e: PointerEvent<HTMLElement>) => void }) => ReactNode;
+}) {
+  const drag = useDragSource(id, data, disabled);
+  return <>{children(drag)}</>;
+}
+
+const toLane = (j: AdminJob): LaneCard => ({ id: j.id, start: j.start_minute ?? 0, duration: j.duration_minutes });
+
 /**
- * The chosen day as columns of job cards, like a task board: the jobs with no
- * crew member first, then one column for each crew member with that member's
- * jobs and free slots in time order. A card is dragged onto a free slot (it
- * starts where it is dropped in the slot) or between two cards (it takes the
- * first free time after the card above). On the detailed layout the start moves
- * in 15-minute steps. Dropping a card on Unscheduled takes it off its crew
- * member. Clicking a card opens its dialog to set an exact time. A crew member
- * who cannot work that day is greyed out and takes no card (ADM-SCH-32, -33).
- * A drop that would overlap another job is refused with the job in the way.
+ * Moves the cards in a crew lane out of the way of a group that has been placed
+ * (P0-8). `fixed` are the group's cards at their new times; `others` are the
+ * rest of the lane. A card that overlaps a fixed card, or the card above it, moves
+ * down to the first free time after it. Nothing moves up. Returns the changed
+ * cards only.
  */
-export function CardBoard({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, onOpen, onMove }: {
+export function settleAround(others: LaneCard[], fixed: LaneCard[], top: number, step = 5): Shift[] {
+  const fixedSorted = [...fixed].sort((a, b) => a.start - b.start);
+  const changed: Shift[] = [];
+  let cursor = snapUpMinute(top, step);
+  for (const o of [...others].sort((a, b) => a.start - b.start)) {
+    let start = o.start < cursor ? snapUpMinute(cursor, step) : o.start;
+    let again = true;
+    while (again) {
+      again = false;
+      for (const f of fixedSorted) {
+        if (f.start < start + o.duration && start < f.start + f.duration) {
+          start = snapUpMinute(f.start + f.duration, step);
+          again = true;
+          break;
+        }
+      }
+    }
+    if (start !== o.start) changed.push({ id: o.id, start });
+    cursor = start + o.duration;
+  }
+  return changed;
+}
+
+/** The free slot under a pointer height in a lane, if the pointer is over one. */
+export function slotUnder(laneEl: HTMLElement, y: number): HTMLElement | null {
+  return [...laneEl.querySelectorAll<HTMLElement>("[data-slot]")].find((el) => {
+    const r = el.getBoundingClientRect();
+    return y >= r.top && y <= r.bottom;
+  }) ?? null;
+}
+
+export interface BoardDropInput {
+  drop: DropHit;
+  /** The card that was held. */
+  draggedId: string;
+  /** The cards picked with their checkboxes. A picked card drags the whole picked group (P0-8). */
+  picked: ReadonlySet<string>;
+  jobs: AdminJob[];
+  crew: SchedulingCrew[];
+  availability: CrewDayAvailability[];
+  folded: ReadonlySet<string>;
+  /** Whether a card is drawn with the current filters. The drop index counts only drawn cards. */
+  shown: (job: AdminJob) => boolean;
+  step: number;
+}
+
+/**
+ * What a drop on the board does, as the drag engine asks for it (P0-5, P0-7, P0-8).
+ * Unscheduled takes the cards off their crew members, with no confirmation (P0-7). A
+ * crew lane places the card at the drop, pushing the cards it runs into down (P0-5);
+ * a picked group keeps its relative times and is saved as one batch (P0-8). A drop on
+ * a member who cannot work is refused. Crew hours and service hours never refuse: the
+ * server returns them as warnings. An overlap is refused by the server.
+ */
+export function planBoardMoves(input: BoardDropInput): DropOutcome {
+  const { drop, draggedId, picked, jobs, crew, availability, folded, shown, step } = input;
+  const dragged = jobs.find((j) => j.id === draggedId);
+  if (!dragged) return null;
+  const group = picked.has(draggedId) ? jobs.filter((j) => picked.has(j.id) && isOpen(j)) : [];
+  const moving = group.length > 1 ? group : [dragged];
+  const movingIds = new Set(moving.map((j) => j.id));
+
+  if (drop.laneId === UNSCHEDULED) {
+    const moves = moving
+      .filter((j) => j.crew_id !== null)
+      .map((j) => ({ job_id: j.id, crew_id: null, start_minute: null }));
+    return moves.length > 0 ? { moves } : null;
+  }
+
+  const member = crew.find((c) => c.id === drop.laneId);
+  if (!member) return null;
+  const avail = availability.find((a) => a.crew_id === member.id);
+  if (avail?.status === "Off") return { refused: `${member.name} cannot take work this day. ${avail.reason}`.trim() };
+  if (moving.length > 1 && moving.some((j) => j.start_minute === null)) {
+    return { refused: "Cards with no time yet cannot be moved as a group. Take them out of the selection first." };
+  }
+
+  const wins = windowsOf(member, avail);
+  const top = wins.length > 0 ? wins[0].start : 0;
+  const laneJobs = jobs
+    .filter((j) => j.crew_id === member.id && j.start_minute !== null)
+    .sort(byStart);
+  // A single card stays in the lane list, so a move within its own lane closes the gap it leaves.
+  const laneArg = moving.length === 1 ? laneJobs : laneJobs.filter((j) => !movingIds.has(j.id));
+  const others = laneArg.filter((j) => j.id !== draggedId);
+  const pos = new Map<string, number>(others.map((j, i) => [j.id, i] as [string, number]));
+  // The drop index counts the cards drawn in the lane, the held card left out. Insert after the last of them that is in `others`.
+  const drawn = laneJobs.filter((j) => j.id !== draggedId && shown(j));
+  let at = 0;
+  for (let k = Math.min(drop.index, drawn.length); k > 0; k--) {
+    const p = pos.get(drawn[k - 1].id);
+    if (p !== undefined) { at = p + 1; break; }
+  }
+
+  // Only a card moved within its own lane keeps its old time (planInsertion closes the gap it leaves). Any other card starts at the drop.
+  const stays = moving.length === 1 && member.id === dragged.crew_id && dragged.start_minute !== null;
+  const anchor: LaneCard = { id: draggedId, start: stays ? dragged.start_minute! : 0, duration: dragged.duration_minutes };
+  let plan: DropPlan;
+  if (folded.has(member.id)) {
+    // A folded lane has no cards to drop among: the card takes the member's first free time.
+    const start = freeStart(wins, others, 0, dragged.duration_minutes, step);
+    if (start === null) return { refused: `${member.name} has no free ${dragged.duration_minutes} minutes in their slots this day.` };
+    plan = { start, shifts: [] };
+  } else {
+    const slot = slotUnder(drop.laneEl, drop.clientY);
+    const lane = laneArg.map(toLane);
+    plan = slot
+      ? planFreeDrop(lane, anchor, slotTime(slot, drop.clientY, dragged.duration_minutes, step), at, { top, step })
+      : planInsertion(lane, anchor, at, { top, step });
+  }
+
+  if (moving.length === 1) {
+    if (member.id === dragged.crew_id && plan.start === dragged.start_minute && plan.shifts.length === 0) return null;
+    return {
+      moves: [
+        { job_id: draggedId, crew_id: member.id, start_minute: plan.start },
+        ...plan.shifts.map((s) => ({ job_id: s.id, crew_id: member.id, start_minute: s.start })),
+      ],
+    };
+  }
+
+  // A group keeps its relative times from the held card. Its cards fix the lane; the rest of the lane moves out of their way.
+  const base = dragged.start_minute ?? 0;
+  const placed: LaneCard[] = moving.map((j) => ({
+    id: j.id,
+    start: Math.max(snapUpMinute(top, step), plan.start + ((j.start_minute ?? 0) - base)),
+    duration: j.duration_minutes,
+  }));
+  const shifts = settleAround(others.map(toLane), placed, top, step);
+  return {
+    moves: [
+      ...placed.map((p) => ({ job_id: p.id, crew_id: member.id, start_minute: p.start })),
+      ...shifts.map((s) => ({ job_id: s.id, crew_id: member.id, start_minute: s.start })),
+    ],
+  };
+}
+
+export interface CardBoardProps {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -143,9 +292,67 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   density?: Density;
   /** The job whose move is being saved, shown as working. */
   savingId?: string | null;
+  /** Off, the filters hide the cards they do not keep; on, those cards show in disabled form (P1-4). */
+  showAll?: boolean;
   onOpen: (job: AdminJob) => void;
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
-}) {
+  /** Gets the error of a refused drop (a frozen day offers the code), or null once a drop is saved. */
+  onDropSettled?: (error: unknown) => void;
+}
+
+type GridProps = CardBoardProps & {
+  folded: Set<string>;
+  toggleFold: (id: string) => void;
+  picked: Set<string>;
+  setPicked: Dispatch<SetStateAction<Set<string>>>;
+  /** The warnings of the last saved move, by job (crew hours, service hours). Shown in red; the move stands. */
+  warned: Map<string, string>;
+};
+
+/**
+ * The chosen day as columns of job cards, like a task board: the jobs with no
+ * crew member first, then one column for each crew member with that member's
+ * jobs and free slots in time order. A card is dragged with the drag engine
+ * (dnd/): a ghost follows the pointer, the card's neighbours shift to show where
+ * it lands, and a drop saves at once with no confirmation (P0-1, decision 4).
+ * Dropping a card between two cards pushes the cards below it down; every card
+ * it moves is marked By hand (P0-5). Dropping on Unscheduled takes the card off
+ * its crew member, and a card from Unscheduled can go to any place in a lane (P0-7).
+ * A card's checkbox picks it for a group move (P0-8). Clicking a card opens its
+ * dialog to set an exact time. A crew member who cannot work that day is greyed
+ * out and takes no card (ADM-SCH-32, -33). The filters hide the cards they do not
+ * keep; "Show all" brings them back in disabled form (P1-4). A hidden card still
+ * takes its time in its column.
+ */
+export function CardBoard(props: CardBoardProps) {
+  const { crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, onDropSettled } = props;
+  const [folded, toggleFold] = useFoldedLanes();
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+  const [warned, setWarned] = useState<Map<string, string>>(() => new Map());
+  const step = stepOf(density);
+  const plan = (drop: DropHit, item: DragItem): DropOutcome => planBoardMoves({
+    drop, draggedId: item.id, picked, jobs, crew, availability, folded, step,
+    shown: (j) => isShown(j, showAll, focus, search, type, flag),
+  });
+  // The board query of this schedule: the optimistic move and the refresh use it.
+  const boardKey = ["board", "id", jobs[0]?.schedule_id];
+  return (
+    <DragEngineProvider
+      boardKey={boardKey}
+      plan={plan}
+      onSaved={(r) => {
+        setPicked(new Set());
+        setWarned(new Map<string, string>(r.warnings.map((w) => [w.job_id, w.message] as [string, string])));
+      }}
+      onSettled={onDropSettled}
+    >
+      <CardGrid {...props} folded={folded} toggleFold={toggleFold} picked={picked} setPicked={setPicked} warned={warned} />
+    </DragEngineProvider>
+  );
+}
+
+function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, showAll = false,
+  onOpen, onMove, folded, toggleFold, picked, setPicked, warned }: GridProps) {
   const confirm = useConfirm();
   // Lock or unlock a card placed by hand; the board is read again so the icon and the card follow the server (item 15).
   const lockOf = useAppMutation<{ job: AdminJob; locked: boolean }, AdminJob>({
@@ -156,15 +363,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   });
   const zones = zonesOf(jobs);
   const step = stepOf(density);
-  const dragging = useRef<AdminJob | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [over, setOver] = useState<Over | null>(null);
+  const { activeId: dragId, hit } = useDragState();
   const [blocked, setBlocked] = useState("");
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement | null>(null);
   const pan = useRef<{ x: number; left: number } | null>(null);
   const [panning, setPanning] = useState(false);
-  const [folded, toggleFold] = useFoldedLanes();
   // Searching brings the first match into view, so a car in a long lane is not hunted for.
   useEffect(() => {
     if (!search.trim()) return;
@@ -178,8 +382,9 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   // Members who cannot work go to the end, so the columns that take work come first.
   const members = [...crew].sort((a, b) =>
     Number(availOf(a.id)?.status === "Off") - Number(availOf(b.id)?.status === "Off"));
-  const unplaced = jobs.filter(isUnplaced);
+  const unplaced = unscheduledOrder(jobs.filter(isUnplaced));
   const dragged = dragId ? jobs.find((j) => j.id === dragId) ?? null : null;
+  const warnings = [...new Set(warned.values())];
   /** While a card is held, whether a crew member could take it at all: shown as green or red columns. */
   const takes = (member: SchedulingCrew): boolean | null => {
     if (!dragged) return null;
@@ -206,23 +411,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     if ((e.target as HTMLElement).closest(".sch-col-body") || !strip.current) return;
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) strip.current.scrollLeft += e.deltaY;
   };
-  const slotOf = (e: DragEvent<HTMLElement>) => (e.target as HTMLElement).closest?.<HTMLElement>("[data-slot]") ?? null;
 
-  /** Where among the column's other cards the pointer is: 0 is above the first. */
-  const indexAt = (body: HTMLElement, y: number) =>
-    [...body.querySelectorAll<HTMLElement>("[data-card]")]
-      .filter((el) => el.dataset.job !== dragging.current?.id)
-      .filter((el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2 < y; }).length;
-
-  const startDrag = (job: AdminJob) => (e: DragEvent) => {
-    dragging.current = job;
-    setBlocked("");
-    e.dataTransfer?.setData("text/plain", job.id);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-    // Let the browser take its picture of the card before it is dimmed.
-    requestAnimationFrame(() => setDragId(job.id));
-  };
-  const endDrag = () => { dragging.current = null; setDragId(null); setOver(null); };
+  const togglePick = (id: string) => setPicked((cur) => {
+    const next = new Set(cur);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   /** The delete icon takes a placed job off its crew member for the day; it goes to Unscheduled, nothing is deleted (item 6). */
   const takeOff = async (job: AdminJob) => {
@@ -231,73 +425,6 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
       description: `The job goes to Unscheduled for this day. It is not deleted: you can place it again later.`,
       confirmLabel: "Take off the day", tone: "danger",
     })) onMove(job, null, null);
-  };
-
-  const dragOver = (col: string) => (e: DragEvent<HTMLElement>) => {
-    const job = dragging.current;
-    if (!job) return;
-    e.preventDefault();
-    const slot = col === UNSCHEDULED ? null : slotOf(e);
-    const next: Over = slot
-      ? { col, index: -1, gap: Number(slot.dataset.start), at: slotTime(slot, e.clientY, job.duration_minutes, step) }
-      : { col, index: col === UNSCHEDULED ? 0 : indexAt(e.currentTarget, e.clientY) };
-    if (over?.col !== next.col || over.index !== next.index || over.gap !== next.gap || over.at !== next.at) setOver(next);
-  };
-  const dragLeave = (e: DragEvent<HTMLElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null);
-  };
-
-  const dropOn = (member: SchedulingCrew | null) => async (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    const job = dragging.current;
-    const slot = member ? slotOf(e) : null;
-    const index = member ? indexAt(e.currentTarget, e.clientY) : 0;
-    endDrag();
-    if (!job) return;
-    if (!member) {
-      if (!job.crew_id) return;
-      if (await confirm({
-        title: `Take ${job.registration} off ${job.crew_name ?? "its crew member"}?`,
-        description: "The job goes to Unscheduled for this day. You can place it again later.",
-        confirmLabel: "Take off crew member", tone: "danger",
-      })) onMove(job, null, null);
-      return;
-    }
-    const avail = availOf(member.id);
-    if (avail?.status === "Off") {
-      setBlocked(`${member.name} cannot take work this day. ${avail.reason}`.trim());
-      return;
-    }
-    const wins = windowsOf(member, avail);
-    const others = jobs.filter((j) => j.crew_id === member.id && j.id !== job.id && j.start_minute !== null).sort(byStart);
-    let start: number | null;
-    if (slot) {
-      start = slotTime(slot, e.clientY, job.duration_minutes, step);
-      if (!fitsAt(wins, others, start, job.duration_minutes)) {
-        // A free slot shorter than the card is named as such; the job next to it is not the reason.
-        const free = Number(slot.dataset.end) - Number(slot.dataset.start);
-        if (free < job.duration_minutes) {
-          setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
-          return;
-        }
-        const blocker = clashOf(others, start, job.duration_minutes);
-        if (blocker) {
-          setBlocked(clashMessage(job, blocker, member.name, freeStart(wins, others, 0, job.duration_minutes, step)));
-          return;
-        }
-        setBlocked(`Only ${hm(free)} is free there; ${job.registration} needs ${job.duration_minutes} min.`);
-        return;
-      }
-    } else {
-      start = freeStart(wins, others, index, job.duration_minutes, step);
-    }
-    if (start === null) {
-      setBlocked(`${member.name} has no free ${job.duration_minutes} minutes in their slots this day.`);
-      return;
-    }
-    if (job.crew_id === member.id && job.start_minute === start) return;
-    setBlocked("");
-    onMove(job, member.id, start);
   };
 
   /** Alt + Up or Down moves a placed card one step (5 minutes, or 15 on the detailed layout) earlier or later in its own column. */
@@ -322,64 +449,86 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   };
 
   const card = (job: AdminJob) => {
-    const open = isOpen(job);
+    // A card the filters do not keep is shown only with "Show all" on, and then it is disabled: no drag, no dialog.
+    const kept = matches(job, focus, search, type, flag);
+    const open = isOpen(job) && kept;
     const wine = breached(job);
     const tools = job.placed_by_hand || (open && job.crew_id);
+    const isPicked = picked.has(job.id);
+    const warning = warned.get(job.id);
+    const outline = warning ? "2px solid var(--c-error)" : isPicked ? "2px solid var(--c-gold)" : undefined;
     return (
-      <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
-           aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
-           title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}`}
-           className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
-             wine && "wine", !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
-             savingId === job.id && "saving", tools && "has-tools")}
-           onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
-           onClick={() => onOpen(job)}
-           onKeyDown={(e) => {
-             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); }
-             else if (e.altKey && open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
-               e.preventDefault();
-               nudge(job, e.key === "ArrowUp" ? -1 : 1);
-             }
-           }}>
-        <CardFace job={job} density={density} zones={zones} />
-        {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
-        {job.crew_id && job.cross_zone_reason && density !== "compact" && (
-          <span className="sch-why" role="note" title={job.cross_zone_reason} aria-label={job.cross_zone_reason}>Outside zone</span>
-        )}
-        {/* A card taken off a crew member shows the reason it has no place. */}
-        {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
-        {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
-        {tools && job.placed_by_hand && (() => {
-          // The lock sits at the top right, on its own. It never opens the card.
-          const locked = job.hand_locked === true;
-          const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
-          return (
-            <span className="sch-card-lock" onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
-              <button type="button" className={`sch-tool lock ${locked ? "is-locked" : "is-open"}`}
-                      aria-pressed={locked} aria-disabled={!open || undefined}
-                      aria-label={tip} title={tip}
-                      onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
-                {locked ? <Lock aria-hidden /> : <Unlock aria-hidden />}
-              </button>
-            </span>
-          );
-        })()}
-        {tools && (
-          // The take-off icon sits at the bottom right (standard and detailed) or the right (compact). It never opens the card.
-          <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
-            {open && job.crew_id && (
-              // The name stays out of the button's label, so a search by registration still finds the card alone.
-              <button type="button" className="sch-tool del" aria-label="Take off the day"
-                      title={`Take ${job.registration} off the day`}
-                      onClick={() => void takeOff(job)}>
-                <Trash2 aria-hidden />
-              </button>
+      <DragSource key={job.id} id={job.id} data={job} disabled={!open}>
+        {(drag) => (
+          <div data-card data-dnd-card={job.id} data-job={job.id} role="button" tabIndex={0}
+               draggable={open ? undefined : false}
+               aria-disabled={!kept || undefined} aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
+               title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}${warning ? ` ${warning}` : ""}`}
+               style={outline ? { outline, outlineOffset: "1px" } : undefined}
+               className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
+                 wine && "wine", !kept && "dim", drag.dragging && "dragging", !open && "locked",
+                 savingId === job.id && "saving", tools && "has-tools")}
+               onPointerDown={drag.onPointerDown}
+               onClick={() => { if (kept) onOpen(job); }}
+               onKeyDown={(e) => {
+                 if (!kept) return;
+                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); }
+                 else if (e.altKey && open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+                   e.preventDefault();
+                   nudge(job, e.key === "ArrowUp" ? -1 : 1);
+                 }
+               }}>
+            <CardFace job={job} density={density} zones={zones} />
+            {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
+            {job.crew_id && job.cross_zone_reason && density !== "compact" && (
+              <span className="sch-why" role="note" title={job.cross_zone_reason} aria-label={job.cross_zone_reason}>Outside zone</span>
             )}
-          </span>
+            {/* A card taken off a crew member shows the reason it has no place. */}
+            {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
+            {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
+            {open && (
+              // The checkbox sits at the top right. It picks the card for a group move and never opens the card.
+              <span className="absolute right-1 top-1 z-[1] leading-none" onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}>
+                <input type="checkbox" className="m-0 h-3.5 w-3.5 cursor-pointer" checked={isPicked}
+                       aria-label="Select this job" title="Select to move together with the other selected cards"
+                       onChange={() => togglePick(job.id)} />
+              </span>
+            )}
+            {tools && job.placed_by_hand && (() => {
+              // The lock sits at the top right, on its own, and moves below the checkbox when the card has one. It never opens the card.
+              const locked = job.hand_locked === true;
+              const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
+              return (
+                <span className="sch-card-lock" style={open ? { top: "1.35rem" } : undefined}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
+                  <button type="button" className={`sch-tool lock ${locked ? "is-locked" : "is-open"}`}
+                          aria-pressed={locked} aria-disabled={!open || undefined}
+                          aria-label={tip} title={tip}
+                          onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
+                    <LockGlyph locked={locked} />
+                  </button>
+                </span>
+              );
+            })()}
+            {tools && (
+              // The take-off icon sits at the bottom right (standard and detailed) or the right (compact). It never opens the card.
+              <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
+                {open && job.crew_id && (
+                  // The name stays out of the button's label, so a search by registration still finds the card alone.
+                  <button type="button" className="sch-tool del" aria-label="Take off the day"
+                          title={`Take ${job.registration} off the day`}
+                          onClick={() => void takeOff(job)}>
+                    <Trash2 aria-hidden />
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
         )}
-      </div>
+      </DragSource>
     );
   };
 
@@ -390,13 +539,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     const items: { start: number; node: () => ReactNode; card?: AdminJob }[] = [
       ...mine.map((j) => ({ start: j.start_minute!, card: j, node: () => card(j) })),
       ...freeSlots(aroundBreak(wins, brk), others).map((g) => ({ start: g.start, node: () => {
-        const here = over?.col === member.id && over.gap === g.start;
-        const tight = here && dragged !== null && g.end - g.start < dragged.duration_minutes;
+        const tight = dragged !== null && g.end - g.start < dragged.duration_minutes;
         return (
           <div key={`free-${g.start}`} data-slot data-start={g.start} data-end={g.end}
-               className={cn("sch-slot", here && "over", tight && "tight")} style={{ height: gapHeight(g.end - g.start) }}
+               className={cn("sch-slot", tight && "tight")} style={{ height: gapHeight(g.end - g.start) }}
                aria-label={`Free ${hhmm(g.start)}-${hhmm(g.end)}`}>
-            <span>{tight ? `Too short for ${dragged?.duration_minutes} min` : here && over.at !== undefined ? `Drop at ${hhmm(over.at)}` : `Free ${hhmm(g.start)}-${hhmm(g.end)}`}</span>
+            <span>{tight ? `Too short for ${dragged?.duration_minutes} min` : `Free ${hhmm(g.start)}-${hhmm(g.end)}`}</span>
             <span>{hm(g.end - g.start)}</span>
           </div>
         );
@@ -412,12 +560,14 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     return withLine(member.id, items);
   };
 
-  /** The items of a column, with a line where the dragged card would go between cards. */
+  /** The items of a column, with a line where the held card would go between cards. A card the filters hide is left out. */
   const withLine = (col: string, items: { node: () => ReactNode; card?: AdminJob }[]) => {
     const out: ReactNode[] = [];
-    const lineAt = over?.col === col && col !== UNSCHEDULED && over.index >= 0 ? over.index : -1;
+    // The engine counts the drawn cards of the lane, the held card left out; this line sits at that index.
+    const lineAt = hit?.laneId === col ? hit.index : -1;
     let at = 0;
     for (const it of items) {
+      if (it.card && !isShown(it.card, showAll, focus, search, type, flag)) continue;
       if (it.card && it.card.id !== dragId) {
         if (lineAt === at) out.push(<div key="drop" className="sch-drop-line" />);
         at += 1;
@@ -430,13 +580,12 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
 
   return (
     <div className="sch-fill" ref={root}>
-      <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", panning && "panning")} role="group" aria-label="Day board"
+      <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", density, panning && "panning")} role="group" aria-label="Day board"
                 onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={panEnd} onWheel={wheel}>
         {folded.has(UNSCHEDULED) ? (
           // A folded Unscheduled lane is a thin strip; a card dropped on it is taken off its crew member, as on the open lane.
-          <section aria-label={`Unscheduled (${unplaced.length}), folded`} data-testid="col-unscheduled"
-                   className={cn("sch-col unscheduled folded", over?.col === UNSCHEDULED && "over")}
-                   onDragOver={dragOver(UNSCHEDULED)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(null)(e)}>
+          <section aria-label={`Unscheduled (${unplaced.length}), folded`} data-testid="col-unscheduled" data-dnd-lane={UNSCHEDULED}
+                   className={cn("sch-col unscheduled folded", hit?.laneId === UNSCHEDULED && "over")}>
             <button type="button" className="sch-fold-btn" aria-label="Show the Unscheduled lane" title="Show the lane"
                     onClick={() => toggleFold(UNSCHEDULED)}>
               <ChevronsRight aria-hidden />
@@ -446,7 +595,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           </section>
         ) : (
         <section aria-label={`Unscheduled (${unplaced.length})`} data-testid="col-unscheduled"
-                 className={cn("sch-col unscheduled", over?.col === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
+                 className={cn("sch-col unscheduled", hit?.laneId === UNSCHEDULED && "over", dragged?.crew_id && "can")}>
           <header className="sch-col-head">
             <span className="flex items-baseline justify-between gap-2">
               <strong>Unscheduled</strong>
@@ -460,8 +609,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
             </span>
             <span className="text-xs text-muted-foreground">No crew member yet. Drop a card here to take it off.</span>
           </header>
-          <Scroller axis="y" wrapClassName="sch-col-scroll" className="sch-col-body"
-                    onDragOver={dragOver(UNSCHEDULED)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(null)(e)}>
+          <Scroller axis="y" wrapClassName="sch-col-scroll" className="sch-col-body" data-dnd-lane={UNSCHEDULED}>
             {unplaced.length === 0
               ? <p className="sch-col-empty">Every job of this day has a crew member.</p>
               : withLine(UNSCHEDULED, unplaced.map((j) => ({ card: j, node: () => card(j) })))}
@@ -478,14 +626,13 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
           const booked = mine.reduce((n, j) => n + j.duration_minutes, 0);
           const pct = available ? Math.round((booked / available) * 100) : 0;
           const fold = folded.has(member.id);
-          const state = cn("sch-col", closed && "closed", over?.col === member.id && "over",
+          const state = cn("sch-col", closed && "closed", hit?.laneId === member.id && "over",
             takes(member) === true && "can", takes(member) === false && "cannot");
           if (fold) {
             // A folded lane is a thin strip: name, jobs and use. A card dropped on it goes to its first free time.
             return (
-              <section key={member.id} aria-label={`${member.name}, folded`} data-testid={`col-${member.id}`}
-                       className={cn(state, "folded")}
-                       onDragOver={dragOver(member.id)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(member)(e)}>
+              <section key={member.id} aria-label={`${member.name}, folded`} data-testid={`col-${member.id}`} data-dnd-lane={member.id}
+                       className={cn(state, "folded")}>
                 <button type="button" className="sch-fold-btn" aria-label={`Show ${member.name}'s lane`} title="Show the lane"
                         onClick={() => toggleFold(member.id)}>
                   <ChevronsRight aria-hidden />
@@ -530,8 +677,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
                   </>
                 )}
               </header>
-              <Scroller axis="y" wrapClassName="sch-col-scroll" className="sch-col-body"
-                        onDragOver={dragOver(member.id)} onDragLeave={dragLeave} onDrop={(e) => void dropOn(member)(e)}>
+              <Scroller axis="y" wrapClassName="sch-col-scroll" className="sch-col-body" data-dnd-lane={member.id}>
                 {closed ? <p className="sch-col-empty">{avail?.reason || "Cannot take work this day."}</p>
                   : lane(member, mine, wins, brk)}
               </Scroller>
@@ -540,6 +686,9 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
         })}
       </Scroller>
       {blocked && <p className="mt-2 mb-0 text-sm text-destructive" role="alert">{blocked}</p>}
+      {warnings.length > 0 && (
+        <p className="mt-2 mb-0 text-sm text-destructive" data-testid="board-warnings">{warnings.join(" ")}</p>
+      )}
     </div>
   );
 }

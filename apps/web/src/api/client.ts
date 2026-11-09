@@ -52,6 +52,8 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** A 401 here is an answer (wrong password, no session), not a lost session. */
   quiet401?: boolean;
+  /** A file (a PDF): the reply is returned as a Blob, not parsed as JSON. */
+  binary?: boolean;
 }
 
 async function toError(res: Response): Promise<ApiError> {
@@ -69,7 +71,7 @@ async function toError(res: Response): Promise<ApiError> {
 
 export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const method = (opts.method ?? "GET").toUpperCase();
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: opts.binary ? "application/pdf" : "application/json" };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (!SAFE.has(method)) {
     const csrf = readCookie(CSRF_COOKIE);
@@ -99,6 +101,7 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     throw err;
   }
   if (res.status === 204) return undefined as T;
+  if (opts.binary) return (await res.blob()) as T;
   try {
     return (await res.json()) as T;
   } catch {

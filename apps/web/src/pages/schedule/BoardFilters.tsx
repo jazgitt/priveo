@@ -5,6 +5,7 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
+import { Switch } from "@/ui/switch";
 
 import type { SchedulingCrew } from "./api";
 
@@ -17,6 +18,19 @@ export function FlagKey({ flag, onFlag }: { flag: string; onFlag: (flag: string)
     </button>
   );
   return <div className="flex items-center gap-1.5" role="group" aria-label="Flags">{chip("late", "Late")}{chip("manual", "By hand")}</div>;
+}
+
+/**
+ * "Show all" (P1-4). Off, the filters hide the cards and rows they do not keep. On, those cards and
+ * rows come back in disabled form, so the rest of the day is still in view.
+ */
+export function ShowAll({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <Switch size="sm" checked={checked} onCheckedChange={onChange} aria-label="Show all" />
+      Show all
+    </label>
+  );
 }
 
 /** Chooses which crew members' lanes and rows are shown; none chosen shows everyone. */

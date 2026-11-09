@@ -26,6 +26,8 @@ from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
+from app.scheduling import crew_roles as scheduling_roles
+from app.scheduling import home_zone
 from app.scheduling import service as scheduling
 from app.scheduling.models import (
     Job,
@@ -90,6 +92,8 @@ class CrewOut(BaseModel):
     # A Trainee's Member: the Member's crew ID and name (ADM-CRW-19).
     paired_member_id: str | None = None
     paired_member: str = ""
+    # The home zones in force, by name: a Trainee shows the paired Member's (P2-5).
+    home_zones: list[str] = []
     # From today on, soonest first (ADM-CRW-07).
     exceptions: list[CrewExceptionOut] = []
 
@@ -410,10 +414,18 @@ class CrewService:
                 .order_by(SchedulingCrewException.on_date)
             ):
                 exceptions.setdefault(ex.crew_id, []).append(_ex_out(ex))
+        zone_names = home_zone.zone_names_by_crew(
+            self._db, [sc.id for sc in sc_by_login.values()] + list(pair_ids))
         out = []
         for crew, login, society in rows:
             sc = sc_by_login.get(login.id)
             mate = mates.get(sc.paired_member_id) if sc and sc.paired_member_id else None
+            if sc is None:
+                zones = []
+            elif sc.role == "Trainee":
+                zones = zone_names.get(sc.paired_member_id, []) if sc.paired_member_id else []
+            else:
+                zones = zone_names.get(sc.id, [])
             out.append(
                 CrewOut(
                     id=str(crew.id),
@@ -431,6 +443,7 @@ class CrewService:
                     paired_member_id=str(mate.id) if mate else None,
                     paired_member=mate.name if mate else "",
                     exceptions=exceptions.get(sc.id, []) if sc else [],
+                    home_zones=zones,
                 )
             )
         return out
@@ -774,6 +787,8 @@ class CrewService:
                 mate_sc = self._member_to_pair(body.paired_member_id, crew.society_id)
             crew.role = body.role
             self._sync(crew, login)
+            # A permanent change ends the dated roles still to run (P2-4, Derived).
+            scheduling_roles.clear_open_periods(self._db, sc.id, today_ist())
             sc.paired_member_id = mate_sc.id if mate_sc is not None else None
             if body.role == "Trainee":
                 # A Trainee is never assigned directly (ADM-CRW-14).
