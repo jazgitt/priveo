@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 import app.models  # noqa: F401  (registers the tables)
 from app.customers.convert_logins import convert_customer_logins
 from app.platform.db import get_engine
+from app.platform.sync_guard import refuse_if_restored
 
 
 def main() -> None:
@@ -32,6 +33,7 @@ def main() -> None:
     if [a for a in args if a != "--apply"]:
         raise SystemExit(__doc__)
     engine = get_engine()
+    refuse_if_restored(engine, "convert_customer_logins")
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     with Session(engine) as db:
         report = convert_customer_logins(db, apply=apply)

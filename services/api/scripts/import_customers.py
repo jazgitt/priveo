@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 import app.models  # noqa: F401  (registers the tables)
 from app.customers.importer import import_workbook
 from app.platform.db import get_engine
+from app.platform.sync_guard import refuse_if_restored
 
 
 def run_payments_job() -> None:
@@ -38,7 +39,9 @@ def main() -> None:
     if len(args) != 1:
         raise SystemExit(__doc__)
     apply = "--apply" in sys.argv
-    with Session(get_engine()) as db:
+    engine = get_engine()
+    refuse_if_restored(engine, "import_customers")
+    with Session(engine) as db:
         report = import_workbook(db, args[0], apply=apply)
 
     print("SAVED" if apply else "TRIAL RUN: nothing was saved")

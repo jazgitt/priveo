@@ -169,7 +169,9 @@ def main() -> None:
     if sum(modes) != 1 or "--help" in args:
         raise SystemExit(__doc__)
     from app.platform.db import get_engine
+    from app.platform.sync_guard import refuse_if_restored
     engine = get_engine()
+    refuse_if_restored(engine, "rules_v2_site_data")
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     with Session(engine) as db:
         if revert:

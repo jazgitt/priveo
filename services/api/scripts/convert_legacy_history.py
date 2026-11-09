@@ -25,6 +25,7 @@ import app.models  # noqa: F401  (registers the tables)
 from app.customers.history_convert import LIVE, NOTHING, WRITTEN, admin_login_id, write_record
 from app.customers.models import LegacyServiceRecord, Vehicle
 from app.platform.db import get_engine
+from app.platform.sync_guard import refuse_if_restored
 
 
 def main() -> None:
@@ -32,6 +33,7 @@ def main() -> None:
     if any(a not in ("--apply",) for a in sys.argv[1:]):
         raise SystemExit(__doc__)
     engine = get_engine()
+    refuse_if_restored(engine, "convert_legacy_history")
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     results: Counter = Counter()
     with Session(engine) as db:

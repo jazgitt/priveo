@@ -205,6 +205,30 @@ Phases 2 to 7 are on the branch `integration/mobile-phases-2-7` and are not on `
 
 Run `tools\dev\portal-local.ps1` (Windows) or `tools/dev/run-local.sh` (Mac) from the repo root. It starts the API on `http://localhost:8000` and the portal dev server on `http://localhost:5173/portal/`, which reloads on every edit. Local runs use a **local PostgreSQL**, never the hosted test or production database. Settings come from `services/api/.env` (git-ignored, never printed): `DATABASE_URL` (the local PostgreSQL) and `TOKEN_SECRET` (any 32 or more characters; not the Vercel one). Nothing is pulled from Vercel, because it keeps `DATABASE_URL`, `TOKEN_SECRET` and the Blob token as sensitive variables that cannot be downloaded. A `DATABASE_URL` on another host is refused, so the shared test database is never written by accident; set `ALLOW_REMOTE_DB=1` to do it on purpose. The scripts do not run the seed; the deploy does that for the hosted databases, and `scripts/seed.py` does it locally.
 
+### Deployment smoke test
+
+`services/api/scripts/smoke_test.py` runs at the end of each API deploy. It checks health, a wrong password, and each role's entry data.
+
+- **Test** (`SMOKE_CREATE_USERS=true`): it does not use the demo logins. It creates one customer and one crew member through the admin API, with numbers in 9000099000 to 9000099999, checks their entry data, and removes both afterwards. The removal uses `DELETE /v1/admin/test-users/{login_id}`, which answers 404 outside the test environment and refuses any login outside that number range. It removes the login and every row that refers to it.
+- **Production** (`SMOKE_ROLES=admin`): it signs in as admin only and creates nothing.
+
+The smoke test needs a society, a plan and a vehicle catalogue entry on the database it runs against.
+
 ### Run the portal against a local copy of the dev database
 
 `tools\dev\portal-local.ps1 -Local` starts a local PostgreSQL (port 5433) with `tools\dev\local-db.ps1` and uses it. The schema is built from the migrations. If `services\api\.env` has `SOURCE_DATABASE_URL` (the hosted test database, for example its Supabase session pooler address), the rows are also copied across as a one-way snapshot; without it the database is empty and you run `scripts\seed.py`. The database lives in the git-ignored `.local-db` folder, and `tools\dev\local-db.ps1 -Refresh` rebuilds it (`-Stop` stops the server). In this mode email, push and S3 are switched off. The copy is made by `services/api/scripts/copy_dev_db.py` (schema from the migrations, rows streamed from the hosted database), because the hosted PostgreSQL can be newer than the local `pg_dump`.
+
+### Copy prod into test (on demand)
+
+`services/api/scripts/sync_prod_to_test.py` replaces every row of the test database with a copy of the prod database. It is run by hand, never by a deploy. Set `SOURCE_DATABASE_URL` (the prod database) and `TARGET_DATABASE_URL` (the test database) for that one command only, and never print them. Without `--apply` it only prints the plan: the table counts and the migration heads, and it refuses if the migrations differ. With `--apply` it asks you to type `SYNC TEST` (`--yes` skips the question; it is refused without a terminal unless `--yes` is given).
+
+What it does, in one transaction on test:
+
+- Copies every table as-is, except `media_uploads` and `crew_photos`, which are left empty. It clears the photo references (vehicle photo and RC, job outcome photo, complaint photo keys), so no row points at a photo that test does not have.
+- Keeps test's own admin password, so the test `ADMIN_PASSWORD` still signs in.
+- Empties `shared_test_data_manifest`, because the synthetic scenarios are removed with the rest.
+- Switches every scheduled job off on test (`cron_jobs`, 9-Nov-26). The Vercel cron calls still arrive, and each one answers `skipped` and changes nothing. `scripts/switch_off_test_crons.py` does the same on its own, and refuses unless `ENVIRONMENT=test`.
+- Adds a row to `db_sync_log`. While that table has a row, the seed and load scripts refuse to write to the database: `seed.py` skips quietly (the deploy still passes), and the others exit with an error. Nothing creates `db_sync_log` in prod.
+
+The copy is done by `copy_database` in `scripts/copy_dev_db.py`, the same code as the local copy. Test's demo logins and synthetic data are gone after a sync. Test has no seed to bring them back until the table is removed by hand.
+

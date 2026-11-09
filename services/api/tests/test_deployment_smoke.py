@@ -10,10 +10,11 @@ def test_deployment_smoke_against_api(client, monkeypatch, capsys):
 
     paths = []
 
-    def call(base, path, body=None, token=None):
+    def call(base, path, body=None, token=None, method=None):
         paths.append(path)
         headers = {"Authorization": f"Bearer {token}"} if token else {}
-        response = (client.post(path, json=body, headers=headers) if body is not None
+        response = (client.delete(path, headers=headers) if method == "DELETE"
+                    else client.post(path, json=body, headers=headers) if body is not None
                     else client.get(path, headers=headers))
         return response.status_code, response.json()
 
