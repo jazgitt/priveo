@@ -337,6 +337,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
     },
   });
   const onMove = (job: AdminJob, crewId: string | null, startMinute: number | null) => move.mutate({ job, crewId, startMinute });
+  // A refused drop (the card is already back) says why above the board; a frozen day offers the code there.
+  const onDropSettled = (e: unknown) => {
+    if (e instanceof ApiError && e.code === "schedule_frozen" && schedule) {
+      setProblem({ code: e.code, message: e.message, scheduleId: schedule.id });
+    } else {
+      setProblem(null);
+    }
+  };
 
   const freeze = useAppMutation<string>({
     event: EVENTS.scheduleFrozen,
@@ -442,10 +450,10 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                 ) : view === "cards" ? (
                   <CardBoard crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
                              type={focusType} flag={focusFlag} density={density} showAll={showAll} savingId={move.isPending ? move.variables?.job.id ?? null : null}
-                             onOpen={setOpen} onMove={onMove} />
+                             onOpen={setOpen} onMove={onMove} onDropSettled={onDropSettled} />
                 ) : (
                   <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density} showAll={showAll} boardKey={boardKey}
-                            now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
+                            now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} onDropSettled={onDropSettled} />
                 )}
               </>
             )}

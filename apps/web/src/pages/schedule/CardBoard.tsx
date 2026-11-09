@@ -296,6 +296,8 @@ export interface CardBoardProps {
   showAll?: boolean;
   onOpen: (job: AdminJob) => void;
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
+  /** Gets the error of a refused drop (a frozen day offers the code), or null once a drop is saved. */
+  onDropSettled?: (error: unknown) => void;
 }
 
 type GridProps = CardBoardProps & {
@@ -323,7 +325,7 @@ type GridProps = CardBoardProps & {
  * takes its time in its column.
  */
 export function CardBoard(props: CardBoardProps) {
-  const { crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false } = props;
+  const { crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, onDropSettled } = props;
   const [folded, toggleFold] = useFoldedLanes();
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [warned, setWarned] = useState<Map<string, string>>(() => new Map());
@@ -342,6 +344,7 @@ export function CardBoard(props: CardBoardProps) {
         setPicked(new Set());
         setWarned(new Map<string, string>(r.warnings.map((w) => [w.job_id, w.message] as [string, string])));
       }}
+      onSettled={onDropSettled}
     >
       <CardGrid {...props} folded={folded} toggleFold={toggleFold} picked={picked} setPicked={setPicked} warned={warned} />
     </DragEngineProvider>
