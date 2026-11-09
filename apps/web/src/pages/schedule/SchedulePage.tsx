@@ -32,7 +32,7 @@ import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
 import { RulesPanel } from "./rules/RulesPanel";
-import { CutoffRequests, DraftImprovements, PendingAddons } from "./ScheduleActions";
+import { CutoffRequests, DraftImprovements, JobCardButtons, PendingAddons } from "./ScheduleActions";
 import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
@@ -489,6 +489,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
               )}
               {schedule && (
                 <>
+                  <JobCardButtons scheduleId={schedule.id} date={date} jobs={dayJobs} />
                   {!boardOnly && <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>}
                   {schedule.status === "Draft" ? (
                     <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>

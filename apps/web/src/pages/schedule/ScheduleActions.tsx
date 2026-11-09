@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Download, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -14,11 +14,72 @@ import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 
 import { serviceCode } from "./Board";
-import { hhmm, useCutoffRequests, weekday, type Board, type CutoffRequest, type PendingAddon } from "./api";
+import { hhmm, jobCardsPdf, useCutoffRequests, weekday, type AdminJob, type Board, type CutoffRequest, type PendingAddon } from "./api";
 
 interface Suggestions { fingerprint: string; items: { job_id: string; crew_id: string; start_minute: number; date: string; service: string }[] }
 
 const dayText = (iso: string) => `${weekday(iso)} ${showDate(iso)}`;
+
+/**
+ * The crew members who have cards on a day, in the order the PDF lists them. Only crew
+ * work counts: a job with a crew member that is not skipped (the same jobs as the PDF).
+ */
+export function crewWithCards(jobs: AdminJob[], date: string): { id: string; name: string }[] {
+  const names = new Map<string, string>();
+  for (const j of jobs) {
+    if (j.date === date && j.crew_id && j.status !== "Skipped") names.set(j.crew_id, j.crew_name ?? "");
+  }
+  return [...names]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+}
+
+/** Saves a file the way a link to it would: an object URL and a click on a download link. */
+function saveFile(blob: Blob, name: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** A file name part from a crew name: "Ravi Kumar" is "Ravi-Kumar". */
+const slug = (text: string, fallback: string) => text.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || fallback;
+
+/**
+ * The two job card downloads on the Schedule page (P1-2): one PDF for all crew, or one
+ * PDF per crew member, one after another. Nothing shows when no crew has cards that day.
+ */
+export function JobCardButtons({ scheduleId, date, jobs }: { scheduleId: string; date: string; jobs: AdminJob[] }) {
+  const crews = crewWithCards(jobs, date);
+  const all = useAppMutation<void>({
+    mutationFn: async () => saveFile(await jobCardsPdf(scheduleId, date), `job-cards-${date}.pdf`),
+    pending: "Preparing the job cards…",
+    success: "Job cards downloaded.",
+  });
+  const perCrew = useAppMutation<void>({
+    mutationFn: async () => {
+      for (const crew of crews) {
+        saveFile(await jobCardsPdf(scheduleId, date, crew.id), `job-cards-${slug(crew.name, crew.id)}-${date}.pdf`);
+      }
+    },
+    pending: "Preparing one PDF per crew member…",
+    success: "Job cards downloaded, one PDF per crew member.",
+  });
+  if (crews.length === 0) return null;
+  const busy = all.isPending || perCrew.isPending;
+  return (
+    <>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => all.mutate()}>
+        <Download aria-hidden /> Job cards, all crew
+      </Button>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => perCrew.mutate()}>
+        <Download aria-hidden /> Job cards, one PDF per crew
+      </Button>
+    </>
+  );
+}
 
 /**
  * "More on other days" with a link to each of those days, so a tab that shows
