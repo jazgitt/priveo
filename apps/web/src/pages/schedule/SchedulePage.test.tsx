@@ -68,6 +68,8 @@ interface Opts {
   jobs?: ReturnType<typeof job>[];
   status?: string;
   moveReply?: () => Response;
+  /** The reply to a card drag, a group drag or a drop on Unscheduled (POST .../jobs/batch-move). */
+  batchReply?: (init?: RequestInit) => Promise<Response> | Response;
   freezeReply?: () => Response;
   unfreezeReply?: () => Response;
   boardReply?: () => Response;
@@ -125,6 +127,7 @@ function server(o: Opts = {}) {
           over_capacity: false },
       ]);
     }
+    if (url.endsWith("/batch-move")) return o.batchReply ? await o.batchReply(init) : json(200, { jobs: [], warnings: [] });
     if (url.endsWith("/move")) return o.moveReply ? o.moveReply() : json(200, job());
     if (url.endsWith("/freeze")) return o.freezeReply ? o.freezeReply() : json(200, board("Frozen").schedule);
     if (url.endsWith("/unfreeze")) {
@@ -150,13 +153,30 @@ async function openDay(date = "2026-11-08", extra = "") {
 const column = (id: string) => screen.findByTestId(`col-${id}`);
 const bodyOf = (col: HTMLElement) => col.querySelector<HTMLElement>(".sch-col-body")!;
 
-/** Drags a card onto a column body, at a pointer height (jsdom has no DragEvent). */
+/**
+ * Drags a card with the mouse, as the drag engine reads it: a press on the card, a move past
+ * its 5 px threshold, then a release over `target` at `clientY`. jsdom has no layout and no
+ * elementFromPoint, so the target is the element under the pointer, and the tests stub the
+ * rectangles they need.
+ */
 function dragTo(card: Element, target: Element, clientY = 0) {
-  fireEvent.dragStart(card, { dataTransfer: { setData: vi.fn() } });
-  const dropEvent = createEvent.drop(target);
-  Object.defineProperty(dropEvent, "clientY", { value: clientY });
-  fireEvent(target, dropEvent);
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  const pointer = (node: Element | Window, type: "pointerDown" | "pointerMove" | "pointerUp", y: number) => {
+    const ev = createEvent[type](node, {});
+    for (const [key, value] of Object.entries({ pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, clientX: 0, clientY: y })) {
+      Object.defineProperty(ev, key, { value });
+    }
+    fireEvent(node, ev);
+  };
+  pointer(card, "pointerDown", 0);
+  pointer(window, "pointerMove", 20);
+  pointer(window, "pointerMove", clientY);
+  pointer(window, "pointerUp", clientY);
 }
+
+/** The batch-move calls: a card drag, a multi-select drag and a drop on Unscheduled all send one. */
+const batchCalls = () => callsTo("/v1/admin/scheduling/jobs/batch-move");
+const batchBody = (i: number) => JSON.parse(String(batchCalls()[i][1].body));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
@@ -170,6 +190,8 @@ beforeEach(() => {
 afterEach(() => {
   fetchMock.mockReset();
   vi.unstubAllGlobals();
+  // Set by dragTo for one drag; jsdom has no such function of its own.
+  delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
 });
 
 describe("the card board (ADM-SCH-33)", () => {
@@ -204,65 +226,77 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(within(asha).getByLabelText("Free 09:20-12:00")).toHaveTextContent("2 h 40 min");
   });
 
-  it("moves a card to the first free time of another crew member", async () => {
+  it("moves a card to the first free time of another crew member, in one batch move", async () => {
     server();
     await openDay();
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     dragTo(card, bodyOf(await column("c2")));
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    const [path, init] = callsTo("/move")[0];
-    expect(path).toBe("/v1/admin/scheduling/jobs/j1/move");
-    expect(JSON.parse(init.body)).toEqual({ crew_id: "c2", start_minute: 480 });
-    expect(await screen.findByText("KA01AB1234 moved to Ravi at 08:00.")).toBeInTheDocument();
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0)).toEqual({ moves: [{ job_id: "j1", crew_id: "c2", start_minute: 480 }], override: false });
+    expect(callsTo("/move")).toHaveLength(0);
+    expect(await screen.findByText("Moved.")).toBeInTheDocument();
   });
 
-  it("SCHS-22: a drop that breaks a rule shows what is breached and moves the job only after a confirm", async () => {
-    let calls = 0;
-    server({ moveReply: () => (++calls === 1
-      ? json(409, { code: "placement_warning", message: "This placement breaks a rule. Confirm to place it anyway.",
-          fields: { outside_hours: "That time is outside the crew member's hours." } })
-      : json(200, job())) });
+  it("shows a crew-hours warning in red and keeps the move", async () => {
+    server({ batchReply: () => json(200, { jobs: [], warnings: [
+      { job_id: "j1", code: "crew_hours", message: "That time is outside the crew member's hours." }] }) });
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("That time is outside the crew member's hours.");
-    expect(callsTo("/move")).toHaveLength(1);
-    await userEvent.click(within(dialog).getByRole("button", { name: "Place anyway" }));
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(2));
-    expect(JSON.parse(callsTo("/move")[1][1].body)).toEqual({ crew_id: "c2", start_minute: 480, override: true });
-  });
-
-  it("SCHS-22: cancelling the warning leaves the job where it was", async () => {
-    server({ moveReply: () => json(409, { code: "placement_warning", message: "Confirm.", fields: { outside_hours: "Outside." } }) });
-    await openDay();
-    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
-    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
-    expect(callsTo("/move")).toHaveLength(1);
-    expect(await within(await column("c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    // No confirmation: the warning is shown and the card stays in Ravi's column (decision 5).
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("board-warnings")).toHaveClass("text-destructive");
+    expect(screen.getByTestId("board-warnings")).toHaveTextContent("That time is outside the crew member's hours.");
   });
 
   it("shows the move at once, before the server answers, and puts the card back if it is refused", async () => {
     let answer: (r: Response) => void = () => {};
-    server({ moveReply: () => new Promise<Response>((res) => { answer = res; }) as unknown as Response });
+    server({ batchReply: () => new Promise<Response>((res) => { answer = res; }) });
     await openDay();
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     dragTo(card, bodyOf(await column("c2")));
-    // The server has not answered, yet the card is already in Ravi's column and shows it is saving.
-    const moved = await within(await column("c2")).findByRole("button", { name: /KA01AB1234/ });
-    expect(moved).toHaveAttribute("aria-busy", "true");
+    // The server has not answered, yet the card is already in Ravi's column.
+    expect(await within(await column("c2")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
     expect(within(await column("c1")).queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
-    answer(json(409, err("conflict", "That time is taken.")));
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    answer(json(409, err("overlap", "KA09ZZ0009 is in the way at 09:00-09:20.")));
     expect(await within(await column("c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
     expect(within(await column("c2")).queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+    expect(await screen.findByText(/KA09ZZ0009 is in the way/)).toBeInTheDocument();
   });
 
-  it("offers Undo after a move, which moves the card back", async () => {
-    server();
+  it("moves a picked group together, each card keeping its time from the dragged card (P0-8)", async () => {
+    server({ jobs: [
+      job(),
+      job({ id: "j2", registration: "KA02ZZ0001", start_minute: 600, start_time: "10:00", end_time: "10:20" }),
+    ] });
     await openDay();
-    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
-    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(2));
-    expect(JSON.parse(callsTo("/move")[1][1].body)).toEqual({ crew_id: "c1", start_minute: 540 });
+    const asha = await column("c1");
+    await userEvent.click(within(within(asha).getByRole("button", { name: /KA01AB1234/ })).getByRole("checkbox"));
+    await userEvent.click(within(within(asha).getByRole("button", { name: /KA02ZZ0001/ })).getByRole("checkbox"));
+    dragTo(within(asha).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    // Ravi's lane is empty: the dragged card goes to 08:00, and the card 60 minutes later on Asha's day goes 60 minutes after it.
+    expect(batchBody(0)).toEqual({ moves: [
+      { job_id: "j1", crew_id: "c2", start_minute: 480 },
+      { job_id: "j2", crew_id: "c2", start_minute: 540 },
+    ], override: false });
+  });
+
+  it("refuses a picked group that has a card with no time yet, and says why", async () => {
+    server({ jobs: [
+      job(),
+      job({ id: "j3", registration: "KA03XX0002", crew_id: null, crew_name: null, start_minute: null, start_time: null,
+            end_time: null, reason: "No crew member is free." }),
+    ] });
+    await openDay();
+    const asha = await column("c1");
+    await userEvent.click(within(within(asha).getByRole("button", { name: /KA01AB1234/ })).getByRole("checkbox"));
+    const unscheduled = await column("unscheduled");
+    await userEvent.click(within(within(unscheduled).getByRole("button", { name: /KA03XX0002/ })).getByRole("checkbox"));
+    dragTo(within(asha).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
+    expect(await screen.findByText("Cards with no time yet cannot be moved as a group. Take them out of the selection first.")).toBeInTheDocument();
+    expect(batchCalls()).toHaveLength(0);
   });
 
   it("moves a placed card 5 minutes with Alt and the arrow keys, only into free time", async () => {
@@ -330,8 +364,8 @@ describe("the card board (ADM-SCH-33)", () => {
     const below = within(ravi).getByRole("button", { name: /KA02ZZ0001/ });
     below.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(ravi), 100);
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 620 });
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0).moves).toEqual([{ job_id: "j1", crew_id: "c2", start_minute: 620 }]);
   });
 
   describe("moving a card within its own crew lane (ADM-SCH-33)", () => {
@@ -342,35 +376,45 @@ describe("the card board (ADM-SCH-33)", () => {
       job({ id: "j2", registration: "KA02ZZ0001", start_minute: 620, start_time: "10:20", end_time: "10:40" }),
       job({ id: "j3", registration: "KA03ZZ0001", start_minute: 660, start_time: "11:00", end_time: "11:20" }),
     ] });
-    const moved = () => JSON.parse(callsTo("/move")[0][1].body);
+    const moved = () => batchBody(0).moves;
 
-    it("drops a card between two cards of its lane", async () => {
+    // Each lane move is one batch: the dragged card, then every card it pushes (all marked By hand on the server).
+    it("drops a card between two cards of its lane, and the card below it moves down (P0-5)", async () => {
       lane();
       await openDay();
       const body = bodyOf(await column("c1"));
       within(body).getByRole("button", { name: /KA02ZZ0001/ }).getBoundingClientRect = rect(0, 40);
       within(body).getByRole("button", { name: /KA03ZZ0001/ }).getBoundingClientRect = rect(100, 40);
       dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, 60);
-      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-      expect(moved()).toEqual({ crew_id: "c1", start_minute: 640 });
+      await waitFor(() => expect(batchCalls()).toHaveLength(1));
+      // 09:00 goes after the 10:20 card, which moves up to 10:00 to close the gap; the 11:00 card stays.
+      expect(moved()).toEqual([
+        { job_id: "j1", crew_id: "c1", start_minute: 620 },
+        { job_id: "j2", crew_id: "c1", start_minute: 600 },
+      ]);
     });
 
-    it("drops a card above the first card of its lane", async () => {
+    it("drops a card above the first card of its lane, and the cards below stay where they are", async () => {
       lane();
       await openDay();
       const body = bodyOf(await column("c1"));
-      dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, -1);
-      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-      expect(moved()).toEqual({ crew_id: "c1", start_minute: 480 });
+      // The 11:00 card goes to the top of the lane, which starts at 08:00.
+      dragTo(within(body).getByRole("button", { name: /KA03ZZ0001/ }), body, -1);
+      await waitFor(() => expect(batchCalls()).toHaveLength(1));
+      expect(moved()).toEqual([{ job_id: "j3", crew_id: "c1", start_minute: 480 }]);
     });
 
-    it("drops a card below the last card of its lane", async () => {
+    it("drops a card below the last card of its lane, and the cards it passes move up", async () => {
       lane();
       await openDay();
       const body = bodyOf(await column("c1"));
       dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), body, 500);
-      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-      expect(moved()).toEqual({ crew_id: "c1", start_minute: 680 });
+      await waitFor(() => expect(batchCalls()).toHaveLength(1));
+      expect(moved()).toEqual([
+        { job_id: "j1", crew_id: "c1", start_minute: 660 },
+        { job_id: "j2", crew_id: "c1", start_minute: 600 },
+        { job_id: "j3", crew_id: "c1", start_minute: 640 },
+      ]);
     });
 
     it("drops a card into a free slot of its own lane at the pointer's 5 minutes", async () => {
@@ -380,8 +424,8 @@ describe("the card board (ADM-SCH-33)", () => {
       const slot = within(body).getByLabelText("Free 11:20-12:00");
       slot.getBoundingClientRect = rect(0, 100);
       dragTo(within(body).getByRole("button", { name: /KA01AB1234/ }), slot, 50);
-      await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-      expect(moved()).toEqual({ crew_id: "c1", start_minute: 690 });
+      await waitFor(() => expect(batchCalls()).toHaveLength(1));
+      expect(moved()).toEqual([{ job_id: "j1", crew_id: "c1", start_minute: 690 }]);
     });
   });
 
@@ -455,28 +499,48 @@ describe("the card board (ADM-SCH-33)", () => {
     slot.getBoundingClientRect = () => ({ top: 0, height: 100, bottom: 100, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
     // Halfway down the 240 minute slot: 08:00 + half of the 220 minutes a 20 minute job can start in.
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), slot, 50);
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 590 });
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0).moves).toEqual([{ job_id: "j1", crew_id: "c2", start_minute: 590 }]);
   });
 
-  it("refuses a free slot too short for the card", async () => {
+  it("a card dropped on a free slot too short for it is not refused: the card below it moves down (P0-5)", async () => {
     server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", crew_name: "Ravi",
                                  start_minute: 490, start_time: "08:10", end_time: "08:30" })] });
     await openDay();
-    const slot = within(await column("c2")).getByLabelText("Free 08:00-08:10");
-    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), slot);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Only 10 min is free there; KA01AB1234 needs 20 min.");
-    expect(callsTo("/move")).toHaveLength(0);
+    const ravi = await column("c2");
+    const boxAt = (top: number, height: number) => () => ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) });
+    const slot = within(ravi).getByLabelText("Free 08:00-08:10");
+    slot.getBoundingClientRect = boxAt(0, 10);
+    within(ravi).getByRole("button", { name: /KA02ZZ0001/ }).getBoundingClientRect = boxAt(10, 20);
+    dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), slot, 5);
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0).moves).toEqual([
+      { job_id: "j1", crew_id: "c2", start_minute: 480 },
+      { job_id: "j2", crew_id: "c2", start_minute: 500 },
+    ]);
   });
 
-  it("takes a card off its crew member when it is dropped on Unscheduled, after a confirmation", async () => {
+  it("takes a card off its crew member when it is dropped on Unscheduled, with no confirmation (P0-7)", async () => {
     server();
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("unscheduled")));
-    expect(callsTo("/move")).toHaveLength(0);
-    await confirmWith("Take off crew member");
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: null, start_minute: null });
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0)).toEqual({ moves: [{ job_id: "j1", crew_id: null, start_minute: null }], override: false });
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("places a card dragged out of Unscheduled into a crew lane at the drop, with no confirmation (P0-7)", async () => {
+    const unplaced = job({ id: "j3", registration: "KA03XX0002", crew_id: null, crew_name: null, start_minute: null,
+                           start_time: null, end_time: null, reason: "No crew member is free." });
+    server({ jobs: [job(), unplaced] });
+    await openDay();
+    const body = bodyOf(await column("c1"));
+    // Asha's only card sits at 09:00-09:20; the drop is below it, so the card goes after it.
+    within(body).getByRole("button", { name: /KA01AB1234/ }).getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    dragTo(within(await column("unscheduled")).getByRole("button", { name: /KA03XX0002/ }), body, 60);
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0).moves).toEqual([{ job_id: "j3", crew_id: "c1", start_minute: 560 }]);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("moves and takes a job off from its dialog", async () => {
@@ -681,8 +745,8 @@ describe("lanes: fold, hide off crew, pan (ADM-SCH-33)", () => {
     expect(JSON.parse(localStorage.getItem("priveo.schedule.folded-lanes")!)).toEqual(["c2"]);
     // A card dropped on the strip goes to Ravi's first free time.
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), strip);
-    await waitFor(() => expect(callsTo("/move")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/move")[0][1].body)).toEqual({ crew_id: "c2", start_minute: 480 });
+    await waitFor(() => expect(batchCalls()).toHaveLength(1));
+    expect(batchBody(0).moves).toEqual([{ job_id: "j1", crew_id: "c2", start_minute: 480 }]);
     await userEvent.click(screen.getByRole("button", { name: "Show Ravi's lane" }));
     expect(screen.getByRole("region", { name: "Ravi" })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem("priveo.schedule.folded-lanes")!)).toEqual([]);
@@ -1097,8 +1161,8 @@ describe("schedule tabs and unavailable crew time", () => {
     expect(cols.map((c) => c.getAttribute("aria-label"))).toEqual(["Unscheduled (0)", "Asha", "Ravi"]);
 
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(ravi));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Ravi cannot take work this day. Sick on this date.");
-    expect(callsTo("/move")).toHaveLength(0);
+    expect(await screen.findByText("Ravi cannot take work this day. Sick on this date.")).toBeInTheDocument();
+    expect(batchCalls()).toHaveLength(0);
   });
 
   it("greys out the time a crew member cannot work on the timeline", async () => {
@@ -1329,11 +1393,13 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     expect(within(dialog).getByText("Tuesday")).toBeInTheDocument();
   });
 
-  it("refuses a drop that overlaps another job, naming the job in the way", async () => {
-    server({ moveReply: () => json(409, err("overlap", "KA02ZZ0001 is in the way at 10:00-10:20. Please try another time.")) });
+  it("refuses a drop that overlaps another job, naming the job in the way, and puts the card back", async () => {
+    server({ batchReply: () => json(409, err("overlap", "KA02ZZ0001 is in the way at 10:00-10:20. Please try another time.")) });
     await openDay();
     dragTo(within(await column("c1")).getByRole("button", { name: /KA01AB1234/ }), bodyOf(await column("c2")));
     expect(await screen.findByText(/KA02ZZ0001 is in the way/)).toBeInTheDocument();
+    expect(await within(await column("c1")).findByRole("button", { name: /KA01AB1234/ })).toBeInTheDocument();
+    expect(within(await column("c2")).queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
   });
 
   it("gives a detailed card taken off its crew member its reason as line four", async () => {
