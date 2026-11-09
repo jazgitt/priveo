@@ -33,6 +33,7 @@ import app.models  # noqa: F401  (registers the tables)
 from app.customers.models import Customer, Subscription, Vehicle
 from app.platform import clock
 from app.platform.db import get_engine
+from app.platform.sync_guard import refuse_if_restored
 from app.scheduling import entitlements
 from app.scheduling.models import InteriorEntitlement
 
@@ -100,6 +101,7 @@ def main() -> None:
         else:
             raise SystemExit(__doc__)
     engine = get_engine()
+    refuse_if_restored(engine, "rules_v2_backfill")
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     with Session(engine) as db:
         if since is not None:

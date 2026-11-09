@@ -16,6 +16,7 @@ from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.config import get_settings
 from app.platform.db import get_engine, utcnow
+from app.platform.sync_guard import refuse_if_restored
 from scripts.test_data import _seed_scenario, catalogue, identity, scenario_mobile
 
 
@@ -116,6 +117,7 @@ def main():
     if settings.environment not in ("dev", "test"):
         parser.error("Hosted synthetic seeding is allowed only for ENVIRONMENT=dev or test.")
     engine = get_engine()
+    refuse_if_restored(engine, "seed_shared_test_data")
     if engine.dialect.name != "postgresql":
         parser.error("Use the local fixture tool for SQLite; hosted seeding needs PostgreSQL.")
     with engine.connect() as connection:

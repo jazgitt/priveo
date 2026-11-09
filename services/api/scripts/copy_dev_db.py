@@ -6,6 +6,9 @@ Used by tools/dev/local-db.ps1 to make a local copy of the shared dev database.
 Reads from the source only. It does not need pg_dump, so the server versions may
 differ. The target must be empty and already hold the schema (alembic upgrade
 head); both databases must be at the same migration. Prints counts, never data.
+
+`copy_database` is the part `scripts/sync_prod_to_test.py` reuses. It does not
+commit: the caller commits, so the copy can be one step of a bigger change.
 """
 import os
 import sys
@@ -36,11 +39,11 @@ def columns(conn: psycopg.Connection, table: str) -> list[str]:
     return [r[0] for r in rows]
 
 
-def main() -> int:
-    source = psycopg.connect(libpq(os.environ["SOURCE_DATABASE_URL"]))
-    target = psycopg.connect(libpq(os.environ["TARGET_DATABASE_URL"]), autocommit=False)
-    source.read_only = True
-
+def copy_database(source: psycopg.Connection, target: psycopg.Connection,
+                  skip_rows: frozenset[str] = frozenset()) -> int:
+    """Empties every table the two databases share, then copies the rows of each
+    except the tables in `skip_rows`, which are left empty. Returns 0 on success,
+    1 when the databases cannot be copied (printed). Does not commit or roll back."""
     a = source.execute("select version_num from alembic_version").fetchone()
     b = target.execute("select version_num from alembic_version").fetchone()
     if a != b:
@@ -58,20 +61,23 @@ def main() -> int:
     # cascade would wipe the child tables already copied.
     target.execute("truncate table " + ", ".join(f'"{t}"' for t in names))
     total = 0
+    copied = 0
     for table in names:
+        if table in skip_rows:
+            print(f"{table}: left empty")
+            continue
         cols = columns(target, table)
         if cols != columns(source, table):
             print(f"Columns of {table} differ between the databases.")
-            target.rollback()
             return 1
         quoted = ", ".join(f'"{c}"' for c in cols)
-        count = 0
         with source.cursor().copy(f'copy "{table}" ({quoted}) to stdout') as out, \
                 target.cursor().copy(f'copy "{table}" ({quoted}) from stdin') as inn:
             for chunk in out:
                 inn.write(chunk)
         count = target.execute(f'select count(*) from "{table}"').fetchone()[0]
         total += count
+        copied += 1
         print(f"{table}: {count}")
     # Serial columns, if any, continue after the copied rows.
     for table in names:
@@ -84,16 +90,28 @@ def main() -> int:
             if seq:
                 target.execute(
                     f'select setval(%s, coalesce((select max("{col}") from "{table}"), 1))', (seq,))
-    # Every table must hold what the source holds, whatever the order was.
+    # Every copied table must hold what the source holds, whatever the order was.
     for table in names:
+        if table in skip_rows:
+            continue
         want = source.execute(f'select count(*) from "{table}"').fetchone()[0]
         got = target.execute(f'select count(*) from "{table}"').fetchone()[0]
         if want != got:
             print(f"{table}: source {want}, copy {got}")
-            target.rollback()
             return 1
+    print(f"Copied {copied} tables, {total} rows.")
+    return 0
+
+
+def main() -> int:
+    source = psycopg.connect(libpq(os.environ["SOURCE_DATABASE_URL"]))
+    target = psycopg.connect(libpq(os.environ["TARGET_DATABASE_URL"]), autocommit=False)
+    source.read_only = True
+    code = copy_database(source, target)
+    if code:
+        target.rollback()
+        return code
     target.commit()
-    print(f"Copied {len(names)} tables, {total} rows.")
     return 0
 
 

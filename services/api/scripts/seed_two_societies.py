@@ -86,6 +86,7 @@ from app.identity.models import Login
 from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.db import Base, make_engine
+from app.platform.sync_guard import refuse_if_restored
 from app.scheduling import service as scheduling
 from app.scheduling.models import (
     Job,
@@ -721,6 +722,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         check_target(args.database_url)
         engine = make_engine(args.database_url)
+        refuse_if_restored(engine, "seed_two_societies")
         if args.command == "init-marker":
             result = init_marker(engine, confirmed=args.confirm_local_dev_database)
         elif args.command == "add":

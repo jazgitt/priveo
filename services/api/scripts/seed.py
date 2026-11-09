@@ -15,10 +15,18 @@ from app.directory.seed import seed_defaults
 from app.identity.seed import seed_logins
 from app.platform.config import get_settings
 from app.platform.db import get_engine
+from app.platform.sync_guard import restored_from_prod
 
 
 def main() -> None:
-    with Session(get_engine()) as db:
+    engine = get_engine()
+    # A database copied from prod is never seeded: the deploy runs this script on
+    # every release, and it must not change the copied data. Exit 0 so the deploy passes.
+    when = restored_from_prod(engine)
+    if when:
+        print(f"seed skipped: this database was copied from prod at {when}.")
+        return
+    with Session(engine) as db:
         for login_id, outcome in seed_logins(db, get_settings()).items():
             print(f"{login_id}: {outcome}")
         # The sample plan, add-ons and vehicle catalogue are never put on prod.

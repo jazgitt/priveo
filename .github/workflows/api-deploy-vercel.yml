@@ -137,10 +137,13 @@ jobs:
           echo "::error::Portal did not become ready within three minutes."
           exit 1
 
-      # Production has no demo logins, so its smoke test signs in as admin only.
+      # Production has no demo logins, so its smoke test signs in as admin only. The test deployment
+      # creates its own customer and crew (SMOKE_CREATE_USERS) instead of using the demo logins.
       - name: Smoke test
         env:
           SMOKE_ROLES: ${{ inputs.demo && 'customer,crew,admin' || 'admin' }}
+          # The test deployment makes its own customer and crew for the run and removes them after (9-Nov-26).
+          SMOKE_CREATE_USERS: ${{ inputs.demo && 'true' || 'false' }}
           SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
           SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
           SMOKE_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}

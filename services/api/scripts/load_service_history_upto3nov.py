@@ -40,6 +40,7 @@ from sqlalchemy.orm import Session
 import app.models  # noqa: F401  (registers the tables)
 from app.customers.history_load import LAST_DAY, load_service_history, read_fills
 from app.platform.db import get_engine
+from app.platform.sync_guard import refuse_if_restored
 
 DEFAULT_REPORT = Path(__file__).resolve().parents[3] / "tmp" / "service_history_not_loaded.csv"
 
@@ -87,6 +88,7 @@ def main() -> None:
     if len(args) != 1:
         raise SystemExit(__doc__)
     engine = get_engine()
+    refuse_if_restored(engine, "load_service_history_upto3nov")
     print(f"Database: {engine.dialect.name}, host {engine.url.host or 'local file'}")
     with Session(engine) as db:
         try:
