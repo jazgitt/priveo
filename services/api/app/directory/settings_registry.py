@@ -84,7 +84,8 @@ DEFINITIONS: tuple[SettingDef, ...] = (
 # The objectives the solver orders (SCHS-33), highest first in the default order
 # (Derived from SCHR-HIER-04 and SCHR-HIER-05). Each has a `scheduler.weight_<name>`.
 OBJECTIVE_NAMES: tuple[str, ...] = (
-    "placed", "zone", "break", "fifo", "late", "early_capacity", "early",
+    "placed", "protected_late", "zone", "break", "fifo", "cutoff_order", "late",
+    "early_capacity", "early",
 )
 DEFAULT_OBJECTIVE_ORDER = ",".join(OBJECTIVE_NAMES)
 RULE_DEFINITIONS: tuple[SettingDef, ...] = (
@@ -105,8 +106,14 @@ RULE_DEFINITIONS: tuple[SettingDef, ...] = (
     SettingDef("scheduler.objective_order", "text",
                "Order of the planning objectives, highest first (comma separated)",
                "scheduler", DEFAULT_OBJECTIVE_ORDER, max_length=200),
+    SettingDef("scheduler.weight_protected_late", "int",
+               "Weight of each protected job (Exterior) placed after its cutoff",
+               "scheduler", 20_000_000_000, minimum=0, maximum=1_000_000_000_000),
     SettingDef("scheduler.weight_zone", "int", "Weight of the home-zone objective",
                "scheduler", 1_000_000, minimum=0, maximum=1_000_000_000_000),
+    SettingDef("scheduler.weight_cutoff_order", "int",
+               "Weight of each pair of jobs in cutoff order (after the fifo week order)", "scheduler", 1_000,
+               minimum=0, maximum=1_000_000_000_000),
     SettingDef("scheduler.weight_break", "int", "Weight of each cleaner break kept",
                "scheduler", 1_000_000, minimum=0, maximum=1_000_000_000_000),
     SettingDef("scheduler.weight_fifo", "int", "Weight of the oldest-first Interior objective",

@@ -59,7 +59,7 @@ def test_SCHR_OUT_03_a_cutoff_that_cannot_be_met_is_also_listed_as_infeasible(ap
     sc.run(THURSDAY)
     r = get(api, world, THURSDAY)
     assert [x["code"] for x in kinds(r)["infeasible"]] == ["customer_cutoff"]
-    assert [x["code"] for x in kinds(r)["unassigned_exteriors"]] == ["customer_cutoff"]
+    assert kinds(r)["unassigned_exteriors"] == []  # placed late, not left out (SCHR-CUT-09)
 
 
 def test_SCHR_OUT_03_unplanned_interiors_cross_zone_and_stored_findings_are_listed(api, world):

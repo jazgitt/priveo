@@ -30,10 +30,11 @@ def test_SCHR_WKE_the_weekday_switch_off_stays_soft():
     assert not is_strict_day(Ctx(hard=False), THURSDAY)
 
 
-def test_SCHR_WKE_a_weekend_job_that_misses_the_cutoff_is_unassigned_when_not_flexible(world, site_cfg):
+def test_SCHR_WKE_a_weekend_exterior_that_misses_the_cutoff_is_placed_late_when_not_flexible(world, site_cfg):
+    # A strict weekend day is strict for the Exterior too, but an Exterior is
+    # protected (SCHR-CUT-09): the second car is placed late, not left out.
     from datetime import time
 
-    from app.scheduling.codes import ReasonCode
     from tests.scheduling.builders import Scenario
     site_cfg({"site.weekend_cutoff_flexible": False})
     sc = Scenario(world)
@@ -41,5 +42,5 @@ def test_SCHR_WKE_a_weekend_job_that_misses_the_cutoff_is_unassigned_when_not_fl
     sc.cleaner(shift=(480, 600))
     sc.cars(2, cutoff=time(8, 30))
     res = sc.run(SATURDAY)
-    assert len(res.placed) == 1 and not any(p.late for p in res.placed)
-    assert res.unassigned[0].note == ReasonCode.CUSTOMER_CUTOFF.text
+    assert len(res.placed) == 2 and [p.late for p in res.placed].count(True) == 1
+    assert not res.unassigned

@@ -79,16 +79,18 @@ def test_SCHR_HARD_13_a_day_with_no_cleaner_is_reported_too(world):
     assert res.unassigned[0].note == ReasonCode.NO_CLEANER.text
 
 
-def test_SCHR_HARD_09_a_car_that_cannot_be_covered_is_named_in_the_findings(world, site_cfg):
+def test_SCHR_HARD_09_a_car_that_cannot_meet_its_cutoff_is_covered_late_and_flagged(world, site_cfg):
+    # An Exterior is protected (SCHR-CUT-09): it cannot end by 08:15 from a 08:00
+    # start, so it is placed late, the car is covered and no shortfall is named.
     sc = Scenario(world)
     sc.slots()
     sc.cleaner(shift=(480, 600))
-    car = sc.car(cutoff=time(8, 15))  # cannot end by 08:15 from a 08:00 start
+    car = sc.car(cutoff=time(8, 15))
     res = sc.run(THURSDAY)
-    assert res.unassigned and res.unassigned[0].vehicle_id == car.id
-    assert res.reasons() == [ReasonCode.CUSTOMER_CUTOFF.value]
+    assert [(p.vehicle_id, p.late) for p in res.placed] == [(car.id, True)]
+    assert not res.unassigned and res.reasons() == []
     finding = world.db.scalar(select(ScheduleFinding).where(ScheduleFinding.code == "customer_cutoff"))
-    assert finding is not None and finding.detail == ReasonCode.CUSTOMER_CUTOFF.text
+    assert finding is None
 
 
 def test_SCHR_EXT_01_a_job_placed_on_a_later_run_loses_its_code(world):

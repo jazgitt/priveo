@@ -114,6 +114,11 @@ def exception_report(
             out["cross_zone"].append(_row(r, ReasonCode.CROSS_ZONE.value, cross[r["id"]]))
         if r["late"] and r["date"].weekday() in weekend:
             out["weekend_lateness"].append(_row(r, "weekend_late", f"Ends after {r['finish_by']}."))
+        elif r["late"] and r["service"] == EXTERIOR:
+            # A protected Exterior placed after its weekday cutoff (SCHR-CUT-09): the car is
+            # covered, but the cutoff is missed, so it is listed with the cutoff infeasibility.
+            out["infeasible"].append(_row(r, ReasonCode.CUSTOMER_CUTOFF.value,
+                                          f"Placed late: ends after {r['finish_by']}."))
 
     findings = db.execute(
         select(ScheduleFinding, Schedule).join(Schedule, Schedule.id == ScheduleFinding.schedule_id)

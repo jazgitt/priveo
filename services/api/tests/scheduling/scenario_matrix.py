@@ -24,7 +24,7 @@ SCENARIO_RULES: dict[str, tuple[str, ...]] = {
     "trainee_follows_member": ("SCHR-ZONE-09", "SCHR-HARD-01"),
     "interior_oldest_week_first": ("SCHR-INT-12", "SCHR-INT-02"),
     "weekend_cutoff_is_soft": ("SCHR-WKE-01", "SCHR-WKE-03", "SCHR-WKE-06", "SCHR-PAR-10"),
-    "weekday_cutoff_is_hard": ("SCHR-CUT-01", "SCHR-CUT-04", "SCHR-HARD-08"),
+    "weekday_cutoff_is_hard": ("SCHR-CUT-09", "SCHR-HARD-08"),
     "sick_leave_and_late_start": ("SCHR-HARD-01", "SCHR-HARD-02"),
     "hand_placement_past_cutoff": ("SCHR-HIER-08", "SCHR-CUT-05"),
     "deferred_interior_returns_to_pending": ("SCHR-DEF-03", "SCHR-DEF-01"),

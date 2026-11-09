@@ -107,19 +107,20 @@ def test_schr_wke_01_saturday_cutoff_is_late_not_lost(world):
     placed = [p for p in sat.placed_on(s.SATURDAY, car=b["car"])]
     assert len(placed) == 1 and placed[0].late
     assert sat.summary.late >= 1  # the lateness is counted in the run summary (SCHR-WKE-06)
+    # Monday is a strict day: the Exterior is placed late, not left out (SCHR-CUT-09).
     mon = sc.run(s.MONDAY, 1)
-    assert mon.placed_on(s.MONDAY, car=b["car"]) == []
-    unplaced = [u for u in mon.unassigned if u.day == s.MONDAY and u.vehicle_id == b["car"].id]
-    assert [u.reason_code for u in unplaced] == [ReasonCode.CUSTOMER_CUTOFF]
+    monday = mon.placed_on(s.MONDAY, car=b["car"])
+    assert len(monday) == 1 and monday[0].late
+    assert not [u for u in mon.unassigned if u.vehicle_id == b["car"].id]
 
 
-def test_schr_cut_01_weekday_cutoff_is_a_hard_end(world):
+def test_schr_cut_09_a_weekday_exterior_that_misses_its_cutoff_is_placed_late_and_flagged(world):
     sc = _sc(world)
     b = s.weekday_cutoff_is_hard(sc)
     result = sc.run(*b["run"])
-    assert result.placed_on(s.MONDAY, car=b["car"]) == []
-    unplaced = [u for u in result.unassigned if u.vehicle_id == b["car"].id]
-    assert [u.reason_code for u in unplaced] == [ReasonCode.CUSTOMER_CUTOFF]
+    placed = result.placed_on(s.MONDAY, car=b["car"])
+    assert len(placed) == 1 and placed[0].late
+    assert not [u for u in result.unassigned if u.vehicle_id == b["car"].id]
 
 
 def test_schr_hard_01_sick_leave_and_late_start_limit_the_crew(world):
