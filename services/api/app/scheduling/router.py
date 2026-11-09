@@ -2,6 +2,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,7 +12,7 @@ from app.platform.clock import now_ist, today_ist
 from app.platform.db import get_db
 from app.platform.deps import require_role
 from app.platform.errors import ApiError
-from app.scheduling import queue, service
+from app.scheduling import batch_move, queue, service
 from app.scheduling.models import Job, Schedule
 from app.scheduling.post_solve import reasons
 from app.scheduling.schemas import (
@@ -156,6 +157,22 @@ def move_job(
                            override=body.override)
     rows = service.job_rows(db, Job.id == job.id)
     return rows[0]
+
+
+@admin.post("/jobs/batch-move", response_model=batch_move.BatchMoveOut)
+def batch_move_jobs(
+    body: batch_move.BatchMoveRequest,
+    user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    """Applies several moves in one transaction (scheduler board, P0-5, P0-7, P0-8).
+    Any overlap refuses the whole batch: 409 with body {"detail": {"code": "overlap",
+    "job_ids": [...]}}. Crew-hours and service-hours crossings are returned as warnings."""
+    try:
+        return batch_move.apply(db, body, user.id)
+    except batch_move.BatchRefused as exc:
+        return JSONResponse(status_code=409, content={"detail": {
+            "code": "overlap", "job_ids": [str(job_id) for job_id in exc.job_ids]}})
 
 
 class HandLockIn(BaseModel):
