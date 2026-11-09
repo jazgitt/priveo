@@ -26,7 +26,9 @@ beforeEach(() => {
       ...(partial ? { partial: true, visit_outcome: "Partially Completed", planned_services: ["Cleaning-External", "Cleaning-Internal"],
         delivered_services: ["Cleaning-External"], outcome_summary: "Exterior done. Interior not done today: Other.",
         reported_by: "Ravi", reported_at: "2026-11-15T05:00:00Z" } : {}),
-    }] : path.includes("/reasons") ? [{ key: "other", label: "Other" }] : {};
+    }] : path.includes("/completion-options") ? { statuses: ["Completed", "Could not complete", "Deferred"],
+      reasons: [{ key: "other", label: "Other", defers: false }, { key: "car_locked", label: "Car is locked", defers: true }] }
+      : path.includes("/reasons") ? [{ key: "other", label: "Other" }] : {};
     return new Response(JSON.stringify(body));
   });
 });
@@ -96,6 +98,47 @@ it("skips selected visits in bulk with a reason, after asking (S-12)", async () 
   await confirmWith("Skip visits");
   await waitFor(() => expect(fetchMock.mock.calls.some(([path, options]) => path === "/v1/admin/operations/bulk-skip" &&
     JSON.parse(options.body).visit_ids[0] === "v1" && JSON.parse(options.body).reason === "Other")).toBe(true));
+});
+
+it("sets the status of one scheduled job with a reason and a remark (P1-3)", async () => {
+  status = "Scheduled";
+  page();
+  await userEvent.click(await screen.findByRole("tab", { name: "Scheduled work" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Set status for HR01ZZ1234 Cleaning-Internal" }));
+  const save = screen.getByRole("button", { name: "Save status" });
+  expect(save).toBeDisabled();
+  await choose("Completion status", "Could not complete");
+  await choose("Reason", "Other");
+  expect(save).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Remark"), "Car away");
+  await userEvent.click(save);
+  await waitFor(() => expect(fetchMock.mock.calls.some(([path, options]) => path === "/v1/admin/operations/jobs/j1/completion" &&
+    JSON.parse(options.body).status === "Could not complete" && JSON.parse(options.body).reason_key === "other" &&
+    JSON.parse(options.body).note === "Car away")).toBe(true));
+});
+
+it("offers only the deferring reasons for Deferred (P1-3)", async () => {
+  status = "Scheduled";
+  page();
+  await userEvent.click(await screen.findByRole("tab", { name: "Scheduled work" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Set status for HR01ZZ1234 Cleaning-Internal" }));
+  await choose("Completion status", "Deferred");
+  await userEvent.click(screen.getByRole("combobox", { name: "Reason" }));
+  expect(await screen.findByRole("option", { name: "Car is locked" })).toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: "Other" })).not.toBeInTheDocument();
+});
+
+it("sets one status for the picked scheduled jobs in bulk (P1-3)", async () => {
+  status = "Scheduled";
+  page();
+  await userEvent.click(await screen.findByRole("tab", { name: "Scheduled work" }));
+  expect(screen.getByRole("button", { name: "Set status (0)" })).toBeDisabled();
+  await userEvent.click(await screen.findByRole("checkbox", { name: /Select HR01ZZ1234/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Set status (1)" }));
+  await choose("Completion status", "Completed");
+  await userEvent.click(screen.getByRole("button", { name: "Save status" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([path, options]) => path === "/v1/admin/operations/bulk-completion" &&
+    JSON.parse(options.body).job_ids[0] === "j1" && JSON.parse(options.body).status === "Completed")).toBe(true));
 });
 
 it("lists a partially completed visit for follow-up with planned and delivered services", async () => {

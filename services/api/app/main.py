@@ -32,7 +32,7 @@ from app.platform.middleware import RequestIdMiddleware
 from app.scheduling import administration as scheduling_admin
 from app.system import router as system
 from app.testing import smoke_cleanup
-from app.visits import operations
+from app.visits import completion, operations
 
 
 @asynccontextmanager
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(administration.customer)
     app.include_router(scheduling_admin.router)
     app.include_router(operations.router)
+    app.include_router(completion.router)
     app.include_router(home.crew)
     app.include_router(home.admin)
     crew.register(app)
