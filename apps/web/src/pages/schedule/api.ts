@@ -312,3 +312,15 @@ export function useAutoFreezeOn(): boolean {
   });
   return flags.data?.find((f) => f.key === "scheduler.auto_freeze")?.enabled ?? false;
 }
+
+/**
+ * The job cards of one day as a PDF (P1-2): every crew in one file when `crewId` is
+ * not given, or the cards of one crew member when it is.
+ */
+export function jobCardsPdf(scheduleId: string, date: string, crewId?: string): Promise<Blob> {
+  const query = `schedule_id=${scheduleId}&date=${date}`;
+  const path = crewId
+    ? `/v1/admin/scheduling/job-cards/crews/${crewId}/pdf?${query}`
+    : `/v1/admin/scheduling/job-cards/pdf?${query}`;
+  return api<Blob>(path, { binary: true });
+}
