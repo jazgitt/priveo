@@ -106,7 +106,10 @@ def _lane_starts(existing: list[_Item], placed: list[_Item],
         for e in sorted((e for e in existing if origin < e.start < p.start), key=lambda e: e.start):
             out[e.job_id] = cursor
             cursor += e.dur
-        items = [(cursor, 0, p)] + [(e.start, 1, e) for e in existing if e.start >= p.start]
+        # Dropped before a card of the lane: it lands after the cards it passes. Dropped past
+        # the last card: it keeps the requested start (a card may run past the lane's end).
+        lands = cursor if any(e.start >= p.start for e in existing) else max(cursor, p.start)
+        items = [(lands, 0, p)] + [(e.start, 1, e) for e in existing if e.start >= p.start]
     else:
         items = [(e.start, 1, e) for e in existing] + [(p.start, 0, p) for p in placed]
     # Walk the lane in order. Each card starts no earlier than the one before it ends.

@@ -6,6 +6,8 @@ and crew-hours or service-hours crossings are warnings only.
 """
 from datetime import time
 
+from tests.scheduling.builders import Scenario
+
 BASE = "/v1/admin/scheduling"
 URL = f"{BASE}/jobs/batch-move"
 
@@ -25,8 +27,9 @@ def _lane(jobs, crew_id):
 def _planned_lane(api, admin, world, run_week):
     """One crew member with three cars, planned by a one-day run: returns (crew, schedule id, board, lane)."""
     crew = world.add_crew(start=360, end=720)
+    sc = Scenario(world)
     for _ in range(3):
-        world.add_vehicle(cutoff=time(12, 0))
+        sc.car(cutoff=time(12, 0))  # Exterior-only: an Interior would add a second card per car
     world.db.commit()
     schedule_id = run_week(days=1)["schedule_id"]
     jobs = _board(api, admin, schedule_id)
@@ -92,7 +95,7 @@ def test_a_drop_above_the_first_card_shifts_the_cards_below_and_marks_them_by_ha
 
     # The lane is still in order without overlap.
     after = _lane(_board(api, admin, schedule_id), str(crew.id))
-    for before_card, next_card in zip(after, after[1:]):
+    for before_card, next_card in zip(after, after[1:], strict=False):
         assert before_card["start_minute"] + before_card["duration_minutes"] <= next_card["start_minute"]
 
 
@@ -107,7 +110,10 @@ def test_a_forward_drop_between_two_cards_closes_the_gap_the_card_left(api, admi
     assert rows[middle["id"]]["start_minute"] == first["start_minute"]
     assert rows[middle["id"]]["manual"] is True
     assert rows[first["id"]]["start_minute"] == first["start_minute"] + middle["duration_minutes"]
-    assert rows[last["id"]]["start_minute"] == last["start_minute"]
+    # The response lists the changed cards only; the card the move passed nothing of stays put.
+    after = _lane(_board(api, admin, schedule_id), str(crew.id))
+    assert [j["id"] for j in after] == [middle["id"], first["id"], last["id"]]
+    assert after[2]["start_minute"] == last["start_minute"]
 
 
 def test_an_overlap_with_a_locked_card_refuses_the_whole_batch(api, admin, world, run_week):

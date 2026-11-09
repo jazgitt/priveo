@@ -8,6 +8,7 @@ Both take `schedule_id` and `date` (the day of the cards, inside the schedule)."
 import re
 import uuid
 from datetime import date
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
@@ -45,7 +46,7 @@ def _pdf(content: bytes, name: str) -> Response:
 @router.get("/pdf")
 def all_crew_cards(
     schedule_id: uuid.UUID,
-    day: date = Query(alias="date"),
+    day: Annotated[date, Query(alias="date")],
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
@@ -58,7 +59,7 @@ def all_crew_cards(
 def one_crew_cards(
     crew_id: uuid.UUID,
     schedule_id: uuid.UUID,
-    day: date = Query(alias="date"),
+    day: Annotated[date, Query(alias="date")],
     user: User = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
