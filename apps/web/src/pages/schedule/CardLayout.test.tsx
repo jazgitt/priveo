@@ -11,7 +11,7 @@ const base = {
   customer_name: "Meena", crew_name: "Asha", service: "Cleaning-External", status: "Scheduled",
   duration_minutes: 20, start_minute: 540, start_time: "09:00", end_time: "09:20", finish_by: "10:00",
   late: false, manual: false, reason: "", crew_id: "c1",
-} as AdminJob;
+} as unknown as AdminJob;
 
 /** The text of each line, one string per line of the card. */
 const lines = (job: AdminJob, density: "compact" | "standard" | "detailed") =>

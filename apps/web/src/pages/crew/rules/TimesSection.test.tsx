@@ -9,7 +9,7 @@ import { collectSections } from ".";
 import * as module from "./TimesSection";
 
 const crew: Crew = {
-  id: "c1", name: "Raj Kumar", mobile: "9000000001", society_id: "s1", society: "Lake View",
+  id: "c1", name: "Raj Kumar", mobile: "9000000001", society_id: "s1", society: "Lake View", home_zones: [],
   role: "Member", active: true, locked: false, working_hours: [],
   paired_member_id: null, paired_member: "", exceptions: [],
 };
