@@ -88,7 +88,8 @@ def test_a_manual_change_survives_a_rerun(api, admin, world, run_week):
     assert len(after) == 8 and all(j["crew_id"] for j in after.values())  # 4 cars, Exterior and Interior
 
 
-def test_taking_a_job_off_is_kept_on_a_rerun(api, admin, world, run_week):
+def test_taking_a_job_off_is_planned_again_on_a_rerun(api, admin, world, run_week):
+    # P2-9 (decision 2): a card taken off by hand is re-planned by a later run.
     world.add_crew(end=480)
     world.add_vehicle()
     world.db.commit()
@@ -98,8 +99,27 @@ def test_taking_a_job_off_is_kept_on_a_rerun(api, admin, world, run_week):
     assert r.status_code == 200 and r.json()["crew_id"] is None
 
     again = run_week(days=1)
-    # The Interior is planned again; the Exterior taken off by hand stays off.
-    assert again["placed"] == 1 and again["unscheduled"] == 1
+    assert again["schedule_id"] == first["schedule_id"]
+    back = {j["id"]: j for j in board(api, admin, again["schedule_id"])["jobs"]}[job["id"]]
+    assert back["crew_id"] is not None and back["manual"] is False
+
+
+def test_two_runs_leave_one_row_per_job_so_the_all_jobs_count_matches_the_cards(
+        api, admin, world, run_week):
+    # P2-1: the "All jobs" chip counts the non-skipped rows of the day. A second run
+    # must not add rows: the chip after two runs equals the card count.
+    world.add_crew(end=720)
+    world.add_vehicle(cutoff=time(9, 0))
+    world.add_vehicle(cutoff=time(9, 0))
+    world.db.commit()
+    first = run_week(days=1)
+    once = [j for j in board(api, admin, first["schedule_id"])["jobs"] if j["status"] != "Skipped"]
+
+    second = run_week(days=1)
+    assert second["schedule_id"] == first["schedule_id"]
+    twice = [j for j in board(api, admin, second["schedule_id"])["jobs"] if j["status"] != "Skipped"]
+    assert len(once) >= 2 and len(twice) == len(once)
+    assert len({(j["visit_id"], j["service"]) for j in twice}) == len(twice)
 
 
 def test_a_move_that_overlaps_or_leaves_the_hours_is_refused(api, admin, world, run_week):

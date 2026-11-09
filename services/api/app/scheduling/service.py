@@ -603,10 +603,11 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
             if job.crew_id is not None and job.crew_id not in day_windows:
                 # The crew member is away that day: the job goes back to the pool.
                 job.crew_id, job.start_minute, job.manual = None, None, False
-            # An unlocked hand placement is planned again like any open job (item 15).
+            # An unlocked hand placement, or a card taken off by hand, is planned again
+            # like any open job (item 15, P2-9, decision 2). A locked card stays put.
             released = (
                 not frozen and job.manual and not job.hand_locked
-                and job.status == "Scheduled" and job.crew_id is not None
+                and job.status == "Scheduled"
             )
             if released:
                 job.crew_id, job.start_minute, job.late, job.note = None, None, False, ""
@@ -663,6 +664,8 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 job.crew_id = base_crew(crew_key)
                 job.start_minute = start
                 job.note = ""
+                if job.id in released_ids:
+                    job.manual = False  # the solver placed it again: no longer "By hand" (P2-2)
             elif key in result.unplaced:
                 job.crew_id, job.start_minute = None, None
                 job.note = result.unplaced[key]
