@@ -40,7 +40,7 @@ from sqlalchemy import func, select
 
 from app.customers.models import WEEKDAYS, Customer, Subscription, Vehicle
 from app.customers.schedule_pattern import day_flags, patterns_for
-from app.directory import lookup
+from app.directory import slot_resolver
 from app.scheduling import entitlements
 from app.scheduling.models import InteriorEntitlement, Job, Schedule, Visit
 
@@ -73,9 +73,7 @@ def provide(ctx, demand: list):
     ctx.interior_held = {}  # (vehicle id, day) -> note: optional, Unscheduled (18.5)
     demand[:] = [d for d in demand if not _is_plan_interior(d)]
 
-    interior_open = None
-    for slot in lookup.working_slots(db, sched.society_id, INTERIOR):
-        interior_open = (interior_open or set()) | set(slot.days)
+    site = slot_resolver.load(db, sched.society_id)  # the Interior's open days (ADM-SVS-12)
 
     redo = {}  # vehicle -> Interior retries already in the demand (they cover a row)
     for item in demand:
@@ -166,7 +164,7 @@ def provide(ctx, demand: list):
                 d for d in days
                 if d >= sub.first_service_date and d not in off and d not in used and d > after
                 and entitlements.week_start(db, d, society) >= row.service_week_start
-                and (interior_open is None or d.weekday() in interior_open)]
+                and site.allows_demand(INTERIOR, d)]
             if not feasible:
                 continue
             own = [d for d in feasible if entitlements.week_start(db, d, society) == row.service_week_start]

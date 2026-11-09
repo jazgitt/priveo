@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -204,6 +204,42 @@ class DirectorySlotOut(BaseModel):
     start: str
     end: str
     days: list[str]
+
+
+# ---- slot exceptions (ADM-SVS-12) ------------------------------------------------
+
+class SlotExceptionWindow(BaseModel):
+    start: str = Field(description="HH:MM")
+    end: str = Field(description="HH:MM, or 24:00 for midnight")
+
+
+class SlotExceptionCreate(BaseModel):
+    service: str
+    start_date: date
+    end_date: date
+    days: list[str] = Field(min_length=1, description="Monday to Sunday")
+    # No windows is allowed: the service is closed on the exception's days.
+    windows: list[SlotExceptionWindow] = Field(default_factory=list)
+    note: str = Field(default="", max_length=120)
+
+
+class SlotExceptionUpdate(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+    days: list[str] | None = Field(default=None, min_length=1)
+    windows: list[SlotExceptionWindow] | None = None
+    note: str | None = Field(default=None, max_length=120)
+
+
+class SlotExceptionOut(BaseModel):
+    id: uuid.UUID
+    society_id: uuid.UUID
+    service: str
+    start_date: date
+    end_date: date
+    days: list[str]
+    windows: list[SlotExceptionWindow]
+    note: str
 
 
 # ---- reasons ---------------------------------------------------------------------

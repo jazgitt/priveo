@@ -33,7 +33,7 @@ def society_of(session: Session, entity: str, entity_id, detail: dict | None = N
     from app.changes.models import ScheduleChange
     from app.crew.models import CrewMember
     from app.customers.models import AddonRequest, Customer, Subscription, Vehicle
-    from app.directory.models import Society, WorkingSlot, Zone
+    from app.directory.models import Society, WorkingSlot, WorkingSlotException, Zone
     from app.scheduling.models import Job, Schedule, SchedulingCrew, Visit
 
     def of_customer(customer_id) -> uuid.UUID | None:
@@ -61,6 +61,9 @@ def society_of(session: Session, entity: str, entity_id, detail: dict | None = N
             found = row.society_id if row else None
         elif entity == "slot":
             row = _find(session, WorkingSlot, key)
+            found = row.society_id if row else None
+        elif entity == "slot_exception":
+            row = _find(session, WorkingSlotException, key)
             found = row.society_id if row else None
         elif entity == "customer":
             found = of_customer(key)

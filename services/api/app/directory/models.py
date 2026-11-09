@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, event, false
+from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, event, false
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -108,6 +108,27 @@ class WorkingSlot(Base):
     end_minute: Mapped[int] = mapped_column(Integer)
     # Weekday numbers, 0 is Monday.
     days: Mapped[list] = mapped_column(JSON)
+
+
+class WorkingSlotException(Base):
+    """A service-wise change to the Root working slots for a date range
+    (ADM-SVS-12, decision 8 of 9-Nov-26). On the weekdays in `days`, on every
+    date of the range, it replaces Root for its service: `windows` (start and end
+    minutes, possibly none) are the only slots that service has on those dates.
+    A weekday that is not in `days` keeps Root. It can open a weekly-off day.
+    `days` are weekday numbers (0 is Monday)."""
+
+    __tablename__ = "working_slot_exceptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    society_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    service: Mapped[str] = mapped_column(String(24))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    days: Mapped[list] = mapped_column(JSON)
+    windows: Mapped[list] = mapped_column(JSON)
+    note: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
 class ChecklistItem(Base):
