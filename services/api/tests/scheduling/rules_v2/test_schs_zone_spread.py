@@ -7,7 +7,7 @@ from app.scheduling import passes
 from app.scheduling.solver import SolverCrew, SolverJob, SolverParams, solve_day
 
 EXT = passes.EXTERIOR
-ORDER = "placed,protected_late,zone,cutoff_order,break,fifo,late,early_capacity,early"
+ORDER = "placed,protected_late,zone,break,fifo,cutoff_order,late,early_capacity,early"
 
 
 def _job(key, zone):

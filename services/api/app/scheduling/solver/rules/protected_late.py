@@ -6,7 +6,7 @@ so the solver may place it after its cutoff. This objective counts the protected
 jobs that end after their cutoff (the `late` variable of `base`), and the order
 puts it above the home-zone objective:
 
-    placed > protected_late > zone > cutoff_order > break > fifo > late > ...
+    placed > protected_late > zone > break > fifo > cutoff_order > late > ...
 
 So the rescue of a protected job by another cleaner (SCHR-ZONE-12) is worth more
 than the home zone, but only for the protected lateness. Any other lateness (a

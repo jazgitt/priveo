@@ -20,7 +20,7 @@ depends_on = None
 
 ORDER_KEY = "scheduler.objective_order"
 OLD_ORDER = "placed,zone,break,fifo,late,early_capacity,early"
-NEW_ORDER = "placed,protected_late,zone,cutoff_order,break,fifo,late,early_capacity,early"
+NEW_ORDER = "placed,protected_late,zone,break,fifo,cutoff_order,late,early_capacity,early"
 NEW_WEIGHTS = {"scheduler.weight_protected_late": "20000000000",
                "scheduler.weight_cutoff_order": "1000"}
 

@@ -10,7 +10,7 @@ from app.scheduling.solver.rules import fifo
 from tests.scheduling.builders import INTERNAL, Scenario
 
 INT = "Cleaning-Internal"
-ORDER = "placed,protected_late,zone,cutoff_order,break,fifo,late,early_capacity,early"
+ORDER = "placed,protected_late,zone,break,fifo,cutoff_order,late,early_capacity,early"
 WEEK1 = date(2026, 11, 2)  # Monday
 SUNDAY = WEEK1 - timedelta(days=1)
 THURSDAY = WEEK1 + timedelta(days=3)

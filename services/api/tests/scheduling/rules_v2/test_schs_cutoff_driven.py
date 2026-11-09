@@ -4,6 +4,8 @@ the normal rules (SCHR-CUT-10), a protected Exterior placed late as the last res
 (SCHR-CUT-11), the cross-zone rescue of a protected job (SCHR-ZONE-12) and the order
 that puts protected lateness above the home zone (SCHR-HIER-09).
 """
+from datetime import date
+
 from app.directory import settings_registry
 from app.scheduling import passes
 from app.scheduling.codes import ReasonCode
@@ -48,6 +50,35 @@ def test_schr_cut_10_the_order_chains_over_three_jobs():
             SolverJob("b", "v2", 30, finish_by=570)]
     result = solve_day(crew, jobs, PRODUCTION)
     assert [k for k, _ in sorted(result.placed.items(), key=lambda kv: kv[1][1])] == ["a", "b", "c"]
+
+
+WEEK1, WEEK2 = date(2026, 11, 2), date(2026, 11, 9)
+
+
+def _interior(key, vehicle, finish_by, week, duration=30):
+    return SolverJob(key, vehicle, duration, service=INT, finish_by=finish_by, hard_cutoff=True,
+                     interior=True, week=week)
+
+
+def test_schr_int_12_an_older_week_interior_with_a_later_cutoff_is_placed_before_a_newer_week_one():
+    # The older week (WEEK1, cutoff 10:00, 60 minutes) goes first, though the newer week
+    # has the earlier cutoff (09:30). The start-time objective alone would take the 30
+    # minute job first, so only the week order puts the older week first.
+    crew = [SolverCrew("a", 480, 600)]
+    old = _interior("old", "v0", finish_by=600, week=WEEK1, duration=60)
+    new = _interior("new", "v9", finish_by=570, week=WEEK2)
+    result = solve_day(crew, [old, new], PRODUCTION, "interior")
+    assert not result.late and not result.unplaced
+    assert result.placed["old"][1] < result.placed["new"][1]
+
+
+def test_schr_int_12_within_one_week_the_earlier_cutoff_is_placed_first():
+    crew = [SolverCrew("a", 480, 600)]
+    later = _interior("later", "v0", finish_by=600, week=WEEK1, duration=30)
+    earlier = _interior("earlier", "v9", finish_by=570, week=WEEK1, duration=60)
+    result = solve_day(crew, [later, earlier], PRODUCTION, "interior")
+    assert not result.late and not result.unplaced
+    assert result.placed["earlier"][1] < result.placed["later"][1]
 
 
 def test_schr_cut_09_a_protected_exterior_that_cannot_be_on_time_is_placed_late_and_flagged():
