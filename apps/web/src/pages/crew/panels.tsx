@@ -15,7 +15,7 @@ import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
 import {
-  EXCEPTION_KINDS, ROLES, useCrewActions, useCrewList, useDefaultHours, useSessions,
+  EXCEPTION_KINDS, ROLES, useCrewActions, useCrewList, useDefaultHours, useRolePeriods, useSessions,
   type Crew, type CrewException, type CrewPassword, type DayHours, type ReleasedJob,
 } from "./api";
 import { HoursEditor } from "./HoursEditor";
@@ -44,7 +44,9 @@ function useCrewRun(setReleased?: (j: ReleasedJob[]) => void) {
 
 const kindChoices = EXCEPTION_KINDS.map((k) => ({ value: k, label: k }));
 
-/** ADM-CRW-02: name and mobile. The society is changed in the Society panel (ADM-CRW-22). */
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+/** ADM-CRW-02: name and mobile. The society is moved further down this tab (ADM-CRW-22). */
 export function DetailsPanel({ crew }: { crew: Crew }) {
   const confirm = useConfirm();
   const { edit, unlock } = useCrewActions(crew.id);
@@ -64,7 +66,7 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
   };
   return (
     <div className="flex flex-col gap-6">
-      <Panel title="Details" description={`Society: ${crew.society}. To move to another society, open the Society tab.`}>
+      <Panel title="Details" description={`Society: ${crew.society}. To move to another society, see Move to another society below.`}>
         <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
               onSubmit={(e) => { e.preventDefault(); if (changed) void save(); }}>
           <Field label="Name" error={fe.name}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
@@ -87,18 +89,25 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
   );
 }
 
-/** ADM-CRW-03, -16, -19: role change and Trainee pairing. */
+/** ADM-CRW-03, -16, -19, -28: role change, a role for a date range, and Trainee pairing. */
 export function RolePanel({ crew }: { crew: Crew }) {
   const confirm = useConfirm();
-  const { role: setRole, pair } = useCrewActions(crew.id);
+  const { role: setRole, pair, addRolePeriod, cancelRolePeriod } = useCrewActions(crew.id);
+  const periods = useRolePeriods(crew.id);
   const members = useMembers(crew);
   const [role, setRoleValue] = useState(crew.role);
   const [mate, setMate] = useState(crew.paired_member_id ?? "");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [released, setReleased] = useState<ReleasedJob[]>([]);
   const run = useCrewRun(setReleased);
+  const removePeriod = useAppMutation<string>({
+    mutationFn: (id) => cancelRolePeriod.mutateAsync(id), pending: "Removing…", success: "The dated role is removed.",
+  });
   const needsMate = role === "Trainee";
   const roleChanged = role !== crew.role;
-  const fe = fieldsOf(setRole.error ?? pair.error);
+  const dated = from !== "" || to !== "";
+  const fe = fieldsOf(setRole.error ?? pair.error ?? addRolePeriod.error);
   const mateName = members.find((m) => m.id === mate)?.name;
 
   const changeRole = async () => {
@@ -109,6 +118,21 @@ export function RolePanel({ crew }: { crew: Crew }) {
         : "Jobs that no longer fit go to Needs scheduling.",
       confirmLabel: "Change role",
     })) run.mutate({ go: () => setRole.mutateAsync({ role, paired_member_id: needsMate ? mate : null }), done: `Role is now ${role}.` });
+  };
+
+  // A role for a date range (ADM-CRW-28). Days already run are not changed.
+  const setForDates = async () => {
+    const span = `from ${from ? showDate(from) : "today"}, ${to
+      ? `until ${showDate(to)}, then ${crew.name} goes back to ${crew.role}`
+      : "until the role is changed"}`;
+    if (await confirm({
+      title: `Make ${crew.name} a ${role} for these dates?`,
+      description: `${role} ${span}. Days already run are not changed. Open jobs that no longer fit go to Needs scheduling.`,
+      confirmLabel: "Set role",
+    })) run.mutate({
+      go: () => addRolePeriod.mutateAsync({ role, start_date: from || null, end_date: to || null }),
+      done: "The dated role is saved.",
+    });
   };
 
   return (
@@ -126,7 +150,7 @@ export function RolePanel({ crew }: { crew: Crew }) {
             {(p) => <SelectBox {...p} value={mate} onChange={setMate} choices={members.map((m) => ({ value: m.id, label: m.name }))} />}
           </Field>
         ) : <span />}
-        {roleChanged && (
+        {roleChanged && !dated && (
           <BusyButton busy={run.isPending} disabled={needsMate && mate === ""} onClick={() => void changeRole()}>Change role</BusyButton>
         )}
         {!roleChanged && crew.role === "Trainee" && (
@@ -136,6 +160,42 @@ export function RolePanel({ crew }: { crew: Crew }) {
           </BusyButton>
         )}
       </div>
+
+      <section aria-labelledby="role-dates" className="mt-6 flex flex-col gap-4 border-t pt-5">
+        <div>
+          <h3 id="role-dates" className="m-0 text-sm font-medium">Role for a date range</h3>
+          <p className="m-0 text-sm text-muted-foreground">
+            Leave both dates empty to change the role for good. A start date begins the role on that day, and an end date
+            brings the previous role back after it. Days already run are not changed. A Trainee role uses the Member this
+            crew member is already paired with.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
+          <Field label="Starts on" hint="Empty means today.">
+            {(p) => <Input {...p} type="date" value={from} min={todayIso()} onChange={(e) => setFrom(e.target.value)} />}
+          </Field>
+          <Field label="Ends on" hint="Empty means until the role is changed." error={fe.end_date}>
+            {(p) => <Input {...p} type="date" value={to} min={from || todayIso()} onChange={(e) => setTo(e.target.value)} />}
+          </Field>
+          <BusyButton busy={run.isPending} disabled={!roleChanged || !dated} onClick={() => void setForDates()}>
+            Set role for these dates
+          </BusyButton>
+        </div>
+        {(periods.data ?? []).length > 0 && (
+          <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-label="Dated roles">
+            {(periods.data ?? []).map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                <span>{p.role} {`from ${showDate(p.start_date)}, ${p.end_date ? `until ${showDate(p.end_date)}` : "until the role is changed"}`}</span>
+                <Button size="sm" variant="ghost" className="text-destructive" disabled={removePeriod.isPending}
+                        aria-label={`Remove the ${p.role} role from ${showDate(p.start_date)}`}
+                        onClick={async () => {
+                          if (await confirm({ title: "Remove this dated role?", description: `${crew.name} goes back to ${crew.role} on those days.`, confirmLabel: "Remove role", tone: "danger" })) removePeriod.mutate(p.id);
+                        }}>Remove</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <ReleasedJobs jobs={released} />
     </Panel>
   );

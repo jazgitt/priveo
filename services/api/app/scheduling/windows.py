@@ -6,7 +6,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.scheduling import window_rules
+from app.scheduling import crew_roles, window_rules
 from app.scheduling.models import SchedulingCrew, SchedulingCrewException
 
 
@@ -23,6 +23,7 @@ def cleaner_windows(
             )
         ).scalars():
             exceptions[(ex.crew_id, ex.on_date)] = ex
+    crew_roles.attach_missing(db, crew)
     rules = [m.cleaner_windows for m in window_rules.discover() if hasattr(m, "cleaner_windows")]
     out: dict[date, dict[uuid.UUID, list[tuple[int, int]]]] = {}
     for day in days:
@@ -30,8 +31,10 @@ def cleaner_windows(
         for cid, c in crew.items():
             ex = exceptions.get((cid, day))
             windows = None
+            # The rules see the role this crew member has on this day (P2-4).
+            on_day = crew_roles.on_day(c, day)
             for rule in rules:
-                windows = rule(db, c, day, windows, ex)
+                windows = rule(db, on_day, day, windows, ex)
             if windows:
                 out[day][cid] = windows
     return out

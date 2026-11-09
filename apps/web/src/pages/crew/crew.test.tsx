@@ -23,7 +23,7 @@ const hours = defaultHours();
 const raj = {
   id: "c1", name: "Raj Kumar", mobile: "9000000001", society_id: "s1", society: "Lake View",
   role: "Member", active: true, locked: false, working_hours: hours,
-  paired_member_id: null, paired_member: "", exceptions: [],
+  paired_member_id: null, paired_member: "", home_zones: ["Zone 1"], exceptions: [],
 };
 const asha = { ...raj, id: "c2", name: "Asha Devi", mobile: "9000000002", role: "Trainee",
                paired_member_id: "c1", paired_member: "Raj Kumar" };
@@ -307,7 +307,7 @@ describe("crew society over time", () => {
       if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
       return err(404, "not_found", "no");
     });
-    renderAt("/crew/c1?tab=society");
+    renderAt("/crew/c1");
     expect(await screen.findByText("now")).toBeInTheDocument(); // The current stay has no end.
     // A Member is told that their Trainees move with them.
     expect(screen.getByRole("note")).toHaveTextContent("their society is updated too");
@@ -336,12 +336,68 @@ describe("crew society over time", () => {
       if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
       return err(404, "not_found", "no");
     });
-    renderAt("/crew/c1?tab=society");
+    renderAt("/crew/c1");
     expect(await screen.findByText("Starts later")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel the move to Park" }));
     await confirmWith("Cancel move");
     await waitFor(() => expect(fetchMock.mock.calls.some(
       (c) => c[0] === "/v1/admin/crew/c1/society-moves/a2" && c[1]?.method === "DELETE")).toBe(true));
+  });
+});
+
+describe("crew details and dated roles", () => {
+  it("keeps the society moves on the Details tab, and an old society link opens Details", async () => {
+    fetchMock.mockImplementation(async (p: string) => {
+      if (p === "/v1/admin/crew/c1/society-history") return json(200, [{
+        id: "a1", society_id: "s1", society: "Lake View", effective_from: "2026-09-01",
+        effective_to: null, pending: false }]);
+      if (p === "/v1/admin/crew/c1/sessions") return json(200, []);
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p === "/v1/admin/crew/c1") return json(200, raj);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew/c1?tab=society");
+    expect(await screen.findByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Move to another society")).toBeInTheDocument();
+    expect(screen.getByText("Society over time")).toBeInTheDocument();
+  });
+
+  it("sets a role for a date range and lists it", async () => {
+    const period = { id: "p1", role: "Manager", start_date: "2099-01-15", end_date: null };
+    fetchMock.mockImplementation(async (p: string, init?: RequestInit) => {
+      if (p === "/v1/admin/crew/c1/role-periods" && init?.method === "POST") {
+        return json(201, { periods: [period], released_jobs: [] });
+      }
+      if (p === "/v1/admin/crew/c1/role-periods") return json(200, []);
+      if (p === "/v1/admin/crew/c1/sessions") return json(200, []);
+      if (p === "/v1/admin/crew/c1/society-history") return json(200, []);
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p === "/v1/admin/crew/c1") return json(200, raj);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew/c1?tab=role");
+    await screen.findByRole("tab", { name: "Role and pairing" });
+    await choose("Role", "Manager");
+    fireEvent.change(screen.getByLabelText("Starts on"), { target: { value: "2099-01-15" } });
+    await userEvent.click(screen.getByRole("button", { name: "Set role for these dates" }));
+    await confirmWith("Set role");
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      (c) => c[0] === "/v1/admin/crew/c1/role-periods" && c[1]?.method === "POST")).toBe(true));
+    const post = fetchMock.mock.calls.find((c) => c[1]?.method === "POST")!;
+    expect(JSON.parse(post[1].body)).toEqual({ role: "Manager", start_date: "2099-01-15", end_date: null });
+  });
+
+  it("shows the home zones as a column on the crew list", async () => {
+    fetchMock.mockImplementation(async (p: string) => {
+      if (p.startsWith("/v1/admin/directory/societies")) return json(200, societies);
+      if (p.startsWith("/v1/admin/crew")) return json(200, [raj, asha]);
+      return err(404, "not_found", "no");
+    });
+    renderAt("/crew");
+    expect(await screen.findByRole("columnheader", { name: "Home zones" })).toBeInTheDocument();
+    expect(screen.getAllByText("Zone 1").length).toBeGreaterThan(0);
   });
 });
 
@@ -368,7 +424,7 @@ describe("crew page layout", () => {
     renderAt("/crew/c1");
     const tabs = await screen.findAllByRole("tab");
     expect(tabs.map((t) => t.textContent)).toEqual([
-      "Details", "Society", "Role and pairing", "Working hours", "Exceptions", "Account", "Sessions", "Scheduling"]);
+      "Details", "Role and pairing", "Working hours", "Exceptions", "Account", "Sessions", "Scheduling"]);
     expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(screen.queryByLabelText("Paired Member")).not.toBeInTheDocument();
