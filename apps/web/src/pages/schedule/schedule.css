@@ -144,6 +144,8 @@
     box-shadow: 0 1px 2px rgba(22, 21, 26, 0.06); transition: box-shadow 120ms, opacity 120ms, transform 120ms; }
   .sch-card:hover { box-shadow: 0 4px 12px rgba(22, 21, 26, 0.14); transform: translateY(-1px); }
   .sch-card:active { cursor: grabbing; }
+  /* A draggable card on touch: the page must not scroll under the press, so the drag engine gets the pointer (P0-1). */
+  .sch-card:not(.locked) { touch-action: none; }
   .sch-card:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
   .sch-card.dragging { opacity: 0.35; transform: none; box-shadow: none; }
   .sch-card.dim { opacity: 0.3; }
