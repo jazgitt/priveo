@@ -69,6 +69,23 @@ class SchedulingCrewHomeZone(Base):
         ForeignKey("zones.id"), primary_key=True, index=True)
 
 
+class SchedulingCrewRolePeriod(Base):
+    """A role a crew member has from `start_date` to `end_date`, both days
+    included (P2-4). An empty `end_date` lasts until the role is changed. The
+    permanent role stays on SchedulingCrew.role. Only days not yet run count
+    (owner decision 7); pairing rules do not change (decision 11)."""
+
+    __tablename__ = "scheduling_crew_role_periods"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    crew_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("scheduling_crew.id"), index=True)
+    role: Mapped[str] = mapped_column(String(8))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("logins.id"))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
 class SchedulingCrewException(Base):
     """A day a crew member is away (Sick, Leave) or starts late (ADM-CRW-08)."""
 

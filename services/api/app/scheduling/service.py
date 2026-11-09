@@ -22,7 +22,8 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import entitlements, hand_placement, home_zone, hooks, passes, queue, rules, run_context, run_counts
+from app.scheduling import crew_roles, entitlements, hand_placement, home_zone, hooks, passes, queue, rules
+from app.scheduling import run_context, run_counts
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,
@@ -268,7 +269,10 @@ def load_crew(db: Session, society_id: uuid.UUID) -> dict[uuid.UUID, SchedulingC
         .scalars()
         .all()
     )
-    return {c.id: c for c in rows}
+    crew = {c.id: c for c in rows}
+    # The dated roles still to run (P2-4): the scheduler reads each run day's role.
+    crew_roles.attach(db, crew, today_ist())
+    return crew
 
 
 def solver_crews(day_windows: dict[uuid.UUID, list[tuple[int, int]]]) -> list[SolverCrew]:
@@ -325,7 +329,7 @@ def day_availability(
         wins = windows.get(cid, [])
         base = rules.hours_windows(c.working_hours, day.weekday(), c.start_minute, c.end_minute)
         slots = ", ".join(f"{_clock(s)}-{_clock(e)}" for s, e in wins)
-        if c.role == "Trainee":
+        if crew_roles.role_on(c, day) == "Trainee":
             status = "Off"
             reason = "Trainee: adds no capacity and follows the paired Member's jobs."
         elif ex and ex.kind in ("Sick", "Leave"):

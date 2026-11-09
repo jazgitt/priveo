@@ -305,6 +305,8 @@
     "ADM-CRW-11": {"stage":"backlog","hash":"65079434-140","bugs":0},
     "ADM-CRW-12": {"stage":"backlog","hash":"303b1d7d-422","bugs":0},
     "ADM-CRW-27": {"stage":"draft","hash":"d8624e0f-345","bugs":0},
+    "ADM-CRW-28": {"stage":"draft","hash":"","bugs":0},
+    "ADM-CRW-29": {"stage":"draft","hash":"","bugs":0},
     "ADM-SVS-01": {"stage":"backlog","hash":"de3df43c-813","bugs":0},
     "ADM-SVS-02": {"stage":"backlog","hash":"6a21e06-181","bugs":0},
     "ADM-SVS-03": {"stage":"backlog","hash":"63a8a2bd-128","bugs":0},
