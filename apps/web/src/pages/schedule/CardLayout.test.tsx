@@ -64,7 +64,7 @@ describe("the vehicle line shows the model only (P2-7)", () => {
   it("leaves the line out when the job row has no model, rather than showing the make", () => {
     const noModel = { ...base, model: undefined, vehicle: "Honda City" } as AdminJob;
     expect(modelOf(noModel)).toBe("");
-    expect(lines(noModel, "detailed")[0]).toEqual(["Zone 3 | Cutoff 10:00"]);
+    expect(lines(noModel, "detailed")[0]).toBe("Zone 3 | Cutoff 10:00");
   });
 });
 

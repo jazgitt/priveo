@@ -74,9 +74,10 @@ it('sends no working times when every window is removed: the service is closed o
 });
 
 it('lists each exception with its dates, weekdays and working times, and shows a closed day', async () => {
-  responses[EXCEPTIONS] = [exception(), exception({ id: 'e2', service: 'Deep Spa', windows: [], days: ['Sunday'] })];
+  responses[EXCEPTIONS] = [exception(), exception({ id: 'e2', service: 'Deep Spa', windows: [], days: ['Sunday'], start_date: '2026-11-18', end_date: '2026-11-22' })];
   mount(<SlotsTab />);
   expect(await screen.findByText('11-Nov-26 to 17-Nov-26')).toBeInTheDocument();
+  expect(screen.getByText('18-Nov-26 to 22-Nov-26')).toBeInTheDocument();
   expect(screen.getByText('06:00 to 12:00')).toBeInTheDocument();
   expect(screen.getByText('Closed')).toBeInTheDocument();
   expect(screen.getByText('Sun')).toBeInTheDocument();

@@ -458,6 +458,7 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
       <DragSource key={job.id} id={job.id} data={job} disabled={!open}>
         {(drag) => (
           <div data-card data-dnd-card={job.id} data-job={job.id} role="button" tabIndex={0}
+               draggable={open ? undefined : false}
                aria-disabled={!kept || undefined} aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
                title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}${warning ? ` ${warning}` : ""}`}
                style={outline ? { outline, outlineOffset: "1px" } : undefined}

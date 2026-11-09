@@ -397,7 +397,7 @@ describe("crew details and dated roles", () => {
     });
     renderAt("/crew");
     expect(await screen.findByRole("columnheader", { name: "Home zones" })).toBeInTheDocument();
-    expect(screen.getAllByText("Zone 1").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Zone 1")).length).toBeGreaterThan(0);
   });
 });
 
