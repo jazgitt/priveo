@@ -354,8 +354,8 @@
     "ADM-SCH-10": {"stage":"dev","hash":"28233600-204","bugs":0},
     "ADM-SCH-11": {"stage":"dev","hash":"fd3ba227-104","bugs":0},
     "ADM-SCH-12": {"stage":"functional","hash":"875e6d7c-113","bugs":0},
-    "ADM-SCH-13": {"stage":"dev","hash":"4f019635-196","bugs":0},
-    "ADM-SCH-14": {"stage":"unit","hash":"f23b4ef5-139","bugs":0},
+    "ADM-SCH-13": {"stage":"draft","hash":"4f019635-196","bugs":0},
+    "ADM-SCH-14": {"stage":"draft","hash":"f23b4ef5-139","bugs":0},
     "ADM-SCH-15": {"stage":"backlog","hash":"c583101e-232","bugs":0},
     "ADM-SCH-16": {"stage":"functional","hash":"a97e625f-94","bugs":0},
     "ADM-SCH-17": {"stage":"unit","hash":"96973a27-272","bugs":0},
@@ -677,6 +677,10 @@
     "SCHR-CUT-09": {"stage":"draft","hash":"6a1dddc2-669","bugs":0},
     "SCHR-CUT-10": {"stage":"draft","hash":"4c5f1c69-627","bugs":0},
     "SCHR-CUT-11": {"stage":"draft","hash":"19a41f50-195","bugs":0},
-    "SCHR-ZONE-12": {"stage":"draft","hash":"d8ed36c8-593","bugs":0}
+    "SCHR-ZONE-12": {"stage":"draft","hash":"d8ed36c8-593","bugs":0},
+    "ADM-SCH-46": {"stage":"draft","hash":"","bugs":0},
+    "ADM-CAP-09": {"stage":"draft","hash":"","bugs":0},
+    "ADM-SCH-51": {"stage":"draft","hash":"","bugs":0},
+    "ADM-SCH-52": {"stage":"draft","hash":"","bugs":0}
   }
 }

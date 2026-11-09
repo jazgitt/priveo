@@ -43,7 +43,6 @@ import { toast } from "sonner";
 import type { BatchMove, BatchMoveResult } from "../api";
 import { useBatchMove } from "./commit";
 import { insertionIndex } from "./geometry";
-import { useBoardSync } from "./sync";
 
 const THRESHOLD_PX = 5;
 const TOUCH_HOLD_MS = 250;
@@ -137,7 +136,7 @@ export function DragEngineProvider({ boardKey, plan, onSaved, children }: DragEn
   const session = useRef<Session | null>(null);
   const commit = useBatchMove(boardKey, (r) => savedRef.current?.(r));
   const commitRef = useRef(commit.mutate);
-  useBoardSync();
+  // Sync is mounted once, by the schedule page (useBoardSync in SchedulePage), not here.
 
   useEffect(() => {
     planRef.current = plan;

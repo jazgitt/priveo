@@ -106,7 +106,9 @@ export function planInsertion(
   const above = at > 0 ? others[at - 1] : null;
   const anchor = above ? snapUpMinute(above.start + above.duration, step) : snapUpMinute(opts.top, step);
   // Dropped where it already is, the card keeps its own time if that is later than the anchor.
-  const start = at === oldIndex ? snapUpMinute(Math.max(anchor, dragged.start), step) : anchor;
+  // Only a card from this same lane keeps its time; a card from another lane takes the anchor.
+  const sameLane = found >= 0;
+  const start = sameLane && at === oldIndex ? snapUpMinute(Math.max(anchor, dragged.start), step) : anchor;
 
   // 3. Push down the cards below only where they now overlap.
   let cursor = start + dragged.duration;
