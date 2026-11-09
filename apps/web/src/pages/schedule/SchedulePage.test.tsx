@@ -927,7 +927,8 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     ] });
     await openDay();
     const days = await screen.findByRole("group", { name: "Days" });
-    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, Needs Attention/ })).toBeInTheDocument();
+    // The label says ", today" in front of the flag on the day it is run; the check holds on any day.
+    expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, (today, )?Needs Attention/ })).toBeInTheDocument();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     expect(within(tabs).queryByRole("tab", { name: /Needs scheduling/ })).not.toBeInTheDocument();
   });
