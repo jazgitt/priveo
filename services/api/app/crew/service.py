@@ -26,9 +26,9 @@ from app.identity.service import hash_password
 from app.platform.clock import today_ist
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import service as scheduling
 from app.scheduling import crew_roles as scheduling_roles
 from app.scheduling import home_zone
+from app.scheduling import service as scheduling
 from app.scheduling.models import (
     Job,
     Schedule,

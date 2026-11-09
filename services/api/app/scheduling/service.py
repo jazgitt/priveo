@@ -22,8 +22,18 @@ from app.identity.models import Login
 from app.notifications import emit  # notify hook
 from app.platform.db import utcnow
 from app.platform.errors import ApiError
-from app.scheduling import crew_roles, entitlements, hand_placement, home_zone, hooks, passes, queue, rules
-from app.scheduling import run_context, run_counts
+from app.scheduling import (
+    crew_roles,
+    entitlements,
+    hand_placement,
+    home_zone,
+    hooks,
+    passes,
+    queue,
+    rules,
+    run_context,
+    run_counts,
+)
 from app.scheduling import windows as window_builder
 from app.scheduling.models import (
     Job,

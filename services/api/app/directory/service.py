@@ -523,7 +523,7 @@ def _window_spans(windows) -> list[dict]:
             raise invalid("windows", "The end time must be after the start time.")
         spans.append({"start_minute": start, "end_minute": end})
     spans.sort(key=lambda w: w["start_minute"])
-    for first, second in zip(spans, spans[1:]):
+    for first, second in zip(spans, spans[1:], strict=False):
         if second["start_minute"] < first["end_minute"]:
             raise ApiError("overlap", "Two windows of this exception overlap.", 409,
                            {"windows": "Two windows of this exception overlap."})

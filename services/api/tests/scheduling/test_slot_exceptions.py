@@ -6,7 +6,7 @@ from datetime import timedelta
 from app.directory import slot_resolver
 from app.directory.models import WorkingSlot, WorkingSlotException
 from app.scheduling import capacity, service
-from tests.scheduling.conftest import SUNDAY
+from tests.scheduling.conftest import SUNDAY, run_days
 
 EXT, INT, SPA = "Cleaning-External", "Cleaning-Internal", "Deep Spa"
 WEDNESDAY = SUNDAY + timedelta(days=3)  # 21-Oct-26, the weekly off in these tests
@@ -51,12 +51,13 @@ def test_the_wednesday_exception_opens_wednesday_for_its_range_only(world):
     assert _cap(world, THURSDAY)["capacity_minutes"] == 60
 
 
-def test_the_exception_beats_the_weekly_off_for_the_scheduler(world, api, admin, run_week):
+def test_the_exception_beats_the_weekly_off_for_the_scheduler(world, api, admin):
     world.add_vehicle()
     world.add_crew()
     _root(world)
     _exception(world, [2], WEDNESDAY, WEDNESDAY)
-    summary = run_week(days=4)  # Sunday to Wednesday
+    # A run covers one day (ADM-SCH-09): read Wednesday's own schedule, the fourth run.
+    summary = run_days(api, admin, world.society.id, SUNDAY, 4)[3]
     board = api.get(f"{BASE}/board", headers=admin,
                     params={"schedule_id": summary["schedule_id"]}).json()
     on_wednesday = [j for j in board["jobs"] if j["date"] == WEDNESDAY.isoformat()]
