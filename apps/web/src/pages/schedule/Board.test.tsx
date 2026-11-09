@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { render, screen } from "@testing-library/react";
 
-import { fitsAt, freeSlots, freeStart, gaps, hm, matches, PARTIAL, StatusSummary, typeClass, zoneShort, zonesOf, zoneStyle } from "./Board";
+import {
+  fitsAt, freeSlots, freeStart, gaps, hm, isShown, matches, PARTIAL, StatusSummary, typeClass, unscheduledOrder, zoneShort, zonesOf, zoneStyle,
+} from "./Board";
 import type { AdminJob } from "./api";
 
 const at = (start: number, duration = 20) => ({ start_minute: start, duration_minutes: duration } as AdminJob);
@@ -154,5 +156,63 @@ describe("zone labels on the cards (ADM-SCH-32)", () => {
     expect(first.color).toBe("#16151a");
     expect(zoneStyle("Zone 2", zones)).toEqual(zoneStyle("Zone 2", zones));
     expect(zoneStyle("", zones)).toBeUndefined();
+  });
+});
+
+const card = (service: string, extra: Partial<AdminJob> = {}) => ({
+  id: service, registration: "KA01AB1234", parking: "B1-24", customer_name: "", crew_name: "", vehicle: "", zone: "",
+  service, status: "Scheduled", duration_minutes: 20, start_minute: 540, start_time: "09:00", end_time: "09:20",
+  finish_by: null, late: false, manual: false, reason: "", crew_id: "c1", ...extra,
+} as AdminJob);
+
+describe("the filters hide the cards they do not keep (P1-4)", () => {
+  it("with Show all off, keeps only the jobs the chosen kind of work keeps", () => {
+    const int = card("Cleaning-Internal");
+    const ext = card("Cleaning-External");
+    expect(isShown(int, false, "", "", "INT")).toBe(true);
+    expect(isShown(ext, false, "", "", "INT")).toBe(false);
+  });
+
+  it("with Show all on, every job is drawn; the ones the filters do not keep are the disabled ones", () => {
+    const ext = card("Cleaning-External");
+    expect(isShown(ext, true, "", "", "INT")).toBe(true);
+    expect(matches(ext, "", "", "INT")).toBe(false);
+  });
+
+  it("applies the status, flag and vehicle search filters the same way", () => {
+    const late = card("Cleaning-External", { late: true, status: "Completed" });
+    expect(isShown(late, false, "", "", "", "manual")).toBe(false);
+    expect(isShown(late, false, "Scheduled", "")).toBe(false);
+    expect(isShown(late, false, "Completed", "zz")).toBe(false);
+    expect(isShown(late, false, "Completed", "b1-24")).toBe(true);
+    expect(isShown(late, false, "", "", "", "late")).toBe(true);
+  });
+
+  it("with no filter chosen, every job is drawn", () => {
+    expect(isShown(card("Deep Spa"), false, "", "")).toBe(true);
+  });
+});
+
+describe("the Unscheduled list order (P2-8)", () => {
+  it("lists EXT by cutoff, then INT by cutoff, then other services by cutoff, and a job with no cutoff last in its group", () => {
+    const jobs = [
+      card("Car Wash", { id: "other", finish_by: "11:00" }),
+      card("Cleaning-Internal", { id: "int-late", finish_by: "15:00" }),
+      card("Cleaning-External", { id: "ext-none", finish_by: null }),
+      card("Deep Spa", { id: "spa", finish_by: "09:00" }),
+      card("Cleaning-External", { id: "ext-late", finish_by: "14:00" }),
+      card("Cleaning-Internal", { id: "int-none", finish_by: null }),
+      card("Cleaning-Internal", { id: "int-early", finish_by: "10:00" }),
+      card("Cleaning-External", { id: "ext-early", finish_by: "08:30" }),
+    ];
+    expect(unscheduledOrder(jobs).map((j) => j.id)).toEqual([
+      "ext-early", "ext-late", "ext-none", "int-early", "int-late", "int-none", "spa", "other",
+    ]);
+  });
+
+  it("changes only the display: the list it is given is not reordered", () => {
+    const jobs = [card("Cleaning-Internal", { id: "i" }), card("Cleaning-External", { id: "e" })];
+    unscheduledOrder(jobs);
+    expect(jobs.map((j) => j.id)).toEqual(["i", "e"]);
   });
 });

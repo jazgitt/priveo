@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Lock, LockOpen } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useState } from "react";
 
 import { api } from "@/api/client";
@@ -11,6 +11,7 @@ import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 
 import { serviceCode } from "./Board";
+import { LockGlyph } from "./LockGlyph";
 import type { AdminJob, SchedulingCrew } from "./api";
 
 const CLOSED = ["Completed", "Could not complete", "Skipped"];
@@ -87,8 +88,8 @@ export function QueuePanel({ crew, jobs, date, refresh }: {
                         <span>{serviceCode(j.service)}</span>
                         <span className="text-muted-foreground">{j.start_time ?? ""}</span>
                         <span>{j.status}</span>
-                        {locked && <span className="inline-flex items-center gap-1 text-muted-foreground"><Lock className="size-3.5" aria-hidden />Locked</span>}
-                        {open && j.queue_unlocked && <span className="inline-flex items-center gap-1 text-muted-foreground"><LockOpen className="size-3.5" aria-hidden />Unlocked by admin</span>}
+                        {locked && <span className="inline-flex items-center gap-1 text-muted-foreground"><LockGlyph locked className="size-3.5" />Locked</span>}
+                        {open && j.queue_unlocked && <span className="inline-flex items-center gap-1 text-muted-foreground"><LockGlyph locked={false} className="size-3.5" />Unlocked by admin</span>}
                         <span className="ml-auto flex gap-1">
                           <Button size="icon-sm" variant="outline" aria-label={`Move ${j.registration} up`}
                                   disabled={!open || i === 0} onClick={() => move(member, queue, i, -1)}>
@@ -101,7 +102,7 @@ export function QueuePanel({ crew, jobs, date, refresh }: {
                           {locked && (
                             <Button size="sm" variant="outline" aria-label={`Unlock ${j.registration}`}
                                     onClick={() => { setReason(""); setPending({ kind: "unlock", job: j }); }}>
-                              <LockOpen aria-hidden />Unlock
+                              <LockGlyph locked />Unlock
                             </Button>
                           )}
                         </span>

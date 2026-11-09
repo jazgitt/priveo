@@ -306,17 +306,20 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(card()).toHaveClass("compact");
   });
 
-  it("keeps only one kind of work bright when its chip is pressed", async () => {
+  it("hides the kind of work the chip does not keep; Show all brings it back dimmed", async () => {
     server({ jobs: [job(), job({ id: "j2", registration: "KA02IN0002", service: "Cleaning-Internal", crew_id: "c2",
                                  crew_name: "Ravi", start_minute: 600, start_time: "10:00", end_time: "10:20" })] });
     await openDay();
     const int = within(await column("c2")).getByRole("button", { name: /KA02IN0002/ });
-    const ext = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
+    expect(screen.getByRole("switch", { name: "Show all" })).toHaveAttribute("aria-checked", "false");
     await userEvent.click(await screen.findByRole("button", { name: "INT" }));
-    expect(ext).toHaveClass("dim");
+    expect(int).not.toHaveClass("dim");
+    expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
+    expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
     expect(int).not.toHaveClass("dim");
     await userEvent.click(screen.getByRole("button", { name: "INT" }));
-    expect(ext).not.toHaveClass("dim");
+    expect(screen.getByRole("button", { name: /KA01AB1234/ })).not.toHaveClass("dim");
   });
 
   it("puts a card dropped below another at the first free time after it", async () => {
@@ -543,12 +546,17 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(screen.getByRole("dialog", { name: "Unfreeze with the code" })).toBeInTheDocument();
   });
 
-  it("dims the cards that do not match the vehicle search", async () => {
+  it("hides the cards that do not match the vehicle search; Show all brings them back disabled", async () => {
     server({ jobs: [job(), job({ id: "j2", registration: "KA02ZZ0001", crew_id: "c2", parking: "B2-07" })] });
     await openDay();
     await column("c1");
     await userEvent.type(screen.getByRole("searchbox", { name: "Find a job" }), "zz00");
-    expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
+    expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
+    await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
+    const hidden = screen.getByRole("button", { name: /KA01AB1234/ });
+    expect(hidden).toHaveClass("dim");
+    expect(hidden).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
   });
 });
@@ -564,6 +572,7 @@ describe("search and filters on every view (ADM-SCH-33)", () => {
     two();
     await openDay();
     await column("c1");
+    await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     const find = screen.getByRole("searchbox", { name: "Find a job" });
     const card1 = screen.getByRole("button", { name: /KA01AB1234/ });
     const card2 = screen.getByRole("button", { name: /KA02ZZ0001/ });
@@ -585,6 +594,7 @@ describe("search and filters on every view (ADM-SCH-33)", () => {
     await openDay();
     await column("c1");
     await userEvent.click(screen.getByRole("button", { name: "Late" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
     expect(screen.getByRole("button", { name: /KA02ZZ0001/ })).not.toHaveClass("dim");
   });
@@ -988,6 +998,7 @@ describe("job status on the board (ADM-SCH-34)", () => {
     const chips = screen.getByRole("group", { name: "Job status" });
     expect(within(chips).getByRole("button", { name: "All jobs 3" })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     expect(card("KA01AA0002")).not.toHaveClass("dim");
     expect(card("KA01AA0001")).toHaveClass("dim");
     await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
@@ -1260,12 +1271,13 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
 
   it("shows the lines of a detailed card: zone, model and cutoff; EXT and slot; car number and customer", async () => {
     localStorage.setItem("priveo.schedule.card-density", "detailed");
-    server({ jobs: [job({ zone: "Zone 3", parking: "Zone 3 · B1-24", vehicle: "Honda City", finish_by: "10:00" })] });
+    server({ jobs: [job({ zone: "Zone 3", parking: "Zone 3 · B1-24", vehicle: "Honda City", model: "City", finish_by: "10:00" })] });
     await openDay();
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     const lines = [...card.querySelectorAll(".sch-card-line")];
     expect(lines).toHaveLength(3);
-    expect(lines[0]).toHaveTextContent("Z3Honda CityCutoff 10:00");
+    expect(lines[0]).toHaveTextContent("Z3CityCutoff 10:00");
+    expect(card).not.toHaveTextContent("Honda");
     expect(lines[1]).toHaveTextContent("EXT09:00-09:20");
     expect(lines[2]).toHaveTextContent("KA01AB1234Meena");
     expect(card).not.toHaveTextContent("B1-24");
@@ -1336,11 +1348,12 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
 
   it("shows the zone and the customer on a timeline block when detailed", async () => {
     localStorage.setItem("priveo.schedule.card-density", "detailed");
-    server({ jobs: [job({ zone: "Zone 3", vehicle: "Honda City" })] });
+    server({ jobs: [job({ zone: "Zone 3", vehicle: "Honda City", model: "City" })] });
     await openDay("2026-11-08", "&view=timeline");
     const block = await screen.findByLabelText(/KA01AB1234/);
     expect(block).toHaveTextContent("Z3");
-    expect(block).toHaveTextContent("Honda City");
+    expect(block).toHaveTextContent("City");
+    expect(block).not.toHaveTextContent("Honda");
     expect(block).toHaveTextContent("Meena");
   });
 

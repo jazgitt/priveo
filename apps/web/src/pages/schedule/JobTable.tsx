@@ -60,9 +60,11 @@ export function jobsCsv(jobs: AdminJob[]): string {
  * details, sorted by any column. Opening a row opens the job's dialog, where it
  * can be moved; the table itself changes nothing (ADM-SCH-33).
  */
-export function JobTable({ jobs, total, fileName, onOpen, density = "standard" }: {
-  /** The jobs to show, already filtered by the search and the chips. */
+export function JobTable({ jobs, total, fileName, onOpen, density = "standard", faded }: {
+  /** The jobs to show, already filtered by the search and the chips (or all of them with "Show all"). */
   jobs: AdminJob[];
+  /** With "Show all" on: a row the filters do not keep, shown in disabled form (P1-4). */
+  faded?: (job: AdminJob) => boolean;
   /** All jobs of the day, to say how many are hidden by the filters. */
   total: number;
   fileName: string;
@@ -117,10 +119,13 @@ export function JobTable({ jobs, total, fileName, onOpen, density = "standard" }
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((j) => (
-              <TableRow key={j.id} tabIndex={0} className="cursor-pointer" aria-label={`${j.registration}, ${j.crew_name ?? UNASSIGNED}`}
-                        onClick={() => onOpen(j)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(j); }}>
+            {rows.map((j) => {
+              const off = faded?.(j) ?? false;
+              return (
+              <TableRow key={j.id} tabIndex={0} className={cn("cursor-pointer", off && "sch-row-dim")} aria-label={`${j.registration}, ${j.crew_name ?? UNASSIGNED}`}
+                        aria-disabled={off || undefined}
+                        onClick={() => { if (!off) onOpen(j); }}
+                        onKeyDown={(e) => { if (!off && e.key === "Enter" && e.target === e.currentTarget) onOpen(j); }}>
                 {cell(<span className="tabular-nums font-medium">{timeOf(j)}</span>)}
                 {cell(j.crew_name ?? <span className="text-muted-foreground italic">{UNASSIGNED}</span>)}
                 {cell(
@@ -145,7 +150,8 @@ export function JobTable({ jobs, total, fileName, onOpen, density = "standard" }
                     {j.reason && <span className="max-w-[16rem] truncate text-xs text-muted-foreground" title={j.reason}>{j.reason}</span>}
                   </span>)}
               </TableRow>
-            ))}
+              );
+            })}
             {rows.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={wide ? 10 : 7} className="px-3 py-6 text-center text-sm text-muted-foreground">

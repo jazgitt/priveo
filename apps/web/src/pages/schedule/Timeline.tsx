@@ -3,7 +3,7 @@ import { useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 import {
-  breached, gaps, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf, zonesOf,
+  breached, gaps, isShown, isSpa, isUnplaced, jobLabel, matches, minutesOf, serviceCode, statusClass, typeClass, windowsOf, zonesOf,
   type Density,
 } from "./Board";
 import { CardFace } from "./CardBoard";
@@ -27,9 +27,10 @@ interface Tip { job: AdminJob; x: number; y: number }
  * crew member against an hour ruler that spans the day's working hours, so a
  * large crew fits on one screen. Each job is a small block at its start time,
  * as wide as its duration and coloured by its status. Hovering or focusing a
- * block shows its details. Nothing can be moved here (ADM-SCH-33).
+ * block shows its details. The filters hide the blocks they do not keep; "Show all" brings
+ * them back in disabled form (P1-4).
  */
-export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", now }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, now }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -41,6 +42,8 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   flag?: string;
   /** How much a block shows, as on the cards: compact, standard or detailed. */
   density?: Density;
+  /** Off, the filters hide the blocks they do not keep; on, those blocks show in disabled form (P1-4). */
+  showAll?: boolean;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
 }) {
@@ -103,11 +106,14 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                   <div key={g.start} className="sch-off" data-testid="grey" title={avail?.reason}
                        style={{ left: pos(g.start), width: len(g.end - g.start) }} />
                 ))}
-                {mine.map((job) => (
+                {mine.filter((job) => isShown(job, showAll, focus, search, type, flag)).map((job) => {
+                  const kept = matches(job, focus, search, type, flag);
+                  return (
                   <div key={job.id} tabIndex={0} aria-label={`${job.start_time}-${job.end_time} ${jobLabel(job)}, ${job.status}`}
                        aria-describedby={tip?.job.id === job.id ? "sch-tl-tip" : undefined}
+                       aria-disabled={!kept || undefined}
                        className={cn("sch-tl-job", typeClass(job), statusClass(job), isSpa(job) && "spa", job.late && "late",
-                         breached(job) && "wine", !matches(job, focus, search, type, flag) && "dim")}
+                         breached(job) && "wine", !kept && "dim")}
                        style={{ left: pos(job.start_minute!), width: len(job.duration_minutes) }}
                        onMouseEnter={(e) => show(job, e.currentTarget)} onMouseLeave={() => setTip(null)}
                        onFocus={(e) => show(job, e.currentTarget)} onBlur={() => setTip(null)}>
@@ -116,7 +122,8 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
                       <CardFace job={job} density={density} zones={zones} />
                     </span>
                   </div>
-                ))}
+                  );
+                })}
                 {now !== undefined && now >= first && now <= last && (
                   <div className="sch-tl-now" style={{ left: pos(now) }} aria-hidden />
                 )}
