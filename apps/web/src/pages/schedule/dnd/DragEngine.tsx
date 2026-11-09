@@ -109,6 +109,8 @@ interface Session {
 
 /** The lane and index under a point, with the dragged card left out of the count. */
 function hitAt(x: number, y: number, excludeId: string): DropHit | null {
+  // jsdom and some embedded browsers have no hit testing: no lane under the point.
+  if (typeof document.elementFromPoint !== "function") return null;
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
   const laneEl = el?.closest<HTMLElement>("[data-dnd-lane]") ?? null;
   const laneId = laneEl?.dataset.dndLane;
