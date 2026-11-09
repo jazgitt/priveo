@@ -9,7 +9,8 @@ const DATE = "2026-10-18";
 const fetchMock = vi.fn();
 const downloads: string[] = [];
 
-const pdf = () => new Response(new Blob(["%PDF-1.4"]), { status: 200, headers: { "Content-Type": "application/pdf" } });
+// A string body: this environment's Response refuses a jsdom Blob, which the fetch would then report as a lost connection.
+const pdf = () => new Response("%PDF-1.4", { status: 200, headers: { "Content-Type": "application/pdf" } });
 
 /** A card with only the fields the buttons read. */
 function card(id: string, crewId: string | null, crewName: string | null, status = "Scheduled", date = DATE): AdminJob {
@@ -51,9 +52,10 @@ describe("crewWithCards", () => {
       card("e", null, null),
       card("f", "c4", "Dev", "Scheduled", "2026-10-19"),
     ];
+    // Sorted by name: Meena (c2) before Ravi (c1).
     expect(crewWithCards(jobs, DATE)).toEqual([
-      { id: "c1", name: "Ravi" },
       { id: "c2", name: "Meena" },
+      { id: "c1", name: "Ravi" },
     ]);
   });
 });

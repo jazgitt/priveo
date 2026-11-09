@@ -64,7 +64,7 @@ it("starts the default range on today, not the next Sunday (P3-2.1)", async () =
 it("opens the Demand tab from a demand figure and lists the day's jobs in the server order (P3-2.2)", async () => {
   renderPage();
   await screen.findByRole("region", { name: "Capacity summary" });
-  await userEvent.click(screen.getByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
 
   expect(screen.getByRole("tab", { name: "Demand" })).toHaveAttribute("aria-selected", "true");
   const demandCall = fetchMock.mock.calls.map((c) => String(c[0])).find((p) => p.startsWith("/v1/admin/scheduling/demand"));
@@ -84,7 +84,7 @@ it("opens the Demand tab from a demand figure and lists the day's jobs in the se
 it("searches the Demand list by registration and keeps each job's place in the day's order", async () => {
   renderPage();
   await screen.findByRole("region", { name: "Capacity summary" });
-  await userEvent.click(screen.getByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
   await screen.findByText("TEST-C");
   await userEvent.type(screen.getByRole("searchbox"), "TEST-C");
 
@@ -97,7 +97,7 @@ it("searches the Demand list by registration and keeps each job's place in the d
 it("sends the service filter to the server when one is chosen", async () => {
   renderPage();
   await screen.findByRole("region", { name: "Capacity summary" });
-  await userEvent.click(screen.getByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Show jobs due on .* 25-Oct-26/ }));
   await screen.findByText("TEST-B");
   const demandCalls = () => fetchMock.mock.calls.map((c) => String(c[0])).filter((p) => p.startsWith("/v1/admin/scheduling/demand"));
   expect(demandCalls().some((p) => p.includes("service="))).toBe(false);

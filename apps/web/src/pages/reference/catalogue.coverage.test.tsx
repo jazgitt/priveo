@@ -164,7 +164,8 @@ it('shows every service together, filters by a service tab and switches to tiles
   await userEvent.click(screen.getByRole('tab',{name:/Deep Spa/}));
   expect(screen.queryByText('05:00 to 11:00')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button',{name:'Tiles'}));
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  // The exceptions table below the slots is always a table; the slots table's Time column is the one that must go.
+  expect(screen.queryByRole('columnheader',{name:'Time'})).not.toBeInTheDocument();
   expect(screen.getByText('12:00 to 14:00')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button',{name:'Edit'}));
   expect(await screen.findByRole('dialog')).toHaveTextContent('Edit working slot');
