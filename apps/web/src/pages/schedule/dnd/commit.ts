@@ -48,11 +48,29 @@ export interface BatchMoveVars {
 }
 
 /**
+ * What the toast says once a drop is saved: where the dragged card landed, so the admin can see it
+ * (there is no Undo), then the other cards it moved, then any crew or service-hours warning.
+ */
+export function movedMessage(r: BatchMoveResult, moves: BatchMove[]): string {
+  const dragged = moves[0] ? r.jobs.find((j) => j.id === moves[0].job_id) : undefined;
+  let text = "Moved.";
+  if (dragged && dragged.crew_id === null) text = `${dragged.registration} taken off its crew member.`;
+  else if (dragged) text = `${dragged.registration} moved to ${dragged.crew_name} at ${dragged.start_time}.`;
+  const others = moves.length - 1;
+  if (others > 0) text += ` ${others} other ${others === 1 ? "job" : "jobs"} moved by hand.`;
+  const warnings = r.warnings.map((w) => w.message).join(" ");
+  return warnings ? `${text} ${warnings}` : text;
+}
+
+/**
  * Saves a batch of moves for the board under `boardKey`. The change is shown
  * at once; a refusal (overlap, or any other error) puts the board back and
  * shows the message in one toast. `onResult` gets the warnings of a saved batch.
+ * `onSettled` gets the error of a refused batch, or null when it was saved, so the
+ * page can offer the next step (the unfreeze code for a frozen day).
  */
-export function useBatchMove(boardKey: QueryKey, onResult?: (result: BatchMoveResult) => void) {
+export function useBatchMove(boardKey: QueryKey, onResult?: (result: BatchMoveResult) => void,
+                             onSettled?: (error: unknown) => void) {
   const qc = useQueryClient();
   return useAppMutation<BatchMoveVars, BatchMoveResult>({
     mutationFn: (v) => batchMoveJobs(v.moves, Boolean(v.override)),
@@ -65,11 +83,13 @@ export function useBatchMove(boardKey: QueryKey, onResult?: (result: BatchMoveRe
         if (before) qc.setQueryData<Board>(boardKey, before);
       };
     },
-    success: (r) => (r.warnings.length ? r.warnings.map((w) => w.message).join(" ") : "Moved."),
+    success: (r, v) => movedMessage(r, v.moves),
     onSuccess: (r) => {
       onResult?.(r);
+      onSettled?.(null);
       announceBoardChange();
     },
+    onError: (e) => onSettled?.(e),
     invalidate: [boardKey],
   });
 }

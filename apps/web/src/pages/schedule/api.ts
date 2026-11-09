@@ -278,7 +278,9 @@ export async function batchMoveJobs(moves: BatchMove[], override: boolean): Prom
       method: "POST", body: { moves, override },
     });
   } catch (e) {
-    if (e instanceof ApiError && e.status === 409) {
+    // The overlap body is {"detail": {"code": "overlap"}}, which the client reads as "http_error", so that
+    // code is worded here too. Other coded 409s (schedule_frozen, job_not_open) keep their code and message.
+    if (e instanceof ApiError && e.status === 409 && (e.code === "overlap" || e.code === "http_error")) {
       throw new ApiError(409, "overlap", e.code === "overlap" && e.message ? e.message : OVERLAP_TEXT);
     }
     throw e;

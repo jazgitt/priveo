@@ -44,20 +44,15 @@ test.describe("Schedule (scenario R06)", () => {
     await expect(carOf(page, "TEST R06 Manager 0")).toHaveCount(0);
   });
 
-  test("dragging a card onto Unscheduled asks first, and takes it off its crew member [ADM-SCH-33]", async ({ page }) => {
+  test("dragging a card onto Unscheduled takes it off its crew member at once, with no confirmation [ADM-SCH-33]", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await openBoard(page, addDays(scenario("R06").as_of, 1));
     const unscheduled = page.getByTestId("col-unscheduled");
     await carOf(page, "TEST R06 Member 1").dragTo(unscheduled.locator(".sch-col-body"));
-    const ask = page.getByRole("alertdialog");
-    await expect(ask).toContainText("off");
-    // Cancelling leaves the card where it was.
-    await ask.getByRole("button", { name: "Cancel" }).click();
-    await expect(carOf(page, "TEST R06 Member 1")).toBeVisible();
-
-    await carOf(page, "TEST R06 Member 1").dragTo(unscheduled.locator(".sch-col-body"));
-    await page.getByRole("alertdialog").getByRole("button", { name: "Take off crew member" }).click();
+    // Scheduler board fixes build plan, section 3, decision 4: no confirmation dialog on any drop.
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(unscheduled.getByRole("button", { name: /TS35TT0001/ })).toBeVisible();
+    await expect(carOf(page, "TEST R06 Member 1")).toHaveCount(0);
     await page.reload();
     await expect(page.getByTestId("col-unscheduled").getByRole("button", { name: /TS35TT0001/ })).toBeVisible();
 

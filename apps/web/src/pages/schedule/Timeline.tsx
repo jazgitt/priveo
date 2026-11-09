@@ -54,7 +54,7 @@ function laneCardOf(job: AdminJob): LaneCard {
  * Cards view (P0-6). The filters hide the blocks they do not keep; "Show all" brings
  * them back in disabled form (P1-4).
  */
-export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, now, boardKey }: {
+export function Timeline({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", showAll = false, now, boardKey, onDropSettled }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -72,6 +72,8 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   showAll?: boolean;
   /** Minutes after midnight when the day shown is today, for the now line. */
   now?: number;
+  /** Gets the error of a refused drop (a frozen day offers the code), or null once a drop is saved. */
+  onDropSettled?: (error: unknown) => void;
 }) {
   const [tip, setTip] = useState<Tip | null>(null);
   const zones = zonesOf(jobs);
@@ -123,7 +125,7 @@ export function Timeline({ crew, jobs, availability, focus, search, type = "", f
   };
 
   return (
-    <DragEngineProvider boardKey={boardKey} plan={planDrop}>
+    <DragEngineProvider boardKey={boardKey} plan={planDrop} onSettled={onDropSettled}>
     <div className="sch-fill">
       <Scroller className={cn("sch-tl", density)} role="group" aria-label="Day timeline">
         <div className="sch-tl-row sch-tl-head">

@@ -61,4 +61,13 @@ describe("batchMoveJobs (pinned batch-move contract)", () => {
     const err = await batchMoveJobs([{ job_id: "j1", crew_id: "c1", start_minute: 600 }], false).catch((e: unknown) => e);
     expect((err as ApiError).message).toBe("KA09 is in the way at 10:00-10:30.");
   });
+
+  it("keeps the schedule_frozen code, so the page can offer the unfreeze code", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      code: "schedule_frozen", message: "This schedule is frozen. Unfreeze it with the code to move work.", fields: {}, request_id: "r",
+    }), { status: 409 }));
+    const err = await batchMoveJobs([{ job_id: "j1", crew_id: "c1", start_minute: 600 }], false).catch((e: unknown) => e);
+    expect((err as ApiError).code).toBe("schedule_frozen");
+    expect((err as ApiError).message).toMatch(/frozen/);
+  });
 });

@@ -71,6 +71,8 @@ export interface DragEngineProps {
   boardKey: QueryKey;
   plan: (drop: DropHit, item: DragItem) => DropOutcome;
   onSaved?: (result: BatchMoveResult) => void;
+  /** Gets the error of a refused drop (for example a frozen day), or null once a drop is saved. */
+  onSettled?: (error: unknown) => void;
   children: ReactNode;
 }
 
@@ -131,18 +133,20 @@ function detach(s: Session): void {
   if (s.hold !== null) clearTimeout(s.hold);
 }
 
-export function DragEngineProvider({ boardKey, plan, onSaved, children }: DragEngineProps) {
+export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, children }: DragEngineProps) {
   const planRef = useRef(plan);
   const savedRef = useRef(onSaved);
+  const settledRef = useRef(onSettled);
   const [view, setView] = useState<DragState>({ activeId: null, hit: null });
   const session = useRef<Session | null>(null);
-  const commit = useBatchMove(boardKey, (r) => savedRef.current?.(r));
+  const commit = useBatchMove(boardKey, (r) => savedRef.current?.(r), (e) => settledRef.current?.(e));
   const commitRef = useRef(commit.mutate);
   // Sync is mounted once, by the schedule page (useBoardSync in SchedulePage), not here.
 
   useEffect(() => {
     planRef.current = plan;
     savedRef.current = onSaved;
+    settledRef.current = onSettled;
     commitRef.current = commit.mutate;
   });
 
