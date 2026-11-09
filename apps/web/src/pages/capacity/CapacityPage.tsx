@@ -8,15 +8,22 @@ import { HoverTip, TipRows, type TipRow } from "@/components";
 import { cn } from "@/lib/utils";
 import { useSite } from "@/site/SiteContext";
 import { Input } from "@/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
 import {
-  errorText, fmtDate, fmtHours, nextSunday, useCapacity, weekday,
+  errorText, fmtDate, fmtHours, toIso, useCapacity, weekday,
 } from "../schedule/api";
+import { DemandTab } from "./DemandTab";
 
-/** A capacity figure with its breakup on hover (ADM-CAP-06). */
-function Tip({ label, title, rows, empty }: { label: string; title: string; rows: TipRow[]; empty: string }) {
+/** A capacity figure with its breakup on hover (ADM-CAP-06). `open` makes the figure a button (P3-2.2). */
+function Tip({ label, title, rows, empty, open }: {
+  label: string; title: string; rows: TipRow[]; empty: string; open?: { name: string; onClick: () => void };
+}) {
+  const figure = open
+    ? <button type="button" className="cursor-pointer underline-offset-2 hover:underline" aria-label={open.name} onClick={open.onClick}>{label}</button>
+    : label;
   return (
-    <HoverTip label={label} ariaLabel={`${title} ${label}. Hover for the breakup.`}>
+    <HoverTip label={figure} ariaLabel={`${title} ${label}. Hover for the breakup.`}>
       <TipRows title={title} rows={rows} empty={empty} />
     </HoverTip>
   );
@@ -28,8 +35,16 @@ const SPANS = [{ value: "1", label: "1 day" }, { value: "7", label: "7 days" }, 
 export function CapacityPage() {
   const site = useSite();
   const societyId = site.id;
-  const [startDate, setStartDate] = useState(nextSunday());
+  // The range starts today (P3-2.1) and runs for the chosen number of days.
+  const [startDate, setStartDate] = useState(() => toIso(new Date()));
   const [days, setDays] = useState("7");
+  const [tab, setTab] = useState("capacity");
+  const [demandDate, setDemandDate] = useState(() => toIso(new Date()));
+  // A demand figure opens the Demand tab on that date (P3-2.2).
+  const openDemand = (iso: string) => {
+    setDemandDate(iso);
+    setTab("demand");
+  };
   const capQ = useCapacity(societyId, startDate, Number(days));
   const days_ = capQ.data;
   const over = days_?.filter((d) => d.over_capacity).length ?? 0;
@@ -46,7 +61,15 @@ export function CapacityPage() {
       <PageHeader title="Capacity Utilisation" site={site.name || undefined}
                   description="Crew hours available against the work due. Act on red days before scheduling." />
       {!societyId ? <EmptyState title="Choose a site">Pick a site at the top left.</EmptyState> : (
-        <>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList variant="line" aria-label="Capacity sections" className="h-auto flex-wrap justify-start">
+            <TabsTrigger value="capacity" className="flex-none px-3">Capacity</TabsTrigger>
+            <TabsTrigger value="demand" className="flex-none px-3">Demand</TabsTrigger>
+          </TabsList>
+          <TabsContent value="demand" className="mt-4">
+            <DemandTab societyId={societyId} date={demandDate} onDateChange={setDemandDate} />
+          </TabsContent>
+          <TabsContent value="capacity" className="mt-4 flex flex-col gap-4">
           <StatRow label="Capacity summary">
             <StatTile label="Days shown" value={days_?.length} loading={loading} />
             <StatTile label="Days over capacity" value={over} loading={loading} hint={over > 0 ? "Act before scheduling" : "None"} />
@@ -80,6 +103,7 @@ export function CapacityPage() {
                      rows={(d.crew ?? []).map((c) => ({ key: c.name + c.slots, left: `${c.name} (${c.role})`, right: fmtHours(c.minutes), note: c.slots }))} />) },
               { key: "n", header: "Demand", width: "8rem", align: "right", className: "overflow-visible", cell: (d) => (
                 <Tip label={fmtHours(d.demand_minutes)} title="Demand" empty="Nothing due"
+                     open={{ name: `Show jobs due on ${weekday(d.date)} ${fmtDate(d.date)}`, onClick: () => openDemand(d.date) }}
                      rows={(d.demand ?? []).map((l) => ({
                        key: l.service + l.source, left: `${l.service}${l.source === "Add-on" ? " (add-on)" : ""}`,
                        right: fmtHours(l.minutes), note: `${l.jobs} ${l.jobs === 1 ? "job" : "jobs"}` }))} />) },
@@ -101,7 +125,8 @@ export function CapacityPage() {
               { key: "o", header: "", width: "8.5rem", cell: (d) => (d.over_capacity ? <StatusBadge status="Over capacity" tone="error" /> : null) },
             ]}
           />
-        </>
+          </TabsContent>
+        </Tabs>
       )}
     </>
   );
