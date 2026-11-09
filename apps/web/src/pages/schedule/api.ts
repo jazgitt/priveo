@@ -246,6 +246,45 @@ export function useCapacity(societyId: string, startDate: string, days: number) 
   });
 }
 
+/** One job's new place in a batch move. A null crew takes the job to Unscheduled (pinned contract, batch move). */
+export interface BatchMove {
+  job_id: string;
+  crew_id: string | null;
+  start_minute: number | null;
+}
+
+/** A crew-hours or service-hours crossing: the move still happens, and the board shows it in red. */
+export interface BatchWarning {
+  job_id: string;
+  code: "crew_hours" | "service_hours" | string;
+  message: string;
+}
+
+export interface BatchMoveResult {
+  jobs: AdminJob[];
+  warnings: BatchWarning[];
+}
+
+const OVERLAP_TEXT = "That move overlaps another job, so nothing was moved. The card is back where it was.";
+
+/**
+ * Moves several jobs in one transaction (POST /v1/admin/scheduling/jobs/batch-move).
+ * Any overlap refuses the whole batch with HTTP 409, and the caller puts every card back.
+ * Late placements are allowed; crew-hours and service-hours crossings come back as warnings.
+ */
+export async function batchMoveJobs(moves: BatchMove[], override: boolean): Promise<BatchMoveResult> {
+  try {
+    return await api<BatchMoveResult>("/v1/admin/scheduling/jobs/batch-move", {
+      method: "POST", body: { moves, override },
+    });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      throw new ApiError(409, "overlap", e.code === "overlap" && e.message ? e.message : OVERLAP_TEXT);
+    }
+    throw e;
+  }
+}
+
 // ---- helpers ---------------------------------------------------------------
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
