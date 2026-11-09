@@ -36,6 +36,7 @@ import { CutoffRequests, DraftImprovements, JobCardButtons, PendingAddons } from
 import { NeedsAttention } from "./NeedsAttention";
 import { SkippedJobs } from "./SkippedJobs";
 import { Timeline } from "./Timeline";
+import { useBoardSync } from "./dnd";
 import { Fireworks } from "./RunFireworks";
 import { isRunMusicMuted, setRunMusicMuted, startRunMusic, stopRunMusic } from "./runMusic";
 import {
@@ -280,6 +281,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
 
   // A move shows on the board at once and is put back if the server refuses it (ADM-SCH-33).
   const boardKey = ["board", "id", schedule?.id];
+  // Another tab of this browser that saves a change re-reads this board (P0-9, same browser only).
+  useBoardSync();
   const move = useAppMutation<{ job: AdminJob; crewId: string | null; startMinute: number | null; override?: boolean }, AdminJob>({
     mutationFn: (v) => api(`/v1/admin/scheduling/jobs/${v.job.id}/move`, {
       method: "POST", body: { crew_id: v.crewId, start_minute: v.startMinute, ...(v.override ? { override: true } : {}) },
@@ -441,7 +444,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                              type={focusType} flag={focusFlag} density={density} showAll={showAll} savingId={move.isPending ? move.variables?.job.id ?? null : null}
                              onOpen={setOpen} onMove={onMove} />
                 ) : (
-                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density} showAll={showAll}
+                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density} showAll={showAll} boardKey={boardKey}
                             now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>
