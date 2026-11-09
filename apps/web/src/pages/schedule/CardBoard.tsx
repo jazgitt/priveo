@@ -349,21 +349,26 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
         {/* A card taken off a crew member shows the reason it has no place. */}
         {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
         {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
+        {tools && job.placed_by_hand && (() => {
+          // The lock sits at the top right, on its own. It never opens the card.
+          const locked = job.hand_locked === true;
+          const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
+          return (
+            <span className="sch-card-lock" onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
+              <button type="button" className={`sch-tool lock ${locked ? "is-locked" : "is-open"}`}
+                      aria-pressed={locked} aria-disabled={!open || undefined}
+                      aria-label={tip} title={tip}
+                      onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
+                {locked ? <Lock aria-hidden /> : <Unlock aria-hidden />}
+              </button>
+            </span>
+          );
+        })()}
         {tools && (
-          // The icons sit at the bottom right (standard and detailed) or the right (compact). They never open the card.
+          // The take-off icon sits at the bottom right (standard and detailed) or the right (compact). It never opens the card.
           <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
-            {job.placed_by_hand && (() => {
-              const locked = job.hand_locked === true;
-              const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
-              return (
-                <button type="button" className="sch-tool lock" aria-pressed={locked} aria-disabled={!open || undefined}
-                        aria-label={tip} title={tip}
-                        onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
-                  {locked ? <Lock aria-hidden /> : <Unlock aria-hidden />}
-                </button>
-              );
-            })()}
             {open && job.crew_id && (
               // The name stays out of the button's label, so a search by registration still finds the card alone.
               <button type="button" className="sch-tool del" aria-label="Take off the day"

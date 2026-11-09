@@ -343,17 +343,18 @@
 .sch-fireworks-mute:hover { background: #fbf6e9; }
 /* Card tools: the lock (placed by hand) and the take-off icon. Bottom right on standard and detailed, right on compact (items 6, 15). */
 .sch-card.has-tools, .sch-card.has-tools.compact { padding-right: 2.25rem; }
-/* The lock sits at the left edge, so an unlocked card's icon is easy to see; delete stays at the right. */
-.sch-card-tools { position: absolute; left: 0.2rem; right: 0.2rem; bottom: 0.15rem; display: flex; justify-content: flex-start; gap: 0.1rem; }
-.sch-card-tools .sch-tool.del { margin-left: auto; }
+/* The lock sits at the top right; the take-off icon stays at the bottom right (compact: right, centred). */
+.sch-card-lock { position: absolute; top: 0.15rem; right: 0.2rem; display: flex; gap: 0.1rem; }
+.sch-card-tools { position: absolute; right: 0.2rem; bottom: 0.15rem; display: flex; justify-content: flex-end; gap: 0.1rem; }
 .sch-card.compact .sch-card-tools { top: 50%; bottom: auto; transform: translateY(-50%); }
 .sch-tool { display: grid; place-items: center; width: 1.2rem; height: 1.2rem; padding: 0; border: 0; border-radius: 4px;
   background: transparent; color: var(--c-mute); cursor: pointer; }
 .sch-tool:hover { background: rgba(22, 21, 26, 0.08); color: var(--c-text); }
 .sch-tool:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
 .sch-tool svg { width: 0.8rem; height: 0.8rem; }
-.sch-tool.lock[aria-pressed="true"] { color: var(--c-text); }
-.sch-tool.lock[aria-pressed="false"] { color: var(--c-text); }
+/* Locked is red, open is green. The open shackle is the Unlock icon. */
+.sch-tool.lock.is-locked { color: var(--c-error); }
+.sch-tool.lock.is-open { color: var(--c-ok); }
 .sch-tool.lock[aria-disabled="true"] { opacity: 0.45; cursor: default; }
 .sch-tool.del:hover { color: var(--c-error); }
 .sch-card.wine .sch-tool { color: #fdf2f4; }
