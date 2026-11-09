@@ -23,7 +23,7 @@ import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
 import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass, TypeKey } from "./Board";
-import { CrewPicker, FlagKey } from "./BoardFilters";
+import { CrewPicker, FlagKey, ShowAll } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
@@ -161,6 +161,8 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [focusStatus, setFocusStatus] = useState("");
   const [focusType, setFocusType] = useState("");
   const [focusFlag, setFocusFlag] = useState("");
+  // Off, the filters hide the cards, blocks and rows they do not keep; on, those show in disabled form (P1-4).
+  const [showAll, setShowAll] = useState(false);
   // Which crew members' lanes and rows are shown; none chosen shows everyone.
   const [crewSel, setCrewSel] = useState<string[]>([]);
   const [hideOff, setHideOff] = useState(false);
@@ -194,9 +196,10 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const view = params.get("view") === "timeline" ? "timeline" : params.get("view") === "table" ? "table" : "cards";
   const isOff = (id: string) => availability.find((a) => a.crew_id === id)?.status === "Off";
   const shownCrew = (board?.crew ?? []).filter((c) => (crewSel.length === 0 || crewSel.includes(c.id)) && !(hideOff && isOff(c.id)));
-  // The table lists only what the search and the chips keep; the board dims the rest instead.
-  const tableJobs = jobs.filter((j) => matches(j, focusStatus, search, focusType, focusFlag)
-    && (crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id))));
+  // The table lists only what the search and the chips keep, unless "Show all" is on; then the rest show in disabled form.
+  const crewJobs = jobs.filter((j) => crewSel.length === 0 || (j.crew_id !== null && crewSel.includes(j.crew_id)));
+  const keptByFilters = (j: AdminJob) => matches(j, focusStatus, search, focusType, focusFlag);
+  const tableJobs = showAll ? crewJobs : crewJobs.filter(keptByFilters);
 
   // An old link with tab=run opens the board with the Run dialog.
   // An old link with tab=needs (the Needs scheduling tab, now on the Board's Unscheduled column) opens the board.
@@ -396,6 +399,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
                   <TypeKey type={focusType} onType={setFocusType} />
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
+                  <ShowAll checked={showAll} onChange={setShowAll} />
                   <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />
                   {/* The card detail switch works for all three views (ADM-SCH-32). */}
                   <div className="sch-views" role="group" aria-label="Card detail" title="How much each job shows">
@@ -430,14 +434,14 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                   </span>
                 </div>
                 {view === "table" ? (
-                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen} density={density}
+                  <JobTable jobs={tableJobs} total={jobs.length} onOpen={setOpen} density={density} faded={(j) => !keptByFilters(j)}
                             fileName={`schedule-${(site.name || "site").replace(/[^A-Za-z0-9]+/g, "-")}-${date}.csv`} />
                 ) : view === "cards" ? (
                   <CardBoard crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search}
-                             type={focusType} flag={focusFlag} density={density} savingId={move.isPending ? move.variables?.job.id ?? null : null}
+                             type={focusType} flag={focusFlag} density={density} showAll={showAll} savingId={move.isPending ? move.variables?.job.id ?? null : null}
                              onOpen={setOpen} onMove={onMove} />
                 ) : (
-                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density}
+                  <Timeline crew={shownCrew} jobs={jobs} availability={availability} focus={focusStatus} search={search} type={focusType} flag={focusFlag} density={density} showAll={showAll}
                             now={date === today ? new Date().getHours() * 60 + new Date().getMinutes() : undefined} />
                 )}
               </>

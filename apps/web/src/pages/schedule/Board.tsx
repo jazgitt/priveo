@@ -58,9 +58,17 @@ export type CardPiece = "zone" | "reg" | "model" | "customer" | "cutoff" | "code
 export interface CardPart { kind: CardPiece; text: string }
 
 /**
+ * The car model alone, for the card's vehicle line (P2-7). A card never shows the make. The job row
+ * carries the model as `model`; without it the line is empty rather than showing the make.
+ */
+export function modelOf(job: AdminJob): string {
+  return (job as AdminJob & { model?: string }).model ?? "";
+}
+
+/**
  * The lines a card shows at each size (owner review, 8-Nov-26). Compact: zone, EXT or INT and the
  * cutoff. Standard: zone, car number and cutoff, then EXT or INT and the service slot. Detailed:
- * zone, make and model and cutoff, then EXT or INT and the slot, then car number and customer.
+ * zone, model and cutoff, then EXT or INT and the slot, then car number and customer.
  * The status flags and notes are added by the card itself.
  */
 export function cardLines(job: AdminJob, density: Density): CardPart[][] {
@@ -70,7 +78,7 @@ export function cardLines(job: AdminJob, density: Density): CardPart[][] {
   const cutoff: CardPart | null = job.finish_by ? { kind: "cutoff", text: `Cutoff ${job.finish_by}` } : null;
   const code: CardPart = { kind: "code", text: serviceCode(job.service) };
   const slot: CardPart = { kind: "slot", text: job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min` };
-  const model: CardPart | null = job.vehicle ? { kind: "model", text: job.vehicle } : null;
+  const model: CardPart | null = modelOf(job) ? { kind: "model", text: modelOf(job) } : null;
   const customer: CardPart | null = job.customer_name ? { kind: "customer", text: job.customer_name } : null;
   const lines: (CardPart | null)[][] = density === "compact"
     ? [[zone, code, cutoff]]
@@ -155,6 +163,36 @@ export function matches(job: AdminJob, focus: string, search: string, type = "",
   if (focus === PARTIAL) return job.visit_outcome === PARTIAL && matchesSearch(job, search);
   if (focus && job.status !== focus) return false;
   return matchesSearch(job, search);
+}
+
+/**
+ * Whether a job is drawn on the board at all. With "Show all" off, only the jobs the filters keep
+ * are drawn; with it on, the others are drawn in disabled form (P1-4).
+ */
+export function isShown(job: AdminJob, showAll: boolean, focus: string, search: string, type = "", flag = ""): boolean {
+  return showAll || matches(job, focus, search, type, flag);
+}
+
+/** The rank of a job in the Unscheduled list: EXT 0, INT 1, every other service (SPA too) 2. */
+function unscheduledRank(job: AdminJob): number {
+  if (isSpa(job)) return 2;
+  const code = serviceCode(job.service);
+  return code === "EXT" ? 0 : code === "INT" ? 1 : 2;
+}
+
+/**
+ * The display order of the Unscheduled list (P2-8): EXT by cutoff, then INT by cutoff, then other
+ * services by cutoff. A job with no cutoff goes last in its group. Display only: the scheduler's
+ * own order does not change.
+ */
+export function unscheduledOrder(jobs: AdminJob[]): AdminJob[] {
+  const byCutoff = (a: AdminJob, b: AdminJob) => {
+    if (a.finish_by === b.finish_by) return 0;
+    if (!a.finish_by) return 1;
+    if (!b.finish_by) return -1;
+    return a.finish_by < b.finish_by ? -1 : 1;
+  };
+  return [...jobs].sort((a, b) => unscheduledRank(a) - unscheduledRank(b) || byCutoff(a, b));
 }
 
 /**

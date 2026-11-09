@@ -1,4 +1,4 @@
-import { Check, ChevronsLeft, ChevronsRight, Lock, Trash2, Unlock, X } from "lucide-react";
+import { Check, ChevronsLeft, ChevronsRight, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent, type PointerEvent, type ReactNode, type WheelEvent } from "react";
 
 import { useConfirm } from "@/blocks/confirm";
@@ -7,10 +7,12 @@ import { cn } from "@/lib/utils";
 
 import { HoverTip } from "../../components";
 import {
-  breached, cardLines, clashMessage, clashOf, type CardPart, type Density, fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isSpa,
-  isUnplaced, jobLabel, matches, minutesOf, Reasoning, stepOf, statusClass, typeClass, windowsOf, zoneShort, zonesOf, zoneStyle,
+  breached, cardLines, clashMessage, clashOf, type CardPart, type Density, fitsAt, freeSlots, freeStart, gaps, hm, isOpen, isShown, isSpa,
+  isUnplaced, jobLabel, matches, minutesOf, Reasoning, stepOf, statusClass, typeClass, unscheduledOrder, windowsOf, zoneShort, zonesOf,
+  zoneStyle,
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
+import { LockGlyph } from "./LockGlyph";
 import { Scroller } from "./Scroller";
 import { api } from "@/api/client";
 import { hhmm, type AdminJob, type CrewDayAvailability, type SchedulingCrew } from "./api";
@@ -129,8 +131,10 @@ export function CardFace({ job, density, zones }: { job: AdminJob; density: Dens
  * member. Clicking a card opens its dialog to set an exact time. A crew member
  * who cannot work that day is greyed out and takes no card (ADM-SCH-32, -33).
  * A drop that would overlap another job is refused with the job in the way.
+ * The filters hide the cards they do not keep; "Show all" brings them back in
+ * disabled form (P1-4). A hidden card still takes its time in its column.
  */
-export function CardBoard({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, onOpen, onMove }: {
+export function CardBoard({ crew, jobs, availability, focus, search, type = "", flag = "", density = "standard", savingId = null, showAll = false, onOpen, onMove }: {
   crew: SchedulingCrew[];
   jobs: AdminJob[];
   availability: CrewDayAvailability[];
@@ -143,6 +147,8 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   density?: Density;
   /** The job whose move is being saved, shown as working. */
   savingId?: string | null;
+  /** Off, the filters hide the cards they do not keep; on, those cards show in disabled form (P1-4). */
+  showAll?: boolean;
   onOpen: (job: AdminJob) => void;
   onMove: (job: AdminJob, crewId: string | null, startMinute: number | null) => void;
 }) {
@@ -178,7 +184,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   // Members who cannot work go to the end, so the columns that take work come first.
   const members = [...crew].sort((a, b) =>
     Number(availOf(a.id)?.status === "Off") - Number(availOf(b.id)?.status === "Off"));
-  const unplaced = jobs.filter(isUnplaced);
+  const unplaced = unscheduledOrder(jobs.filter(isUnplaced));
   const dragged = dragId ? jobs.find((j) => j.id === dragId) ?? null : null;
   /** While a card is held, whether a crew member could take it at all: shown as green or red columns. */
   const takes = (member: SchedulingCrew): boolean | null => {
@@ -322,19 +328,22 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
   };
 
   const card = (job: AdminJob) => {
-    const open = isOpen(job);
+    // A card the filters do not keep is shown only with "Show all" on, and then it is disabled: no drag, no dialog.
+    const kept = matches(job, focus, search, type, flag);
+    const open = isOpen(job) && kept;
     const wine = breached(job);
     const tools = job.placed_by_hand || (open && job.crew_id);
     return (
       <div key={job.id} data-card data-job={job.id} role="button" tabIndex={0} draggable={open}
-           aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
+           aria-disabled={!kept || undefined} aria-label={jobLabel(job)} aria-busy={savingId === job.id || undefined}
            title={`${job.start_time ? `${job.start_time}-${job.end_time} ` : ""}${job.vehicle}, ${job.service}.${job.parking ? ` ${job.parking}.` : ""} ${job.status}${job.reason ? `. ${job.reason}` : ""}${wine ? ` Placed by hand against a rule: ${(job.hand_breaches ?? []).join(" ")}` : ""}${open && job.crew_id ? ` Alt and the up or down arrow move it ${step} minutes.` : ""}`}
            className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
-             wine && "wine", !matches(job, focus, search, type, flag) && "dim", dragId === job.id && "dragging", !open && "locked",
+             wine && "wine", !kept && "dim", dragId === job.id && "dragging", !open && "locked",
              savingId === job.id && "saving", tools && "has-tools")}
            onDragStart={open ? startDrag(job) : undefined} onDragEnd={endDrag}
-           onClick={() => onOpen(job)}
+           onClick={() => { if (kept) onOpen(job); }}
            onKeyDown={(e) => {
+             if (!kept) return;
              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(job); }
              else if (e.altKey && open && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                e.preventDefault();
@@ -360,7 +369,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
                       aria-pressed={locked} aria-disabled={!open || undefined}
                       aria-label={tip} title={tip}
                       onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
-                {locked ? <Lock aria-hidden /> : <Unlock aria-hidden />}
+                <LockGlyph locked={locked} />
               </button>
             </span>
           );
@@ -412,12 +421,13 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
     return withLine(member.id, items);
   };
 
-  /** The items of a column, with a line where the dragged card would go between cards. */
+  /** The items of a column, with a line where the dragged card would go between cards. A card the filters hide is left out. */
   const withLine = (col: string, items: { node: () => ReactNode; card?: AdminJob }[]) => {
     const out: ReactNode[] = [];
     const lineAt = over?.col === col && col !== UNSCHEDULED && over.index >= 0 ? over.index : -1;
     let at = 0;
     for (const it of items) {
+      if (it.card && !isShown(it.card, showAll, focus, search, type, flag)) continue;
       if (it.card && it.card.id !== dragId) {
         if (lineAt === at) out.push(<div key="drop" className="sch-drop-line" />);
         at += 1;
@@ -430,7 +440,7 @@ export function CardBoard({ crew, jobs, availability, focus, search, type = "", 
 
   return (
     <div className="sch-fill" ref={root}>
-      <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", panning && "panning")} role="group" aria-label="Day board"
+      <Scroller wrapClassName="sch-board-wrap" innerRef={strip} className={cn("sch-board", density, panning && "panning")} role="group" aria-label="Day board"
                 onPointerDown={panStart} onPointerMove={panMove} onPointerUp={panEnd} onPointerCancel={panEnd} onWheel={wheel}>
         {folded.has(UNSCHEDULED) ? (
           // A folded Unscheduled lane is a thin strip; a card dropped on it is taken off its crew member, as on the open lane.
