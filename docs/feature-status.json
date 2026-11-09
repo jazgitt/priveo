@@ -316,6 +316,7 @@
     "ADM-SVS-09": {"stage":"dev","hash":"67050fca-246","bugs":0},
     "ADM-SVS-10": {"stage":"dev","hash":"9b927b60-372","bugs":0},
     "ADM-SVS-11": {"stage":"draft","hash":"8ffac8d7-265","bugs":0},
+    "ADM-SVS-12": {"stage":"draft","hash":"","bugs":0},
     "ADM-CAP-01": {"stage":"functional","hash":"7f4c285d-333","bugs":0},
     "ADM-CAP-02": {"stage":"dev","hash":"eba0487a-97","bugs":0},
     "ADM-CAP-03": {"stage":"functional","hash":"c17f75a3-284","bugs":0},

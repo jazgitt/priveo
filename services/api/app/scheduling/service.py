@@ -15,7 +15,7 @@ from app.customers.parking import label as parking_label
 from app.customers.parking import slots as parking_slots
 from app.customers.parking_rules import with_zone, zone_names
 from app.customers.schedule_pattern import day_flags, patterns_for
-from app.directory import lookup
+from app.directory import lookup, slot_resolver
 from app.directory.models import Plan, Society
 from app.features import service as features
 from app.identity.models import Login
@@ -125,11 +125,15 @@ def _customer_changes(
     return off, cutoffs
 
 
-def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[Demand]:
+def build_demand(
+    db: Session, society_id: uuid.UUID, days: list[date],
+    site: slot_resolver.SiteSlots | None = None,
+) -> list[Demand]:
     """Cleaning-External every day, Cleaning-Internal on the interior care day
     and a Deep Spa on the date the customer asked for (ADM-SVS-10). Only
-    Active subscriptions count (ADM-SUB-02). A weekday the site has no working
-    slot for a service gives no demand for it (ADM-CAP-08)."""
+    Active subscriptions count (ADM-SUB-02). A day the site has no working
+    slot for a service gives no demand for it (ADM-CAP-08). `site` is the
+    slot resolver's load of the site; it is read here when not given."""
     out: list[Demand] = []
     rows = db.execute(
         select(Subscription, Vehicle)
@@ -237,18 +241,13 @@ def build_demand(db: Session, society_id: uuid.UUID, days: list[date]) -> list[D
                 job.source_job_id,
             )
         )
-    # The site's working slots say which weekdays it is off for each service:
-    # no slot on a weekday means no demand that day (owner, 04-Nov-26). A
-    # service with no slot at all is not filtered. Re-run jobs already exist
-    # and stay.
-    open_days: dict[str, set[int] | None] = {}
-    for slot in lookup.working_slots(db, society_id):
-        open_days.setdefault(slot.service, set()).update(slot.days)
+    # The slot resolver says whether a service is open on a day (owner, 04-Nov-26;
+    # ADM-SVS-12 exceptions count). A service with no slot at all is not filtered.
+    # Re-run jobs already exist and stay.
+    site = site or slot_resolver.load(db, society_id)
     return [
         d for d in out
-        if d.source_job_id is not None
-        or open_days.get(d.service) is None
-        or d.day.weekday() in open_days[d.service]
+        if d.source_job_id is not None or site.allows_demand(d.service, d.day)
     ]
 
 

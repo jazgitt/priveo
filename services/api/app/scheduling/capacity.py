@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.directory import lookup
+from app.directory import lookup, slot_resolver
 from app.identity.models import Login
 from app.scheduling import capacity_lines, service
 from app.scheduling import windows as windows_module
@@ -53,7 +53,10 @@ def capacity(
     demand_minutes = dict.fromkeys(days, 0)
     lines: dict[date, dict[tuple[str, str], list[int]]] = {day: {} for day in days}
     durations = lookup.durations(db)
-    for d in service.build_demand(db, society_id, days):
+    # The same slot resolver the scheduler reads (ADM-CAP-08, ADM-SVS-12), so a day
+    # with no slot for a service has no demand here either.
+    site = slot_resolver.load(db, society_id)
+    for d in service.build_demand(db, society_id, days, site=site):
         if d.skipped:
             continue
         minutes = durations.get(d.service, d.duration)

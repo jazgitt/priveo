@@ -30,6 +30,20 @@ export interface Slot {
   days: string[];
 }
 
+/** A working-slot exception (ADM-SVS-12). No windows means the service is closed on its days. */
+export interface SlotException {
+  id: string;
+  society_id: string;
+  service: string;
+  /** yyyy-mm-dd */
+  start_date: string;
+  /** yyyy-mm-dd */
+  end_date: string;
+  days: string[];
+  windows: { start: string; end: string }[];
+  note: string;
+}
+
 export interface Plan {
   id: string;
   /** The plan ID admins quote, like PLN-0001. */

@@ -2,6 +2,7 @@
 `directory_audit` with the admin and the time."""
 import re
 import uuid
+from datetime import date
 from typing import Any
 
 from sqlalchemy import func, select
@@ -22,6 +23,7 @@ from app.directory.models import (
     SystemSetting,
     VehicleCatalogueEntry,
     WorkingSlot,
+    WorkingSlotException,
     Zone,
 )
 from app.directory.seed import add_default_slots
@@ -500,6 +502,126 @@ def delete_slot(db: Session, admin_id, slot_id: uuid.UUID) -> None:
         "society_id": str(slot.society_id), "service": slot.service,
         "start": show_minute(slot.start_minute), "end": show_minute(slot.end_minute)})
     db.delete(slot)
+    db.commit()
+
+
+# ---- slot exceptions (ADM-SVS-12) -------------------------------------------------
+
+def _jsonable(value):
+    return value.isoformat() if isinstance(value, date) else value
+
+
+def _window_spans(windows) -> list[dict]:
+    """The stored form of an exception's windows, checked: each end is after its
+    start, and no two windows overlap. No windows is allowed: the service is
+    closed on the exception's weekdays."""
+    spans = []
+    for w in windows:
+        start = minute_of(w.start, "windows")
+        end = minute_of(w.end, "windows", allow_midnight=True)
+        if end <= start:
+            raise invalid("windows", "The end time must be after the start time.")
+        spans.append({"start_minute": start, "end_minute": end})
+    spans.sort(key=lambda w: w["start_minute"])
+    for first, second in zip(spans, spans[1:]):
+        if second["start_minute"] < first["end_minute"]:
+            raise ApiError("overlap", "Two windows of this exception overlap.", 409,
+                           {"windows": "Two windows of this exception overlap."})
+    return spans
+
+
+def _check_exception_dates(db: Session, society_id: uuid.UUID, service: str,
+                           start_date: date, end_date: date, days: list[int],
+                           except_id: uuid.UUID | None = None) -> None:
+    """Two exceptions of one service may not cover the same date on the same
+    weekday, so a date has at most one exception for a weekday (Derived)."""
+    if end_date < start_date:
+        raise invalid("end_date", "The end date must be on or after the start date.")
+    for other in db.scalars(select(WorkingSlotException).where(
+            WorkingSlotException.society_id == society_id,
+            WorkingSlotException.service == service)):
+        if other.id == except_id:
+            continue
+        if start_date <= other.end_date and other.start_date <= end_date \
+                and set(other.days) & set(days):
+            message = "Another exception for this service covers some of these dates and days."
+            raise ApiError("overlap", message, 409, {"start_date": message})
+
+
+def _windows_out(row: WorkingSlotException) -> list[dict]:
+    return [{"start": show_minute(w["start_minute"]), "end": show_minute(w["end_minute"])}
+            for w in row.windows]
+
+
+def slot_exception_out(row: WorkingSlotException) -> dict:
+    return {"id": row.id, "society_id": row.society_id, "service": row.service,
+            "start_date": row.start_date, "end_date": row.end_date,
+            "days": [defaults.WEEKDAYS[d] for d in sorted(row.days)],
+            "note": row.note or "", "windows": _windows_out(row)}
+
+
+def _audit_detail(row: WorkingSlotException) -> dict:
+    """JSON-safe: the audit detail is a JSON column."""
+    return {"society_id": str(row.society_id), "service": row.service,
+            "start_date": row.start_date.isoformat(), "end_date": row.end_date.isoformat(),
+            "days": [defaults.WEEKDAYS[d] for d in sorted(row.days)],
+            "note": row.note or "", "windows": _windows_out(row)}
+
+
+def slot_exceptions(db: Session, society_id: uuid.UUID,
+                    service_name: str | None = None) -> list[WorkingSlotException]:
+    query = select(WorkingSlotException).where(WorkingSlotException.society_id == society_id)
+    if service_name:
+        query = query.where(WorkingSlotException.service == service_name)
+    return list(db.scalars(query.order_by(
+        WorkingSlotException.start_date, WorkingSlotException.service)))
+
+
+def create_slot_exception(db: Session, admin_id, society_id: uuid.UUID, body) -> WorkingSlotException:
+    _get(db, Society, society_id, "society")
+    if body.service not in defaults.SERVICES:
+        raise invalid("service", "Choose one of the three services.")
+    days = _day_numbers(body.days)
+    _check_exception_dates(db, society_id, body.service, body.start_date, body.end_date, days)
+    row = WorkingSlotException(
+        society_id=society_id, service=body.service, start_date=body.start_date,
+        end_date=body.end_date, days=days, note=(body.note or "").strip(),
+        windows=_window_spans(body.windows))
+    db.add(row)
+    db.flush()
+    audit(db, admin_id, "slot_exception", row.id, "create", _audit_detail(row))
+    db.commit()
+    return row
+
+
+def update_slot_exception(db: Session, admin_id, exception_id: uuid.UUID, body) -> WorkingSlotException:
+    """Changes the fields the body gives. The dates and days are checked against the
+    other exceptions of the same service; the service itself does not change."""
+    row = _get(db, WorkingSlotException, exception_id, "slot exception")
+    start_date = body.start_date or row.start_date
+    end_date = body.end_date or row.end_date
+    days = _day_numbers(body.days) if body.days is not None else sorted(row.days)
+    _check_exception_dates(db, row.society_id, row.service, start_date, end_date, days, row.id)
+    windows = _window_spans(body.windows) if body.windows is not None else row.windows
+    note = row.note if body.note is None else body.note.strip()
+    changes = {"start_date": start_date, "end_date": end_date, "days": days,
+               "note": note, "windows": windows}
+    diff = {}
+    for field, new in changes.items():
+        old = getattr(row, field)
+        if old != new:
+            diff[field] = [_jsonable(old), _jsonable(new)]
+            setattr(row, field, new)
+    if diff:
+        audit(db, admin_id, "slot_exception", row.id, "update", diff)
+    db.commit()
+    return row
+
+
+def delete_slot_exception(db: Session, admin_id, exception_id: uuid.UUID) -> None:
+    row = _get(db, WorkingSlotException, exception_id, "slot exception")
+    audit(db, admin_id, "slot_exception", row.id, "delete", _audit_detail(row))
+    db.delete(row)
     db.commit()
 
 
