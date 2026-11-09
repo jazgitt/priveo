@@ -1,8 +1,12 @@
-"""Hard weekday cutoff (SCHR-CUT-01 to 04, SCHR-HARD-08): on a strict day a job
-that is placed ends by its car's Customer cutoff. A job that cannot is left
-unassigned with the reason Customer cutoff. The caller marks a job
+"""Hard weekday cutoff (SCHR-CUT-01 to 04, SCHR-HARD-08, SCHR-CUT-11): on a strict
+day a job that is placed ends by its car's Customer cutoff. A job that cannot is
+left unassigned with the reason Customer cutoff. The caller marks a job
 `hard_cutoff` only for a strict day (`is_strict_day`), so weekend days that are
-flexible keep the soft penalty of the base rule (the weekend is SCHS-20)."""
+flexible keep the soft penalty of the base rule (the weekend is SCHS-20).
+
+A protected job (the Exterior, SCHR-CUT-09) never gets this hard limit, even on
+a strict day: it is placed late when it cannot be on time, and only the base
+rule's penalty and the `protected_late` objective count the lateness."""
 
 from __future__ import annotations
 
@@ -29,7 +33,7 @@ def is_strict_day(ctx, day) -> bool:
 
 
 def add_job_terms(ctx: ModelContext, job: SolverJob) -> None:
-    if not job.hard_cutoff or job.finish_by is None:
+    if not job.hard_cutoff or job.protected or job.finish_by is None:
         return
     ctx.model.Add(
         ctx.start_vars[job.key] + ctx.durations[job.key] <= job.finish_by // ctx.params.step
@@ -40,4 +44,4 @@ def cutoff_blocks(job: SolverJob) -> bool:
     """True when the cutoff is a hard limit for the job. A job of such a day
     that was not placed would have been placed late without it, so the cutoff is
     the reason it stays unassigned (S36)."""
-    return job.hard_cutoff and job.finish_by is not None
+    return job.hard_cutoff and not job.protected and job.finish_by is not None

@@ -84,8 +84,8 @@ def interior_oldest_week_first(sc):
 
 def weekend_cutoff_is_soft(sc):
     """A car whose cutoff is 06:15, and a cleaner who starts at 06:00. On a weekday
-    the Exterior cannot finish in time and is unassigned. On Saturday the cutoff is
-    flexible: the job runs late and is placed."""
+    the Exterior cannot finish in time, so it is placed late and flagged (SCHR-CUT-09).
+    On Saturday the cutoff is flexible: the job runs late and is placed."""
     sc.cleaner("Ravi", shift=(360, 480))
     car = sc.car(cutoff=_time(6, 15))
     return {"car": car, "saturday": SATURDAY, "monday": MONDAY}
@@ -93,7 +93,8 @@ def weekend_cutoff_is_soft(sc):
 
 def weekday_cutoff_is_hard(sc):
     """A Monday cutoff of 06:45, with the cleaner starting at 06:30: the Exterior
-    would end at 07:00, so it is unassigned with the customer-cutoff reason."""
+    would end at 07:00. An Exterior is protected (SCHR-CUT-09), so it is placed
+    late and flagged; an Interior in the same position would be unassigned."""
     sc.cleaner("Ravi", shift=(390, 480))
     car = sc.car(cutoff=_time(6, 45))
     return {"car": car, "run": (MONDAY, 1)}

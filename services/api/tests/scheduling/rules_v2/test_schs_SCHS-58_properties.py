@@ -222,7 +222,11 @@ def test_schr_hard_properties_a_planned_day_keeps_the_site_rules(world, site_cfg
                 assert end <= br.start_minute or p.start >= br.end_minute, f"{key}: Interior in the break"
         cutoff = cutoffs[p.vehicle_id]
         if cutoff is not None and p.day.weekday() not in strict_free and not p.manual:
-            assert end <= cutoff.hour * 60 + cutoff.minute, f"{key}: past the strict cutoff"  # SCHR-CUT-02
+            limit = cutoff.hour * 60 + cutoff.minute
+            if p.service == EXT:  # SCHR-CUT-09: a protected Exterior may end late, and is then flagged
+                assert p.late == (end > limit), f"{key}: late flag does not match the cutoff"
+            else:
+                assert end <= limit, f"{key}: past the strict cutoff"  # SCHR-CUT-02
         per_crew[(p.day, p.crew_id)].append((p.start, end))
         per_car[(p.day, p.vehicle_id)].append((p.start, end))
     for job, visit in jobs:

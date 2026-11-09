@@ -80,6 +80,9 @@ class SolverJob:
     interior: bool = False
     week: date | None = None  # the service week it counts against, when known
     service: str = ""  # the job's service; the passes split on it (SCHS-32)
+    # A protected job (the Exterior, owner decision 09-Nov-26) is never a hard
+    # cutoff: when it cannot end by its cutoff it is placed late, not left out.
+    protected: bool = False
 
 
 @dataclass

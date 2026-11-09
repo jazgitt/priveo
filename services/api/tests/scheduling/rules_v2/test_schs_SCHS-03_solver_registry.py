@@ -14,6 +14,7 @@ from ortools.sat.python import cp_model
 from app.scheduling.solver import (
     SolverCrew,
     SolverJob,
+    SolverParams,
     SolverResult,
     registry,
     rules,
@@ -160,11 +161,14 @@ def make_day(rng):
 
 
 def test_fifty_generated_days_equal_the_old_solver():
+    # The reference is the solver before the cutoff-order objective (SCHR-CUT-10, 9 Nov 2026).
+    # That objective is switched off here (weight 0), so this still checks the registry seam.
     rng = random.Random(20261106)
+    off = SolverParams(settings={"scheduler.weight_cutoff_order": 0})
     for day in range(50):
         crew, jobs = make_day(rng)
         old = ref_solve_day(crew, jobs)
-        new = solve_day(crew, jobs)
+        new = solve_day(crew, jobs, off)
         assert new.placed == old.placed, day
         assert new.unplaced == old.unplaced, day
         assert new.late == old.late, day

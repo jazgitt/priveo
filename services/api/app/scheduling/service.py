@@ -634,6 +634,9 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                 and job.finish_by_minute is not None
             ):
                 slots = tuple((s, min(e, job.finish_by_minute)) for s, e in slots)
+            # A protected job (the Exterior) is never a hard cutoff: placed late
+            # as a last resort, not left out (SCHR-CUT-09).
+            protected = job.service == passes.EXTERIOR
             solver_jobs.append(
                 SolverJob(
                     str(job.id),
@@ -642,10 +645,11 @@ def run_schedule(db: Session, schedule: Schedule, admin_id: uuid.UUID | None) ->
                     job.finish_by_minute,
                     fixed,
                     slots,
-                    hard_cutoff=is_strict_day(ctx, day),
+                    hard_cutoff=is_strict_day(ctx, day) and not protected,
                     interior=entitlements.uses_entitlement(job),
                     week=job.service_week_start,
                     service=job.service,
+                    protected=protected,
                 )
             )
         if not solver_jobs:

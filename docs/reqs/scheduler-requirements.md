@@ -1,6 +1,6 @@
 # Priveo Car Concierge: Scheduler Requirements (Scheduling Rules v1.2)
 
-**Status:** Draft v0.9 (8 Nov 2026: SCHR-INT-29 added, migrated service history counts in the Interior ledger like live work; see owner-decisions-2026-11-08-history.md). Earlier: v0.8 (8 Nov 2026, owner decision A: a scheduler run covers one day, so an Interior is planned on the first run day with a pending entitlement and room, and a deferred Interior is retried on a later run day. SCHR-INT-05, SCHR-INT-10, SCHR-INT-26, SCHR-DEF-02 and SCHR-INT-27 changed; the plan week of SCHR-INT-27 and SCHR-INT-28 is the car's service week, the week of the day planned, not the run's window. Earlier: v0.7 (8 Nov 2026: SCHR-ZONE-01 and SCHR-ZONE-07 changed, a cleaner may have several home zones (owner, 8 Nov 2026); earlier: 9 Nov 2026: SCHR-INT-28 answered, the car keeps its preferred day; earlier: Interior gap rule SCHR-INT-27 and the no-Interior case SCHR-INT-28 added, SCHR-INT-05 and SCHR-HIER-08 changed, 8 Nov 2026), v0.4 (worked examples for the weekend cutoff added to section 3, no row changed, 06-Nov-26), v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
+**Status:** Draft v0.10 (9 Nov 2026: cutoff-driven scheduling, owner decisions of 9 Nov 2026 in owner-decisions-2026-11-09.md. SCHR-CUT-01, 02, 03, 04, SCHR-HARD-08, SCHR-ZONE-04 and the Pass A list of section 3 changed; SCHR-CUT-09 to SCHR-CUT-11, SCHR-ZONE-12 and SCHR-HIER-09 added. Earlier: v0.9 (8 Nov 2026: SCHR-INT-29 added, migrated service history counts in the Interior ledger like live work; see owner-decisions-2026-11-08-history.md). Earlier: v0.8 (8 Nov 2026, owner decision A: a scheduler run covers one day, so an Interior is planned on the first run day with a pending entitlement and room, and a deferred Interior is retried on a later run day. SCHR-INT-05, SCHR-INT-10, SCHR-INT-26, SCHR-DEF-02 and SCHR-INT-27 changed; the plan week of SCHR-INT-27 and SCHR-INT-28 is the car's service week, the week of the day planned, not the run's window. Earlier: v0.7 (8 Nov 2026: SCHR-ZONE-01 and SCHR-ZONE-07 changed, a cleaner may have several home zones (owner, 8 Nov 2026); earlier: 9 Nov 2026: SCHR-INT-28 answered, the car keeps its preferred day; earlier: Interior gap rule SCHR-INT-27 and the no-Interior case SCHR-INT-28 added, SCHR-INT-05 and SCHR-HIER-08 changed, 8 Nov 2026), v0.4 (worked examples for the weekend cutoff added to section 3, no row changed, 06-Nov-26), v0.3 (no-hardcoding rules SCHR-CFG added, 05-Nov-26), v0.2 (owner decisions of 05-Nov-26 applied), v0.1 (new file, 05-Nov-26). Written from the owner's "Priveo Scheduling Rules, Finalized v1.2" sheet of 05-Nov-26. Not yet approved by the owner. The existing requirement rows in the customer, admin and crew files are NOT changed by this file; the list of rows and documents that must change once the owner approves is in `scheduler-gap-analysis.md`.
 **Scope:** The daily and weekly scheduler for car cleaning (Cleaning-External and Cleaning-Internal): the settings it reads, the rules it applies, the order in which rules win, the entitlement accounting for interior cleaning, and the reports it must give. Deep Spa is outside the sheet and keeps its current behaviour (ADM-ADD, ADM-SCH-30).
 **Platforms:** The rules run in the API (`services/api/app/scheduling`). Settings and reports are shown in the React web portal. The crew app shows the resulting day (crew file).
 **Language:** English only
@@ -129,7 +129,7 @@ This section is the order the scheduling job follows for one site and one day. A
 - open(D): D's weekday has a working slot for the service. If not, no job of that service is planned.
 - cleaners(D): active Members and Managers with working hours on D, after exceptions (Sick, Leave, Late start). Each has a first-job time, a break (or none), and owned zones.
 - cars(D): vehicles with an Active subscription that has started, not skipped or paused on D (existing rule, `build_demand`).
-- cutoff(car, D): the finish-by time of the car for D (the date's override, else the subscription's default), and its mode on D: hard on a strict day, flexible on a weekend day.
+- cutoff(car, D): the finish-by time of the car for D (the date's override, else the subscription's default), and its mode on D: hard on a strict day for an Interior and a Deep Spa, flexible on a weekend day. An Exterior is protected: its cutoff is a limit that is placed late and flagged when missed (SCHR-CUT-09).
 - ledger: the Interior entitlements of the site that are not yet fulfilled, each with its service week (section 6).
 - interior_earliest, break rules, zone ownership, durations.
 
@@ -139,15 +139,17 @@ This section is the order the scheduling job follows for one site and one day. A
 
 **Level 3. Ordered objectives.** Higher first.
 
-Pass A (Exterior), after Level 2 coverage is maximal:
+Pass A (Exterior), after Level 2 coverage is maximal (Changed 9 Nov 2026: items 1 and 3 added, item 2 names the rescue; the other items are as before):
 
-1. Zones: fill each cleaner's home zone first, then take jobs of other zones into spare capacity, recording the reason (SCHR-ZONE-03, SCHR-ZONE-04).
-2. Weekend cutoffs: on a weekend day, as few late jobs as possible (Derived, so that item 3 does not break cutoffs, sheet rule 06).
-3. Usable early capacity: as many free cleaner minutes as possible from `interior_earliest` onward that a pending Interior could use before its cutoff, and free minutes between first-job time and `interior_earliest` kept for Exterior or onboarding (SCHR-EXT-05).
-4. Cleaner break kept (SCHR-BRK).
-5. Fewer zone switches in a cleaner's day.
-6. Earlier start times.
-7. A fixed random seed, so the same input gives the same plan.
+1. Protected Exteriors: as few Exteriors as possible placed after their cutoff. A protected Exterior is placed late rather than left out, and is left unassigned only when no capacity is left (SCHR-CUT-09, SCHR-HIER-09).
+2. Zones: fill each cleaner's home zone first, then take jobs of other zones into spare capacity, recording the reason (SCHR-ZONE-03, SCHR-ZONE-04). A protected job may be rescued by another zone's cleaner (SCHR-ZONE-12).
+3. Ascending cutoff order: a job with an earlier cutoff is done earlier (SCHR-CUT-10).
+4. Weekend cutoffs: on a weekend day, as few late jobs as possible (Derived, so that item 5 does not break cutoffs, sheet rule 06).
+5. Usable early capacity: as many free cleaner minutes as possible from `interior_earliest` onward that a pending Interior could use before its cutoff, and free minutes between first-job time and `interior_earliest` kept for Exterior or onboarding (SCHR-EXT-05).
+6. Cleaner break kept (SCHR-BRK).
+7. Fewer zone switches in a cleaner's day.
+8. Earlier start times.
+9. A fixed random seed, so the same input gives the same plan.
 
 Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 
@@ -158,18 +160,21 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 5. Fewer zone switches, earlier start, fixed seed.
 6. Break: an Interior never overlaps a kept break. This is a hard rule in Pass B (the break wins over an Interior, SCHR-BRK-02).
 
+Changed 9 Nov 2026: the ascending cutoff order (SCHR-CUT-10) applies in Pass B as well. In the order of SCHR-HIER-09 it ranks above item 1 of this list (Derived, to confirm with the owner: see section 13).
+
 **Level 4. Outputs.** The daily cleaner view, the weekly summary and the exception report (SCHR-OUT).
 
 **How conflicts resolve.**
 
 | Conflict | Result |
 |---|---|
-| Exterior coverage against a hard rule (shift, overlap, first-job time, weekday cutoff, weekly off) | The hard rule wins. The Exterior is left unassigned and reported with the reason and the shortfall. |
+| Exterior coverage against a hard rule (shift, overlap, first-job time, weekly off) | The hard rule wins. The Exterior is left unassigned and reported with the reason and the shortfall. |
+| Protected Exterior against a weekday cutoff (changed 9 Nov 2026) | The Exterior is placed late and flagged. It is left unassigned only when no capacity is left (SCHR-CUT-09). |
 | Exterior coverage against the break | Coverage wins. The break is dropped and flagged as missed, only when no other plan places the Exterior. |
 | Weekday cutoff against the break | The cutoff wins. The break is dropped and flagged. |
-| Weekday cutoff against an Interior | The cutoff wins. The Interior is deferred (stays pending) and reported. It never displaces an Exterior. |
+| Weekday cutoff against an Interior | The cutoff wins. The Interior is left Unscheduled with its reason and is not made late (SCHR-CUT-11, changed 9 Nov 2026). It never displaces an Exterior. |
 | Break against an Interior | The break wins. The Interior is deferred. |
-| Home zone against a cutoff or coverage | Coverage and weekday cutoffs win: a cleaner may take another zone's job into spare capacity, and cross-zone work never pushes a home-zone job past its cutoff. The reason is recorded. |
+| Home zone against a cutoff or coverage | Coverage and weekday cutoffs win: a cleaner may take another zone's job into spare capacity, and cross-zone work never pushes a home-zone job past its cutoff, except a rescue of a protected job that leaves no more protected jobs late (SCHR-ZONE-12, changed 9 Nov 2026). The reason is recorded. |
 | Home zone against a preferred free slot | The home zone is filled first. A cleaner never crosses zones only to create a free slot. |
 | Early free capacity against coverage or a cutoff | Coverage and cutoffs win. Free capacity is never created by breaking them. |
 | Early free capacity against an eligible Interior | The Interior takes the free slot. A slot is never kept idle on purpose. |
@@ -198,6 +203,7 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | SCHR-HIER-06 | Tie-breaks, in order: fewer cross-zone assignments, fewer zone switches in a cleaner's day, earlier start, a stable order by vehicle creation date and ID, then the fixed random seed. | Derived |
 | SCHR-HIER-07 | Pass A and Pass B are two separate solves. Pass B receives Pass A's placements as fixed jobs and fills the gaps. "Exterior first" is a planning order only: a cleaner who has finished their own Exteriors may start an assigned Interior while another cleaner still works on Exteriors (SCHR-INT-08). | Owner |
 | SCHR-HIER-08 | Jobs placed by hand and jobs already frozen stay where they are and take up the cleaner's time in both passes, as today (ADM-SCH-14, ADM-SCH-27). The admin may place a job against any rule; the screen warns and each breach is flagged in the exception report. The scheduler itself never breaks a hard constraint (owner, 05-Nov-26). A hand move that overlaps another job is refused, not warned (ADM-SCH-43). | Owner and Derived |
+| SCHR-HIER-09 | Order of the objectives in Pass A and Pass B (changed 9 Nov 2026): placed; protected lateness (SCHR-CUT-09, with the rescue of SCHR-ZONE-12); home zone; ascending cutoff order (SCHR-CUT-10); cleaner break; fifo for Interiors (SCHR-INT-12); other lateness; usable early capacity; earlier start; fixed seed. Normal rules come first. A protected job is placed late only when no other plan places it on time, and is unplaced only when no capacity is left. | Owner and Derived |
 
 ---
 
@@ -212,7 +218,7 @@ Pass B (Interior), run after Pass A, with every Pass A placement fixed:
 | SCHR-HARD-05 | No Interior starts before the Interior-earliest time (07:00 by default), on any day. | Owner |
 | SCHR-HARD-06 | Every Exterior and every Interior takes exactly its set duration (30 minutes by default). No travel minutes are added for movement between cars or zones. | Owner |
 | SCHR-HARD-07 | No Exterior or Interior is planned on a weekly off day. | Owner |
-| SCHR-HARD-08 | On a strict day (Monday, Tuesday, Thursday, Friday by default), no Exterior and no Interior ends after the car's cutoff time. | Owner |
+| SCHR-HARD-08 | On a strict day (Monday, Tuesday, Thursday, Friday by default), no Interior and no Deep Spa ends after the car's cutoff time. An Exterior is protected and may end after it only as SCHR-CUT-09 says (changed 9 Nov 2026; was: no Exterior and no Interior). | Owner |
 | SCHR-HARD-09 | Every active car needs one Exterior on every working day. If that is not possible, the shortfall is reported and not hidden. | Owner |
 | SCHR-HARD-10 | At most one Interior is planned or completed against the same service week of a car. | Owner |
 | SCHR-HARD-11 | At most one Interior is planned for a car on a day. Two Interiors in one calendar week are allowed only on separate days, each for a different service week. | Owner |
@@ -282,14 +288,17 @@ Three different times are called "cutoff" in the product. In this file: the **Cu
 
 | ID | Requirement | Status |
 |---|---|---|
-| SCHR-CUT-01 | On Monday, Tuesday, Thursday and Friday the service cutoff is a hard completion deadline for both Exterior and Interior. | Owner |
-| SCHR-CUT-02 | A job is never scheduled to finish after its car's cutoff on those days. | Owner |
-| SCHR-CUT-03 | If an Interior cannot fit before the cutoff, it is deferred and stays pending. This never costs an Exterior its place. | Owner |
-| SCHR-CUT-04 | If an Exterior cannot fit before the weekday cutoff, it is left unassigned and reported with the reason and the cutoff time. It is not placed late (owner, 05-Nov-26). | Owner |
+| SCHR-CUT-01 | On Monday, Tuesday, Thursday and Friday the service cutoff is a hard completion deadline for Interior and Deep Spa. An Exterior is protected and follows SCHR-CUT-09 (changed 9 Nov 2026; was: for both Exterior and Interior). | Owner |
+| SCHR-CUT-02 | On those days a job other than an Exterior is never scheduled to finish after its car's cutoff. An Exterior may finish after it only as SCHR-CUT-09 says (changed 9 Nov 2026; was: a job, of any service). | Owner |
+| SCHR-CUT-03 | If an Interior cannot fit before the cutoff, it is left Unscheduled with its reason and is not made late (changed 9 Nov 2026; was: deferred and stays pending). Whether its entitlement stays pending is open (section 13). This never costs an Exterior its place. | Owner |
+| SCHR-CUT-04 | If an Interior or a Deep Spa cannot fit before the weekday cutoff, it is left unassigned and reported with the reason and the cutoff time. It is not placed late. An Exterior is not left unassigned for lateness; see SCHR-CUT-09 (changed 9 Nov 2026; was: an Exterior is left unassigned and not placed late, owner, 05-Nov-26). | Owner |
 | SCHR-CUT-05 | An admin who places a job by hand after a weekday cutoff is warned and the job is marked Late, as in ADM-SCH-07. The admin may go ahead; the breach is flagged in the exception report (owner, 05-Nov-26). | Owner |
 | SCHR-CUT-06 | The three cutoffs are named in screens and reports as Customer cutoff (the scheduler's deadline), Freeze (8 PM, ADM-SCH-25) and 9 PM rule (SCHED-01) (owner, 05-Nov-26). | Owner |
 | SCHR-CUT-07 | The customer can still choose any cutoff in 30-minute steps (ONB-16). A cutoff earlier than the first-job time plus the duration cannot be met on a strict day; the car is left unassigned and reported (SCHR-CUT-04). The app does not warn or limit the choice. | Derived |
 | SCHR-CUT-08 | The late-assignment rule after a freeze (ADM-SCH-27, earliest time before the cutoff) stays and is consistent with the hard weekday cutoff. | Derived |
+| SCHR-CUT-09 | An Exterior (service Cleaning-External) is protected. It is never a hard cutoff, on a weekday or on any strict day. When it cannot end by its car's cutoff it is placed late and flagged, as a last resort. It is left unassigned only when no capacity is left. Protection comes from the service only: there is no priority flag per car, and Interior and Deep Spa are not protected (owner, 9 Nov 2026). | Owner |
+| SCHR-CUT-10 | Normal placement is in ascending order of the cutoff: a job with an earlier cutoff is done earlier, for Exterior and Interior, in both passes. The order ranks below placement, protected lateness and the home zone, and above the other objectives (SCHR-HIER-09). Across cleaners the order is kept by a chain of neighbouring jobs (Derived). | Owner and Derived (9 Nov 2026) |
+| SCHR-CUT-11 | An Interior, and a Deep Spa, that cannot be placed before the weekday cutoff is left Unscheduled with its reason. It is not placed late on a weekday (owner, 9 Nov 2026). | Owner |
 | SCHR-WKE-01 | On Saturday and Sunday the service cutoff is flexible for Exterior and Interior: the scheduler prefers to meet it when the car is available. | Owner |
 | SCHR-WKE-02 | The scheduler finishes all weekend Exteriors first, then gives the remaining capacity to Interiors. | Owner |
 | SCHR-WKE-03 | A weekend Exterior or Interior may end after the normal cutoff only if the vehicle is physically available. The job must still end inside the assigned cleaner's shift. | Owner |
@@ -306,7 +315,7 @@ Three different times are called "cutoff" in the product. In this file: the **Cu
 | SCHR-ZONE-01 | Each society has several zones and each vehicle has one zone. Each cleaner has one or more home zones, set by the admin (owner, 8 Nov 2026). The scheduler fills the cleaner's home zone first (owner, 05-Nov-26). | Owner |
 | SCHR-ZONE-02 | The scheduler minimises the number of zone switches in a cleaner's day. | Owner |
 | SCHR-ZONE-03 | After the home-zone jobs are placed, a cleaner may take jobs from other zones into spare capacity. This holds for both Exterior and Interior jobs. It replaces the sheet's wording "only when the zone owner cannot" (owner, 05-Nov-26). | Owner |
-| SCHR-ZONE-04 | Before a cross-zone assignment the scheduler checks the cutoff, the cleaner's spare capacity and the weekly Interior requirement. A cleaner does not cross zones only to create a preferred free slot, and a cross-zone job never pushes a home-zone job past its cutoff. | Owner and Derived |
+| SCHR-ZONE-04 | Before a cross-zone assignment the scheduler checks the cutoff, the cleaner's spare capacity and the weekly Interior requirement. A cleaner does not cross zones only to create a preferred free slot, and a cross-zone job never pushes a home-zone job past its cutoff, except a rescue under SCHR-ZONE-12 (changed 9 Nov 2026). | Owner and Derived |
 | SCHR-ZONE-05 | Movement across zones is part of the fixed 30-minute slot. No extra travel minutes are added. | Owner |
 | SCHR-ZONE-06 | The reason for each cross-zone assignment is recorded on the job. Reasons: home-zone cleaner absent, home zone full, spare capacity used, needed to meet a cutoff or the weekly Interior. | Owner and Derived |
 | SCHR-ZONE-07 | The admin sets one or more home zones for each cleaner on the crew screen (owner, 8 Nov 2026). Several cleaners may share a home zone. A zone with no cleaner is served entirely as cross-zone work. | Owner and Derived |
@@ -314,6 +323,7 @@ Three different times are called "cutoff" in the product. In this file: the **Cu
 | SCHR-ZONE-09 | Only Members and Managers have a home zone. A Trainee follows the paired Member's jobs and the Member's home zone (CRW-SCH-10). | Derived |
 | SCHR-ZONE-10 | A zone switch is two jobs in a row in a cleaner's day that are in different zones. A cross-zone assignment is a job in a zone other than the cleaner's home zone. | Derived |
 | SCHR-ZONE-11 | A site where no cleaner has a home zone plans as today: no zone preference and no cross-zone records. | Derived |
+| SCHR-ZONE-12 | A protected job (SCHR-CUT-09) may be taken by a cleaner of another zone when the home cleaner of its zone would place it late. The rescue overrides the home zone only to save a protected job from lateness: a rescue is used only when it leaves no more protected jobs late. Every other choice keeps the home zone first. Cross-zone help off (`site.cross_zone_help_allowed`) allows no rescue. The reason is recorded as needed to meet a cutoff (SCHR-ZONE-06) (owner, 9 Nov 2026; the reading of "after the normal rules" as this overriding priority is Derived). | Owner and Derived |
 
 ---
 
@@ -402,5 +412,13 @@ Answered by the owner on 05-Nov-26 in this session. The SCHR- rows that depend o
 | 16 | Deferral reasons | Owner: these will be added in configuration. No change in this document. | SCHR-DEF-04 |
 
 Nothing is open from the original 16 questions. The hand-placement decision (10) makes the hard constraints advisory for admins only; the scheduler itself never breaks them.
+
+Owner decisions of 9 Nov 2026 (cutoff-driven scheduling) are recorded in `owner-decisions-2026-11-09.md`: protected Exteriors (SCHR-CUT-09), ascending cutoff order (SCHR-CUT-10), Interior unplaced on a weekday (SCHR-CUT-11), the rescue (SCHR-ZONE-12) and the order (SCHR-HIER-09).
+
+Open from 9 Nov 2026, for the owner to confirm (not decided by the document):
+- Weekend Interiors keep the soft weekend cutoff (SCHR-WKE-01). This was kept as it is, and is reported, not changed.
+- A protected Exterior is also protected on a strict weekend day when `site.weekend_cutoff_flexible` is off (the code reads decision 4 as general). Confirm, or limit it to weekdays.
+- The cutoff order ranks above fifo in Pass B (SCHR-HIER-09), so it can change which of two competing Interiors is placed. Confirm that the order is right.
+- SCHR-CUT-03 says an Interior that cannot fit stays pending. The owner's decision of 9 Nov 2026 says Unscheduled. The ledger state of such an Interior is still Planned in the code (KNOWN_OPEN, test_schr_int_21). Confirm the ledger state.
 
 Open from 8 Nov 2026 (admin file, section 13, question 1): what "Earliest" in Site Setup controls. The no-Interior-in-the-week case (SCHR-INT-28) is answered: the car keeps its preferred day.

@@ -7,7 +7,7 @@ from tests.scheduling.builders import Scenario
 from tests.scheduling.conftest import SUNDAY
 
 EXT = passes.EXTERIOR
-ORDER = "placed,zone,break,fifo,late,early_capacity,early"
+ORDER = "placed,protected_late,zone,cutoff_order,break,fifo,late,early_capacity,early"
 MONDAY = SUNDAY + timedelta(days=1)
 
 
