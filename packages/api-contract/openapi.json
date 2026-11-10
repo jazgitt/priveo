@@ -32936,9 +32936,8 @@
               "type": "string"
             },
             "type": "array",
-            "minItems": 1,
             "title": "Days",
-            "description": "Monday to Sunday"
+            "description": "Monday to Sunday; none closes the service on every date"
           },
           "windows": {
             "items": {
@@ -33053,8 +33052,7 @@
                 "items": {
                   "type": "string"
                 },
-                "type": "array",
-                "minItems": 1
+                "type": "array"
               },
               {
                 "type": "null"
