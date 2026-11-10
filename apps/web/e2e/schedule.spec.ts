@@ -223,4 +223,39 @@ test.describe("Schedule (scenario R06)", () => {
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(board.getByText("Frozen", { exact: true })).toBeVisible();
   });
+
+  // Owner items 4, 5, 7, 8 (10 Nov 2026): the pieces of a card never overlap, at every layout, and Detail shows the model.
+  for (const [layout, lines] of [["Compact", 1], ["Standard", 2], ["Detail", 3]] as const) {
+    test(`${layout} card: no two pieces overlap and every piece is inside the card [ADM-SCH-33]`, async ({ page }) => {
+      await page.setViewportSize({ width: 1366, height: 768 });
+      await openBoard(page, addDays(scenario("R06").as_of, 1));
+      await page.getByRole("group", { name: "Card detail" }).getByRole("button", { name: layout, exact: true }).click();
+      const card = carOf(page, "TEST R06 Member 1");
+      await expect(card.locator(".sch-card-line")).toHaveCount(lines);
+      // Line 1 holds the select checkbox, the take-off icon and the cutoff box; the model shows on the Detail layout.
+      await expect(card.getByRole("checkbox", { name: "Select this job" })).toBeVisible();
+      if (layout === "Detail") await expect(card.locator(".sch-model")).toHaveText(/\S/);
+
+      const boxes = await card.evaluate((el) => {
+        const rect = (e: Element) => { const r = e.getBoundingClientRect(); return { name: e.getAttribute("aria-label") ?? e.className.toString(), l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+        const pieces = [...el.querySelectorAll(".sch-card-line > *:not(.sch-flags), .sch-flags > *:not(.sch-card-tools), .sch-card-tools > *")]
+          .filter((e) => e.getBoundingClientRect().width > 0);
+        return { card: rect(el), pieces: pieces.map(rect) };
+      });
+      expect(boxes.pieces.length).toBeGreaterThan(3);
+      for (const p of boxes.pieces) {
+        expect(p.l, p.name).toBeGreaterThanOrEqual(boxes.card.l - 0.5);
+        expect(p.r, p.name).toBeLessThanOrEqual(boxes.card.r + 0.5);
+        expect(p.t, p.name).toBeGreaterThanOrEqual(boxes.card.t - 0.5);
+        expect(p.b, p.name).toBeLessThanOrEqual(boxes.card.b + 0.5);
+      }
+      for (let i = 0; i < boxes.pieces.length; i++) {
+        for (let j = i + 1; j < boxes.pieces.length; j++) {
+          const a = boxes.pieces[i], b = boxes.pieces[j];
+          const apart = a.r <= b.l + 0.5 || b.r <= a.l + 0.5 || a.b <= b.t + 0.5 || b.b <= a.t + 0.5;
+          expect(apart, `${a.name} overlaps ${b.name}`).toBe(true);
+        }
+      }
+    });
+  }
 });

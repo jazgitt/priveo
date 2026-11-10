@@ -1,23 +1,67 @@
-import { ChevronDown, Users } from "lucide-react";
+import { ChevronDown, Users, Wrench } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/ui/button";
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { Switch } from "@/ui/switch";
 
-import type { SchedulingCrew } from "./api";
+import { serviceKey } from "./Board";
+import { HandGlyph, HourglassAlertGlyph } from "./FlagIcons";
+import type { AdminJob, SchedulingCrew } from "./api";
 
-/** Late and By hand as chips; pressing one keeps only those jobs bright, pressing it again shows all. */
+/** Late and By hand as icon chips; pressing one keeps only those jobs bright, pressing it again shows all. */
 export function FlagKey({ flag, onFlag }: { flag: string; onFlag: (flag: string) => void }) {
-  const chip = (id: "late" | "manual", label: string) => (
-    <button key={id} type="button" aria-pressed={flag === id} onClick={() => onFlag(flag === id ? "" : id)}
-            className={`sch-chip flag-${id}`}>
-      {label}
+  const chip = (id: "late" | "manual", label: string, glyph: ReactNode) => (
+    <button key={id} type="button" aria-pressed={flag === id} aria-label={label} title={label}
+            onClick={() => onFlag(flag === id ? "" : id)} className={`sch-chip flag-${id}`}>
+      {glyph}
     </button>
   );
-  return <div className="flex items-center gap-1.5" role="group" aria-label="Flags">{chip("late", "Late")}{chip("manual", "By hand")}</div>;
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label="Flags">
+      {chip("late", "Late", <HourglassAlertGlyph decorative className="sch-flag-icon" />)}
+      {chip("manual", "By hand", <HandGlyph decorative className="sch-flag-icon" />)}
+    </div>
+  );
+}
+
+/** The services of the day's jobs, one for each short code (EXT, INT, SPA and any other service), with the full name for the tip. */
+export function servicesOf(jobs: AdminJob[]): { key: string; name: string }[] {
+  const seen = new Map<string, string>();
+  for (const j of jobs) if (!seen.has(serviceKey(j))) seen.set(serviceKey(j), j.service);
+  return [...seen].map(([key, name]) => ({ key, name })).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/** One dropdown for the kind of work, in place of the three chips. Single choice; "Clear" shows all services again. */
+export function ServicesFilter({ jobs, type, onType }: { jobs: AdminJob[]; type: string; onType: (type: string) => void }) {
+  const services = servicesOf(jobs);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8" aria-label={type ? `Services: ${type}` : "Services"}>
+          <Wrench aria-hidden /> {type || "Services"} <ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuLabel>Show only this service</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuRadioGroup value={type} onValueChange={onType}>
+          {services.map((s) => (
+            <DropdownMenuRadioItem key={s.key} value={s.key} title={s.name}>{s.key}</DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+        {type && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onType("")}>Clear</DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 /**

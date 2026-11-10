@@ -1023,6 +1023,7 @@ def _job_dict(
         "vehicle_id": vehicle.id,
         "registration": vehicle.registration or "",
         "vehicle": vehicle_label(vehicle),
+        "model": vehicle.model or "",
         "parking": "-".join(p for p in (vehicle.parking_basement, vehicle.parking_number) if p),
         "customer_name": (
             f"{customer.first_name} {customer.last_name}".strip() if customer else ""

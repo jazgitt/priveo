@@ -1,6 +1,7 @@
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { slotTime } from "./CardBoard";
+import { CardFace, slotTime } from "./CardBoard";
 import {
   breached, cardLines, clashMessage, clashOf, freeStart, matches, modelOf, parkingPlace, stepOf, typeClass,
 } from "./Board";
@@ -20,18 +21,18 @@ const lines = (job: AdminJob, density: "compact" | "standard" | "detailed") =>
 describe("card lines by layout (owner review, 8-Nov-26)", () => {
   it("detailed: zone, model and cutoff; EXT and slot; car number and customer", () => {
     expect(lines(base, "detailed")).toEqual([
-      "Zone 3 | City | Cutoff 10:00",
+      "Zone 3 | City | 10:00",
       "EXT | 09:00-09:20",
       "KA01AB1234 | Meena",
     ]);
   });
 
   it("standard: zone, car number and cutoff; EXT and slot", () => {
-    expect(lines(base, "standard")).toEqual(["Zone 3 | KA01AB1234 | Cutoff 10:00", "EXT | 09:00-09:20"]);
+    expect(lines(base, "standard")).toEqual(["Zone 3 | KA01AB1234 | 10:00", "EXT | 09:00-09:20"]);
   });
 
   it("compact: zone, EXT or INT and cutoff on one line", () => {
-    expect(lines(base, "compact")).toEqual(["Zone 3 | EXT | Cutoff 10:00"]);
+    expect(lines(base, "compact")).toEqual(["Zone 3 | EXT | 10:00"]);
   });
 
   it("keeps the zone's place when a job has no zone, and drops the other pieces that are missing", () => {
@@ -61,10 +62,60 @@ describe("the vehicle line shows the model only (P2-7)", () => {
     expect(lines(base, "detailed")[0]).not.toContain("Honda");
   });
 
-  it("leaves the line out when the job row has no model, rather than showing the make", () => {
-    const noModel = { ...base, model: undefined, vehicle: "Honda City" } as AdminJob;
-    expect(modelOf(noModel)).toBe("");
-    expect(lines(noModel, "detailed")[0]).toBe("Zone 3 | Cutoff 10:00");
+  it("falls back to the make and model label when the job row has no model (10-Nov-26)", () => {
+    const noModel = { ...base, model: "", vehicle: "Honda City" } as AdminJob;
+    expect(modelOf(noModel)).toBe("Honda City");
+    expect(lines(noModel, "detailed")[0]).toBe("Zone 3 | Honda City | 10:00");
+  });
+
+  it("leaves the model out only when the car has neither a model nor a label", () => {
+    const none = { ...base, model: "", vehicle: "" } as AdminJob;
+    expect(lines(none, "detailed")[0]).toBe("Zone 3 | 10:00");
+  });
+});
+
+/** A job as the board API sends it: no hand-set `model` beyond what the contract carries. */
+const apiJob = {
+  id: "j9", visit_id: "v9", schedule_id: "s1", schedule_status: "Draft", date: "2026-11-10", vehicle_id: "veh9",
+  registration: "KA09ZZ0009", vehicle: "Hyundai Creta", parking: "Zone 2 · B2-09", zone: "Zone 2", customer_name: "Ravi",
+  service: "Cleaning-Internal", status: "Scheduled", duration_minutes: 30, crew_id: "c1", crew_name: "Asha",
+  start_minute: 600, start_time: "10:00", end_time: "10:30", finish_by: "12:00", late: true, manual: true, reason: "",
+} as unknown as AdminJob;
+
+describe("the card face (10-Nov-26 items 4, 5, 7)", () => {
+  it("shows the model on the Detail card from an API-shaped job with no model field", () => {
+    render(<CardFace job={apiJob} density="detailed" zones={["Zone 2"]} />);
+    expect(screen.getByText("Hyundai Creta")).toBeInTheDocument();
+  });
+
+  it("shows the model alone when the API sends it", () => {
+    render(<CardFace job={{ ...apiJob, model: "Creta" } as AdminJob} density="detailed" zones={["Zone 2"]} />);
+    expect(screen.getByText("Creta")).toBeInTheDocument();
+    expect(screen.queryByText("Hyundai Creta")).not.toBeInTheDocument();
+  });
+
+  it.each(["compact", "standard", "detailed"] as const)("%s: the cutoff is the time alone in a labelled box, with Late and By hand as icons", (density) => {
+    const { container } = render(<CardFace job={apiJob} density={density} zones={["Zone 2"]} />);
+    const cutoff = screen.getByRole("img", { name: "Cutoff 12:00" });
+    expect(cutoff).toHaveTextContent(/^12:00$/);
+    expect(cutoff).toHaveClass("sch-cut");
+    expect(screen.getByRole("img", { name: "Late" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Placed by hand" })).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("Late");
+    expect(container).not.toHaveTextContent("By hand");
+    // The icons are on line 1.
+    const first = container.querySelector(".sch-card-line")!;
+    expect(within(first as HTMLElement).getByRole("img", { name: "Late" })).toBeInTheDocument();
+  });
+
+  it("compact is one line: zone, service type, cutoff, Late, By hand, then the card's tools, in that DOM order", () => {
+    const tools = <span data-testid="tools">tools</span>;
+    const { container } = render(<CardFace job={apiJob} density="compact" zones={["Zone 2"]} tools={tools} />);
+    const lineEls = container.querySelectorAll(".sch-card-line");
+    expect(lineEls).toHaveLength(1);
+    const order = [...lineEls[0].querySelectorAll<HTMLElement>(".sch-zone, .sch-code, .sch-cut, [data-glyph='late'], [data-glyph='manual'], [data-testid='tools']")]
+      .map((el) => el.dataset.glyph ?? el.dataset.testid ?? el.className.split(" ").find((c) => c.startsWith("sch-")));
+    expect(order).toEqual(["sch-zone", "sch-code", "sch-cut", "late", "manual", "tools"]);
   });
 });
 

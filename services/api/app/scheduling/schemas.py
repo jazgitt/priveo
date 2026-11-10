@@ -135,6 +135,8 @@ class AdminJob(BaseModel):
     vehicle_id: uuid.UUID
     registration: str
     vehicle: str
+    # The car model alone, for example "Creta", for the Detail card. Empty when the car has none.
+    model: str = ""
     # The parking place, for example "B1-24" (basement and number), with the zone in
     # front when the vehicle has one: "Zone 3 · B1-24".
     parking: str = ""
