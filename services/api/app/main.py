@@ -28,7 +28,7 @@ from app.identity import router as identity
 from app.notifications.cron import get_cron_settings
 from app.platform.config import check_startup, get_settings
 from app.platform.errors import install_error_handlers
-from app.platform.middleware import RequestIdMiddleware
+from app.platform.middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from app.scheduling import administration as scheduling_admin
 from app.system import router as system
 from app.testing import smoke_cleanup
@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Priveo API", version="0.1.0", docs_url=None, redoc_url=None,
                   lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
     install_error_handlers(app)
     app.include_router(system.router)
     app.include_router(identity.router)
