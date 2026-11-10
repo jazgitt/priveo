@@ -45,4 +45,25 @@ test.describe("Crew (scenarios R04, R06)", () => {
     await expect(page.getByRole("table")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "List" })).toHaveAttribute("aria-pressed", "false");
   });
+
+  test("form fields line up despite hints under them (10 Nov items 9-10)", async ({ page }) => {
+    await chooseSite(page, /TEST R06/);
+    await page.getByLabel("Search").fill("9800035000");
+    await page.locator("tbody tr").first().getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/crew\/[0-9a-f-]{36}$/);
+
+    const sameY = async (a: string, b: string) => {
+      const boxA = await page.getByLabel(a, { exact: true }).boundingBox();
+      const boxB = await page.getByLabel(b, { exact: true }).boundingBox();
+      expect(boxA).not.toBeNull();
+      expect(boxB).not.toBeNull();
+      expect(Math.abs(boxA!.y - boxB!.y)).toBeLessThan(1);
+    };
+
+    await sameY("Name", "Mobile number");
+    await page.getByRole("tab", { name: "Role and pairing" }).click();
+    await sameY("Starts on", "Ends on");
+    await page.getByRole("tab", { name: "Exceptions" }).click();
+    await sameY("From date", "To date");
+  });
 });
