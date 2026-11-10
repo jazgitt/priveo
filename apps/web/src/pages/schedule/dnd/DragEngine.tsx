@@ -38,6 +38,7 @@ import {
   type PointerEvent as ReactPointerEvent, type ReactNode,
 } from "react";
 import type { QueryKey } from "@tanstack/react-query";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 
 import type { BatchMove, BatchMoveResult } from "../api";
@@ -184,8 +185,10 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     s.source.style.opacity = "";
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    // The board state and the page classes change together, in one paint: the held class, the lane outlines and the
+    // transitions switch back at once, not one render after the ghost is gone.
+    flushSync(() => setView({ activeId: null, hit: null }));
     document.body.classList.remove("dnd-active");
-    setView({ activeId: null, hit: null });
   };
 
   /** A press that moved was a drag, so the click that ends it must not open the card. */
@@ -201,15 +204,19 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     window.addEventListener("click", swallowClick, true);
     window.setTimeout(() => window.removeEventListener("click", swallowClick, true), 0);
     const hit = cancelled ? null : hitAt(x, y, s.item.id);
-    clearVisuals(s);
-    if (!hit) return;
-    const outcome = planRef.current(hit, s.item);
-    if (!outcome) return;
-    if ("refused" in outcome) {
-      toast.error(outcome.refused);
+    const outcome = hit ? planRef.current(hit, s.item) : null;
+    if (outcome && !("refused" in outcome) && outcome.moves.length > 0) {
+      // The ghost stays over the target, and the board keeps its drag state, until the optimistic board has been drawn
+      // (two frames). Clearing first let the card show in its old place for a frame before it jumped (no flicker).
+      commitRef.current({ moves: outcome.moves });
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (session.current) s.ghost?.remove(); // a new drag began meanwhile: it owns the page classes
+        else clearVisuals(s);
+      }));
       return;
     }
-    if (outcome.moves.length > 0) commitRef.current({ moves: outcome.moves });
+    clearVisuals(s);
+    if (outcome && "refused" in outcome) toast.error(outcome.refused);
   };
 
   function onMove(e: PointerEvent) {

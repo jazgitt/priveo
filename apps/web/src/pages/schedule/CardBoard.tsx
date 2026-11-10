@@ -117,8 +117,15 @@ export function CardFace({ job, density, zones, tools }: { job: AdminJob; densit
     <>
       {cardLines(job, density).map((line, i) => (
         <span key={i} className="sch-card-line">
-          {line.map((part) => <Piece key={part.kind} part={part} zones={zones} />)}
-          {i === 0 && flags}
+          {line.filter((part) => i !== 0 || part.kind !== "cutoff").map((part) => <Piece key={part.kind} part={part} zones={zones} />)}
+          {/* Line 1 ends with one end cluster: the cutoff and the icons. It never shrinks; on a card too narrow for it
+              and the fixed pieces, the whole cluster drops to its own row instead of overlapping (owner, 10-Nov-26). */}
+          {i === 0 && (
+            <span className="sch-end">
+              {line.filter((part) => part.kind === "cutoff").map((part) => <Piece key={part.kind} part={part} zones={zones} />)}
+              {flags}
+            </span>
+          )}
         </span>
       ))}
     </>
@@ -344,8 +351,10 @@ export function CardBoard(props: CardBoardProps) {
       boardKey={boardKey}
       plan={plan}
       onSaved={(r) => {
-        setPicked(new Set());
-        setWarned(new Map<string, string>(r.warnings.map((w) => [w.job_id, w.message] as [string, string])));
+        // No new object when nothing changed, so a plain save does not render the whole board again.
+        setPicked((p) => (p.size === 0 ? p : new Set()));
+        setWarned((w) => (w.size === 0 && r.warnings.length === 0
+          ? w : new Map<string, string>(r.warnings.map((x) => [x.job_id, x.message] as [string, string]))));
       }}
       onSettled={onDropSettled}
     >
@@ -526,11 +535,11 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
 
   /** A member's day in time order: cards, free slots and the time between slots. */
   const lane = (member: SchedulingCrew, mine: AdminJob[], wins: { start: number; end: number }[], brk: { start: number; end: number } | null) => {
-    // The card being moved does not block its own slot, so it can go back to where it was or a step either side.
-    const others = mine.filter((j) => j.id !== dragId);
+    // The lane keeps its shape while a card is held: the free slots are computed with the held card still in place, so nothing
+    // below it shifts when the drag starts (no flicker). A drop on its own place goes through the insertion index.
     const items: { start: number; node: () => ReactNode; card?: AdminJob }[] = [
       ...mine.map((j) => ({ start: j.start_minute!, card: j, node: () => card(j) })),
-      ...freeSlots(aroundBreak(wins, brk), others).map((g) => ({ start: g.start, node: () => {
+      ...freeSlots(aroundBreak(wins, brk), mine).map((g) => ({ start: g.start, node: () => {
         const tight = dragged !== null && g.end - g.start < dragged.duration_minutes;
         return (
           <div key={`free-${g.start}`} data-slot data-start={g.start} data-end={g.end}

@@ -131,3 +131,25 @@ describe("useBatchMove", () => {
     expect(vi.mocked(toast.error).mock.calls[0][0]).toMatch(/overlaps another job/);
   });
 });
+
+describe("the optimistic card matches what the server answers", () => {
+  it("marks a placed card by hand and locked, with no reason, so the refetch changes nothing on it", () => {
+    const out = applyMovesToBoard(board(), [{ job_id: "j1", crew_id: "c2", start_minute: 540 }]);
+    const j = out.jobs.find((x) => x.id === "j1")!;
+    expect(j).toMatchObject({ manual: true, placed_by_hand: true, hand_locked: true, reason: "" });
+  });
+
+  it("shows a taken-off card with the lock icon and its reason, keeping its lock state", () => {
+    const b = board();
+    b.jobs[0] = job("j1", { hand_locked: false });
+    const j = applyMovesToBoard(b, [{ job_id: "j1", crew_id: null, start_minute: null }]).jobs[0];
+    expect(j).toMatchObject({ crew_id: null, placed_by_hand: true, hand_locked: false, reason: "Taken off the schedule by the admin." });
+  });
+
+  it("leaves the cards it shifts unlocked", () => {
+    const out = applyMovesToBoard(board(), [
+      { job_id: "j1", crew_id: "c1", start_minute: 540 }, { job_id: "j2", crew_id: "c1", start_minute: 600 }]);
+    expect(out.jobs.find((x) => x.id === "j2")!.hand_locked).toBeFalsy();
+  });
+});
+

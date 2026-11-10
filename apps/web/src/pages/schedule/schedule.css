@@ -286,6 +286,14 @@
 /* The icon cluster: status, Late, By hand, then the card's tools. In the flow, right-aligned, one icon box size for all. */
 .sch-flags { display: inline-flex; align-items: center; gap: 0.25rem; flex: none; margin-left: auto; }
 .sch-cut + .sch-flags { margin-left: 0; }
+/* The end cluster of line 1 (cutoff, then icons): fixed size, pushed right. Its pieces never shrink, so they cannot overlap. */
+.sch-end { display: inline-flex; align-items: center; gap: 0.3rem; flex: none; margin-left: auto; white-space: nowrap; }
+.sch-end > .sch-cut { margin-left: 0; flex: none; }
+.sch-end > .sch-flags { margin-left: 0; }
+/* Fixed pieces keep their size; only the text pieces (model, customer, car number) give way. When even the fixed pieces and the
+   end cluster do not fit the card, line 1 wraps and the cluster takes the next row, right-aligned. Cards only: the timeline keeps one row. */
+.sch-card-line > .sch-zone, .sch-card-line > .sch-time, .sch-card-line > .sch-code { flex: none; }
+.sch-card .sch-card-line:first-child { flex-wrap: wrap; row-gap: 0.1rem; }
 .sch-card-tools { display: inline-flex; align-items: center; gap: 0.25rem; flex: none; }
 .sch-flag-box { display: inline-grid; place-items: center; width: var(--sch-icon); height: var(--sch-icon); flex: none; overflow: visible; }
 .sch-flag-icon { width: var(--sch-icon); height: var(--sch-icon); display: block; flex: none; }
@@ -397,3 +405,5 @@
 .dnd-ghost { transition: none !important; will-change: transform; animation: none !important; }
 body.dnd-active .sch-card, body.dnd-active .sch-col, body.dnd-active .sch-slot { transition: none; }
 body.dnd-active .sch-card:hover { transform: none; box-shadow: 0 1px 2px rgba(22, 21, 26, 0.06); }
+/* While a card is held, the scroll arrows take no pointer: they sit over the lane edges and made the drop target blink. */
+body.dnd-active .sch-more { pointer-events: none; }

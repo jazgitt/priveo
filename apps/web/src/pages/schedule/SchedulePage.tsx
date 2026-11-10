@@ -473,45 +473,39 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       <DateBar title="Schedule" site={site.name || undefined} startFolded={boardOnly} date={date} today={today} from={from} to={to}
                scheduleOf={scheduleOf} attention={attention} onChange={chooseDate}>
         {!societyId ? (
-          <span className="text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
-        ) : schedulesQ.isPending ? <Skeleton className="h-6 w-60" />
+          <span className="truncate text-sm text-muted-foreground">Pick a site at the top left to see its schedule.</span>
+        ) : schedulesQ.isPending ? <Skeleton className="h-6 w-40" />
           : (
-          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-3">
-            {schedule ? (
+          <div role="group" aria-label="Schedule of this day" className="flex min-w-0 flex-nowrap items-center gap-2">
+            {/* The Run button is on the page and in the focus view's top bar; the own-tab board has none. */}
+            {mode !== "solo" && (
+              <Button size="sm" variant={schedule ? "outline" : "default"} onClick={() => setRunOpen(true)} disabled={running}
+                      aria-busy={running || undefined}>
+                {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
+                {running ? "Running…" : "Run"}
+              </Button>
+            )}
+            {!schedule && <span className="min-w-0 truncate text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>}
+            {schedule && (
               <>
-                <StatusBadge status={schedule.status} />
-                <span className="min-w-0 truncate text-sm text-muted-foreground"
+                {/* The status sits left of the Freeze button; the auto-freeze time before it truncates when the bar is full. */}
+                <span className="min-w-0 max-w-64 truncate text-sm text-muted-foreground"
                       title={schedule.start_date === schedule.end_date ? "A schedule for this day only."
                         : `Part of the schedule for ${dayText(schedule.start_date)} to ${dayText(schedule.end_date)}. Freezing applies to all its days.`}>
                   {freezeText(schedule, autoFreeze)}
                 </span>
+                <StatusBadge status={schedule.status} />
+                {schedule.status === "Draft" ? (
+                  <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
+                    <Lock aria-hidden /> Freeze
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
+                    <LockOpen aria-hidden /> Unfreeze
+                  </Button>
+                )}
               </>
-            ) : (
-              <span className="text-sm text-muted-foreground">No schedule covers this day yet. Run the scheduler to make a draft.</span>
             )}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {/* The Run button is on the page and in the focus view's top bar; the own-tab board has none. */}
-              {mode !== "solo" && (
-                <Button size="sm" variant={schedule ? "outline" : "default"} onClick={() => setRunOpen(true)} disabled={running}
-                        aria-busy={running || undefined}>
-                  {running ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}
-                  {running ? "Running…" : "Run"}
-                </Button>
-              )}
-              {schedule && (
-                <>
-                  {schedule.status === "Draft" ? (
-                    <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
-                      <Lock aria-hidden /> Freeze
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => setUnfreezing(schedule)}>
-                      <LockOpen aria-hidden /> Unfreeze
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
           </div>
         )}
       </DateBar>

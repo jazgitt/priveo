@@ -163,7 +163,7 @@ def test_a_take_off_leaves_the_others_where_they_are(api, admin, world, run_week
     assert body["warnings"] == []
     row = {j["id"]: j for j in body["jobs"]}[taken["id"]]
     assert row["crew_id"] is None and row["start_minute"] is None
-    assert row["manual"] is True and row["placed_by_hand"] is False
+    assert row["manual"] is True and row["placed_by_hand"] is True  # shows the lock in Unscheduled
 
     after = _board(api, admin, schedule_id)
     for other in (lane[0], lane[2]):
