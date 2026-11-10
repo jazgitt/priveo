@@ -3,6 +3,7 @@
 Each option returns a PDF. Each crew starts on its own page, so the all-crew PDF has
 one page per crew and the same pages as the per-crew PDFs put together."""
 import io
+import re
 import uuid
 from datetime import date
 
@@ -119,3 +120,25 @@ def test_unknown_crew_and_a_day_outside_the_schedule_are_refused(world, api, adm
     outside = api.get(f"{CARDS}/pdf", headers=admin,
                       params={"schedule_id": schedule_id, "date": date(2026, 11, 30).isoformat()})
     assert outside.status_code == 422
+
+
+def test_sr_column_restarts_per_crew_and_special_notes_replace_status_and_notes(
+    world, api, admin, run_week
+):
+    schedule_id, crews = placed_day(world, api, admin, run_week)
+    for vehicle in world.vehicles:
+        vehicle.notes = "Gate code 4321"
+    world.db.commit()
+
+    pages = pages_of(all_crew(api, admin, schedule_id))
+    text = text_of(pages)
+    assert "Sr #" in text
+    assert "Special notes" in text
+    assert "Status and notes" not in text
+    assert "Gate code 4321" in text
+    for status_text in ("Scheduled", "Late", "By hand", "Outside zone"):
+        assert status_text not in text
+    # Numbering starts at 1 on each crew's page.
+    assert len(pages) == 2
+    for page in pages:
+        assert re.search(r"^1\s", page.extract_text(), re.MULTILINE)

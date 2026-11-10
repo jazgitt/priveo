@@ -13,7 +13,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.customers.models import Vehicle
+from app.customers.models import Subscription, Vehicle
 from app.identity.models import Login
 from app.scheduling import service as scheduling_service
 from app.scheduling.models import Schedule, SchedulingCrew, Visit
@@ -35,6 +35,7 @@ class CardRow:
     parking: str
     status: str
     notes: tuple[str, ...]
+    special_notes: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,7 +78,12 @@ def _notes(job: dict) -> tuple[str, ...]:
     return tuple(notes)
 
 
-def _row(job: dict, model: str) -> CardRow:
+def _special_notes(*texts: str | None) -> str:
+    """The non-empty texts of the vehicle note and the interior-day note, joined with "; "."""
+    return "; ".join(t.strip() for t in texts if t and t.strip())
+
+
+def _row(job: dict, model: str, special_notes: str = "") -> CardRow:
     return CardRow(
         window=_window(job),
         zone=zone_short(job["zone"]) if job["zone"] else "",
@@ -90,6 +96,7 @@ def _row(job: dict, model: str) -> CardRow:
         parking=job["parking"] or "",
         status=job["status"],
         notes=_notes(job),
+        special_notes=special_notes,
     )
 
 
@@ -105,13 +112,20 @@ def crew_cards(
     ]
     if not jobs:
         return []
-    models = dict(db.execute(
-        select(Vehicle.id, Vehicle.model).where(Vehicle.id.in_({j["vehicle_id"] for j in jobs}))
+    vehicle_ids = {j["vehicle_id"] for j in jobs}
+    models = dict(db.execute(select(Vehicle.id, Vehicle.model).where(Vehicle.id.in_(vehicle_ids))).all())
+    vehicle_notes = dict(db.execute(select(Vehicle.id, Vehicle.notes).where(Vehicle.id.in_(vehicle_ids))).all())
+    interior_notes = dict(db.execute(
+        select(Subscription.vehicle_id, Subscription.interior_day_notes)
+        .where(Subscription.vehicle_id.in_(vehicle_ids))
     ).all())
     by_crew: dict[uuid.UUID, list[CardRow]] = {}
     names: dict[uuid.UUID, str] = {}
     for job in sorted(jobs, key=lambda j: (j["start_minute"] is None, j["start_minute"] or 0)):
-        by_crew.setdefault(job["crew_id"], []).append(_row(job, models.get(job["vehicle_id"]) or ""))
+        by_crew.setdefault(job["crew_id"], []).append(_row(
+            job, models.get(job["vehicle_id"]) or "",
+            _special_notes(vehicle_notes.get(job["vehicle_id"]), interior_notes.get(job["vehicle_id"])),
+        ))
         names[job["crew_id"]] = job["crew_name"] or ""
     return sorted(
         (CrewCards(crew_id=cid, name=names[cid], rows=tuple(rows)) for cid, rows in by_crew.items()),
