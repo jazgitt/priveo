@@ -105,6 +105,8 @@ interface Session {
   offsetX: number;
   offsetY: number;
   hold: ReturnType<typeof setTimeout> | null;
+  /** The animation frame that will run the hit test; one per frame, however many pointer events came. */
+  frame: number | null;
   /** The exact listeners added for this press, so they are removed by identity. */
   handlers: { move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; cancel: (e: PointerEvent) => void; key: (e: KeyboardEvent) => void };
 }
@@ -131,6 +133,8 @@ function detach(s: Session): void {
   window.removeEventListener("pointercancel", s.handlers.cancel);
   window.removeEventListener("keydown", s.handlers.key);
   if (s.hold !== null) clearTimeout(s.hold);
+  if (s.frame !== null) cancelAnimationFrame(s.frame);
+  s.frame = null;
 }
 
 export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, children }: DragEngineProps) {
@@ -157,6 +161,8 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     ghost.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
     ghost.removeAttribute("id");
     ghost.setAttribute("aria-hidden", "true");
+    // The clone keeps the card's classes, and so its 120 ms transform transition: the ghost would trail the pointer. No easing.
+    ghost.classList.add("dnd-ghost");
     ghost.style.cssText += `;position:fixed;left:0;top:0;width:${rect.width}px;height:${rect.height}px;margin:0;` +
       `pointer-events:none;z-index:1000;opacity:0.92;box-shadow:0 12px 28px rgba(0,0,0,0.22);` +
       `transform:translate(${rect.left}px,${rect.top}px);`;
@@ -168,6 +174,7 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     s.source.style.opacity = "0.35";
     document.body.style.cursor = "grabbing";
     document.body.style.userSelect = "none";
+    document.body.classList.add("dnd-active");
     setView({ activeId: s.item.id, hit: null });
   };
 
@@ -177,6 +184,7 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     s.source.style.opacity = "";
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    document.body.classList.remove("dnd-active");
     setView({ activeId: null, hit: null });
   };
 
@@ -221,13 +229,21 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     }
     e.preventDefault();
     if (s.ghost) s.ghost.style.transform = `translate(${s.x - s.offsetX}px, ${s.y - s.offsetY}px)`;
-    const hit = hitAt(s.x, s.y, s.item.id);
-    setView((v) => {
-      const next = hit ? { laneId: hit.laneId, index: hit.index } : null;
-      const same = (v.hit === null && next === null) ||
-        (v.hit !== null && next !== null && v.hit.laneId === next.laneId && v.hit.index === next.index);
-      return same ? v : { activeId: v.activeId, hit: next };
-    });
+    // The ghost moves at once (a transform costs no layout). The hit test reads the layout of every card in the lane, so it
+    // runs once per frame, on the latest position, not on every pointer event.
+    if (s.frame === null) {
+      s.frame = requestAnimationFrame(() => {
+        s.frame = null;
+        if (session.current !== s) return;
+        const hit = hitAt(s.x, s.y, s.item.id);
+        setView((v) => {
+          const next = hit ? { laneId: hit.laneId, index: hit.index } : null;
+          const same = (v.hit === null && next === null) ||
+            (v.hit !== null && next !== null && v.hit.laneId === next.laneId && v.hit.index === next.index);
+          return same ? v : { activeId: v.activeId, hit: next };
+        });
+      });
+    }
   }
 
   function onUp(e: PointerEvent) {
@@ -252,7 +268,7 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     const s: Session = {
       pointerId: e.pointerId, item, source: e.currentTarget, pointerType: e.pointerType,
       startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,
-      active: false, ghost: null, offsetX: 0, offsetY: 0, hold: null,
+      active: false, ghost: null, offsetX: 0, offsetY: 0, hold: null, frame: null,
       handlers: { move: onMove, up: onUp, cancel: onCancel, key: onKey },
     };
     session.current = s;
@@ -278,6 +294,7 @@ export function DragEngineProvider({ boardKey, plan, onSaved, onSettled, childre
     s.source.style.opacity = "";
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    document.body.classList.remove("dnd-active");
   }, []);
 
   const value: DragContextValue = { activeId: view.activeId, hit: view.hit, begin };

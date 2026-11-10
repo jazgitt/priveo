@@ -132,7 +132,9 @@
   .sch-break-rest { font-weight: 600; color: var(--c-gold-text); text-align: center; }
   .sch-col-empty { margin: 0; padding: 1rem 0.5rem; border: 1px dashed #d8cfbf; border-radius: 8px;
     text-align: center; font-size: 0.75rem; color: var(--c-mute); }
-  .sch-drop-line { flex: 0 0 auto; height: 3px; margin: -0.1rem 0; border-radius: 999px; background: var(--c-gold); }
+  .sch-drop-line { flex: 0 0 auto; position: relative; height: 0; margin: -0.2rem 0; }
+  /* The line takes no room (height 0, the margins cancel the column gap), so the cards never move under the pointer while it moves. */
+  .sch-drop-line::before { content: ""; position: absolute; left: 0; right: 0; top: -1.5px; height: 3px; border-radius: 999px; background: var(--c-gold); }
 
   /* The kind of work sets the card's colour; the status is an icon and a word, so the two never fight (ADM-SCH-34). */
   .sch-card, .sch-detail { --type: var(--c-ok); --type-bg: #eef8f1; --type-line: #bfe0cd;
@@ -390,3 +392,8 @@
 .sch-name-line > strong { flex: none; }
 .sch-home-zones { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--c-mute); }
 
+
+/* Dragging: the held card's ghost follows the pointer with no easing, and nothing on the board animates under it. */
+.dnd-ghost { transition: none !important; will-change: transform; animation: none !important; }
+body.dnd-active .sch-card, body.dnd-active .sch-col, body.dnd-active .sch-slot { transition: none; }
+body.dnd-active .sch-card:hover { transform: none; box-shadow: 0 1px 2px rgba(22, 21, 26, 0.06); }
