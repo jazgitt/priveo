@@ -238,7 +238,7 @@ test.describe("Schedule (scenario R06)", () => {
 
       const boxes = await card.evaluate((el) => {
         const rect = (e: Element) => { const r = e.getBoundingClientRect(); return { name: e.getAttribute("aria-label") ?? e.className.toString(), l: r.left, t: r.top, r: r.right, b: r.bottom }; };
-        const pieces = [...el.querySelectorAll(".sch-card-line > *:not(.sch-flags), .sch-flags > *:not(.sch-card-tools), .sch-card-tools > *")]
+        const pieces = [...el.querySelectorAll(".sch-card-line > *:not(.sch-end), .sch-end > *:not(.sch-flags), .sch-flags > *:not(.sch-card-tools), .sch-card-tools > *")]
           .filter((e) => e.getBoundingClientRect().width > 0);
         return { card: rect(el), pieces: pieces.map(rect) };
       });
