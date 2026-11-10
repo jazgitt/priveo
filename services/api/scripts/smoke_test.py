@@ -61,6 +61,9 @@ def create_users(base: str, token: str, roles: list[str], created: list[str]) ->
     status, societies = call(base, "/v1/admin/directory/societies", token=token)
     check(status == 200 and societies, "smoke users: a society to use")
     society = societies[0]["id"]
+    # Use a basement the society really has: the test society's basements are set per site, not fixed.
+    basements = societies[0].get("parking_basements") or []
+    check(bool(basements), "smoke users: a parking basement to use")
     status, catalogue = call(base, "/v1/admin/directory/vehicle-catalogue", token=token)
     check(status == 200 and catalogue, "smoke users: a vehicle to use")
     status, plans = call(base, "/v1/admin/directory/plans", token=token)
@@ -69,7 +72,7 @@ def create_users(base: str, token: str, roles: list[str], created: list[str]) ->
     if "customer" in roles:
         vehicle = {"society_id": society, "plan_id": plans[0]["id"],
                    "catalogue_id": catalogue[0]["id"],
-                   "registration": f"HR99SM{suffix:04d}", "parking_basement": "B2",
+                   "registration": f"HR99SM{suffix:04d}", "parking_basement": basements[0],
                    "parking_number": "99", "cutoff_time": "09:00", "interior_day": "Monday"}
         status, body = call(base, "/v1/admin/customers", token=token, body={
             "first_name": "Smoke", "last_name": "Customer", "mobile": customer_mobile,
