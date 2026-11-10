@@ -75,7 +75,6 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
         <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={() => onChange(today)}>
           Today
         </Button>
-        {children}
         {/* The control names the days of the strip it shows or hides (the date trail), at 75% of the normal size. */}
         <Button size="sm" variant="ghost" className="ml-auto h-8 shrink-0 text-[10.5px]" aria-expanded={!folded} aria-controls="sch-days"
                 onClick={toggle}>
@@ -109,6 +108,10 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
             <span className="sch-day-key"><i className="flag" /> Needs Attention</span>
           </p>
         </div>
+      )}
+      {/* The chosen day's schedule sits under the strip (ADM-SCH-35), so the header stays one line. */}
+      {children && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5">{children}</div>
       )}
     </div>
   );
