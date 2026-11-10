@@ -112,3 +112,20 @@ def test_an_exception_for_one_service_does_not_change_another():
 def test_root_windows_come_back_sorted_and_empty_ones_are_dropped():
     s = site(root(EXT, 1020, 1080, ALL), root(EXT, 300, 360, ALL), root(EXT, 500, 500, ALL))
     assert s.effective(EXT, WEDNESDAY).windows == ((300, 360), (1020, 1080))
+
+
+def test_an_exception_with_no_days_closes_every_date_of_its_range_only():
+    end = MONDAY + timedelta(days=13)
+    ex = exception(EXT, MONDAY, end, [], [(420, 540)], EXCEPTION_ID)
+    s = site(root(EXT, 300, 660, ALL), exceptions=[ex])
+    for offset in range(14):
+        eff = s.effective(EXT, MONDAY + timedelta(days=offset))
+        assert (eff.source, eff.windows, eff.exception_id, eff.open) == (
+            sr.EXCEPTION, (), EXCEPTION_ID, False)
+    # Outside the range Root applies, before and after.
+    assert s.effective(EXT, MONDAY - timedelta(days=1)).source == sr.ROOT
+    assert s.effective(EXT, end + timedelta(days=1)).windows == ((300, 660),)
+    # Another service is untouched.
+    s2 = site(root(EXT, 300, 660, ALL), root(SPA, 300, 660, ALL), exceptions=[ex])
+    assert s2.effective(SPA, MONDAY).source == sr.ROOT
+    assert not s2.allows_demand(EXT, MONDAY)
