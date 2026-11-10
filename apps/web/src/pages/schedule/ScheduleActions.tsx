@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Download, Sparkles } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Download, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -12,6 +12,7 @@ import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { showDate } from "@/components/format";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/dropdown-menu";
 
 import { serviceCode } from "./Board";
 import { hhmm, jobCardsPdf, useCutoffRequests, weekday, type AdminJob, type Board, type CutoffRequest, type PendingAddon } from "./api";
@@ -48,7 +49,7 @@ function saveFile(blob: Blob, name: string): void {
 const slug = (text: string, fallback: string) => text.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || fallback;
 
 /**
- * The two job card downloads on the Schedule page (P1-2): one PDF for all crew, or one
+ * The "Download Jobs" menu in the Board toolbar (P1-2): one PDF for all crew, or one
  * PDF per crew member, one after another. Nothing shows when no crew has cards that day.
  */
 export function JobCardButtons({ scheduleId, date, jobs }: { scheduleId: string; date: string; jobs: AdminJob[] }) {
@@ -70,14 +71,17 @@ export function JobCardButtons({ scheduleId, date, jobs }: { scheduleId: string;
   if (crews.length === 0) return null;
   const busy = all.isPending || perCrew.isPending;
   return (
-    <>
-      <Button size="sm" variant="outline" disabled={busy} onClick={() => all.mutate()}>
-        <Download aria-hidden /> Job cards, all crew
-      </Button>
-      <Button size="sm" variant="outline" disabled={busy} onClick={() => perCrew.mutate()}>
-        <Download aria-hidden /> Job cards, one PDF per crew
-      </Button>
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8" disabled={busy}>
+          <Download aria-hidden /> Download Jobs <ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => all.mutate()}>Single PDF (all crew)</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => perCrew.mutate()}>Individual PDFs (one per crew)</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
