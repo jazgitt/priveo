@@ -118,7 +118,8 @@ def test_an_exception_with_no_days_overlaps_any_exception_in_its_range(client, a
     # So is one with weekdays, whichever weekday.
     assert client.post(url, headers=admin, json=EXCEPTION | {"days": ["Monday"]}).status_code == 409
     # Outside the range, and for another service, is fine.
-    assert client.post(url, headers=admin, json=closed | {"start_date": "2026-11-18", "end_date": "2026-11-19"}).status_code == 201
+    later = closed | {"start_date": "2026-11-18", "end_date": "2026-11-19"}
+    assert client.post(url, headers=admin, json=later).status_code == 201
     assert client.post(url, headers=admin, json=closed | {"service": "Deep Spa"}).status_code == 201
     # A weekday exception that exists blocks a closed one over its dates.
     spa = EXCEPTION | {"service": "Cleaning-Internal", "days": ["Monday"]}

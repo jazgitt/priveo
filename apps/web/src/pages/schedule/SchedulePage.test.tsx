@@ -347,13 +347,15 @@ describe("the card board (ADM-SCH-33)", () => {
     await openDay();
     const int = within(await column("c2")).getByRole("button", { name: /KA02IN0002/ });
     expect(screen.getByRole("switch", { name: "Show all" })).toHaveAttribute("aria-checked", "false");
-    await userEvent.click(await screen.findByRole("button", { name: "INT" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Services" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "INT" }));
     expect(int).not.toHaveClass("dim");
     expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
     expect(int).not.toHaveClass("dim");
-    await userEvent.click(screen.getByRole("button", { name: "INT" }));
+    await userEvent.click(screen.getByRole("button", { name: "Services: INT" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Clear" }));
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).not.toHaveClass("dim");
   });
 

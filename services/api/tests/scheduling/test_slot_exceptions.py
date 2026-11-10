@@ -87,8 +87,12 @@ def test_an_exception_with_no_days_closes_the_service_for_the_scheduler(world, a
     world.add_crew()
     _root(world)
     _exception(world, [], THURSDAY, THURSDAY)
-    assert _cap(world, THURSDAY)["capacity_minutes"] == 0
-    assert _cap(world, THURSDAY + timedelta(days=1))["capacity_minutes"] == 60
+    # Capacity is crew time, shared by every service, so it stays 60 here: the closure
+    # is read per service through the resolver.
+    site = slot_resolver.load(world.db, world.society.id)
+    assert site.effective(EXT, THURSDAY).windows == ()
+    assert site.effective(EXT, THURSDAY).source == slot_resolver.EXCEPTION
+    assert site.effective(EXT, THURSDAY + timedelta(days=1)).windows == ((300, 660),)
     summary = run_days(api, admin, world.society.id, SUNDAY, 5)[4]
     board = api.get(f"{BASE}/board", headers=admin,
                     params={"schedule_id": summary["schedule_id"]}).json()
