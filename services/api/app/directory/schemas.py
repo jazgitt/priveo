@@ -217,7 +217,8 @@ class SlotExceptionCreate(BaseModel):
     service: str
     start_date: date
     end_date: date
-    days: list[str] = Field(min_length=1, description="Monday to Sunday")
+    # No days is allowed: the exception then closes the service on every date of its range.
+    days: list[str] = Field(description="Monday to Sunday; none closes the service on every date")
     # No windows is allowed: the service is closed on the exception's days.
     windows: list[SlotExceptionWindow] = Field(default_factory=list)
     note: str = Field(default="", max_length=120)
@@ -226,7 +227,7 @@ class SlotExceptionCreate(BaseModel):
 class SlotExceptionUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
-    days: list[str] | None = Field(default=None, min_length=1)
+    days: list[str] | None = None
     windows: list[SlotExceptionWindow] | None = None
     note: str | None = Field(default=None, max_length=120)
 

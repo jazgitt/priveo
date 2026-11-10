@@ -5,7 +5,8 @@ weekly off all read the slot through this module, so they cannot disagree. For
 a service and a date the first rule that applies wins:
 
 1. an exception for that service whose date range covers the date and whose
-   `days` include the weekday. Its windows are the only slots the service has
+   `days` include the weekday, or whose `days` are empty (then it covers every
+   weekday and closes the service on every date of its range). Its windows are the only slots the service has
    that day, and no windows means the service is closed that day. It can open a
    weekday the weekly off would close (decision 8, 9-Nov-26);
 2. Root: the site's `working_slots` rows for the service on that weekday;
@@ -88,8 +89,12 @@ class SiteSlots:
     def effective(self, service: str, day: date) -> Effective:
         weekday = day.weekday()
         for ex in self.exceptions:
-            if (ex.service == service and ex.start_date <= day <= ex.end_date
-                    and weekday in ex.days):
+            if ex.service != service or not ex.start_date <= day <= ex.end_date:
+                continue
+            if not ex.days:
+                # No working days: closed on every date of the range, whatever the windows.
+                return Effective(service, day, EXCEPTION, (), ex.id)
+            if weekday in ex.days:
                 return Effective(service, day, EXCEPTION, _sorted(ex.windows), ex.id)
         mine = [r for r in self.root if r.service == service]
         if not mine:

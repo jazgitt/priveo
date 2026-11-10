@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { formatDate } from "../support/format";
 import { fieldError, useDirectory, useDirSave } from "./api";
 import { Notice, QueryState } from "./common";
+import { DayChips, dayTone } from "./DayChips";
 import { SERVICE_NAMES, type Slot, type SlotException, WEEKDAYS } from "./types";
 
 const services = SERVICE_NAMES.map((s) => ({ value: s, label: s }));
@@ -51,7 +52,7 @@ function SlotForm({ societyId, slot, service, onClose }: { societyId: string; sl
         <div className="flex flex-wrap gap-2">
           {WEEKDAYS.map((d) => (
             <label key={d} className={cn("flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors",
-              days.includes(d) ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-accent")}>
+              dayTone(days.includes(d)), days.includes(d) ? "border-green-600" : "hover:bg-accent")}>
               <input type="checkbox" className="sr-only" checked={days.includes(d)} onChange={() => flip(d)} />
               {d}
             </label>
@@ -64,22 +65,8 @@ function SlotForm({ societyId, slot, service, onClose }: { societyId: string; sl
   );
 }
 
-const DAY_LETTERS = WEEKDAYS.map((d) => d.slice(0, 3));
-
-function DayChips({ slot }: { slot: Slot }) {
-  return (
-    <span className="flex flex-wrap gap-1" aria-label={slot.days.join(", ")}>
-      {WEEKDAYS.map((d, i) => (
-        <span key={d} className={cn("rounded px-1.5 py-0.5 text-xs", slot.days.includes(d) ? "bg-gold/20 font-medium" : "text-muted-foreground/50")}>{DAY_LETTERS[i]}</span>
-      ))}
-    </span>
-  );
-}
-
 type TimeWindow = { start: string; end: string };
 
-const DAY_SHORT = (days: string[]) =>
-  WEEKDAYS.filter((d) => days.includes(d)).map((d) => d.slice(0, 3)).join(", ");
 const WINDOWS_TEXT = (windows: TimeWindow[]) =>
   windows.length ? windows.map((w) => `${w.start} to ${w.end}`).join(", ") : "Closed";
 
@@ -95,14 +82,15 @@ function SlotExceptionForm({ societyId, row, onClose }: { societyId: string; row
   const flip = (d: string) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d]));
   const setWindow = (i: number, patch: Partial<TimeWindow>) =>
     setWindows((ws) => ws.map((w, j) => (j === i ? { ...w, ...patch } : w)));
-  const ready = Boolean(startDate && endDate && days.length > 0);
+  // No working days is allowed: the service is then closed for these dates.
+  const ready = Boolean(startDate && endDate);
 
   const submit = () => {
     const body = {
       start_date: startDate,
       end_date: endDate,
       days: WEEKDAYS.filter((d) => days.includes(d)),
-      windows,
+      windows: days.length ? windows : [],
       note: note.trim(),
     };
     save.mutate(row
@@ -123,19 +111,20 @@ function SlotExceptionForm({ societyId, row, onClose }: { societyId: string; row
         <Field label="End date" error={fieldError(save.error, "end_date")}>{(p) => <Input {...p} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />}</Field>
       </div>
       <fieldset className="m-0 border-0 p-0">
-        <legend className="mb-2 text-[0.8125rem] font-medium">Days the exception covers</legend>
+        <legend className="mb-2 text-[0.8125rem] font-medium">Working days</legend>
         <div className="flex flex-wrap gap-2">
           {WEEKDAYS.map((d) => (
             <label key={d} className={cn("flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors",
-              days.includes(d) ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-accent")}>
+              dayTone(days.includes(d)), days.includes(d) ? "border-green-600" : "hover:bg-accent")}>
               <input type="checkbox" className="sr-only" checked={days.includes(d)} onChange={() => flip(d)} />
               {d}
             </label>
           ))}
         </div>
         {fieldError(save.error, "days") && <p className="mt-2 mb-0 text-xs text-destructive" role="alert">{fieldError(save.error, "days")}</p>}
+        {days.length === 0 && <p className="mt-2 mb-0 text-xs text-muted-foreground">No working days: the service is closed for these dates.</p>}
       </fieldset>
-      <fieldset className="m-0 border-0 p-0">
+      {days.length > 0 && <fieldset className="m-0 border-0 p-0">
         <legend className="mb-2 text-[0.8125rem] font-medium">Working times on those days</legend>
         <div className="flex flex-col gap-2">
           {windows.map((w, i) => (
@@ -154,7 +143,7 @@ function SlotExceptionForm({ societyId, row, onClose }: { societyId: string; row
         </div>
         {windows.length === 0 && <p className="mt-2 mb-0 text-xs text-muted-foreground">No window: the service is closed on these days.</p>}
         {windowError && <p className="mt-2 mb-0 text-xs text-destructive" role="alert">{windowError}</p>}
-      </fieldset>
+      </fieldset>}
       <Field label="Note (optional)" error={fieldError(save.error, "note")}>{(p) => <Input {...p} maxLength={120} value={note} onChange={(e) => setNote(e.target.value)} />}</Field>
     </FormDialog>
   );
@@ -205,7 +194,7 @@ function SlotExceptions({ societyId }: { societyId: string }) {
               <DataTable rows={sorted} rowKey={(r) => r.id} empty={<EmptyState title="No exceptions">Root applies on every date.</EmptyState>} columns={[
                 { key: "service", header: "Service", width: "12rem", cell: (r) => r.service },
                 { key: "dates", header: "Dates", width: "14rem", cell: (r) => <span className="tabular-nums">{formatDate(r.start_date)} to {formatDate(r.end_date)}</span> },
-                { key: "days", header: "Days", wrap: true, cell: (r) => DAY_SHORT(r.days) },
+                { key: "days", header: "Working Days", wrap: true, cell: (r) => <DayChips days={r.days} /> },
                 { key: "times", header: "Working times", wrap: true, cell: (r) => <span className="tabular-nums">{WINDOWS_TEXT(r.windows)}</span> },
                 { key: "note", header: "Note", wrap: true, cell: (r) => r.note || "-" },
                 { key: "act", header: "", width: "12rem", align: "right", cell: actions },
@@ -286,7 +275,7 @@ export function SlotsTab() {
                               <p className="m-0 text-xs font-medium text-muted-foreground">{s.service}</p>
                               <p className="m-0 mt-0.5 text-lg font-semibold tabular-nums">{s.start} to {s.end}</p>
                             </div>
-                            <DayChips slot={s} />
+                            <DayChips days={s.days} />
                             <div className="mt-auto -mr-2">{actions(s)}</div>
                           </div>
                         ))}
@@ -296,7 +285,7 @@ export function SlotsTab() {
                     <DataTable rows={rows} rowKey={(s) => s.id} empty={empty} columns={[
                       { key: "service", header: "Service", width: "12rem", cell: (s) => s.service },
                       { key: "time", header: "Time", width: "12rem", cell: (s) => <span className="font-medium tabular-nums">{s.start} to {s.end}</span> },
-                      { key: "days", header: "Days", wrap: true, cell: (s) => <DayChips slot={s} /> },
+                      { key: "days", header: "Days", wrap: true, cell: (s) => <DayChips days={s.days} /> },
                       { key: "act", header: "", width: "12rem", align: "right", cell: actions },
                     ]} />
                   )}

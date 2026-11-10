@@ -49,8 +49,9 @@ it('adds an exception for a date range, its weekdays and its working times', asy
   await choose('Service', 'Cleaning-External');
   fireEvent.change(within(dialog).getByLabelText('Start date'), { target: { value: '2026-11-11' } });
   fireEvent.change(within(dialog).getByLabelText('End date'), { target: { value: '2026-11-17' } });
-  // Dates alone are not enough: a day must be chosen.
-  expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled();
+  // Dates are enough: with no working day the service is closed for them.
+  expect(within(dialog).getByRole('button', { name: 'Save' })).toBeEnabled();
+  expect(within(dialog).getByText('No working days: the service is closed for these dates.')).toBeInTheDocument();
   await userEvent.click(within(dialog).getByLabelText('Wednesday'));
   expect(within(dialog).getByRole('button', { name: 'Save' })).toBeEnabled();
   expect(await saved('/societies/s1/slot-exceptions')).toEqual({
@@ -80,7 +81,41 @@ it('lists each exception with its dates, weekdays and working times, and shows a
   expect(screen.getByText('18-Nov-26 to 22-Nov-26')).toBeInTheDocument();
   expect(screen.getByText('06:00 to 12:00')).toBeInTheDocument();
   expect(screen.getByText('Closed')).toBeInTheDocument();
-  expect(screen.getByText('Sun')).toBeInTheDocument();
+  // Item 14: every row shows all seven weekdays, working ones green and the rest grey.
+  const rows = screen.getAllByTestId('day-chips');
+  expect(rows).toHaveLength(2);
+  expect(rows[0].querySelector('[data-day="Wed"]')).toHaveAttribute('data-working', 'true');
+  expect(rows[0].querySelector('[data-day="Sun"]')).toHaveAttribute('data-working', 'false');
+  expect(rows[1].querySelector('[data-day="Sun"]')).toHaveAttribute('data-working', 'true');
+  expect(rows[1].querySelector('[data-day="Sun"]')!.className).toContain('bg-green-100');
+  expect(rows[0].querySelector('[data-day="Mon"]')!.className).toContain('bg-muted');
+});
+
+it('names the columns and the dialog legend Working Days', async () => {
+  responses[EXCEPTIONS] = [exception()];
+  mount(<SlotsTab />);
+  expect(await screen.findByRole('columnheader', { name: 'Working Days' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  const dialog = within(await screen.findByRole('dialog'));
+  expect(dialog.getByText('Working days')).toBeInTheDocument();
+  expect(dialog.queryByText('Days the exception covers')).not.toBeInTheDocument();
+});
+
+it('saves an exception with no working days: days and windows are sent empty and the times section is hidden', async () => {
+  responses[EXCEPTIONS] = [];
+  mount(<SlotsTab />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Add an exception' }));
+  const dialog = within(await screen.findByRole('dialog'));
+  await choose('Service', 'Cleaning-External');
+  fireEvent.change(dialog.getByLabelText('Start date'), { target: { value: '2026-12-24' } });
+  fireEvent.change(dialog.getByLabelText('End date'), { target: { value: '2026-12-26' } });
+  expect(dialog.getByRole('button', { name: 'Save' })).toBeEnabled();
+  expect(dialog.queryByText('Working times on those days')).not.toBeInTheDocument();
+  expect(dialog.queryByLabelText('Window 1 start (HH:MM)')).not.toBeInTheDocument();
+  expect(await saved('/societies/s1/slot-exceptions')).toEqual({
+    service: 'Cleaning-External', start_date: '2026-12-24', end_date: '2026-12-26',
+    days: [], windows: [], note: '',
+  });
 });
 
 it('edits an exception and sends its changed note with the other fields', async () => {
