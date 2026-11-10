@@ -24,14 +24,14 @@ describe("the day bar (ADM-SCH-35)", () => {
     expect(onChange).toHaveBeenCalledWith("2026-11-08");
   });
 
-  it("keeps the header on one row; the chosen day's schedule sits under the strip", () => {
+  it("keeps the header on one row; the chosen day's schedule sits at its right end", () => {
     renderBar();
     const row = screen.getByRole("heading", { name: "Schedule" }).parentElement!;
     expect(row).toHaveClass("flex-nowrap");
     expect(row).not.toHaveClass("flex-wrap");
     expect(row).toContainElement(screen.getByRole("button", { name: "Hide days" }));
-    expect(row).not.toContainElement(screen.getByText("status here"));
-    expect(screen.getByText("status here")).toBeInTheDocument();
+    expect(row).toContainElement(screen.getByText("status here"));
+    expect(row).toContainElement(screen.getByRole("button", { name: "Today" }));
   });
 
   it("names the days of the strip in the days control, at a smaller size", async () => {

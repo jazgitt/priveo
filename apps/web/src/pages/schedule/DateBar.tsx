@@ -43,7 +43,7 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
   /** Days with jobs that need scheduling or cutoff requests. */
   attention: Set<string>;
   onChange: (date: string) => void;
-  /** The schedule of the day and its actions, in the same bar. */
+  /** The schedule of the day and its actions: they sit at the right end of the one header line. */
   children?: ReactNode;
 }) {
   const strip = useRef<HTMLDivElement>(null);
@@ -59,7 +59,7 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
 
   return (
     <div className="mb-2 rounded-xl border bg-card shadow-xs">
-      {/* One line: the title, the day, the schedule of the day and its actions, then the days toggle. */}
+      {/* One line: the title, the day, Today and the days toggle, then the schedule of the day and its actions at the right. */}
       <div className="flex flex-nowrap items-center gap-x-2 px-3 py-1.5">
         <h1 className="m-0 shrink-0 text-base font-semibold tracking-tight">{title}</h1>
         {site && <span className="shrink-0 text-sm font-medium">{site}</span>}
@@ -76,11 +76,12 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
           Today
         </Button>
         {/* The control names the days of the strip it shows or hides (the date trail), at 75% of the normal size. */}
-        <Button size="sm" variant="ghost" className="ml-auto h-8 shrink-0 text-[10.5px]" aria-expanded={!folded} aria-controls="sch-days"
+        <Button size="sm" variant="ghost" className="h-8 shrink-0 text-[10.5px]" aria-expanded={!folded} aria-controls="sch-days"
                 onClick={toggle}>
           <CalendarDays aria-hidden /> {folded ? "Show days" : "Hide days"}
           <span aria-hidden className="text-muted-foreground">{shortDay(from)} to {shortDay(to)}</span>
         </Button>
+        {children && <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-x-2">{children}</div>}
       </div>
       {!folded && (
         <div id="sch-days" className="border-t">
@@ -108,10 +109,6 @@ export function DateBar({ date, today, from, to, scheduleOf, attention, onChange
             <span className="sch-day-key"><i className="flag" /> Needs Attention</span>
           </p>
         </div>
-      )}
-      {/* The chosen day's schedule sits under the strip (ADM-SCH-35), so the header stays one line. */}
-      {children && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5">{children}</div>
       )}
     </div>
   );

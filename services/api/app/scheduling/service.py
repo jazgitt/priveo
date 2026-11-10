@@ -902,8 +902,8 @@ def set_hand_lock(db: Session, job_id: uuid.UUID, locked: bool, admin_id: uuid.U
         raise ApiError("not_found", "That job does not exist.", 404)
     visit = db.get(Visit, job.visit_id)
     schedule = db.get(Schedule, visit.schedule_id)
-    if not (job.manual and job.crew_id is not None):
-        raise ApiError("not_hand_placed", "Only a job placed by hand can be locked or unlocked.",
+    if not job.manual:  # placed by hand, or taken off by hand
+        raise ApiError("not_hand_placed", "Only a job placed or taken off by hand can be locked or unlocked.",
                        422, {"locked": "This job is not placed by hand."})
     if job.status != "Scheduled":
         raise ApiError("job_not_open", "That job has already started or finished.", 409)
@@ -1039,7 +1039,7 @@ def _job_dict(
         "finish_by": rules.hhmm(job.finish_by_minute),
         "late": job.late,
         "manual": job.manual,
-        "placed_by_hand": bool(job.manual and job.crew_id is not None),
+        "placed_by_hand": bool(job.manual),
         "hand_locked": bool(job.hand_locked),
         "reason": job.note,
         "reason_code": job.reason_code,

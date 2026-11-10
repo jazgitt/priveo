@@ -25,7 +25,8 @@ export function Scroller({ axis = "x", className, wrapClassName, innerRef, child
     setMore((m) => (m.back === next.back && m.on === next.on ? m : next));
   }, [axis]);
   // Content changes with every render, so the ends are checked again each time.
-  useEffect(() => { check(); });
+  // Skipped while a card is dragged: reading the layout of every lane on each hit change is what makes the drag stutter.
+  useEffect(() => { if (!document.body.classList.contains("dnd-active")) check(); });
   useEffect(() => {
     const e = el.current;
     if (!e || typeof ResizeObserver === "undefined") return;

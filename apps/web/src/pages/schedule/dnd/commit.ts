@@ -24,6 +24,7 @@ export function movesFor(crewId: string | null, draggedId: string, plan: DropPla
  */
 export function applyMovesToBoard(board: Board, moves: BatchMove[]): Board {
   const byJob = new Map(moves.map((m) => [m.job_id, m]));
+  const heldId = moves[0]?.job_id;
   const jobs = board.jobs.map((j): AdminJob => {
     const m = byJob.get(j.id);
     if (!m) return j;
@@ -34,6 +35,10 @@ export function applyMovesToBoard(board: Board, moves: BatchMove[]): Board {
       crew_id: m.crew_id,
       crew_name: crewName,
       manual: true,
+      // What the server will answer, so the refetch changes nothing on the card: the lock icon and the reason line are already right.
+      placed_by_hand: true,
+      hand_locked: placed && j.id === heldId ? true : j.hand_locked,
+      reason: placed ? "" : "Taken off the schedule by the admin.",
       start_minute: placed ? m.start_minute : null,
       start_time: placed ? hhmm(m.start_minute!) : null,
       end_time: placed ? hhmm(m.start_minute! + j.duration_minutes) : null,

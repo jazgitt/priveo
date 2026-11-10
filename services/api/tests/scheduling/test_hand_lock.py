@@ -134,3 +134,21 @@ def test_a_locked_card_taken_off_by_hand_stays_off_a_later_run(api, admin, world
     run_week(days=1)
     off = _board(api, admin, sid)[job_id]
     assert off["crew_id"] is None and off["manual"] is True and off["hand_locked"] is True
+
+
+def test_a_card_taken_off_by_hand_can_be_locked_and_unlocked(api, admin, world, run_week):
+    # The lock shows on a card in Unscheduled: locked stays off a later run, unlocked is planned again.
+    crew, sid = _one_cleaner_one_car(world, run_week)
+    job_id = _exterior_id(api, admin, sid)
+    assert api.post(f"{BASE}/jobs/{job_id}/move", headers=admin, json={"crew_id": None}).status_code == 200
+    r = api.put(f"{BASE}/jobs/{job_id}/hand-lock", headers=admin, json={"locked": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["hand_locked"] is True and r.json()["placed_by_hand"] is True
+
+    run_week(days=1)
+    off = _board(api, admin, sid)[job_id]
+    assert off["crew_id"] is None and off["hand_locked"] is True
+
+    assert api.put(f"{BASE}/jobs/{job_id}/hand-lock", headers=admin, json={"locked": False}).status_code == 200
+    run_week(days=1)
+    assert _board(api, admin, sid)[job_id]["crew_id"] == str(crew.id)
