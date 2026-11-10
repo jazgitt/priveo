@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # a hosted server it must be set on purpose (check_startup); on a
     # developer's machine it defaults to "dev".
     environment: str = "dev"
+    # Content-Security-Policy mode (security review R-05): "report-only" (the
+    # browser reports breaks in its console and blocks nothing), "enforce" or
+    # "off". The other security headers are always sent.
+    csp_mode: str = "report-only"
     # Dev only: optional fixed 6-digit code for customer verification.
     # Delivery uses Resend when configured, otherwise the logging sender.
     mock_email_code: str = ""
