@@ -60,7 +60,11 @@ def create_users(base: str, token: str, roles: list[str], created: list[str]) ->
 
     status, societies = call(base, "/v1/admin/directory/societies", token=token)
     check(status == 200 and societies, "smoke users: a society to use")
-    society = societies[0]["id"]
+    # The parking basement must be one the society offers, so use a society that has one and its first basement.
+    with_basement = [x for x in societies if x.get("parking_basements")]
+    check(bool(with_basement), "smoke users: a society with a parking basement")
+    society = with_basement[0]["id"]
+    basement = with_basement[0]["parking_basements"][0]
     status, catalogue = call(base, "/v1/admin/directory/vehicle-catalogue", token=token)
     check(status == 200 and catalogue, "smoke users: a vehicle to use")
     status, plans = call(base, "/v1/admin/directory/plans", token=token)
@@ -69,12 +73,12 @@ def create_users(base: str, token: str, roles: list[str], created: list[str]) ->
     if "customer" in roles:
         vehicle = {"society_id": society, "plan_id": plans[0]["id"],
                    "catalogue_id": catalogue[0]["id"],
-                   "registration": f"HR99SM{suffix:04d}", "parking_basement": "B2",
+                   "registration": f"HR99SM{suffix:04d}", "parking_basement": basement,
                    "parking_number": "99", "cutoff_time": "09:00", "interior_day": "Monday"}
         status, body = call(base, "/v1/admin/customers", token=token, body={
             "first_name": "Smoke", "last_name": "Customer", "mobile": customer_mobile,
             "flat": "SMOKE", "vehicle": vehicle})
-        check(status == 201, f"smoke customer created (HTTP {status})")
+        check(status == 201, f"smoke customer created (HTTP {status}: {body})")
         created.append(customer_mobile)
         # The MPIN starts as the last six digits of the mobile number.
         made["customer"] = (customer_mobile, customer_mobile[-6:])
