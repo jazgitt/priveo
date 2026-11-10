@@ -579,21 +579,6 @@ describe("the card board (ADM-SCH-33)", () => {
     expect(JSON.parse(callsTo("/move-date")[0][1].body)).toEqual({ date: "2099-01-05", reason: "Customer away" });
   });
 
-  it("reassigns a crew member's whole day to another (S-09)", async () => {
-    server();
-    await openDay();
-    await userEvent.click(await screen.findByRole("button", { name: "Reassign crew day" }));
-    const submit = screen.getByRole("button", { name: "Reassign" });
-    expect(submit).toBeDisabled();
-    await choose("From crew member", /Asha/);
-    await choose("To crew member", /Ravi/);
-    await userEvent.type(screen.getByLabelText("Reason"), "Asha is unwell");
-    await userEvent.click(submit);
-    await waitFor(() => expect(callsTo("/scheduling/reassign")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/scheduling/reassign")[0][1].body)).toEqual({
-      from_crew_id: "c1", date: "2026-11-08", to_crew_id: "c2", reason: "Asha is unwell" });
-  });
-
   it("shows a frozen-schedule conflict plainly and offers the code prompt", async () => {
     server({
       status: "Frozen",
@@ -1005,6 +990,22 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(await within(days).findByRole("button", { name: /^Mon 09-Nov-26, Draft, (today, )?Needs Attention/ })).toBeInTheDocument();
     const tabs = await screen.findByRole("tablist", { name: "Schedule sections" });
     expect(within(tabs).queryByRole("tab", { name: /Needs scheduling/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("Download Jobs menu", () => {
+  it("sits in the Board toolbar and has no Reassign crew day button", async () => {
+    server();
+    await openDay();
+    expect(await screen.findByRole("button", { name: /Download Jobs/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reassign crew day" })).not.toBeInTheDocument();
+  });
+
+  it("does not render on the Needs Attention tab", async () => {
+    server();
+    await openDay("2026-11-08", "&tab=needs");
+    await screen.findByRole("tablist", { name: "Schedule sections" });
+    expect(screen.queryByRole("button", { name: /Download Jobs/ })).not.toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { crewWithCards, JobCardButtons } from "./ScheduleActions";
@@ -63,12 +64,13 @@ describe("crewWithCards", () => {
 describe("JobCardButtons", () => {
   it("shows nothing when no crew has cards that day", () => {
     renderButtons([card("e", null, null)]);
-    expect(screen.queryByRole("button", { name: /job cards/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /download jobs/i })).not.toBeInTheDocument();
   });
 
   it("the all-crew button asks for the one PDF of the day and saves it", async () => {
     renderButtons([card("a", "c1", "Ravi"), card("b", "c2", "Meena")]);
-    fireEvent.click(screen.getByRole("button", { name: /all crew/i }));
+    await userEvent.click(screen.getByRole("button", { name: /download jobs/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Single PDF (all crew)" }));
 
     await waitFor(() => expect(downloads).toEqual(["job-cards-2026-10-18.pdf"]));
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -78,7 +80,8 @@ describe("JobCardButtons", () => {
 
   it("the per-crew button asks for one PDF for each crew member, in name order", async () => {
     renderButtons([card("a", "c2", "Meena"), card("b", "c1", "Ravi Kumar")]);
-    fireEvent.click(screen.getByRole("button", { name: /one PDF per crew/i }));
+    await userEvent.click(screen.getByRole("button", { name: /download jobs/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Individual PDFs (one per crew)" }));
 
     await waitFor(() => expect(downloads).toHaveLength(2));
     // Meena comes before Ravi Kumar by name, so her PDF is asked for first.

@@ -28,7 +28,7 @@ import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
 import { NameRain } from "./NameRain";
-import { MoveToDateDialog, ReassignCrewDayDialog } from "./JobOps";
+import { MoveToDateDialog } from "./JobOps";
 import { QueuePanel } from "./QueuePanel";
 import { REPORT_SECTIONS } from "./reports";
 import { RulesPanel } from "./rules/RulesPanel";
@@ -177,7 +177,6 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
   const [problem, setProblem] = useState<{ code: string; message: string; scheduleId: string } | null>(null);
   const [open, setOpen] = useState<AdminJob | null>(null);
   const [movingDate, setMovingDate] = useState<AdminJob | null>(null);
-  const [reassigning, setReassigning] = useState(false);
   const [unfreezing, setUnfreezing] = useState<ScheduleOut | null>(null);
 
   const needsQ = useNeedsScheduling(societyId);
@@ -423,6 +422,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                     <span className="block max-w-xs">{hint}</span>
                   </HoverTip>
                   <span className="ml-auto flex items-center gap-1.5">
+                    <JobCardButtons scheduleId={schedule.id} date={date} jobs={dayJobs} />
                     {skippedCount > 0 && !boardOnly && (
                       <Button size="sm" variant="link" className="mr-2 h-auto p-0" onClick={() => setParam("tab", "skipped")}>
                         {skippedCount} skipped or paused, not shown
@@ -500,8 +500,6 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
               )}
               {schedule && (
                 <>
-                  <JobCardButtons scheduleId={schedule.id} date={date} jobs={dayJobs} />
-                  {!boardOnly && <Button size="sm" variant="outline" disabled={!board} onClick={() => setReassigning(true)}>Reassign crew day</Button>}
                   {schedule.status === "Draft" ? (
                     <Button size="sm" onClick={() => void askFreeze(schedule)} disabled={freeze.isPending}>
                       <Lock aria-hidden /> Freeze
@@ -551,10 +549,6 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
       {movingDate && (
         <MoveToDateDialog job={movingDate} today={today} onClose={() => setMovingDate(null)}
                           onDone={() => { setMovingDate(null); void refresh(); }} />
-      )}
-      {reassigning && board && (
-        <ReassignCrewDayDialog board={board} date={date} onClose={() => setReassigning(false)}
-                               onDone={() => { setReassigning(false); void refresh(); }} />
       )}
       {unfreezing && (
         <UnfreezeDialog schedule={unfreezing} onClose={() => setUnfreezing(null)}
