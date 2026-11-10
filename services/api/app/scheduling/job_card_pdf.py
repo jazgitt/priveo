@@ -2,7 +2,7 @@
 
 Modelled on the invoice renderer in `app.billing.pdf` (reportlab, Manrope). Landscape
 A4, so the detailed card lines fit on one table row each: zone, car model, cutoff,
-service, time window, car number, customer, parking, status and notes. Each crew
+service, time window, car number, customer, parking and special notes. Each crew
 member starts on a new page. The run date is printed in the header of every page,
 and the Priveo logo sits beside it. Dates are dd-Mon-yy."""
 from __future__ import annotations
@@ -37,8 +37,8 @@ HEAD_FILL = colors.HexColor("#eef1f5")
 RULE = colors.HexColor("#cbd3df")
 LINE = colors.HexColor("#e3e8ef")
 # Column widths in mm, in the order of HEADINGS. The last column takes the rest.
-WIDTHS_MM = (24, 12, 24, 36, 40, 34, 18, 16)
-HEADINGS = ("Time", "Zone", "Car", "Model", "Customer", "Service", "Cutoff", "Parking", "Status and notes")
+WIDTHS_MM = (10, 24, 12, 24, 36, 40, 34, 18, 16)
+HEADINGS = ("Sr #", "Time", "Zone", "Car", "Model", "Customer", "Service", "Cutoff", "Parking", "Special notes")
 
 
 @lru_cache(maxsize=1)
@@ -86,11 +86,11 @@ def render_job_cards(day: date, crews: list[CrewCards]) -> bytes:
             Spacer(1, 3 * mm),
         ]
         data = [[text(h, head_cell) for h in HEADINGS]]
-        for r in crew.rows:
+        for sr, r in enumerate(crew.rows, start=1):
             data.append([
-                text(r.window), text(r.zone), text(r.registration), text(r.model), text(r.customer),
+                text(str(sr)), text(r.window), text(r.zone), text(r.registration), text(r.model), text(r.customer),
                 text(f"{r.service_code} {r.service_name}"), text(r.cutoff), text(r.parking),
-                text("; ".join([r.status, *r.notes]) if r.notes else r.status),
+                text(r.special_notes),
             ])
         table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
         table.setStyle(TableStyle([

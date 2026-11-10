@@ -67,13 +67,15 @@ export function DetailsPanel({ crew }: { crew: Crew }) {
   return (
     <div className="flex flex-col gap-6">
       <Panel title="Details" description={`Society: ${crew.society}. To move to another society, see Move to another society below.`}>
-        <form className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+        <form className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
               onSubmit={(e) => { e.preventDefault(); if (changed) void save(); }}>
           <Field label="Name" error={fe.name}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
           <Field label="Mobile number" error={fe.mobile} hint="A new number is the new login ID and signs the crew member out.">
             {(p) => <Input {...p} inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(phoneDigits(e.target.value))} />}
           </Field>
-          <BusyButton type="submit" className="sm:mb-5" disabled={!changed} busy={run.isPending}>Save details</BusyButton>
+          <div className="sm:pt-[1.4rem]">
+            <BusyButton type="submit" disabled={!changed} busy={run.isPending}>Save details</BusyButton>
+          </div>
         </form>
       </Panel>
       {crew.locked && (
@@ -141,7 +143,7 @@ export function RolePanel({ crew }: { crew: Crew }) {
         { label: "Role now", value: crew.role },
         { label: "Paired with", value: crew.role === "Trainee" ? crew.paired_member : "Not a Trainee" },
       ]} />
-      <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[12rem_minmax(0,16rem)_auto]">
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[12rem_minmax(0,16rem)_auto]">
         <Field label="Role" error={fe.role}>
           {(p) => <SelectBox {...p} value={role} onChange={setRoleValue} choices={ROLES.map((r) => ({ value: r, label: r }))} />}
         </Field>
@@ -150,15 +152,17 @@ export function RolePanel({ crew }: { crew: Crew }) {
             {(p) => <SelectBox {...p} value={mate} onChange={setMate} choices={members.map((m) => ({ value: m.id, label: m.name }))} />}
           </Field>
         ) : <span />}
-        {roleChanged && !dated && (
-          <BusyButton busy={run.isPending} disabled={needsMate && mate === ""} onClick={() => void changeRole()}>Change role</BusyButton>
-        )}
-        {!roleChanged && crew.role === "Trainee" && (
-          <BusyButton busy={run.isPending} disabled={mate === "" || mate === crew.paired_member_id}
-                      onClick={() => run.mutate({ go: () => pair.mutateAsync({ paired_member_id: mate }), done: "Pairing saved." })}>
-            Change pairing
-          </BusyButton>
-        )}
+        <div className="sm:pt-[1.4rem]">
+          {roleChanged && !dated && (
+            <BusyButton busy={run.isPending} disabled={needsMate && mate === ""} onClick={() => void changeRole()}>Change role</BusyButton>
+          )}
+          {!roleChanged && crew.role === "Trainee" && (
+            <BusyButton busy={run.isPending} disabled={mate === "" || mate === crew.paired_member_id}
+                        onClick={() => run.mutate({ go: () => pair.mutateAsync({ paired_member_id: mate }), done: "Pairing saved." })}>
+              Change pairing
+            </BusyButton>
+          )}
+        </div>
       </div>
 
       <section aria-labelledby="role-dates" className="mt-6 flex flex-col gap-4 border-t pt-5">
@@ -170,16 +174,18 @@ export function RolePanel({ crew }: { crew: Crew }) {
             crew member is already paired with.
           </p>
         </div>
-        <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
+        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
           <Field label="Starts on" hint="Empty means today.">
             {(p) => <Input {...p} type="date" value={from} min={todayIso()} onChange={(e) => setFrom(e.target.value)} />}
           </Field>
           <Field label="Ends on" hint="Empty means until the role is changed." error={fe.end_date}>
             {(p) => <Input {...p} type="date" value={to} min={from || todayIso()} onChange={(e) => setTo(e.target.value)} />}
           </Field>
-          <BusyButton busy={run.isPending} disabled={!roleChanged || !dated} onClick={() => void setForDates()}>
-            Set role for these dates
-          </BusyButton>
+          <div className="sm:pt-[1.4rem]">
+            <BusyButton busy={run.isPending} disabled={!roleChanged || !dated} onClick={() => void setForDates()}>
+              Set role for these dates
+            </BusyButton>
+          </div>
         </div>
         {(periods.data ?? []).length > 0 && (
           <ul className="m-0 flex list-none flex-col gap-2 p-0" aria-label="Dated roles">
@@ -273,14 +279,16 @@ export function ExceptionsPanel({ crew }: { crew: Crew }) {
       </Panel>
 
       <Panel title="Add an exception" description="Jobs the crew member can no longer do go to Needs scheduling.">
-        <form className="grid grid-cols-2 items-end gap-4 lg:grid-cols-[10rem_10rem_10rem_8rem_auto]" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <form className="grid grid-cols-2 items-start gap-4 lg:grid-cols-[10rem_10rem_10rem_8rem_auto]" onSubmit={(e) => { e.preventDefault(); add(); }}>
           <Field label="Type" error={fe.kind}>{(p) => <SelectBox {...p} value={kind} onChange={setKind} choices={kindChoices} />}</Field>
           <Field label="From date" error={fe.from_date}>{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
           <Field label="To date" error={fe.to_date ?? order} hint="Empty for one day.">{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
           {kind === "Late start"
             ? <Field label="Can start at" error={fe.start}>{(p) => <Input {...p} type="time" value={start} onChange={(e) => setStart(e.target.value)} />}</Field>
             : <span />}
-          <BusyButton type="submit" className="lg:mb-5" busy={run.isPending} disabled={!from || Boolean(order) || (kind === "Late start" && !start)}>Add exception</BusyButton>
+          <div className="lg:pt-[1.4rem]">
+            <BusyButton type="submit" busy={run.isPending} disabled={!from || Boolean(order) || (kind === "Late start" && !start)}>Add exception</BusyButton>
+          </div>
         </form>
         <ReleasedJobs jobs={released} />
       </Panel>

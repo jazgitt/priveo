@@ -80,3 +80,21 @@ def test_capacity_and_the_scheduler_read_the_same_demand_on_an_exception_day(wor
     # Capacity counts the same Exterior: 30 minutes of work on the exception day.
     assert _cap(world, WEDNESDAY)["demand_minutes"] == 30
     assert _cap(world, WEDNESDAY)["capacity_minutes"] == 60
+
+
+def test_an_exception_with_no_days_closes_the_service_for_the_scheduler(world, api, admin):
+    world.add_vehicle()
+    world.add_crew()
+    _root(world)
+    _exception(world, [], THURSDAY, THURSDAY)
+    # Capacity is crew time, shared by every service, so it stays 60 here: the closure
+    # is read per service through the resolver.
+    site = slot_resolver.load(world.db, world.society.id)
+    assert site.effective(EXT, THURSDAY).windows == ()
+    assert site.effective(EXT, THURSDAY).source == slot_resolver.EXCEPTION
+    assert site.effective(EXT, THURSDAY + timedelta(days=1)).windows == ((300, 660),)
+    summary = run_days(api, admin, world.society.id, SUNDAY, 5)[4]
+    board = api.get(f"{BASE}/board", headers=admin,
+                    params={"schedule_id": summary["schedule_id"]}).json()
+    on_thursday = [j for j in board["jobs"] if j["date"] == THURSDAY.isoformat()]
+    assert not any(j["service"] == EXT for j in on_thursday)

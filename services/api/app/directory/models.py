@@ -116,6 +116,8 @@ class WorkingSlotException(Base):
     date of the range, it replaces Root for its service: `windows` (start and end
     minutes, possibly none) are the only slots that service has on those dates.
     A weekday that is not in `days` keeps Root. It can open a weekly-off day.
+    Empty `days` means no working days: the service is closed on every date of
+    the range, and Root does not apply.
     `days` are weekday numbers (0 is Monday)."""
 
     __tablename__ = "working_slot_exceptions"

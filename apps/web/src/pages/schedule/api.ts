@@ -61,6 +61,8 @@ export interface AdminJob {
   vehicle_id: string;
   registration: string;
   vehicle: string;
+  /** The car model alone, for example "City". The board sends it; the card falls back to `vehicle` when it is empty. */
+  model?: string;
   /** For example "B1-24": basement and parking number. */
   parking?: string;
   /** The zone of the vehicle, for example "Zone 3", or empty. */

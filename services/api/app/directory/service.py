@@ -514,7 +514,7 @@ def _jsonable(value):
 def _window_spans(windows) -> list[dict]:
     """The stored form of an exception's windows, checked: each end is after its
     start, and no two windows overlap. No windows is allowed: the service is
-    closed on the exception's weekdays."""
+    closed on the exception's weekdays (on every date when it has no weekdays)."""
     spans = []
     for w in windows:
         start = minute_of(w.start, "windows")
@@ -534,16 +534,19 @@ def _check_exception_dates(db: Session, society_id: uuid.UUID, service: str,
                            start_date: date, end_date: date, days: list[int],
                            except_id: uuid.UUID | None = None) -> None:
     """Two exceptions of one service may not cover the same date on the same
-    weekday, so a date has at most one exception for a weekday (Derived)."""
+    weekday, so a date has at most one exception for a weekday (Derived). An
+    exception with no days closes every weekday of its range, so for this check
+    it covers all seven."""
     if end_date < start_date:
         raise invalid("end_date", "The end date must be on or after the start date.")
+    mine = set(days) or set(range(7))
     for other in db.scalars(select(WorkingSlotException).where(
             WorkingSlotException.society_id == society_id,
             WorkingSlotException.service == service)):
         if other.id == except_id:
             continue
         if start_date <= other.end_date and other.start_date <= end_date \
-                and set(other.days) & set(days):
+                and (set(other.days) or set(range(7))) & mine:
             message = "Another exception for this service covers some of these dates and days."
             raise ApiError("overlap", message, 409, {"start_date": message})
 

@@ -267,13 +267,29 @@
 
 /* Card lines (owner review, 8-Nov-26): the same kind of piece is shown the same way on every card size.
    Lines grow with their content and never clip a piece, so no text runs into the next line. */
+:root { --sch-icon: 1rem; --sch-cutoff: #c026d3; --sch-cutoff-line: #86198f; }
 .sch-card-line { display: flex; align-items: center; gap: 0.3rem; min-width: 0; min-height: 1.25rem; white-space: nowrap; color: var(--c-text); }
-.sch-card-line > * { flex: none; }
-.sch-card-line > .sch-model, .sch-card-line > .sch-customer { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The icons keep their size. Text pieces (zone, code, cutoff, model, customer, car number) give way when a
+   narrow card is full, so the icon cluster, the checkbox included, always stays inside the card. */
+.sch-card-line > * { flex: 0 1 auto; min-width: 0; }
+.sch-card-line > .sch-flags, .sch-card-line > .sch-card-tools { flex: none; }
+.sch-card-line > .sch-model, .sch-card-line > .sch-customer { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sch-card-line > .sch-reg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sch-card-line > .sch-model { color: var(--c-mute); font-size: 0.6875rem; }
 .sch-card-line > .sch-customer { color: var(--c-mute); font-size: 0.6875rem; }
-.sch-card-line > .sch-cut { margin-left: auto; color: var(--c-mute); font-size: 0.6875rem; }
 .sch-card-line > .sch-time { font-size: 0.6875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* The cutoff is a magenta box with the time alone (owner, 10-Nov-26). It leads the icon cluster on the right. */
+.sch-cut { margin-left: auto; padding: 0 0.3rem; border: 1px solid var(--sch-cutoff-line); border-radius: 4px; background: var(--sch-cutoff);
+  color: #fff; font-size: 0.625rem; font-weight: 700; line-height: 1.05rem; font-variant-numeric: tabular-nums; }
+/* The icon cluster: status, Late, By hand, then the card's tools. In the flow, right-aligned, one icon box size for all. */
+.sch-flags { display: inline-flex; align-items: center; gap: 0.25rem; flex: none; margin-left: auto; }
+.sch-cut + .sch-flags { margin-left: 0; }
+.sch-card-tools { display: inline-flex; align-items: center; gap: 0.25rem; flex: none; }
+.sch-flag-box { display: inline-grid; place-items: center; width: var(--sch-icon); height: var(--sch-icon); flex: none; overflow: visible; }
+.sch-flag-icon { width: var(--sch-icon); height: var(--sch-icon); display: block; flex: none; }
+.sch-chip .sch-flag-icon { width: 1rem; height: 1rem; }
+.sch-chip.flag-late[aria-pressed="true"], .sch-chip.flag-manual[aria-pressed="true"] { background: var(--c-card); }
+.sch-chip.flag-late, .sch-chip.flag-manual { padding: 0.15rem 0.45rem; }
 
 /* Card heights by layout. The timeline blocks use the same heights, so a row is as tall as a card. */
 .sch-card.compact { min-height: 1.9rem; justify-content: center; }
@@ -351,16 +367,16 @@
   box-shadow: 0 4px 14px rgba(22, 21, 26, 0.16); font-size: 0.8rem; cursor: pointer; }
 .sch-fireworks-mute:hover { background: #fbf6e9; }
 /* Card tools: the lock (placed by hand) and the take-off icon. Bottom right on standard and detailed, right on compact (items 6, 15). */
-.sch-card.has-tools, .sch-card.has-tools.compact { padding-right: 2.25rem; }
-/* The lock sits at the top right; the take-off icon stays at the bottom right (compact: right, centred). */
-.sch-card-lock { position: absolute; top: 0.15rem; right: 0.2rem; display: flex; gap: 0.1rem; }
-.sch-card-tools { position: absolute; right: 0.2rem; bottom: 0.15rem; display: flex; justify-content: flex-end; gap: 0.1rem; }
-.sch-card.compact .sch-card-tools { top: 50%; bottom: auto; transform: translateY(-50%); }
-.sch-tool { display: grid; place-items: center; width: 1.2rem; height: 1.2rem; padding: 0; border: 0; border-radius: 4px;
+/* The tools are inline children of line 1 (see .sch-flags above), so they never overlay the text. */
+.sch-tool { display: grid; place-items: center; width: var(--sch-icon); height: var(--sch-icon); padding: 0; border: 0; border-radius: 4px;
   background: transparent; color: var(--c-mute); cursor: pointer; }
 .sch-tool:hover { background: rgba(22, 21, 26, 0.08); color: var(--c-text); }
 .sch-tool:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 1px; }
-.sch-tool svg { width: 0.8rem; height: 0.8rem; }
+.sch-tool svg { width: 100%; height: 100%; }
+.sch-check { width: var(--sch-icon); height: var(--sch-icon); border-radius: 4px; cursor: pointer; }
+.sch-check svg { width: 0.75rem; height: 0.75rem; }
+/* The timeline block clips what runs past its edge, but never the icon cluster of its first line. */
+.sch-tl-job .sch-flags, .sch-tl-job .sch-flags span, .sch-tl-job .sch-card-tools { overflow: visible; }
 /* Locked is red, open is green. The open shackle is the Unlock icon. */
 .sch-tool.lock.is-locked { color: var(--c-error); }
 .sch-tool.lock.is-open { color: var(--c-ok); }

@@ -95,3 +95,33 @@ def test_exception_changes_are_audited_with_json_safe_detail(client, admin, engi
         assert sorted(r.action for r in rows) == ["create", "delete", "update"]
         created = next(r for r in rows if r.action == "create")
         assert created.detail["start_date"] == "2026-11-11" and created.detail["days"] == ["Wednesday"]
+
+
+def test_no_working_days_is_allowed_on_create_and_change(client, admin):
+    url = f"{BASE}/societies/{_society(client, admin)['id']}/slot-exceptions"
+    made = client.post(url, headers=admin, json=EXCEPTION | {"days": [], "windows": []})
+    assert made.status_code == 201, made.text
+    assert made.json()["days"] == [] and made.json()["windows"] == []
+    other = client.post(url, headers=admin, json=EXCEPTION | {"service": "Deep Spa"}).json()
+    up = client.patch(f"{BASE}/slot-exceptions/{other['id']}", headers=admin, json={"days": []})
+    assert up.status_code == 200, up.text
+    assert up.json()["days"] == []
+
+
+def test_an_exception_with_no_days_overlaps_any_exception_in_its_range(client, admin):
+    url = f"{BASE}/societies/{_society(client, admin)['id']}/slot-exceptions"
+    closed = EXCEPTION | {"days": [], "windows": []}
+    assert client.post(url, headers=admin, json=closed).status_code == 201
+    # Another closed exception over part of the range is refused.
+    clash = client.post(url, headers=admin, json=closed | {"start_date": "2026-11-15", "end_date": "2026-11-20"})
+    assert clash.status_code == 409 and clash.json()["code"] == "overlap"
+    # So is one with weekdays, whichever weekday.
+    assert client.post(url, headers=admin, json=EXCEPTION | {"days": ["Monday"]}).status_code == 409
+    # Outside the range, and for another service, is fine.
+    later = closed | {"start_date": "2026-11-18", "end_date": "2026-11-19"}
+    assert client.post(url, headers=admin, json=later).status_code == 201
+    assert client.post(url, headers=admin, json=closed | {"service": "Deep Spa"}).status_code == 201
+    # A weekday exception that exists blocks a closed one over its dates.
+    spa = EXCEPTION | {"service": "Cleaning-Internal", "days": ["Monday"]}
+    assert client.post(url, headers=admin, json=spa).status_code == 201
+    assert client.post(url, headers=admin, json=spa | {"days": []}).status_code == 409

@@ -209,12 +209,13 @@ describe("the card board (ADM-SCH-33)", () => {
     const card1 = within(asha).getByRole("button", { name: "EXT,KA01AB1234,B1-24" });
     expect(card1).toHaveTextContent("09:00-09:20");
     expect(card1).toHaveTextContent("EXT");
-    expect(card1).toHaveTextContent("KA01AB1234Cutoff 10:00");
+    expect(card1).toHaveTextContent("KA01AB123410:00");
     expect(card1.querySelectorAll(".sch-card-line")).toHaveLength(2);
     const card2 = within(await column("c2")).getByRole("button", { name: /KA02ZZ0001/ });
     expect(card2).toHaveClass("late");
     expect(card2).toHaveClass("manual");
-    expect(card2).toHaveTextContent("Late");
+    expect(within(card2).getByRole("img", { name: "Late" })).toBeInTheDocument();
+    expect(within(card2).getByRole("img", { name: "Placed by hand" })).toBeInTheDocument();
     expect(card2).toHaveAttribute("title", expect.stringContaining("Misses the cutoff."));
     const unscheduled = await column("unscheduled");
     expect(unscheduled).toHaveAccessibleName("Unscheduled (1)");
@@ -346,13 +347,15 @@ describe("the card board (ADM-SCH-33)", () => {
     await openDay();
     const int = within(await column("c2")).getByRole("button", { name: /KA02IN0002/ });
     expect(screen.getByRole("switch", { name: "Show all" })).toHaveAttribute("aria-checked", "false");
-    await userEvent.click(await screen.findByRole("button", { name: "INT" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Services" }));
+    await userEvent.click(await screen.findByRole("menuitemradio", { name: "INT" }));
     expect(int).not.toHaveClass("dim");
     expect(screen.queryByRole("button", { name: /KA01AB1234/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).toHaveClass("dim");
     expect(int).not.toHaveClass("dim");
-    await userEvent.click(screen.getByRole("button", { name: "INT" }));
+    await userEvent.click(screen.getByRole("button", { name: "Services: INT" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Clear" }));
     expect(screen.getByRole("button", { name: /KA01AB1234/ })).not.toHaveClass("dim");
   });
 
@@ -577,21 +580,6 @@ describe("the card board (ADM-SCH-33)", () => {
     await userEvent.click(submit);
     await waitFor(() => expect(callsTo("/move-date")).toHaveLength(1));
     expect(JSON.parse(callsTo("/move-date")[0][1].body)).toEqual({ date: "2099-01-05", reason: "Customer away" });
-  });
-
-  it("reassigns a crew member's whole day to another (S-09)", async () => {
-    server();
-    await openDay();
-    await userEvent.click(await screen.findByRole("button", { name: "Reassign crew day" }));
-    const submit = screen.getByRole("button", { name: "Reassign" });
-    expect(submit).toBeDisabled();
-    await choose("From crew member", /Asha/);
-    await choose("To crew member", /Ravi/);
-    await userEvent.type(screen.getByLabelText("Reason"), "Asha is unwell");
-    await userEvent.click(submit);
-    await waitFor(() => expect(callsTo("/scheduling/reassign")).toHaveLength(1));
-    expect(JSON.parse(callsTo("/scheduling/reassign")[0][1].body)).toEqual({
-      from_crew_id: "c1", date: "2026-11-08", to_crew_id: "c2", reason: "Asha is unwell" });
   });
 
   it("shows a frozen-schedule conflict plainly and offers the code prompt", async () => {
@@ -943,7 +931,7 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
     expect(screen.getByTitle("A schedule for this day only.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unfreeze" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Freeze" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^All jobs/ })).not.toBeInTheDocument();
   });
 
   it("folds the day strip away to give the board room, and remembers it", async () => {
@@ -1008,6 +996,22 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
   });
 });
 
+describe("Download Jobs menu", () => {
+  it("sits in the Board toolbar and has no Reassign crew day button", async () => {
+    server();
+    await openDay();
+    expect(await screen.findByRole("button", { name: /Download Jobs/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reassign crew day" })).not.toBeInTheDocument();
+  });
+
+  it("does not render on the Needs Attention tab", async () => {
+    server();
+    await openDay("2026-11-08", "&tab=needs");
+    await screen.findByRole("tablist", { name: "Schedule sections" });
+    expect(screen.queryByRole("button", { name: /Download Jobs/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("freezing", () => {
   it("freezes a draft after a confirmation that names all its days", async () => {
     server();
@@ -1060,7 +1064,7 @@ describe("job status on the board (ADM-SCH-34)", () => {
     expect(card("KA01AA0003")).not.toHaveClass("failed");
 
     const chips = screen.getByRole("group", { name: "Job status" });
-    expect(within(chips).getByRole("button", { name: "All jobs 3" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(chips).queryByRole("button", { name: /^(All jobs|Scheduled)/ })).not.toBeInTheDocument();
     await userEvent.click(within(chips).getByRole("button", { name: "Could not complete 1" }));
     await userEvent.click(screen.getByRole("switch", { name: "Show all" }));
     expect(card("KA01AA0002")).not.toHaveClass("dim");
@@ -1102,7 +1106,7 @@ describe("skipped and finished jobs cannot be placed or moved", () => {
     ] });
     await openDay();
     expect(within(await column("c2")).queryByRole("button", { name: /KA05SK0005/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All jobs 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^All jobs/ })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Skipped and paused (1)" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "1 skipped or paused, not shown" }));
@@ -1340,7 +1344,7 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     const lines = [...card.querySelectorAll(".sch-card-line")];
     expect(lines).toHaveLength(3);
-    expect(lines[0]).toHaveTextContent("Z3CityCutoff 10:00");
+    expect(lines[0]).toHaveTextContent("Z3City10:00");
     expect(card).not.toHaveTextContent("Honda");
     expect(lines[1]).toHaveTextContent("EXT09:00-09:20");
     expect(lines[2]).toHaveTextContent("KA01AB1234Meena");
@@ -1354,7 +1358,7 @@ describe("freeze by itself and the run (ADM-SCH-25, ADM-SCH-32)", () => {
     const card = within(await column("c1")).getByRole("button", { name: /KA01AB1234/ });
     const lines = [...card.querySelectorAll(".sch-card-line")];
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toHaveTextContent("Z3EXTCutoff 10:00");
+    expect(lines[0]).toHaveTextContent("Z3EXT10:00");
   });
 
   it("marks a card placed by hand against a rule as wine", async () => {
