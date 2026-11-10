@@ -39,6 +39,9 @@ WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
 # Often enough that the web idle time is close to 60 minutes.
 _WEB_TOUCH_EVERY = timedelta(minutes=1)
+# A refresh token that was just replaced is a retry (the phone lost the reply),
+# not theft, for this long (security review R-07).
+REFRESH_REUSE_GRACE = timedelta(minutes=2)
 CODE_LIFETIME = timedelta(minutes=30)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
 MAX_WRONG_CODES = 5  # AUTH-07
@@ -392,15 +395,41 @@ class AuthService:
         return session, login
 
     def refresh(self, refresh_token: str) -> LoginResult:
+        old_hash = tokens.refresh_hash(refresh_token)
         found = self._db.scalar(select(AuthSession).where(
-            AuthSession.refresh_hash == tokens.refresh_hash(refresh_token)))
+            AuthSession.refresh_hash == old_hash))
+        if found is None:
+            self._refresh_reuse(old_hash)
+            raise _signed_out()
         session, login = self._live(found)
-        # Each refresh token works once.
+        # Each refresh token works once. The swap only happens if the token is
+        # still the current one, so two calls with the same token cannot both win.
         new_token = tokens.new_refresh_token()
-        session.refresh_hash = tokens.refresh_hash(new_token)
-        session.last_used_at = utcnow()
+        now = utcnow()
+        swapped = self._db.execute(update(AuthSession).where(
+            AuthSession.id == session.id, AuthSession.refresh_hash == old_hash,
+        ).values(previous_refresh_hash=old_hash, rotated_at=now,
+                 refresh_hash=tokens.refresh_hash(new_token), last_used_at=now))
+        if swapped.rowcount != 1:
+            self._db.rollback()
+            raise _signed_out()
         self._db.commit()
+        self._db.refresh(session)
         return self._result(login, session, new_token)
+
+    def _refresh_reuse(self, old_hash: str) -> None:
+        """An unknown refresh token. If it is the one a session just replaced and
+        the grace time has passed, the token was copied: end that session, so the
+        thief's newer token dies too and the real owner signs in again (R-07)."""
+        session = self._db.scalar(select(AuthSession).where(
+            AuthSession.previous_refresh_hash == old_hash))
+        if session is None or session.ended_at is not None or session.rotated_at is None:
+            return
+        if utcnow() - session.rotated_at <= REFRESH_REUSE_GRACE:
+            return
+        self._end(session, "token_reuse")
+        self._event(self._db.get(Login, session.login_id), "refresh_reuse")
+        self._db.commit()
 
     def authenticate(self, access_token: str) -> User:
         claims = tokens.read_access(self._s, access_token)
