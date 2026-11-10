@@ -993,6 +993,22 @@ describe("the chosen day leads the page (ADM-SCH-35)", () => {
   });
 });
 
+describe("Download Jobs menu", () => {
+  it("sits in the Board toolbar and has no Reassign crew day button", async () => {
+    server();
+    await openDay();
+    expect(await screen.findByRole("button", { name: /Download Jobs/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reassign crew day" })).not.toBeInTheDocument();
+  });
+
+  it("does not render on the Needs Attention tab", async () => {
+    server();
+    await openDay("2026-11-08", "&tab=needs");
+    await screen.findByRole("tablist", { name: "Schedule sections" });
+    expect(screen.queryByRole("button", { name: /Download Jobs/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("freezing", () => {
   it("freezes a draft after a confirmation that names all its days", async () => {
     server();
