@@ -22,8 +22,8 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass, TypeKey } from "./Board";
-import { CrewPicker, FlagKey, ShowAll } from "./BoardFilters";
+import { breached, isOpen, JobFlags, matches, parkingPlace, serviceCode, StatusSummary, typeClass } from "./Board";
+import { CrewPicker, FlagKey, ServicesFilter, ShowAll } from "./BoardFilters";
 import { JobTable } from "./JobTable";
 import { CardBoard, type Density } from "./CardBoard";
 import { addDays, DateBar } from "./DateBar";
@@ -407,7 +407,7 @@ export function SchedulePage({ mode = "page" }: { mode?: ScheduleMode }) {
                            onChange={(e) => setSearch(e.target.value)} />
                   </label>
                   <StatusSummary jobs={jobs} focus={focusStatus} onFocus={setFocusStatus} />
-                  <TypeKey type={focusType} onType={setFocusType} />
+                  <ServicesFilter jobs={jobs} type={focusType} onType={setFocusType} />
                   <FlagKey flag={focusFlag} onFlag={setFocusFlag} />
                   <ShowAll checked={showAll} onChange={setShowAll} />
                   <CrewPicker crew={board.crew} selected={crewSel} onChange={setCrewSel} hideOff={hideOff} onHideOff={setHideOff} />

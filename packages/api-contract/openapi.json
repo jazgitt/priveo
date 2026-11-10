@@ -22751,6 +22751,11 @@
             "type": "string",
             "title": "Vehicle"
           },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
           "parking": {
             "type": "string",
             "title": "Parking",

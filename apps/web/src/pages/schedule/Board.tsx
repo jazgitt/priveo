@@ -58,11 +58,12 @@ export type CardPiece = "zone" | "reg" | "model" | "customer" | "cutoff" | "code
 export interface CardPart { kind: CardPiece; text: string }
 
 /**
- * The car model alone, for the card's vehicle line (P2-7). A card never shows the make. The job row
- * carries the model as `model`; without it the line is empty rather than showing the make.
+ * The car model for the card's vehicle line (P2-7). The board API sends it as `model`; a row
+ * without one falls back to the make and model label (`vehicle`), so the line is never empty
+ * for a car that has a name (owner, 10-Nov-26).
  */
 export function modelOf(job: AdminJob): string {
-  return (job as AdminJob & { model?: string }).model ?? "";
+  return job.model || job.vehicle || "";
 }
 
 /**
@@ -75,7 +76,7 @@ export function cardLines(job: AdminJob, density: Density): CardPart[][] {
   // The zone slot is always there: a job with no zone shows an empty box, so the lines do not shift (owner, 8-Nov-26).
   const zone: CardPart = { kind: "zone", text: job.zone ?? "" };
   const reg: CardPart = { kind: "reg", text: job.registration };
-  const cutoff: CardPart | null = job.finish_by ? { kind: "cutoff", text: `Cutoff ${job.finish_by}` } : null;
+  const cutoff: CardPart | null = job.finish_by ? { kind: "cutoff", text: job.finish_by } : null;
   const code: CardPart = { kind: "code", text: serviceCode(job.service) };
   const slot: CardPart = { kind: "slot", text: job.start_time ? `${job.start_time}-${job.end_time}` : `${job.duration_minutes} min` };
   const model: CardPart | null = modelOf(job) ? { kind: "model", text: modelOf(job) } : null;
@@ -123,6 +124,11 @@ export function isSpa(job: AdminJob): boolean {
   return job.service.toLowerCase().includes("spa");
 }
 
+/** The value the Services filter keeps by: EXT, INT, SPA, or the short code of any other service. */
+export function serviceKey(job: AdminJob): string {
+  return isSpa(job) ? "SPA" : serviceCode(job.service);
+}
+
 /** The kind of work, which sets a card's colour: exterior green, interior blue, spa purple (ADM-SCH-34). */
 export const JOB_TYPES = ["EXT", "INT", "SPA"] as const;
 export function typeClass(job: AdminJob): string {
@@ -157,7 +163,7 @@ export function statusClass(job: AdminJob): string {
 
 /** Whether a job stays bright for the chosen status and vehicle search. */
 export function matches(job: AdminJob, focus: string, search: string, type = "", flag = ""): boolean {
-  if (type && (isSpa(job) ? "SPA" : serviceCode(job.service)) !== type) return false;
+  if (type && serviceKey(job) !== type) return false;
   if (flag === "late" && !job.late) return false;
   if (flag === "manual" && !job.manual) return false;
   if (focus === PARTIAL) return job.visit_outcome === PARTIAL && matchesSearch(job, search);
@@ -218,7 +224,8 @@ export function StatusSummary({ jobs, focus, onFocus }: {
 }) {
   const counts = new Map<string, number>();
   for (const j of jobs) counts.set(j.status, (counts.get(j.status) ?? 0) + 1);
-  const shown = [...JOB_STATUSES.filter((s) => counts.has(s)),
+  // No "All jobs" and no "Scheduled" chip (owner, 10-Nov-26): pressing a pressed chip clears the filter.
+  const shown = [...JOB_STATUSES.filter((s) => s !== "Scheduled" && counts.has(s)),
     ...[...counts.keys()].filter((s) => !(JOB_STATUSES as readonly string[]).includes(s))];
   const partial = jobs.filter((j) => j.visit_outcome === PARTIAL).length;
   const chip = (status: string, label: string, n: number) => (
@@ -230,23 +237,8 @@ export function StatusSummary({ jobs, focus, onFocus }: {
   );
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Job status">
-      {chip("", "All jobs", jobs.length)}
       {shown.map((s) => chip(s, s, counts.get(s) ?? 0))}
       {partial > 0 && chip(PARTIAL, PARTIAL, partial)}
-    </div>
-  );
-}
-
-/** The three kinds of work as chips; pressing one keeps only that kind bright, pressing it again shows all. */
-export function TypeKey({ type, onType }: { type: string; onType: (type: string) => void }) {
-  return (
-    <div className="flex items-center gap-1.5" role="group" aria-label="Kind of work">
-      {JOB_TYPES.map((t) => (
-        <button key={t} type="button" aria-pressed={type === t} onClick={() => onType(type === t ? "" : t)}
-                className={`sch-chip type t-${t.toLowerCase()}`}>
-          <i aria-hidden /> {t}
-        </button>
-      ))}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type Dispatch, type PointerEvent, type Rea
 import { useConfirm } from "@/blocks/confirm";
 import { useAppMutation } from "@/blocks/mutation";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/ui/checkbox";
 
 import { HoverTip } from "../../components";
 import {
@@ -12,6 +13,7 @@ import {
   zoneStyle,
 } from "./Board";
 import { aroundBreak, BreakBlock, breakOf } from "./BreakBlock";
+import { HandGlyph, HourglassAlertGlyph } from "./FlagIcons";
 import { LockGlyph } from "./LockGlyph";
 import { Scroller } from "./Scroller";
 import { api } from "@/api/client";
@@ -86,7 +88,7 @@ function Piece({ part, zones }: { part: CardPart; zones: string[] }) {
     case "customer":
       return <span className="sch-customer">{part.text}</span>;
     case "cutoff":
-      return <span className="sch-cut">{part.text}</span>;
+      return <span className="sch-cut" role="img" aria-label={`Cutoff ${part.text}`}>{part.text}</span>;
     case "code":
       return <span className={`sch-code ${part.text.toLowerCase()}`}>{part.text}</span>;
     case "slot":
@@ -95,27 +97,28 @@ function Piece({ part, zones }: { part: CardPart; zones: string[] }) {
 }
 
 /**
- * The face of a card or a timeline block: its lines at the chosen size (owner review, 8-Nov-26),
- * with the status icon and the flags on the line of the kind of clean. Shared by the board and
- * the timeline, so both show the same lines.
+ * The face of a card or a timeline block: its lines at the chosen size (owner review, 8-Nov-26).
+ * Line 1 ends with one icon cluster, right-aligned and in the flow, so nothing overlaps (owner,
+ * 10-Nov-26): the status icon, Late, By hand, then the card's own `tools` (lock, take off the day,
+ * select). Shared by the board and the timeline, so both show the same lines.
  */
-export function CardFace({ job, density, zones }: { job: AdminJob; density: Density; zones: string[] }) {
-  const flagLine = density === "compact" ? 0 : 1;
+export function CardFace({ job, density, zones, tools }: { job: AdminJob; density: Density; zones: string[]; tools?: ReactNode }) {
   const flags = (
-    <>
+    <span className="sch-flags">
       {job.status === "Completed" && <Check className="sch-st done" aria-hidden />}
       {job.status === "Could not complete" && <X className="sch-st failed" aria-hidden />}
       {job.status === "In progress" && <i className="sch-st active" aria-hidden />}
-      {job.late && <span className="sch-flag late">Late</span>}
-      {job.manual && <span className="sch-flag">By hand</span>}
-    </>
+      {job.late && <span className="sch-flag-box" title="Late"><HourglassAlertGlyph className="sch-flag-icon" /></span>}
+      {job.manual && <span className="sch-flag-box" title="Placed by hand"><HandGlyph className="sch-flag-icon" /></span>}
+      {tools}
+    </span>
   );
   return (
     <>
       {cardLines(job, density).map((line, i) => (
         <span key={i} className="sch-card-line">
           {line.map((part) => <Piece key={part.kind} part={part} zones={zones} />)}
-          {i === flagLine && flags}
+          {i === 0 && flags}
         </span>
       ))}
     </>
@@ -457,6 +460,35 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
     const isPicked = picked.has(job.id);
     const warning = warned.get(job.id);
     const outline = warning ? "2px solid var(--c-error)" : isPicked ? "2px solid var(--c-gold)" : undefined;
+    const locked = job.hand_locked === true;
+    const lockTip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
+    // The card's tools sit in the flow at the end of line 1, in this order: lock, take off the day, select. None of them opens the card
+    // or starts a drag (the drag engine ignores presses on a button), and each stops the click and the key from reaching the card.
+    const toolsNode = (open || tools) ? (
+      <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
+        {tools && job.placed_by_hand && (
+          <button type="button" className={`sch-tool lock ${locked ? "is-locked" : "is-open"}`}
+                  aria-pressed={locked} aria-disabled={!open || undefined}
+                  aria-label={lockTip} title={lockTip}
+                  onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
+            <LockGlyph locked={locked} />
+          </button>
+        )}
+        {tools && open && job.crew_id && (
+          // The name stays out of the button's label, so a search by registration still finds the card alone.
+          <button type="button" className="sch-tool del" aria-label="Take off the day"
+                  title={`Take ${job.registration} off the day`}
+                  onClick={() => void takeOff(job)}>
+            <Trash2 aria-hidden />
+          </button>
+        )}
+        {open && (
+          <Checkbox className="sch-check" checked={isPicked} onCheckedChange={() => togglePick(job.id)}
+                    aria-label="Select this job" title="Select to move together with the other selected cards" />
+        )}
+      </span>
+    ) : null;
     return (
       <DragSource key={job.id} id={job.id} data={job} disabled={!open}>
         {(drag) => (
@@ -467,7 +499,7 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
                style={outline ? { outline, outlineOffset: "1px" } : undefined}
                className={cn("sch-card", typeClass(job), statusClass(job), density, isSpa(job) && "spa", job.late && "late", job.manual && "manual",
                  wine && "wine", !kept && "dim", drag.dragging && "dragging", !open && "locked",
-                 savingId === job.id && "saving", tools && "has-tools")}
+                 savingId === job.id && "saving")}
                onPointerDown={drag.onPointerDown}
                onClick={() => { if (kept) onOpen(job); }}
                onKeyDown={(e) => {
@@ -478,7 +510,7 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
                    nudge(job, e.key === "ArrowUp" ? -1 : 1);
                  }
                }}>
-            <CardFace job={job} density={density} zones={zones} />
+            <CardFace job={job} density={density} zones={zones} tools={toolsNode} />
             {density !== "compact" && job.status !== "Scheduled" && <span className="sch-card-status">{job.status}</span>}
             {job.crew_id && job.cross_zone_reason && density !== "compact" && (
               <span className="sch-why" role="note" title={job.cross_zone_reason} aria-label={job.cross_zone_reason}>Outside zone</span>
@@ -486,46 +518,6 @@ function CardGrid({ crew, jobs, availability, focus, search, type = "", flag = "
             {/* A card taken off a crew member shows the reason it has no place. */}
             {!job.crew_id && job.reason && density !== "compact" && <span className="sch-why">{job.reason}</span>}
             {wine && density !== "compact" && <span className="sch-why sch-breach">Placed by hand against a rule</span>}
-            {open && (
-              // The checkbox sits at the top right. It picks the card for a group move and never opens the card.
-              <span className="absolute right-1 top-1 z-[1] leading-none" onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}>
-                <input type="checkbox" className="m-0 h-3.5 w-3.5 cursor-pointer" checked={isPicked}
-                       aria-label="Select this job" title="Select to move together with the other selected cards"
-                       onChange={() => togglePick(job.id)} />
-              </span>
-            )}
-            {tools && job.placed_by_hand && (() => {
-              // The lock sits at the top right, on its own, and moves below the checkbox when the card has one. It never opens the card.
-              const locked = job.hand_locked === true;
-              const tip = locked ? LOCK_TIP.locked : LOCK_TIP.unlocked;
-              return (
-                <span className="sch-card-lock" style={open ? { top: "1.35rem" } : undefined}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
-                  <button type="button" className={`sch-tool lock ${locked ? "is-locked" : "is-open"}`}
-                          aria-pressed={locked} aria-disabled={!open || undefined}
-                          aria-label={tip} title={tip}
-                          onClick={() => { if (open) lockOf.mutate({ job, locked: !locked }); }}>
-                    <LockGlyph locked={locked} />
-                  </button>
-                </span>
-              );
-            })()}
-            {tools && (
-              // The take-off icon sits at the bottom right (standard and detailed) or the right (compact). It never opens the card.
-              <span className="sch-card-tools" onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()} onDragStart={(e) => e.preventDefault()}>
-                {open && job.crew_id && (
-                  // The name stays out of the button's label, so a search by registration still finds the card alone.
-                  <button type="button" className="sch-tool del" aria-label="Take off the day"
-                          title={`Take ${job.registration} off the day`}
-                          onClick={() => void takeOff(job)}>
-                    <Trash2 aria-hidden />
-                  </button>
-                )}
-              </span>
-            )}
           </div>
         )}
       </DragSource>

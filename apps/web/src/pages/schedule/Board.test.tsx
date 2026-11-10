@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import {
-  fitsAt, freeSlots, freeStart, gaps, hm, isShown, matches, PARTIAL, StatusSummary, typeClass, unscheduledOrder, zoneShort, zonesOf, zoneStyle,
+  fitsAt, freeSlots, freeStart, gaps, hm, isShown, matches, PARTIAL, serviceKey, StatusSummary, typeClass, unscheduledOrder, zoneShort, zonesOf, zoneStyle,
 } from "./Board";
+import { servicesOf } from "./BoardFilters";
 import type { AdminJob } from "./api";
 
 const at = (start: number, duration = 20) => ({ start_minute: start, duration_minutes: duration } as AdminJob);
@@ -90,6 +91,34 @@ describe("partially completed visits (never hidden)", () => {
   it("counts partial visits in the status summary", () => {
     render(<StatusSummary jobs={[partial, done]} focus="" onFocus={() => {}} />);
     expect(screen.getByRole("button", { name: /Partially Completed/ })).toHaveTextContent("1");
+  });
+
+  it("has no All jobs chip and no Scheduled chip, and pressing a pressed chip clears the filter (10-Nov-26)", async () => {
+    const scheduled = { ...done, id: "s", status: "Scheduled" } as AdminJob;
+    const calls: string[] = [];
+    render(<StatusSummary jobs={[scheduled, done]} focus="Completed" onFocus={(s) => calls.push(s)} />);
+    expect(screen.queryByRole("button", { name: /^All jobs/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Scheduled/ })).not.toBeInTheDocument();
+    const chip = screen.getByRole("button", { name: /^Completed/ });
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    chip.click();
+    expect(calls).toEqual([""]);
+  });
+});
+
+describe("the Services filter (10-Nov-26)", () => {
+  const of = (service: string, id = service) => ({ id, service, status: "Scheduled", registration: "KA01", parking: "" } as AdminJob);
+
+  it("lists each service of the day once, other services included, with the full name", () => {
+    const list = servicesOf([of("Cleaning-External", "a"), of("Cleaning-External", "b"), of("Deep Spa"), of("Cleaning-Internal"), of("Windscreen Polish")]);
+    expect(list.map((s) => s.key)).toEqual(["EXT", "INT", "SPA", "WIN"]);
+    expect(list.find((s) => s.key === "WIN")?.name).toBe("Windscreen Polish");
+  });
+
+  it("keeps only the chosen service bright, through matches() for every view", () => {
+    expect(matches(of("Windscreen Polish"), "", "", "WIN")).toBe(true);
+    expect(matches(of("Cleaning-External"), "", "", "WIN")).toBe(false);
+    expect(serviceKey(of("Deep Spa"))).toBe("SPA");
   });
 });
 

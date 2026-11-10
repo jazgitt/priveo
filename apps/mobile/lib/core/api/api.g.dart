@@ -1002,6 +1002,7 @@ class AdminJob {
     required this.vehicleId,
     required this.registration,
     required this.vehicle,
+    this.model,
     this.parking,
     this.zone,
     required this.customerName,
@@ -1042,6 +1043,7 @@ class AdminJob {
   final String vehicleId;
   final String registration;
   final String vehicle;
+  final String? model;
   final String? parking;
   final String? zone;
   final String customerName;
@@ -1082,6 +1084,7 @@ class AdminJob {
         vehicleId: j['vehicle_id'] as String,
         registration: j['registration'] as String,
         vehicle: j['vehicle'] as String,
+        model: j['model'] == null ? null : j['model'] as String,
         parking: j['parking'] == null ? null : j['parking'] as String,
         zone: j['zone'] == null ? null : j['zone'] as String,
         customerName: j['customer_name'] as String,
@@ -1123,6 +1126,7 @@ class AdminJob {
         'vehicle_id': vehicleId,
         'registration': registration,
         'vehicle': vehicle,
+        'model': model,
         'parking': parking,
         'zone': zone,
         'customer_name': customerName,
