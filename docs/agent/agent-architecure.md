@@ -24,7 +24,7 @@ How to read status in this document: the spec and explicit owner decisions win. 
 | D3 | OpenRouter's data-retention and provider-routing controls are checked before prod use | Owner. Check done 30-Oct, findings in section 8.1; two points left for the owner |
 | D4 | Local runs on Ollama on a MacBook Air with 24 GB memory | Owner |
 | D5 | The OpenRouter key is supplied when needed, as environment configuration, never committed | Owner |
-| D6 | The Founder login is `priveopapa`, the only Admin login in the seed and test data. Anyone holding that password is the Founder | Owner (confirmed 30-Oct) |
+| D6 | The Founder login is `ADMIN_LOGIN_ID`, the only Admin login in the seed and test data. Anyone holding that password is the Founder | Owner (confirmed 30-Oct) |
 | D7 | Local and test use the existing seed data. Prod uses real data | Owner |
 | D8 | Indexable sources: everything related to Priveo, except secrets and PII. PII means customer address, mobile number and email, and all admin data. Crew data is not PII. The final source list goes to the owner for approval before the design is finalised | Owner |
 | D9 | I draft the question set (Appendix A); the owner reviews and updates it | Owner (replaced 31-Oct by the code, architecture, business and how-to-run set: all 50 kept) |
@@ -156,7 +156,7 @@ Refresh defaults (proposed): operational answers query live; monitoring and aler
 
 ### 6.3 Founder-only access
 
-The current `admin` role does not identify the Founder. Add an explicit founder capability or account binding, enforced server-side for chat, sources, history, voice, approvals, reports and background task ownership. Hiding a menu item is not enough. Mani cannot grant or change their own permissions. Per D6, the binding is to `priveopapa`, the only Admin login today. If more admins are ever added, only the bound login keeps access.
+The current `admin` role does not identify the Founder. Add an explicit founder capability or account binding, enforced server-side for chat, sources, history, voice, approvals, reports and background task ownership. Hiding a menu item is not enough. Mani cannot grant or change their own permissions. Per D6, the binding is to `ADMIN_LOGIN_ID`, the only Admin login today. If more admins are ever added, only the bound login keeps access.
 
 ### 6.4 Controlled tools
 
@@ -324,7 +324,7 @@ Recurring costs: model input and output, embeddings, speech minutes, storage, ba
 
 | # | Item | Why it matters |
 |---|---|---|
-| 1 | Closed (D6): `priveopapa` is the Founder login | Access binding |
+| 1 | Closed (D6): `ADMIN_LOGIN_ID` is the Founder login | Access binding |
 | 2 | Closed (D12): text-only Crawl is the MVP | Scope |
 | 3 | Closed (D8, owner, 1-Nov-26): the Appendix B list is approved. The exclusions were agreed on 30-Oct | Knowledge and PII safety |
 | 4 | Closed (D9, D19): question set reviewed 30-Oct, all 50 kept. Expected answers for live questions are filled in from the seed data in Phase 1 | Accuracy testing |

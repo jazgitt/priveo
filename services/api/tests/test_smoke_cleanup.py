@@ -41,7 +41,7 @@ def test_cleanup_is_not_found_outside_the_test_environment(client, monkeypatch, 
 def test_cleanup_refuses_a_login_outside_the_smoke_range(client, monkeypatch, directory):
     admin = auth(login(client, "admin")["access_token"])
     _environment(monkeypatch, "test")
-    assert client.delete("/v1/admin/test-users/priveopapa", headers=admin).status_code == 422
+    assert client.delete("/v1/admin/test-users/testadminid", headers=admin).status_code == 422
     assert client.delete("/v1/admin/test-users/9876543210", headers=admin).status_code == 422
 
 
@@ -95,3 +95,17 @@ def test_smoke_makes_its_own_customer_and_crew_and_removes_them(client, monkeypa
     db.expire_all()
     assert db.scalar(select(func.count()).select_from(Login)
                      .where(Login.login_id.like("9000099%"))) == 0
+
+
+def _route_exists(monkeypatch, name):
+    from app import main
+    monkeypatch.setattr(main, "get_settings", lambda: types.SimpleNamespace(environment=name))
+    app = main.create_app()
+    from fastapi.testclient import TestClient
+    # The route is hidden from the schema: a missing route is 404, a registered one answers 401/403.
+    return TestClient(app).delete("/v1/admin/test-users/nobody").status_code != 404
+
+
+def test_the_route_is_registered_only_in_test_and_dev(monkeypatch):
+    assert _route_exists(monkeypatch, "test") and _route_exists(monkeypatch, "dev")
+    assert not _route_exists(monkeypatch, "prod")

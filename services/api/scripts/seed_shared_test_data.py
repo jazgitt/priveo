@@ -20,6 +20,14 @@ from app.platform.sync_guard import refuse_if_restored
 from scripts.test_data import _seed_scenario, catalogue, identity, scenario_mobile
 
 
+def admin_login_id() -> str:
+    """The admin's login ID, from ADMIN_LOGIN_ID (it is not in the repository)."""
+    value = os.environ.get("ADMIN_LOGIN_ID", "").strip()
+    if not value:
+        raise ValueError("ADMIN_LOGIN_ID is not set.")
+    return value
+
+
 def sync_accounts(db, config, snapshot, password_hash):
     """Explicitly rotate only accounts with verified synthetic identities."""
     scenario = config["id"]
@@ -54,8 +62,8 @@ def seed_additive(engine, day, password, *, sync_passwords=False):
         if engine.dialect.name == "postgresql":
             db.execute(text("SELECT pg_advisory_xact_lock(798975)"))
         admins = list(db.scalars(select(Login).where(Login.role == "admin")))
-        if len(admins) != 1 or admins[0].login_id != "priveopapa":
-            raise ValueError("Expected the existing single priveopapa Admin.")
+        if len(admins) != 1 or admins[0].login_id != admin_login_id():
+            raise ValueError("Expected the existing single Admin, under ADMIN_LOGIN_ID.")
         db.execute(text("CREATE TABLE IF NOT EXISTS shared_test_data_manifest "
                         "(scenario TEXT PRIMARY KEY, snapshot TEXT NOT NULL)"))
         shared = [
@@ -98,7 +106,7 @@ def seed_additive(engine, day, password, *, sync_passwords=False):
                        {"scenario": scenario, "snapshot": json.dumps(snapshot)})
             snapshots.append(snapshot)
             added.append(scenario)
-    return {"version": 1, "admin_login": "priveopapa", "scenarios": snapshots,
+    return {"version": 1, "admin_login": admin_login_id(), "scenarios": snapshots,
             "added": added, "limitations": [
                 "Additive seed only: existing scenarios and Admin credentials are preserved.",
                 "Historical jobs have no proof media; upload it through the application.",

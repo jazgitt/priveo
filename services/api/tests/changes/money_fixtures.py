@@ -115,5 +115,5 @@ def money(settings, engine, db) -> Money:
 
     return Money(client=client, db=db, clock=clock, gateway=gateway,
                  customer=token(MOBILE, PASSWORD, "customer"),
-                 admin=token("priveopapa", "pw-admin1", "admin"),
+                 admin=token("testadminid", "pw-admin1", "admin"),
                  customer_id=customer.id, vehicle_id=str(vehicle.id), subscription_id=sub.id)

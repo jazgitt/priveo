@@ -45,7 +45,7 @@ def world(db):
     db.flush()
     for reg in ("AB12CD0001", "AB12CD0002", "AB12CD0003"):
         db.add(Vehicle(customer_id=customer.id, registration=reg, model="Creta"))
-    db.add(Login(role="admin", login_id="priveopapa", display_name="Admin", password_hash="x"))
+    db.add(Login(role="admin", login_id="testadminid", display_name="Admin", password_hash="x"))
     db.commit()
 
 

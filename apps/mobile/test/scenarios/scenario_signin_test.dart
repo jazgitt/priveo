@@ -69,7 +69,7 @@ void main() {
     });
 
     testWidgets(
-      'a mobile number Priveo does not know is told to contact Priveo [AUTH-15]',
+      'a mobile number Priveo does not know gets the code step and the support buttons [AUTH-15]',
       (tester) async {
         await openSignIn(tester);
         await tester.enterText(find.byType(TextField), '9111111111');
@@ -78,7 +78,7 @@ void main() {
         await tapFinder(tester, find.text('Forgot MPIN?'));
         await untilFound(
           tester,
-          find.text('This mobile number is not registered. Contact Priveo.'),
+          find.text('Enter the code'),
         );
         await untilFound(tester, find.text('Call support'));
         expect(find.text('WhatsApp support'), findsOneWidget);
@@ -129,7 +129,7 @@ void main() {
 
     testWidgets('the admin signs in by user ID [ADM-ACC-06]', (tester) async {
       await openSignIn(tester);
-      await enterIdAndPassword(tester, 'priveopapa', scenarioAdminPassword);
+      await enterIdAndPassword(tester, 'test-admin-id', scenarioAdminPassword);
       await untilFound(tester, find.text('Payments to confirm'));
       await letTimersFinish(tester);
     });

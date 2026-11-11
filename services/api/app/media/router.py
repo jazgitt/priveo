@@ -88,7 +88,17 @@ async def put_local(upload_id: str, expires: int, sig: str, request: Request,
         upload = None
     if upload is None or upload.status != STATUS_REQUESTED:
         raise ApiError("not_found", "This upload was not found.", 404)
-    data = await request.body()
+    # Review R-15: refuse by the declared length first, then stop reading at the limit.
+    limit = service.MAX_BYTES[upload.kind]
+    declared = request.headers.get("content-length")
+    if declared is not None and declared.isdigit() and int(declared) > limit:
+        raise ApiError("upload_too_large", "The file is too large.", 422)
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > limit:
+            raise ApiError("upload_too_large", "The file is too large.", 422)
+    data = bytes(data)
     if not service.valid_size(upload.kind, len(data)):
         raise ApiError("upload_too_large", "The file is too large.", 422)
     store.put(upload.object_key, data)

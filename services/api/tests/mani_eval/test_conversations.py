@@ -149,7 +149,7 @@ def test_real_agent_with_a_fake_model_reports_input_tokens(eval_world):
     conv = convo.Conversation(99, "t", "t", (
         convo.Turn("How many jobs today?", tools_any=("jobs_today",), params={"phrases_all": [r"12"]}),
         convo.Turn("Hi", max_words=10, tools_none=True)))
-    login = db.scalar(select(Login.id).where(Login.login_id == "priveopapa"))
+    login = db.scalar(select(Login.id).where(Login.login_id == "testadminid"))
     score = convo.run_conversation(agent, db, conv, login_id=login, expected=eval_world["expected"], dataset=None)
     assert score.passed, convo.ConversationReport([score]).to_text()
     assert [t.input_tokens for t in score.turns] == [20, 10]  # two model calls of 10, then one

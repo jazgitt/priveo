@@ -15,7 +15,6 @@ from typing import Any
 
 from app.mani.contracts import ScrubResult
 
-DEFAULT_ADMIN_LOGIN = "priveopapa"
 # Not PII (owner decision D20). Compared on the last 10 digits.
 HELPLINE_NUMBERS = frozenset({"0000000000", "1234567890"})
 _MAX_DEPTH = 40
@@ -83,7 +82,7 @@ class PatternScrubber:
             from app.mani.config import get_mani_settings
             admin = get_mani_settings().founder_login_id
         except Exception:  # settings must never stop the scrubber from working
-            admin = DEFAULT_ADMIN_LOGIN
+            admin = ""
         literals = sorted({s for s in (admin, *extra_literals) if s}, key=len, reverse=True)
         self.literals = tuple(literals)
         # An existing marker is matched first and left alone, so a literal such as "login"

@@ -304,7 +304,7 @@ def test_the_support_bridge_writes_the_inbox_and_follows_the_switch(
 
 
 def test_admin_push_goes_to_admin_phones(db, push):
-    admin = Login(role="admin", login_id="priveopapa", display_name="Admin")
+    admin = Login(role="admin", login_id="testadminid", display_name="Admin")
     db.add(admin)
     db.flush()
     db.add(DeviceToken(login_id=admin.id, token="admin-token-0001", platform="ios"))

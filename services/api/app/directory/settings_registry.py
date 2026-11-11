@@ -244,8 +244,8 @@ def parse(definition: SettingDef, raw: Any) -> str:
             raise ValueError("Enter a UPI ID such as name@bank.")
         return text
     if definition.kind == "url":
-        if not re.match(r"^https?://\S+$", text):
-            raise ValueError("Enter an address that starts with http:// or https://.")
+        if not re.match(r"^https://[^\s/]\S*$", text):
+            raise ValueError("Enter an address that starts with https://.")
         return text
     if definition.kind == "gstin":
         text = text.upper()

@@ -7,6 +7,7 @@ name: api-deploy-vercel
 # by `environment`, so the steps are the same for both:
 #   variables: VERCEL_ORG_ID, VERCEL_PROJECT_ID, API_URL
 #   secrets:   VERCEL_TOKEN, MIGRATION_DATABASE_URL, ADMIN_PASSWORD
+#   variables: ADMIN_LOGIN_ID (the admin's sign-in ID; not in the repository)
 #   test only: MOCK_CUSTOMER_PASSWORD, MOCK_CREW_PASSWORD
 # Runtime settings (DATABASE_URL, TOKEN_SECRET, CRON_SECRET ...) live in the
 # Vercel project's own environment variables, not here.
@@ -58,6 +59,7 @@ jobs:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_LOGIN_ID: ${{ vars.ADMIN_LOGIN_ID }}
           MOCK_CUSTOMER_PASSWORD: ${{ inputs.demo && secrets.MOCK_CUSTOMER_PASSWORD || '' }}
           MOCK_CREW_PASSWORD: ${{ inputs.demo && secrets.MOCK_CREW_PASSWORD || '' }}
           SEED_DEMO_LOGINS: ${{ inputs.demo && 'true' || 'false' }}
@@ -147,4 +149,5 @@ jobs:
           SMOKE_CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
           SMOKE_CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
           SMOKE_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_LOGIN_ID: ${{ vars.ADMIN_LOGIN_ID }}
         run: python services/api/scripts/smoke_test.py "${{ vars.API_URL }}"

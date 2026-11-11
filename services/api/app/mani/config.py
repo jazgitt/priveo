@@ -23,10 +23,13 @@ GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"  # G
 
 
 class ManiSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="MANI_")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="MANI_",
+                                      populate_by_name=True)
 
     # The only login that may use Mani (D6). Anyone holding its password is the Founder.
-    founder_login_id: str = "priveopapa"
+    # Defaults to the platform admin ID (ADMIN_LOGIN_ID). Empty means Mani is off.
+    founder_login_id: str = Field(
+        default="", validation_alias=AliasChoices("MANI_FOUNDER_LOGIN_ID", "ADMIN_LOGIN_ID"))
     # Whether Mani Bond and the Agent report are on in the admin portal (MANI_PORTAL_ENABLED). Unset means
     # on in dev (local) and test, and off in prod. Set it to true or false to override either way.
     portal_enabled: bool | None = None

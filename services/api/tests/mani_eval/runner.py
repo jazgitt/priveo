@@ -179,7 +179,7 @@ def run_questions(agent: Agent, db: Session, *, now: datetime = FIXED_NOW,
                   dataset: DatasetReport | None = None) -> Report:
     """Score `agent` on `questions`. The database must already hold the dataset."""
     expected = expected or compute_all(db, now)
-    login_id = db.scalar(select(Login.id).where(Login.login_id == "priveopapa"))
+    login_id = db.scalar(select(Login.id).where(Login.login_id == "testadminid"))
     scores = []
     for position, q in enumerate(questions, 1):
         started = time.monotonic()

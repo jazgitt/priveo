@@ -39,6 +39,9 @@ WEB_SESSION_MINUTES = 12 * 60
 _TOUCH_EVERY = timedelta(minutes=5)
 # Often enough that the web idle time is close to 60 minutes.
 _WEB_TOUCH_EVERY = timedelta(minutes=1)
+# A refresh token that was just replaced is a retry (the phone lost the reply),
+# not theft, for this long (security review R-07).
+REFRESH_REUSE_GRACE = timedelta(minutes=2)
 CODE_LIFETIME = timedelta(minutes=30)  # AUTH-05
 CODE_RESEND_AFTER = timedelta(seconds=30)  # AUTH-05
 MAX_WRONG_CODES = 5  # AUTH-07
@@ -110,11 +113,6 @@ def _invalid(customer: bool = False) -> ApiError:
         return ApiError("invalid_credentials",
                         "The mobile number or MPIN is not correct.", 401)
     return ApiError("invalid_credentials", "The ID or password is not correct.", 401)
-
-
-def _not_registered() -> ApiError:
-    return ApiError("mobile_not_registered",
-                    "This mobile number is not registered. Contact Priveo.", 404)  # AUTH-15
 
 
 def _new_code_needed(message: str) -> ApiError:
@@ -243,17 +241,27 @@ class AuthService:
     # With an email on file, a code is emailed and the customer sets a new MPIN.
     # Without one, the admin resets it.
 
-    def _customer(self, mobile: str) -> Login:
-        key = normalise(mobile)
-        login = self._db.scalar(
-            select(Login).where(Login.login_id == key, Login.role == "customer"))
-        if login is None or not login.active:
-            raise _not_registered()
-        return login
+    def _known_customer(self, mobile: str) -> Login | None:
+        login = self._db.scalar(select(Login).where(
+            Login.login_id == normalise(mobile), Login.role == "customer"))
+        return login if login is not None and login.active else None
 
     def send_code(self, mobile: str) -> CodeSent:
-        """Emails a code to the customer's email: "resend" and "forgot MPIN"."""
-        return CodeSent(resend_in_seconds=self._send_code(self._customer(mobile)))
+        """Emails a code to the customer's email: "resend" and "forgot MPIN".
+
+        A number that is not a customer, and a customer with no email saved, get the
+        same answer as a customer with an email and nothing is sent, so the route
+        cannot be used to list customers (security review R-11). The app tells the
+        person to contact Priveo if no code arrives (AUTH-16).
+        """
+        login = self._known_customer(mobile)
+        customer = (self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+                    if login is not None else None)
+        if login is None or customer is None or not customer.email:
+            # Same work as a first send: a keyed hash, then the same answer.
+            self._code_hash(uuid.uuid4(), "000000")
+            return CodeSent(resend_in_seconds=int(CODE_RESEND_AFTER.total_seconds()))
+        return CodeSent(resend_in_seconds=self._send_code(login, customer))
 
     def _code_hash(self, code_id: uuid.UUID, code: str) -> str:
         return tokens.keyed_hash(self._s, f"{code_id}:{code}")
@@ -264,14 +272,9 @@ class AuthService:
             .where(EmailCode.login_id == login.id, EmailCode.ended_at.is_(None))
             .order_by(EmailCode.created_at.desc()))
 
-    def _send_code(self, login: Login) -> int:
+    def _send_code(self, login: Login, customer: Customer) -> int:
         """Returns the seconds until another code can be asked for."""
         now = utcnow()
-        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
-        if customer is None or not customer.email:
-            raise ApiError(
-                "no_email", "No email is saved for this number. Ask Priveo to reset your MPIN.",
-                409)
         wait = int(CODE_RESEND_AFTER.total_seconds())
         current = self._live_code(login)
         if (current is not None and current.verified_at is None
@@ -312,7 +315,11 @@ class AuthService:
         return wait
 
     def verify_code(self, mobile: str, code: str) -> CodeVerified:
-        login = self._customer(mobile)
+        login = self._known_customer(mobile)
+        if login is None:
+            # The answer for a wrong code, so an unknown number looks like a known one (R-11).
+            self._code_hash(uuid.uuid4(), code.strip())
+            raise ApiError("invalid_code", "The code is not correct.", 400)
         row = self._live_code(login)
         now = utcnow()
         if row is None or row.verified_at is not None:
@@ -392,15 +399,41 @@ class AuthService:
         return session, login
 
     def refresh(self, refresh_token: str) -> LoginResult:
+        old_hash = tokens.refresh_hash(refresh_token)
         found = self._db.scalar(select(AuthSession).where(
-            AuthSession.refresh_hash == tokens.refresh_hash(refresh_token)))
+            AuthSession.refresh_hash == old_hash))
+        if found is None:
+            self._refresh_reuse(old_hash)
+            raise _signed_out()
         session, login = self._live(found)
-        # Each refresh token works once.
+        # Each refresh token works once. The swap only happens if the token is
+        # still the current one, so two calls with the same token cannot both win.
         new_token = tokens.new_refresh_token()
-        session.refresh_hash = tokens.refresh_hash(new_token)
-        session.last_used_at = utcnow()
+        now = utcnow()
+        swapped = self._db.execute(update(AuthSession).where(
+            AuthSession.id == session.id, AuthSession.refresh_hash == old_hash,
+        ).values(previous_refresh_hash=old_hash, rotated_at=now,
+                 refresh_hash=tokens.refresh_hash(new_token), last_used_at=now))
+        if swapped.rowcount != 1:
+            self._db.rollback()
+            raise _signed_out()
         self._db.commit()
+        self._db.refresh(session)
         return self._result(login, session, new_token)
+
+    def _refresh_reuse(self, old_hash: str) -> None:
+        """An unknown refresh token. If it is the one a session just replaced and
+        the grace time has passed, the token was copied: end that session, so the
+        thief's newer token dies too and the real owner signs in again (R-07)."""
+        session = self._db.scalar(select(AuthSession).where(
+            AuthSession.previous_refresh_hash == old_hash))
+        if session is None or session.ended_at is not None or session.rotated_at is None:
+            return
+        if utcnow() - session.rotated_at <= REFRESH_REUSE_GRACE:
+            return
+        self._end(session, "token_reuse")
+        self._event(self._db.get(Login, session.login_id), "refresh_reuse")
+        self._db.commit()
 
     def authenticate(self, access_token: str) -> User:
         claims = tokens.read_access(self._s, access_token)

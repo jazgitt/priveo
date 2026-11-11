@@ -49,7 +49,7 @@ def test_raising_the_budget_lifts_the_stop(db):
 def test_the_per_request_limit_counts_only_that_run(db):
     from app.identity.models import Login
     from app.mani.models import ManiConversation, ManiRun
-    login = Login(role="admin", login_id="priveopapa", display_name="F", password_hash="x")
+    login = Login(role="admin", login_id="testadminid", display_name="F", password_hash="x")
     db.add(login)
     db.flush()
     conv = ManiConversation(login_id=login.id)

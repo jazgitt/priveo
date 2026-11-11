@@ -17,7 +17,7 @@ PARAMS = {"society": "s1", "from": "2026-11-03", "to": "2026-11-09"}
 
 @pytest.fixture
 def founder_id(db, client):
-    return db.scalars(select(Login.id).where(Login.login_id == "priveopapa")).one()
+    return db.scalars(select(Login.id).where(Login.login_id == "testadminid")).one()
 
 
 def make(db, founder_id, params=None, now=NOW, **kw):

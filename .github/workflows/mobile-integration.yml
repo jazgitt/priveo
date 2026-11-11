@@ -44,6 +44,7 @@ jobs:
       CUSTOMER_PASSWORD: ${{ secrets.MOCK_CUSTOMER_PASSWORD }}
       CREW_PASSWORD: ${{ secrets.MOCK_CREW_PASSWORD }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      ADMIN_LOGIN_ID: ${{ vars.ADMIN_LOGIN_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -102,7 +103,7 @@ jobs:
           disable-animations: true
           disk-size: 2048M
           working-directory: apps/mobile
-          script: flutter test integration_test/logins_test.dart --dart-define=API_BASE_URL="$API_TEST_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
+          script: flutter test integration_test/logins_test.dart --dart-define=API_BASE_URL="$API_TEST_URL" --dart-define=LIVE_CUSTOMER_PASSWORD="$CUSTOMER_PASSWORD" --dart-define=LIVE_CREW_PASSWORD="$CREW_PASSWORD" --dart-define=LIVE_ADMIN_ID="$ADMIN_LOGIN_ID" --dart-define=LIVE_ADMIN_PASSWORD="$ADMIN_PASSWORD"
 
   scenarios:
     if: (github.event_name == 'workflow_dispatch' && inputs.job != 'logins') || vars.RUN_EMULATOR_ON_MERGE == 'true'
@@ -111,6 +112,8 @@ jobs:
     env:
       SCENARIO_PASSWORD: Priveo-Fixture-Scenario-123!
       SCENARIO_ADMIN_PASSWORD: Priveo-Fixture-Admin-123!
+      # The fixture database is local and throwaway, so its admin ID is a fixed fake.
+      ADMIN_LOGIN_ID: test-admin-id
       FIXTURE_PORT: "8000"
     steps:
       - uses: actions/checkout@v4

@@ -24,8 +24,17 @@ import urllib.request
 LOGINS = [
     ("customer", "9000000001", "SMOKE_CUSTOMER_PASSWORD"),
     ("crew", "9000000002", "SMOKE_CREW_PASSWORD"),
-    ("admin", "priveopapa", "SMOKE_ADMIN_PASSWORD"),
+    ("admin", None, "SMOKE_ADMIN_PASSWORD"),  # the ID comes from ADMIN_LOGIN_ID
 ]
+
+
+def admin_login_id() -> str:
+    """The admin's login ID, from ADMIN_LOGIN_ID (it is not in the repository)."""
+    value = os.environ.get("ADMIN_LOGIN_ID", "").strip()
+    if not value:
+        raise SystemExit("ADMIN_LOGIN_ID is not set.")
+    return value
+
 
 
 def call(base: str, path: str, body: dict | None = None, token: str | None = None,
@@ -109,7 +118,7 @@ def main() -> None:
     # The wrong password goes first. The admin's right password below then
     # clears the wrong-attempt count, so a deploy never uses up a try.
     status, body = call(base, "/v1/auth/login",
-                        {"login_id": "priveopapa", "password": "wrong", "role": "admin"})
+                        {"login_id": admin_login_id(), "password": "wrong", "role": "admin"})
     check(status == 401 and body.get("code") == "invalid_credentials", "wrong password rejected")
     roles = os.environ.get("SMOKE_ROLES", "customer,crew,admin").split(",")
     create = os.environ.get("SMOKE_CREATE_USERS", "").lower() == "true"
@@ -119,7 +128,7 @@ def main() -> None:
         made: dict = {}
         if create:
             status, body = call(base, "/v1/auth/login", {
-                "login_id": "priveopapa", "password": os.environ.get("SMOKE_ADMIN_PASSWORD", ""),
+                "login_id": admin_login_id(), "password": os.environ.get("SMOKE_ADMIN_PASSWORD", ""),
                 "role": "admin"})
             check(status == 200 and body.get("access_token"), "admin login for the smoke users")
             token = body["access_token"]
@@ -130,6 +139,7 @@ def main() -> None:
             if role in made:
                 login_id, password = made[role]
             else:
+                login_id = login_id or admin_login_id()
                 password = os.environ.get(env, "")
             status, body = call(base, "/v1/auth/login",
                                 {"login_id": login_id, "password": password, "role": role})
@@ -151,7 +161,7 @@ def main() -> None:
         if created:
             if token is None:
                 status, body = call(base, "/v1/auth/login", {
-                    "login_id": "priveopapa", "password": os.environ.get("SMOKE_ADMIN_PASSWORD", ""),
+                    "login_id": admin_login_id(), "password": os.environ.get("SMOKE_ADMIN_PASSWORD", ""),
                     "role": "admin"})
                 token = body.get("access_token")
             remove_users(base, token, created)

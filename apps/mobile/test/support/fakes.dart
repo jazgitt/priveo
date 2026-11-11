@@ -41,10 +41,6 @@ const adminSession = Session(
 /// gets the code [code] at the email on file, then sets a new MPIN and signs in.
 class FakeAuthRepository implements AuthRepository {
   static const wrongMessage = 'The ID or password is not correct.';
-  static const notRegistered =
-      'This mobile number is not registered. Contact Priveo.';
-  static const noEmail =
-      'No email is saved for this number. Ask Priveo to reset your MPIN.';
   static const wrongCode = 'The code is not correct.';
   static const customerId = '9000000001';
   static const crewId = '9000000002';
@@ -56,7 +52,7 @@ class FakeAuthRepository implements AuthRepository {
   static const _accounts = {
     'customer:9000000001': customerSession,
     'crew:9000000002': crewSession,
-    'admin:priveopapa': adminSession,
+    'admin:test-admin-id': adminSession,
   };
 
   int logoutCalls = 0;
@@ -66,20 +62,9 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<int> sendCode(String mobile) async {
-    if (mobile == unknownMobile) {
-      throw const ApiFailure(
-        code: 'mobile_not_registered',
-        message: notRegistered,
-        statusCode: 404,
-      );
-    }
-    if (mobile == noEmailMobile) {
-      throw const ApiFailure(
-        code: 'no_email',
-        message: noEmail,
-        statusCode: 409,
-      );
-    }
+    // The API gives the same answer for every number (review R-11); a number that
+    // is not a customer, or has no email, simply gets no code.
+    if (mobile == unknownMobile || mobile == noEmailMobile) return 30;
     codesSent++;
     return 30;
   }

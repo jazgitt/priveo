@@ -136,7 +136,7 @@ def test_an_unknown_access_mode_is_refused():
         BlobObjectStore(TOKEN, access="open")
 
 
-@pytest.mark.parametrize("access, expected", [("", "public"), ("private", "private")])
+@pytest.mark.parametrize("access, expected", [("", "private"), ("private", "private"), ("public", "public")])
 def test_blob_access_follows_the_configuration(monkeypatch, access, expected):
     monkeypatch.setattr(store_module, "_store", None)
     monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", TOKEN)
@@ -144,5 +144,29 @@ def test_blob_access_follows_the_configuration(monkeypatch, access, expected):
     monkeypatch.setenv("BLOB_ACCESS", access)
     try:
         assert get_object_store().access == expected
+    finally:
+        store_module._store = None
+
+
+def test_public_access_is_refused_in_prod(monkeypatch):
+    monkeypatch.setattr(store_module, "_store", None)
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", TOKEN)
+    monkeypatch.setenv("MEDIA_STORE", "")
+    monkeypatch.setenv("BLOB_ACCESS", "public")
+    monkeypatch.setenv("ENVIRONMENT", "prod")
+    try:
+        with pytest.raises(ValueError):
+            get_object_store()
+    finally:
+        store_module._store = None
+
+
+def test_a_missing_blob_access_setting_means_private(monkeypatch):
+    monkeypatch.setattr(store_module, "_store", None)
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", TOKEN)
+    monkeypatch.setenv("MEDIA_STORE", "")
+    monkeypatch.delenv("BLOB_ACCESS", raising=False)
+    try:
+        assert get_object_store().access == "private"
     finally:
         store_module._store = None

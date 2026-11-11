@@ -37,6 +37,7 @@ $adminPassword = 'PriveoWidgetAdmin123!'
 $env:ENVIRONMENT = 'dev'
 $env:TEST_DATA_PASSWORD = $customerPassword
 $env:TEST_DATA_ADMIN_PASSWORD = $adminPassword
+$env:ADMIN_LOGIN_ID = 'test-admin-id'
 Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 
 Push-Location $apiRoot

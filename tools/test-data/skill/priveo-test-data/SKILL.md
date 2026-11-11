@@ -34,7 +34,7 @@ R04 crew fixture stays locked. A changed secret alone does not update accounts.
 
 The tool requires an explicit file and a fixture marker, and never consumes `DATABASE_URL`. Only local SQLite and `ENVIRONMENT=dev` are supported. Do not point it at production or try to bypass the marker. PostgreSQL/shared dev seeding needs a separate reviewed implementation.
 
-Read `TEST_DATA_PASSWORD` and, for first initialization, `TEST_DATA_ADMIN_PASSWORD` from the process environment. Do not print secrets or tokens, copy real `.env` values, or silently change retained accounts' passwords. Use the same fixture password on partial refreshes. Exactly one Admin login, `priveopapa`, serves every Admin variation.
+Read `TEST_DATA_PASSWORD` and, for first initialization, `TEST_DATA_ADMIN_PASSWORD` from the process environment. Do not print secrets or tokens, copy real `.env` values, or silently change retained accounts' passwords. Use the same fixture password on partial refreshes. Exactly one Admin login, `ADMIN_LOGIN_ID`, serves every Admin variation.
 
 Preview the selected IDs, then execute the authorized scope. Always pass `--output .local/test-data/manifest.json` (or the user's selected manifest path). The manifest retains untouched scenario entries and provides Customer/Crew logins and entity IDs. Report reset IDs/date anchor, manifest path, checks performed and any cases still requiring actions.
 

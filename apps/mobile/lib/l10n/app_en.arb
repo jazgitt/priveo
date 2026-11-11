@@ -24,7 +24,7 @@
   "changeId": "Change",
   "forgotMpin": "Forgot MPIN?",
   "codeTitle": "Enter the code",
-  "codeSentToEmailOnFile": "We sent a 6-digit code to the email saved for this number. It works for 30 minutes.",
+  "codeSentToEmailOnFile": "If an email is saved for this number, we sent a 6-digit code to it. It works for 30 minutes. If nothing arrives, contact Priveo.",
   "codeLabel": "6-digit code",
   "enterCode": "Enter the 6-digit code.",
   "verifyButton": "Verify",

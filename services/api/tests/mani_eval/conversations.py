@@ -319,7 +319,7 @@ def run_conversations(agent: Agent, db: Session, *, conversations: Sequence[Conv
                       expected: dict[str, Expected], dataset: DatasetReport | None = None,
                       progress: Callable[[str], None] | None = None) -> ConversationReport:
     """Run each conversation on its own conversation id. The database must hold the dataset."""
-    login_id = db.scalar(select(Login.id).where(Login.login_id == "priveopapa"))
+    login_id = db.scalar(select(Login.id).where(Login.login_id == "testadminid"))
     scores = []
     for position, conv in enumerate(conversations, 1):
         score = run_conversation(agent, db, conv, login_id=login_id, expected=expected, dataset=dataset)

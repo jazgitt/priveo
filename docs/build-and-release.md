@@ -34,7 +34,7 @@ Each role has one look, whatever the phone's light or dark setting (owner decisi
 
 The Android emulator reaches your computer at `http://10.0.2.2:8000`, which is the default for local builds.
 
-Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin `priveopapa` from `ADMIN_PASSWORD`, and running it again resets that password and ends any block on the login. Five wrong passwords block the admin for 15 minutes, then 1 hour, then 24 hours (CRW-ACC-07). To get in sooner on `dev`, run the `api-deploy` workflow by hand (Actions, Run workflow): it runs the seed. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
+Passwords are configuration, never committed. The database keeps only an Argon2 hash. The seed makes the admin (ID from `ADMIN_LOGIN_ID`) from `ADMIN_PASSWORD`, and running it again resets that password and ends any block on the login. Five wrong passwords block the admin for 15 minutes, then 1 hour, then 24 hours (CRW-ACC-07). To get in sooner on `dev`, run the `api-deploy` workflow by hand (Actions, Run workflow): it runs the seed. The demo customer and crew logins exist only where `SEED_DEMO_LOGINS` is `true`, until the admin can create real ones (Phase 2).
 
 ## Check before you push (macOS and Linux)
 
@@ -96,7 +96,6 @@ To make a failing test block a merge, turn on branch protection for `main` and r
 | `AWS_REGION` | `ap-south-1` (Mumbai) |
 | `ECR_REPOSITORY` | The ECR repository name |
 | `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY` | The `dev` ECS names |
-| `API_DEV_URL` | AWS only: the public address of the AWS `dev` API, used by its smoke test |
 
 Analytics (PostHog EU) is set by three repository variables. Both the mobile release build and the portal build in `api-deploy.yml` read them. Vite bakes the values into the portal, because the portal is built in GitHub Actions, not on Vercel.
 
@@ -120,7 +119,8 @@ The AWS names (`AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `ECR_REPOSITORY`, `ECS_*`) a
 | `API_URL` | variable | The public address of that API (the project's production domain, or its own domain). The app, the portal check and the smoke test use it |
 | `VERCEL_TOKEN` | secret | A token for the Vercel team |
 | `MIGRATION_DATABASE_URL` | secret | That environment's Supabase direct or session address (port 5432). The deploy migrates and seeds with it. The runtime `DATABASE_URL` (pooler, port 6543) lives only in the Vercel project |
-| `ADMIN_PASSWORD` | secret | The admin `priveopapa` password for that environment. The deploy seeds it and the smoke test signs in with it |
+| `ADMIN_LOGIN_ID` | variable | The admin's sign-in ID for that environment. Required in production; not in the repository. Also set it on the Vercel project. The deploy seeds with it and the smoke test signs in with it |
+| `ADMIN_PASSWORD` | secret | The admin's password for that environment. The deploy seeds it and the smoke test signs in with it |
 | `MOCK_CUSTOMER_PASSWORD`, `MOCK_CREW_PASSWORD` | secret | `test` only: the demo customer's MPIN (6 digits) and the crew password. Production has none |
 
 **Repository secrets:**

@@ -71,7 +71,7 @@ def test_an_empty_binding_lets_nobody_in(client, monkeypatch):
 
 def test_a_deactivated_founder_is_refused(client, db):
     headers = auth(login(client, "admin")["access_token"])
-    founder = db.scalars(select(Login).where(Login.login_id == "priveopapa")).one()
+    founder = db.scalars(select(Login).where(Login.login_id == "testadminid")).one()
     founder.active = False
     db.commit()
     assert client.get(STATUS, headers=headers).status_code in (401, 403)

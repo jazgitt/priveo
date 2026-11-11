@@ -159,7 +159,7 @@ void main() {
     testWidgets('admin sees payments to confirm [ADM-ACC-07]', (tester) async {
       await openApp(
         tester,
-        await signInApi(tester, 'priveopapa', scenarioAdminPassword),
+        await signInApi(tester, 'test-admin-id', scenarioAdminPassword),
       );
       await untilFound(tester, find.text('Payments to confirm'));
     });

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const manifestPath = path.resolve(here, "../../../.local/e2e/manifest.json");
 
-export const ADMIN_LOGIN = "priveopapa";
+export const ADMIN_LOGIN = "test-admin-id";
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "PriveoE2eAdmin123!";
 
 interface Scenario {

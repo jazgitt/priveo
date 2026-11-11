@@ -239,29 +239,48 @@ def test_the_mpin_token_works_once_and_for_10_minutes(client, db, customer):
 
 
 def test_a_number_the_admin_has_not_created_gets_no_code(client, db):
-    for call in (ask_code(client, "9111111111"), verify(client, mobile="9111111111")):
-        assert call.status_code == 404 and call.json()["code"] == "mobile_not_registered"
+    """R-11: the answer is the same as for a known number, and nothing is sent or stored."""
+    assert ask_code(client, "9111111111").status_code == 200
+    assert verify(client, mobile="9111111111").status_code == 400
     assert db.scalar(select(EmailCode)) is None
+
+
+def test_unknown_and_known_numbers_get_the_same_answers(client, db, customer):
+    known, unknown = ask_code(client), ask_code(client, "9111111111")
+    assert known.status_code == unknown.status_code == 200
+    assert known.json().keys() == unknown.json().keys()
+    assert db.scalar(select(EmailCode)) is not None  # the code went to the known number
+    wrong_known = verify(client, code="000000")
+    wrong_unknown = verify(client, code="000000", mobile="9111111111")
+    assert wrong_known.status_code == wrong_unknown.status_code == 400
+    def strip(r):
+        return {k: v for k, v in r.json().items() if k != "request_id"}
+
+    assert strip(wrong_known) == strip(wrong_unknown)
 
 
 def test_an_inactive_customer_gets_no_code(client, db, customer):
     db.scalar(select(Login).where(Login.login_id == MOBILE, Login.role == "customer")
               ).active = False
     db.commit()
-    assert ask_code(client).json()["code"] == "mobile_not_registered"
-
-
-def test_a_customer_with_no_email_is_told_to_ask_priveo(client, db, customer):
-    customer.email = None
-    db.commit()
-    r = ask_code(client)
-    assert r.status_code == 409 and r.json()["code"] == "no_email"
-    assert "reset your MPIN" in r.json()["message"]
+    assert ask_code(client).status_code == 200
     assert db.scalar(select(EmailCode)) is None
 
 
-def test_crew_cannot_get_a_code(client):
-    assert ask_code(client, LOGIN_IDS["crew"]).status_code == 404
+def test_a_customer_with_no_email_gets_the_same_answer_and_no_code(client, db, customer):
+    # Not a 409: that would show the number belongs to a customer (review R-11).
+    customer.email = None
+    db.commit()
+    r = ask_code(client)
+    assert r.status_code == 200
+    assert r.json() == ask_code(client, "9111111111").json()
+    assert db.scalar(select(EmailCode)) is None
+
+
+def test_crew_cannot_get_a_code(client, db):
+    # Same answer as an unknown number (review R-11), but no code is stored.
+    assert ask_code(client, LOGIN_IDS["crew"]).status_code == 200
+    assert db.scalar(select(EmailCode)) is None
 
 
 def test_a_wrong_code_and_then_the_right_one(client, customer):

@@ -13,16 +13,16 @@ def scrub(text: str) -> str:
 
 
 def test_admin_login_literal_replaced_everywhere():
-    assert scrub("log in as priveopapa today") == "log in as [redacted:admin-login] today"
-    assert scrub('{"login_id": "priveopapa"}') == '{"login_id": "[redacted:admin-login]"}'
-    assert "PriveoPapa" not in scrub("PriveoPapa")
-    assert "priveopapa" not in scrub("user priveopapa/pw")
-    assert scrub("priveopapaX stays") == "priveopapaX stays"
+    assert scrub("log in as testadminid today") == "log in as [redacted:admin-login] today"
+    assert scrub('{"login_id": "testadminid"}') == '{"login_id": "[redacted:admin-login]"}'
+    assert "TestAdminId" not in scrub("TestAdminId")
+    assert "testadminid" not in scrub("user testadminid/pw")
+    assert scrub("testadminidX stays") == "testadminidX stays"
 
 
 def test_extra_literals():
     s = PatternScrubber(extra_literals=["owner42"])
-    assert s.scrub("owner42 and priveopapa").text == "[redacted:admin-login] and [redacted:admin-login]"
+    assert s.scrub("owner42 and testadminid").text == "[redacted:admin-login] and [redacted:admin-login]"
     twice = PatternScrubber(extra_literals=["login"])
     once = twice.scrub("login x").text
     assert once == "[redacted:admin-login] x"
@@ -132,7 +132,7 @@ def test_scrub_data_nested_tool_result():
                      "address_line1": "12 MG Road", "society": "Palm Meadows", "order_id": "9876543210"},
         "crew": [{"name": "Raj", "mobile": "9000000002", "password_hash": "$2b$x"}],
         "other": {"role": "crew", "name": "Sam", "phone": "9000000003", "note": "call 9000000003"},
-        "admin": {"role": "admin", "login_id": "priveopapa", "phone": "9000000004", "email": "a@b.com"},
+        "admin": {"role": "admin", "login_id": "testadminid", "phone": "9000000004", "email": "a@b.com"},
         "helpline": {"phone": "+911234567890"},
         "count": 3, "ok": True, "none": None, "pair": ("a@b.com", 5),
     }
@@ -169,7 +169,7 @@ def test_idempotent():
 
 
 def test_redaction_counts():
-    res = S.scrub("a@b.com c@d.com 9000000102 password=hunter2 priveopapa")
+    res = S.scrub("a@b.com c@d.com 9000000102 password=hunter2 testadminid")
     assert res.redactions == {"email": 2, "mobile": 1, "secret": 1, "admin-login": 1}
     assert S.scrub("nothing here").redactions == {}
 
@@ -207,7 +207,7 @@ def _planted_doc() -> str:
         "Address: Flat B-204, Tower 3, Palm Meadows, 12 MG Road",
         '{"address_line1": "12 MG Road", "address_line2": "Near Park", "parking_basement": "B2"}',
         "| Crew | Raj | 9000000002 | Crew home |",
-        "Admin login priveopapa with ADMIN_PASSWORD=Sup3rSecret!",
+        "Admin login testadminid with ADMIN_PASSWORD=Sup3rSecret!",
         "Crew password for Raj: Raj1111$",
         "DATABASE_URL=postgres://dbuser:dbpass99@db.example.com/priveo",
         "RESEND=re_Ab12Cd34_Ef56Gh78Ij90Kl12Mn34 BLOB=vercel_blob_rw_Zz99Yy88Xx77_Ww66Vv55",
@@ -223,7 +223,7 @@ def _planted_doc() -> str:
 def test_final_sweep_no_planted_value_survives():
     out = scrub(_planted_doc())
     planted = ["asha.rao@Example.com", "98765 43210", "9000000102", "9000000103", "B-204", "12 MG Road",
-               "Near Park", "priveopapa", "Sup3rSecret!", "Raj1111$", "dbuser", "dbpass99",
+               "Near Park", "testadminid", "Sup3rSecret!", "Raj1111$", "dbuser", "dbpass99",
                "re_Ab12Cd34", "vercel_blob_rw_Zz99", "sk-or-v1-abcdef", "AKIAIOSFODNN7EXAMPLE",
                "ghp_abcdefghij", "abcdefghijklmnop0123456789", "eyJhbGci", "424242", "KIXQJ9v1dummy",
                "tok_live_abc123", "MIIEvgIBAD"]
