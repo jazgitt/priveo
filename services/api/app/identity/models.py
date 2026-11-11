@@ -59,6 +59,10 @@ class AuthSession(Base):
     app_version: Mapped[str] = mapped_column(String(40), default="")
     # SHA-256 of the current refresh token. The token itself is never stored.
     refresh_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    # The hash the current one replaced, and when. A phone that presents it long
+    # after the swap means the token was copied (security review R-07).
+    previous_refresh_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    rotated_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     last_used_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
