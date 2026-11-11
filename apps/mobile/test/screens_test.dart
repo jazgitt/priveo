@@ -76,25 +76,30 @@ void main() {
     expect(find.text('Continue'), findsOneWidget);
   });
 
-  testWidgets('a mobile number that is not registered shows the API message',
-      (tester) async {
-    await pumpApp(tester);
+  testWidgets('an unknown number gets the code step and no code', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
     await passSplash(tester);
     await enterId(tester, FakeAuthRepository.unknownMobile);
     await tester.tap(find.text('Forgot MPIN?'));
     await tester.pumpAndSettle();
-    expect(find.text(FakeAuthRepository.notRegistered), findsOneWidget);
-    expect(find.text('Sign in').last, findsOneWidget);
+    expect(find.text('Enter the code'), findsOneWidget);
+    expect(find.textContaining('If nothing arrives, contact Priveo'),
+        findsOneWidget);
+    expect(auth.codesSent, 0);
   });
 
-  testWidgets('a customer with no email on file is told to ask Priveo',
-      (tester) async {
-    await pumpApp(tester);
+  testWidgets('a number with no email gets the code step and no code', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
     await passSplash(tester);
     await enterId(tester, FakeAuthRepository.noEmailMobile);
     await tester.tap(find.text('Forgot MPIN?'));
     await tester.pumpAndSettle();
-    expect(find.text(FakeAuthRepository.noEmail), findsOneWidget);
+    expect(find.text('Enter the code'), findsOneWidget);
+    expect(find.textContaining('If nothing arrives, contact Priveo'),
+        findsOneWidget);
+    expect(auth.codesSent, 0);
   });
 
   testWidgets('a customer signs in with the mobile number and says so',
@@ -118,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(auth.codesSent, 1);
     expect(find.text('Enter the code'), findsOneWidget);
-    expect(find.textContaining('email saved for this number'), findsOneWidget);
+    expect(find.textContaining('If an email is saved for this number'), findsOneWidget);
     expect(find.text('Resend code in 00:30'), findsOneWidget);
 
     await tester.tap(find.text('Verify'));

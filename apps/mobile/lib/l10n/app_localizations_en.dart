@@ -83,7 +83,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get codeSentToEmailOnFile =>
-      'We sent a 6-digit code to the email saved for this number. It works for 30 minutes.';
+      'If an email is saved for this number, we sent a 6-digit code to it. It works for 30 minutes. If nothing arrives, contact Priveo.';
 
   @override
   String get codeLabel => '6-digit code';

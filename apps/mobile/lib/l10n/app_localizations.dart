@@ -241,7 +241,7 @@ abstract class AppLocalizations {
   /// No description provided for @codeSentToEmailOnFile.
   ///
   /// In en, this message translates to:
-  /// **'We sent a 6-digit code to the email saved for this number. It works for 30 minutes.'**
+  /// **'If an email is saved for this number, we sent a 6-digit code to it. It works for 30 minutes. If nothing arrives, contact Priveo.'**
   String get codeSentToEmailOnFile;
 
   /// No description provided for @codeLabel.

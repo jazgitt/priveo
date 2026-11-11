@@ -249,15 +249,19 @@ class AuthService:
     def send_code(self, mobile: str) -> CodeSent:
         """Emails a code to the customer's email: "resend" and "forgot MPIN".
 
-        A number that is not a customer gets the same answer as a known one and no
-        email is sent, so the route cannot be used to list customers (security review R-11).
+        A number that is not a customer, and a customer with no email saved, get the
+        same answer as a customer with an email and nothing is sent, so the route
+        cannot be used to list customers (security review R-11). The app tells the
+        person to contact Priveo if no code arrives (AUTH-16).
         """
         login = self._known_customer(mobile)
-        if login is None:
+        customer = (self._db.scalar(select(Customer).where(Customer.login_id == login.id))
+                    if login is not None else None)
+        if login is None or customer is None or not customer.email:
             # Same work as a first send: a keyed hash, then the same answer.
             self._code_hash(uuid.uuid4(), "000000")
             return CodeSent(resend_in_seconds=int(CODE_RESEND_AFTER.total_seconds()))
-        return CodeSent(resend_in_seconds=self._send_code(login))
+        return CodeSent(resend_in_seconds=self._send_code(login, customer))
 
     def _code_hash(self, code_id: uuid.UUID, code: str) -> str:
         return tokens.keyed_hash(self._s, f"{code_id}:{code}")
@@ -268,14 +272,9 @@ class AuthService:
             .where(EmailCode.login_id == login.id, EmailCode.ended_at.is_(None))
             .order_by(EmailCode.created_at.desc()))
 
-    def _send_code(self, login: Login) -> int:
+    def _send_code(self, login: Login, customer: Customer) -> int:
         """Returns the seconds until another code can be asked for."""
         now = utcnow()
-        customer = self._db.scalar(select(Customer).where(Customer.login_id == login.id))
-        if customer is None or not customer.email:
-            raise ApiError(
-                "no_email", "No email is saved for this number. Ask Priveo to reset your MPIN.",
-                409)
         wait = int(CODE_RESEND_AFTER.total_seconds())
         current = self._live_code(login)
         if (current is not None and current.verified_at is None

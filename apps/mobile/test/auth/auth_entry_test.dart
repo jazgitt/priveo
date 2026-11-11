@@ -88,14 +88,14 @@ void main() {
     expect(find.text('Sign in as'), findsNothing);
   });
 
-  testWidgets('not registered shows the support buttons', (tester) async {
+  testWidgets('an unknown number reaches the code step with the support buttons', (tester) async {
     final opened = await pumpLogin(tester);
     await tester.enterText(find.byType(TextField), FakeAuthRepository.unknownMobile);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forgot MPIN?'));
     await tester.pumpAndSettle();
-    expect(find.text(FakeAuthRepository.notRegistered), findsOneWidget);
+    expect(find.text('Enter the code'), findsOneWidget);
 
     await tester.tap(find.text('Call support'));
     await tester.tap(find.text('WhatsApp support'));

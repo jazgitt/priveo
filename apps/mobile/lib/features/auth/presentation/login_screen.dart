@@ -42,7 +42,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // A 10-digit ID is a customer's or a crew member's mobile number: the person
   // says which. Any other ID is an admin's.
   String _pickedRole = 'customer';
-  bool _notRegistered = false;
   late final _termsTap = TapGestureRecognizer()
     ..onTap = () => openLegalLink(ref, 'terms');
   late final _privacyTap = TapGestureRecognizer()
@@ -73,7 +72,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _go(_Step step) => setState(() {
     _step = step;
     _error = null;
-    _notRegistered = false;
     _obscure = true;
     if (step == _Step.id) {
       _countdown?.cancel();
@@ -101,7 +99,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _notRegistered = false;
     });
     try {
       await action();
@@ -109,8 +106,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         setState(() {
           _error = e.message ?? l.networkError;
-          _notRegistered =
-              e.code == 'mobile_not_registered' || e.code == 'no_email';
         });
       }
     } finally {
@@ -273,8 +268,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
       );
 
-  /// "Call support" and "WhatsApp support" for an email that is not
-  /// registered (AUTH-15).
+  /// "Call support" and "WhatsApp support" on the code step: a number that is
+  /// not a customer, or has no email, gets no code (AUTH-15, AUTH-16).
   Widget _supportButtons() {
     final t = const AuthText();
     final contact = ref.watch(authSupportContactProvider).asData?.value;
@@ -359,7 +354,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ],
       _errorSlot(),
-      if (_notRegistered) _supportButtons(),
       PrimaryButton(label: l.continueButton, busy: _busy, onPressed: _continue),
       const SizedBox(height: 16),
       _termsNotice(),
@@ -386,7 +380,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Text(l.forgotMpin),
         ),
       ),
-      if (_notRegistered) _supportButtons(),
     ],
   ];
 
@@ -429,6 +422,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
         ],
       ),
+      // The same answer for every number: if no code arrives, the person asks Priveo.
+      _supportButtons(),
     ];
   }
 

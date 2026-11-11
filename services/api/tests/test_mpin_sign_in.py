@@ -267,12 +267,13 @@ def test_an_inactive_customer_gets_no_code(client, db, customer):
     assert db.scalar(select(EmailCode)) is None
 
 
-def test_a_customer_with_no_email_is_told_to_ask_priveo(client, db, customer):
+def test_a_customer_with_no_email_gets_the_same_answer_and_no_code(client, db, customer):
+    # Not a 409: that would show the number belongs to a customer (review R-11).
     customer.email = None
     db.commit()
     r = ask_code(client)
-    assert r.status_code == 409 and r.json()["code"] == "no_email"
-    assert "reset your MPIN" in r.json()["message"]
+    assert r.status_code == 200
+    assert r.json() == ask_code(client, "9111111111").json()
     assert db.scalar(select(EmailCode)) is None
 
 
