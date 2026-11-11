@@ -207,3 +207,12 @@ def test_a_private_blob_file_streams_through_a_signed_link(
         "vercel_blob_rw_AbCdStore123_secretpart", secret="test-signing-secret")
     assert crew_client.get(link).status_code == 404
     store_module._store = None
+
+
+def test_an_oversized_declared_length_is_refused_before_reading(
+        crew_client, make_crew, signin, new_visit, store):
+    ravi = make_crew("9000000010", "Ravi")
+    _, (job,) = new_visit(assigned=ravi)
+    ticket = request(crew_client, signin(ravi), str(job.id)).json()
+    r = crew_client.put(ticket["upload_url"], content=b"x" * (10 * MB + 5))
+    assert r.status_code == 422
