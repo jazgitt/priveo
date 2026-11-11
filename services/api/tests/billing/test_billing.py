@@ -390,3 +390,12 @@ def test_payments_summary_counts_and_adds_up_each_status(money):
                         headers=m.admin).json()
     assert none["total"] == 0
     assert m.client.get("/v1/admin/payments/summary", headers=m.customer).status_code == 403
+
+
+def test_invoice_numbers_do_not_use_the_random_module():
+    import inspect
+
+    from app.billing import service
+
+    assert not hasattr(service, "random")
+    assert "secrets.randbelow" in inspect.getsource(service.BillingService.issue_invoice)

@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -5,10 +6,17 @@ from starlette.requests import Request
 
 from app.platform.config import get_settings
 
+_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def clean_request_id(value: str | None) -> str:
+    """Review R-17: keep a caller's ID only when it is short and plain."""
+    return value if value and _REQUEST_ID.fullmatch(value) else uuid.uuid4().hex
+
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request.state.request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        request.state.request_id = clean_request_id(request.headers.get("X-Request-ID"))
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response

@@ -1,8 +1,8 @@
 """Payments by UPI: the 30-day cycle, the four statuses, "I've paid",
 the admin's confirmation, invoices, and the daily jobs a scheduler will call."""
 
-import random
 import re
+import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -670,7 +670,7 @@ class BillingService:
         digits = re.sub(r"\D", "0", (c.mobile or "")[-4:].rjust(4, "0"))
         now = self._now()
         while True:
-            number = f"PRV{now:%m%y}{digits}{random.randint(0, 9999):04d}"
+            number = f"PRV{now:%m%y}{digits}{secrets.randbelow(10000):04d}"
             if not self._db.scalar(select(Invoice).where(Invoice.number == number)):
                 break
         inv = Invoice(

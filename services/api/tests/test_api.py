@@ -288,3 +288,12 @@ def test_crew_visits_have_no_customer_details(client):
 def test_validation_error_envelope(client):
     r = client.post("/v1/auth/login", json={})
     assert r.status_code == 422 and r.json()["code"] == "validation_failed"
+
+
+def test_request_id_is_echoed_only_when_short_and_plain(client):
+    ok = client.get("/v1/public/health", headers={"X-Request-ID": "abc-123_X"})
+    assert ok.headers["X-Request-ID"] == "abc-123_X"
+    for bad in ("a b", "x" * 65, "id;drop", "aé"):
+        r = client.get("/v1/public/health", headers={"X-Request-ID": bad})
+        got = r.headers["X-Request-ID"]
+        assert got != bad and len(got) == 32
