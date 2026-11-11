@@ -53,7 +53,9 @@ def create_app() -> FastAPI:
     app.include_router(system.router)
     app.include_router(identity.router)
     app.include_router(identity.admin)
-    app.include_router(smoke_cleanup.router)
+    if get_settings().environment in ("test", "dev"):
+        # A mass-delete route for the smoke test: not compiled into prod (security review R-18).
+        app.include_router(smoke_cleanup.router)
     app.include_router(customers.router)
     app.include_router(administration.admin)
     app.include_router(vehicle_parking.admin)

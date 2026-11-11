@@ -506,6 +506,10 @@ def test_settings_list_and_typed_values(client, admin, db):
     ("support.whatsapp", "12345"),
     ("payment.upi_id", "no-at-sign"),
     ("payment.upi_qr_url", "ftp://x"),
+    ("payment.upi_qr_url", "http://x.test/qr.png"),
+    ("payment.upi_qr_url", "javascript:alert(1)"),
+    ("payment.upi_qr_url", "data:image/png;base64,AAAA"),
+    ("payment.upi_qr_url", "https://"),
     ("billing.inactive_after_days", "seven"),
     ("billing.inactive_after_days", -1),
     ("schedule.freeze_hour", 24),
@@ -531,6 +535,14 @@ def test_setting_accepts_valid_values(client, admin, db):
         r = client.put(f"{BASE}/settings/{key}", headers=admin, json={"value": sent})
         assert r.status_code == 200, (key, r.text)
         assert lookup.setting(db, key) == stored
+
+
+def test_qr_url_change_is_audited(client, admin, db):
+    from app.directory.models import DirectoryAudit
+    client.put(f"{BASE}/settings/payment.upi_qr_url", headers=admin,
+               json={"value": "https://x.test/qr.png"})
+    rows = [r for r in db.query(DirectoryAudit).all() if r.entity_id == "payment.upi_qr_url"]
+    assert rows
 
 
 def test_unknown_setting(client, admin):
