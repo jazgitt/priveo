@@ -115,11 +115,6 @@ def _invalid(customer: bool = False) -> ApiError:
     return ApiError("invalid_credentials", "The ID or password is not correct.", 401)
 
 
-def _not_registered() -> ApiError:
-    return ApiError("mobile_not_registered",
-                    "This mobile number is not registered. Contact Priveo.", 404)  # AUTH-15
-
-
 def _new_code_needed(message: str) -> ApiError:
     return ApiError("code_ended", message, 400)
 
@@ -246,17 +241,23 @@ class AuthService:
     # With an email on file, a code is emailed and the customer sets a new MPIN.
     # Without one, the admin resets it.
 
-    def _customer(self, mobile: str) -> Login:
-        key = normalise(mobile)
-        login = self._db.scalar(
-            select(Login).where(Login.login_id == key, Login.role == "customer"))
-        if login is None or not login.active:
-            raise _not_registered()
-        return login
+    def _known_customer(self, mobile: str) -> Login | None:
+        login = self._db.scalar(select(Login).where(
+            Login.login_id == normalise(mobile), Login.role == "customer"))
+        return login if login is not None and login.active else None
 
     def send_code(self, mobile: str) -> CodeSent:
-        """Emails a code to the customer's email: "resend" and "forgot MPIN"."""
-        return CodeSent(resend_in_seconds=self._send_code(self._customer(mobile)))
+        """Emails a code to the customer's email: "resend" and "forgot MPIN".
+
+        A number that is not a customer gets the same answer as a known one and no
+        email is sent, so the route cannot be used to list customers (security review R-11).
+        """
+        login = self._known_customer(mobile)
+        if login is None:
+            # Same work as a first send: a keyed hash, then the same answer.
+            self._code_hash(uuid.uuid4(), "000000")
+            return CodeSent(resend_in_seconds=int(CODE_RESEND_AFTER.total_seconds()))
+        return CodeSent(resend_in_seconds=self._send_code(login))
 
     def _code_hash(self, code_id: uuid.UUID, code: str) -> str:
         return tokens.keyed_hash(self._s, f"{code_id}:{code}")
@@ -315,7 +316,11 @@ class AuthService:
         return wait
 
     def verify_code(self, mobile: str, code: str) -> CodeVerified:
-        login = self._customer(mobile)
+        login = self._known_customer(mobile)
+        if login is None:
+            # The answer for a wrong code, so an unknown number looks like a known one (R-11).
+            self._code_hash(uuid.uuid4(), code.strip())
+            raise ApiError("invalid_code", "The code is not correct.", 400)
         row = self._live_code(login)
         now = utcnow()
         if row is None or row.verified_at is not None:

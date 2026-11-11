@@ -95,3 +95,15 @@ def test_smoke_makes_its_own_customer_and_crew_and_removes_them(client, monkeypa
     db.expire_all()
     assert db.scalar(select(func.count()).select_from(Login)
                      .where(Login.login_id.like("9000099%"))) == 0
+
+
+def _route_exists(monkeypatch, name):
+    from app import main
+    monkeypatch.setattr(main, "get_settings", lambda: types.SimpleNamespace(environment=name))
+    app = main.create_app()
+    return any(getattr(r, "path", "") == "/v1/admin/test-users/{login_id}" for r in app.routes)
+
+
+def test_the_route_is_registered_only_in_test_and_dev(monkeypatch):
+    assert _route_exists(monkeypatch, "test") and _route_exists(monkeypatch, "dev")
+    assert not _route_exists(monkeypatch, "prod")
