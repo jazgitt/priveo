@@ -159,8 +159,6 @@ def test_public_access_is_refused_in_prod(monkeypatch):
             get_object_store()
     finally:
         store_module._store = None
-<<<<<<< HEAD
-=======
 
 
 def test_a_missing_blob_access_setting_means_private(monkeypatch):
@@ -172,4 +170,3 @@ def test_a_missing_blob_access_setting_means_private(monkeypatch):
         assert get_object_store().access == "private"
     finally:
         store_module._store = None
->>>>>>> integration/sec-c
