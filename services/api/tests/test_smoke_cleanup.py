@@ -101,7 +101,9 @@ def _route_exists(monkeypatch, name):
     from app import main
     monkeypatch.setattr(main, "get_settings", lambda: types.SimpleNamespace(environment=name))
     app = main.create_app()
-    return any(getattr(r, "path", "") == "/v1/admin/test-users/{login_id}" for r in app.routes)
+    from fastapi.testclient import TestClient
+    # The route is hidden from the schema: a missing route is 404, a registered one answers 401/403.
+    return TestClient(app).delete("/v1/admin/test-users/nobody").status_code != 404
 
 
 def test_the_route_is_registered_only_in_test_and_dev(monkeypatch):

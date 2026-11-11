@@ -253,7 +253,10 @@ def test_unknown_and_known_numbers_get_the_same_answers(client, db, customer):
     wrong_known = verify(client, code="000000")
     wrong_unknown = verify(client, code="000000", mobile="9111111111")
     assert wrong_known.status_code == wrong_unknown.status_code == 400
-    assert wrong_known.json() == wrong_unknown.json()
+    def strip(r):
+        return {k: v for k, v in r.json().items() if k != "request_id"}
+
+    assert strip(wrong_known) == strip(wrong_unknown)
 
 
 def test_an_inactive_customer_gets_no_code(client, db, customer):
@@ -273,8 +276,10 @@ def test_a_customer_with_no_email_is_told_to_ask_priveo(client, db, customer):
     assert db.scalar(select(EmailCode)) is None
 
 
-def test_crew_cannot_get_a_code(client):
-    assert ask_code(client, LOGIN_IDS["crew"]).status_code == 404
+def test_crew_cannot_get_a_code(client, db):
+    # Same answer as an unknown number (review R-11), but no code is stored.
+    assert ask_code(client, LOGIN_IDS["crew"]).status_code == 200
+    assert db.scalar(select(EmailCode)) is None
 
 
 def test_a_wrong_code_and_then_the_right_one(client, customer):
