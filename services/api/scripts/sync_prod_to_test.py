@@ -42,9 +42,16 @@ PHOTO_CLEARS = (
     "update complaints set photo_keys = '[]'::json",
 )
 
-TEST_ADMIN_LOGIN = "priveopapa"
 MANIFEST_TABLE = "shared_test_data_manifest"
 CONFIRMATION = "SYNC TEST"
+
+
+def admin_login_id() -> str:
+    """The admin's login ID, from ADMIN_LOGIN_ID (it is not in the repository)."""
+    value = os.environ.get("ADMIN_LOGIN_ID", "").strip()
+    if not value:
+        raise ValueError("ADMIN_LOGIN_ID is not set.")
+    return value
 
 
 def identity(url: str) -> str:
@@ -105,7 +112,7 @@ def dry_run(source: psycopg.Connection, target: psycopg.Connection) -> int:
         print(f"  {table}: {count}{note}")
     print(f"{len(shared)} tables, {total} rows in prod.")
     admin = target.execute(
-        "select 1 from logins where login_id = %s and role = 'admin'", (TEST_ADMIN_LOGIN,)
+        "select 1 from logins where login_id = %s and role = 'admin'", (admin_login_id(),)
     ).fetchone()
     print("Test admin login will be kept: " + ("yes" if admin else "no, test has none"))
     last = last_sync(target)
@@ -126,7 +133,7 @@ def apply_sync(source: psycopg.Connection, target: psycopg.Connection) -> int:
     # Read the test admin's password before the copy replaces the logins.
     kept = target.execute(
         "select password_hash, password_changed_at from logins "
-        "where login_id = %s and role = 'admin'", (TEST_ADMIN_LOGIN,)
+        "where login_id = %s and role = 'admin'", (admin_login_id(),)
     ).fetchone()
 
     code = copy_database(source, target, skip_rows=SKIP_ROWS)
@@ -140,7 +147,7 @@ def apply_sync(source: psycopg.Connection, target: psycopg.Connection) -> int:
         target.execute(
             "update logins set password_hash = %s, password_changed_at = %s "
             "where login_id = %s and role = 'admin'",
-            (kept[0], kept[1], TEST_ADMIN_LOGIN))
+            (kept[0], kept[1], admin_login_id()))
         print("Test admin login kept.")
     else:
         print("Test had no admin login; the admin login is prod's.")

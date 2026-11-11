@@ -41,7 +41,7 @@ def founder(client):
 
 @pytest.fixture
 def founder_id(db):
-    return db.scalars(select(Login.id).where(Login.login_id == "priveopapa")).one()
+    return db.scalars(select(Login.id).where(Login.login_id == "testadminid")).one()
 
 
 def make_conversation(db, login_id, title="", updated_at=None):
@@ -294,7 +294,7 @@ def test_a_cookie_change_needs_the_csrf_header(client, founder_id):
 
     if not any(getattr(r, "path", "") == "/v1/web/login" for r in client.app.routes):
         webauth.register(client.app)
-    assert web.post("/v1/web/login", json={"login_id": "priveopapa", "password": "pw-admin1"}).status_code == 200
+    assert web.post("/v1/web/login", json={"login_id": "testadminid", "password": "pw-admin1"}).status_code == 200
     missing = web.post(f"{BASE}/conversations")
     assert missing.status_code == 403 and missing.json()["code"] == "csrf_failed"
     ok = web.post(f"{BASE}/conversations", headers={"X-CSRF-Token": web.cookies.get("priveo_csrf")})

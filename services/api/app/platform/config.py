@@ -18,10 +18,11 @@ class Settings(BaseSettings):
     # a real one (check_startup).
     token_secret: str = ""
     access_token_minutes: int = 15
-    # The seeded admin's password (ADM-ACC-05). Never committed. The older
-    # name MOCK_ADMIN_PASSWORD is still read.
-    admin_password: str = Field(
-        default="", validation_alias=AliasChoices("ADMIN_PASSWORD", "MOCK_ADMIN_PASSWORD"))
+    # The seeded admin's password (ADM-ACC-05). Never committed.
+    admin_password: str = Field(default="", validation_alias=AliasChoices("ADMIN_PASSWORD"))
+    # The seeded admin's login ID (security review R-01). No default: it is not
+    # in the repository. Required in prod (check_startup), warned about on test.
+    admin_login_id: str = ""
     # Dev only: seed a demo customer and a demo crew login with these passwords.
     seed_demo_logins: bool = False
     mock_customer_password: str = ""
@@ -108,9 +109,13 @@ def startup_problems(settings: Settings, *, hosted: bool,
             problems.append("RESEND_API_KEY is not set. Customers could not sign in.")
         if not cron_secret.strip():
             problems.append("CRON_SECRET is not set. The scheduled jobs would not run.")
+        if not settings.admin_login_id.strip():
+            problems.append("ADMIN_LOGIN_ID is not set. Nobody could sign in to the portal.")
     else:
         if secret not in _PLACEHOLDER_SECRETS and len(secret) < _MIN_PROD_SECRET:
             warnings.append(f"TOKEN_SECRET is shorter than {_MIN_PROD_SECRET} characters.")
+        if settings.environment == "test" and not settings.admin_login_id.strip():
+            warnings.append("ADMIN_LOGIN_ID is not set. The admin is not seeded.")
         if hosted and settings.mock_email_code.strip():
             warnings.append("MOCK_EMAIL_CODE is set on a hosted server: anyone who learns "
                             "it can reset a customer's password.")

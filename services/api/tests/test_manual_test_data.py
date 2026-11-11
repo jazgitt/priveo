@@ -301,7 +301,7 @@ def test_every_fixture_is_readable_through_real_role_routes(fixture_database, se
         assert len(result) == len(catalogue())
         # The Admin portal uses cookies; exercise that distinct auth path too.
         response = client.post(
-            "/v1/web/login", json={"login_id": "priveopapa", "password": "AdminPassword123!"}
+            "/v1/web/login", json={"login_id": "testadminid", "password": "AdminPassword123!"}
         )
         assert response.status_code == 200
         assert client.get("/v1/web/me").json()["role"] == "admin"

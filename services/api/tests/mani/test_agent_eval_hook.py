@@ -21,7 +21,7 @@ PLAIN = Question(2, "Plain", "How is the schedule frozen?", "run", "phrases")
 
 
 def test_the_budget_question_runs_with_the_budget_used_up_and_restores_it(db):
-    login = Login(role="admin", login_id="priveopapa", display_name="F", password_hash="x")
+    login = Login(role="admin", login_id="testadminid", display_name="F", password_hash="x")
     db.add(login)
     db.commit()
     cfg = ManiSettings(_env_file=None, budget_usd=1.0)

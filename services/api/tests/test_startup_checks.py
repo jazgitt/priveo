@@ -18,7 +18,7 @@ def make(**values) -> Settings:
 
 
 def prod(**values) -> Settings:
-    base = {"environment": "prod", "resend_api_key": "re_test"}
+    base = {"environment": "prod", "resend_api_key": "re_test", "admin_login_id": "some-admin-id"}
     return make(**{**base, **values})
 
 
@@ -29,7 +29,7 @@ def problems(settings, hosted=False, cron="cron-secret"):
 @pytest.fixture(autouse=True)
 def clean_environment(monkeypatch):
     for name in ("ENVIRONMENT", "SEED_DEMO_LOGINS", "MOCK_EMAIL_CODE", "EMAIL_REDIRECT_TO",
-                 "MOCK_CUSTOMER_PASSWORD", "MOCK_CREW_PASSWORD", "RESEND_API_KEY"):
+                 "MOCK_CUSTOMER_PASSWORD", "MOCK_CREW_PASSWORD", "RESEND_API_KEY", "ADMIN_LOGIN_ID"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -143,3 +143,24 @@ def test_demo_logins_are_never_seeded_in_prod(db, settings, monkeypatch):
     assert db.scalar(select(Login).where(Login.role == "customer")) is None
     # The admin is still made.
     assert db.scalar(select(Login).where(Login.role == "admin")) is not None
+
+
+def test_prod_without_an_admin_login_id_stops_the_server():
+    assert any("ADMIN_LOGIN_ID" in p for p in problems(prod(admin_login_id="")))
+    assert any("ADMIN_LOGIN_ID" in p for p in problems(prod(admin_login_id="   ")))
+    with pytest.raises(StartupError, match="ADMIN_LOGIN_ID"):
+        check_startup(prod(admin_login_id=""), cron_secret="cron-secret", hosted=False)
+
+
+def test_prod_with_an_admin_login_id_has_no_problems():
+    assert problems(prod()) == []
+
+
+def test_there_is_no_default_admin_login_id():
+    assert Settings(_env_file=None).admin_login_id == ""
+
+
+def test_test_environment_warns_about_a_missing_admin_login_id_but_starts():
+    found, warnings = startup_problems(make(environment="test"), hosted=False)
+    assert found == []
+    assert any("ADMIN_LOGIN_ID" in w for w in warnings)

@@ -1,7 +1,7 @@
 """Loads the logins that are not created in the app.
 
-The admin `priveopapa` is always seeded (ADM-ACC-05). Its password comes
-from the environment and is never in the repository. The two demo logins are
+The admin is seeded (ADM-ACC-05) under the ID in ADMIN_LOGIN_ID. Its ID and
+password come from the environment and are never in the repository. The two demo logins are
 for the dev environment only, until the admin can create customers and crew.
 """
 from datetime import time
@@ -16,8 +16,6 @@ from app.identity.service import _password_matches, hash_password
 from app.platform.clock import today_ist
 from app.platform.config import Settings
 from app.platform.db import utcnow
-
-ADMIN_LOGIN_ID = "priveopapa"
 
 
 def _upsert(db: Session, role: str, login_id: str, display_name: str, password: str) -> str:
@@ -39,6 +37,16 @@ def _upsert(db: Session, role: str, login_id: str, display_name: str, password: 
     login.failed_attempts = 0
     login.blocked_until = None
     return outcome
+
+
+def _rename_single_admin(db: Session, admin_id: str) -> None:
+    """When the configured ID is new and there is exactly one admin under another
+    ID, rename that row (keeps its password, sessions and audit history) instead
+    of creating a second admin."""
+    admins = list(db.scalars(select(Login).where(Login.role == "admin")))
+    if len(admins) == 1 and admins[0].login_id != admin_id:
+        admins[0].login_id = admin_id
+        db.flush()
 
 
 # The demo customer signs in with this mobile number (it was customer@priveo.test
@@ -84,11 +92,14 @@ def _demo_customer(db: Session) -> None:
 def seed_logins(db: Session, settings: Settings) -> dict[str, str]:
     """Returns what happened to each login ID. Safe to run again."""
     done: dict[str, str] = {}
-    if settings.admin_password:
-        done[ADMIN_LOGIN_ID] = _upsert(
-            db, "admin", ADMIN_LOGIN_ID, "Priveo Admin", settings.admin_password)
+    admin_id = settings.admin_login_id.strip()
+    if not admin_id:
+        done["admin"] = "skipped: no ADMIN_LOGIN_ID is configured"
+    elif not settings.admin_password:
+        done[admin_id] = "skipped: no admin password is configured"
     else:
-        done[ADMIN_LOGIN_ID] = "skipped: no admin password is configured"
+        _rename_single_admin(db, admin_id)
+        done[admin_id] = _upsert(db, "admin", admin_id, "Priveo Admin", settings.admin_password)
     if settings.seed_demo_logins and settings.environment == "prod":
         done["demo logins"] = "skipped: never seeded in prod"
     elif settings.seed_demo_logins:

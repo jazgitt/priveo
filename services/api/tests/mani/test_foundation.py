@@ -22,7 +22,7 @@ from tests.mani.fakes import FakeEmbedder, FakeLLM, PassthroughScrubber, word_ov
 
 
 def founder(db):
-    return db.scalars(select(Login).where(Login.login_id == "priveopapa")).one()
+    return db.scalars(select(Login).where(Login.login_id == "testadminid")).one()
 
 
 @pytest.fixture

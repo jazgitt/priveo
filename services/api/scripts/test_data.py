@@ -78,6 +78,14 @@ MARKER = "priveo-synthetic-test-data-v1"
 PAYMENT_STATES = {"Not Due": 15, "Due": 4, "Due today": 0, "Over due": -3, "Initiated": 2}
 
 
+def admin_login_id() -> str:
+    """The admin's login ID, from ADMIN_LOGIN_ID (it is not in the repository)."""
+    value = os.environ.get("ADMIN_LOGIN_ID", "").strip()
+    if not value:
+        raise ValueError("ADMIN_LOGIN_ID is not set.")
+    return value
+
+
 def stored_for(state: str) -> str:
     return {"Paid": "Paid", "Initiated": "Initiated"}.get(state, "Open")
 
@@ -171,7 +179,7 @@ def initialize(engine, password: str, admin_password: str) -> None:
             Login(
                 id=identity("shared", "admin"),
                 role="admin",
-                login_id="priveopapa",
+                login_id=admin_login_id(),
                 display_name="Manual test Admin",
                 password_hash=hash_password(admin_password),
                 alert_email_enabled=False,
@@ -866,8 +874,8 @@ def refresh(engine, scenarios: list[str], day: date, password: str) -> dict:
     password_hash = hash_password(password)
     with Session(engine) as db, db.begin():
         admins = list(db.scalars(select(Login).where(Login.role == "admin")))
-        if len(admins) != 1 or admins[0].login_id != "priveopapa":
-            raise ValueError("Expected exactly one Admin login: priveopapa.")
+        if len(admins) != 1 or admins[0].login_id != admin_login_id():
+            raise ValueError("Expected exactly one Admin login, under ADMIN_LOGIN_ID.")
         for scenario in dict.fromkeys(scenarios):
             _remove_scenario(db, scenario)
             snapshot = _seed_scenario(db, configs[scenario], day, password_hash)
@@ -899,7 +907,7 @@ def manifest(engine) -> dict:
         )
     return {
         "version": 1,
-        "admin_login": "priveopapa",
+        "admin_login": admin_login_id(),
         "scenarios": [json.loads(row) for row in rows],
         "limitations": [
             "Seeded historical jobs have checklist/timing/outcome records but no media files. "
@@ -922,8 +930,8 @@ def fresh_start(path: Path, day: date, password: str) -> dict:
         verify_database(engine)
         with Session(engine) as db:
             admins = list(db.scalars(select(Login).where(Login.role == "admin")))
-            if len(admins) != 1 or admins[0].login_id != "priveopapa":
-                raise ValueError("Expected exactly one Admin login: priveopapa.")
+            if len(admins) != 1 or admins[0].login_id != admin_login_id():
+                raise ValueError("Expected exactly one Admin login, under ADMIN_LOGIN_ID.")
             admin_id, admin_hash, admin_name = (
                 admins[0].id,
                 admins[0].password_hash,

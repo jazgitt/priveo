@@ -41,7 +41,7 @@ def test_cleanup_is_not_found_outside_the_test_environment(client, monkeypatch, 
 def test_cleanup_refuses_a_login_outside_the_smoke_range(client, monkeypatch, directory):
     admin = auth(login(client, "admin")["access_token"])
     _environment(monkeypatch, "test")
-    assert client.delete("/v1/admin/test-users/priveopapa", headers=admin).status_code == 422
+    assert client.delete("/v1/admin/test-users/testadminid", headers=admin).status_code == 422
     assert client.delete("/v1/admin/test-users/9876543210", headers=admin).status_code == 422
 
 

@@ -97,7 +97,7 @@ def make_agent(replies=(), *, tools=(), cfg=None, scrubber=None, embedder=None, 
 
 @pytest.fixture
 def founder(db):
-    login = Login(role="admin", login_id="priveopapa", display_name="Founder", password_hash="x")
+    login = Login(role="admin", login_id="testadminid", display_name="Founder", password_hash="x")
     db.add(login)
     db.commit()
     return login

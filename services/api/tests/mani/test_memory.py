@@ -11,7 +11,7 @@ from app.mani.models import ManiMemoryFact
 
 @pytest.fixture
 def login(db):
-    row = Login(role="admin", login_id="priveopapa", display_name="F", password_hash="x")
+    row = Login(role="admin", login_id="testadminid", display_name="F", password_hash="x")
     db.add(row)
     db.flush()
     return row

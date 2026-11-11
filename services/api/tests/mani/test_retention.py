@@ -17,7 +17,7 @@ CRON = "/v1/internal/cron/mani-retention"
 
 @pytest.fixture
 def founder_id(db, client):
-    return db.scalars(select(Login.id).where(Login.login_id == "priveopapa")).one()
+    return db.scalars(select(Login.id).where(Login.login_id == "testadminid")).one()
 
 
 def conversation(db, login_id, age_days, with_content=True):

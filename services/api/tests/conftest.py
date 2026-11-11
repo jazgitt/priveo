@@ -15,12 +15,17 @@ from app.platform.db import Base, get_db, make_engine
 
 # The demo customer's MPIN is 6 digits; crew and admin have passwords.
 PASSWORDS = {"customer": "483920", "crew": "Rav4821$", "admin": "pw-admin1"}
-LOGIN_IDS = {"customer": "9000000001", "crew": "9000000002", "admin": "priveopapa"}
+# The real admin ID is environment configuration (ADMIN_LOGIN_ID), never in the repo.
+TEST_ADMIN_ID = "testadminid"
+LOGIN_IDS = {"customer": "9000000001", "crew": "9000000002", "admin": TEST_ADMIN_ID}
+# Scripts and settings read it from the environment, also in tests that skip the fixture below.
+os.environ["ADMIN_LOGIN_ID"] = TEST_ADMIN_ID
 
 
 @pytest.fixture
 def settings(monkeypatch):
     monkeypatch.setenv("ADMIN_PASSWORD", PASSWORDS["admin"])
+    monkeypatch.setenv("ADMIN_LOGIN_ID", TEST_ADMIN_ID)
     monkeypatch.setenv("MOCK_CUSTOMER_PASSWORD", PASSWORDS["customer"])
     monkeypatch.setenv("MOCK_CREW_PASSWORD", PASSWORDS["crew"])
     monkeypatch.setenv("SEED_DEMO_LOGINS", "true")

@@ -62,13 +62,13 @@ def test_login_and_home(client, role):
 def test_role_for_reads_the_shape_of_the_id():
     # Only the web portal uses this, to refuse IDs that are not an admin's.
     assert role_for("9000000002") == "crew"
-    assert role_for("priveopapa") == "admin"
+    assert role_for("testadminid") == "admin"
     assert role_for("900000000") == "admin"  # nine digits is not a mobile number
 
 
 def test_login_id_ignores_case_and_spaces(client):
     r = client.post("/v1/auth/login", json={
-        "login_id": "  PriveoPapa ", "password": PASSWORDS["admin"], "role": "admin"})
+        "login_id": "  TestAdminId ", "password": PASSWORDS["admin"], "role": "admin"})
     assert r.status_code == 200
 
 
@@ -86,7 +86,7 @@ def test_unknown_login_looks_like_a_wrong_password(client):
 
 
 def test_only_the_hash_is_stored(client, db):
-    row = db.scalar(select(Login).where(Login.login_id == "priveopapa"))
+    row = db.scalar(select(Login).where(Login.login_id == "testadminid"))
     assert row.password_hash.startswith("$argon2")
     assert PASSWORDS["admin"] not in row.password_hash
 
@@ -275,7 +275,7 @@ def test_demo_logins_are_not_seeded_unless_asked(monkeypatch, db, settings):
     from app.platform.config import get_settings
     get_settings.cache_clear()
     done = seed_logins(db, get_settings())
-    assert list(done) == ["priveopapa"]
+    assert list(done) == ["testadminid"]
     assert db.scalar(select(Login).where(Login.role == "crew")) is None
 
 

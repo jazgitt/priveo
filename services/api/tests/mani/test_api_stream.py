@@ -25,7 +25,7 @@ def founder(client):
 
 @pytest.fixture
 def founder_id(db, client):
-    return db.scalars(select(Login.id).where(Login.login_id == "priveopapa")).one()
+    return db.scalars(select(Login.id).where(Login.login_id == "testadminid")).one()
 
 
 class ScriptedAgent:
