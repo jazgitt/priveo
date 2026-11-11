@@ -129,7 +129,7 @@ void main() {
 
     testWidgets('the admin signs in by user ID [ADM-ACC-06]', (tester) async {
       await openSignIn(tester);
-      await enterIdAndPassword(tester, 'priveopapa', scenarioAdminPassword);
+      await enterIdAndPassword(tester, 'test-admin-id', scenarioAdminPassword);
       await untilFound(tester, find.text('Payments to confirm'));
       await letTimersFinish(tester);
     });

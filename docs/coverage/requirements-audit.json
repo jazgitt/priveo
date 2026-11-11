@@ -9322,7 +9322,7 @@
     {
       "role": "admin",
       "id": "ADM-ACC-05",
-      "requirement": "Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The first admin has the user ID `priveopapa`. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents.",
+      "requirement": "Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The first admin has the user ID `ADMIN_LOGIN_ID`. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents.",
       "definition_status": "Owner",
       "source": {
         "path": "docs/reqs/admin-functional-requirements.md",
@@ -22948,7 +22948,7 @@
     {
       "role": "admin",
       "name": "Admin user",
-      "requirement": "name, user ID (the first is `priveopapa`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.",
+      "requirement": "name, user ID (the first is `ADMIN_LOGIN_ID`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.",
       "source": {
         "path": "docs/reqs/admin-functional-requirements.md",
         "line": 400

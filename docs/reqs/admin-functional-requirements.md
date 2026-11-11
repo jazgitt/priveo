@@ -51,7 +51,7 @@ Owner decisions of 13 Oct 2026 supersede earlier fixed-policy/undecided wording;
 | ADM-ACC-02 | Admin screens are available only to users with the Admin role. | Derived |
 | ADM-ACC-03 | Crew members have one of three roles: **Manager**, **Member**, **Trainee**. The Admin role is separate from these. | Owner (item c) |
 | ADM-ACC-04 | Customers and crew use the mobile app. Admins use the web portal and the mobile quick actions. Each person has their own login, and the role set for it in the backend decides what they can see and do. | Owner |
-| ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The first admin has the user ID `priveopapa`. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents. | Owner |
+| ADM-ACC-05 | Admin accounts are loaded into the database by a seed when the application is set up. There is no admin sign-up or admin creation in the app in MVP. An admin signs in on the same login screen with a user ID and a password (CRW-ACC-02 in the crew file). The admin's user ID is set in the environment configuration (`ADMIN_LOGIN_ID`), not in the repository. Its password is supplied through the environment configuration (`.env`) at setup, and is not stored in the repository or the documents. | Owner |
 
 ### 1a. Web portal and mobile quick actions
 
@@ -504,7 +504,7 @@ These are the admin features the customer requirements already depend on. You co
 For your reference when you write the data model. This is a reading of the requirements, not a design.
 
 - **User login**: person, login, role (customer, crew, admin). The role decides which screens the app shows.
-- **Admin user**: name, user ID (the first is `priveopapa`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.
+- **Admin user**: name, user ID (the first is `ADMIN_LOGIN_ID`), password (stored securely, supplied through `.env` at setup). Created by the initial database seed.
 - **Customer login**: as in the customer file: mobile number (login ID), MPIN hash, must change MPIN, email verified, onboarding confirmed. Created when the admin creates the customer.
 - **Admin preferences**: service week start day (Monday), Interior entitlements for each service week. There is no scheduling period: a run covers one day (ADM-SCH-09).
 - **Cutoff request**: customer's vehicle, old cutoff time, new cutoff time, assigned crew member and time, status (open, handled), handled by and when.

@@ -50,7 +50,7 @@ void main() {
   testWidgets('wrong password shows the API message', (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
-    await signIn(tester, 'priveopapa', 'wrong');
+    await signIn(tester, 'test-admin-id', 'wrong');
     expect(find.text(FakeAuthRepository.wrongMessage), findsOneWidget);
     expect(find.byType(LoginScreen), findsOneWidget);
   });
@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Enter your mobile number or user ID.'),
         findsOneWidget);
 
-    await enterId(tester, 'priveopapa');
+    await enterId(tester, 'test-admin-id');
     await tester.tap(find.text('Sign in').last);
     await tester.pumpAndSettle();
     expect(find.text('Enter your password.'), findsOneWidget);
@@ -224,7 +224,7 @@ void main() {
   testWidgets('admin login lands on the admin home', (tester) async {
     await pumpApp(tester);
     await passSplash(tester);
-    await signIn(tester, 'priveopapa', 'secret');
+    await signIn(tester, 'test-admin-id', 'secret');
     expect(find.text('Payments to confirm'), findsOneWidget);
     expect(find.text('Flat A-101'), findsOneWidget);
     expect(find.text('₹1,499'), findsOneWidget);

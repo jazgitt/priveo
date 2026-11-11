@@ -21,6 +21,8 @@ for (const f of [db, manifest]) if (existsSync(f)) rmSync(f);
 const env = {
   ...process.env,
   ENVIRONMENT: "dev",
+  // The fixture database is throwaway; its admin ID is a fixed fake (the real one is not in the repo).
+  ADMIN_LOGIN_ID: "test-admin-id",
   TEST_DATA_PASSWORD: process.env.E2E_CUSTOMER_PASSWORD ?? "PriveoE2eFixture123!",
   TEST_DATA_ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? "PriveoE2eAdmin123!",
 };

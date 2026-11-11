@@ -43,7 +43,7 @@ Mock passwords are set as configuration on the dev API, never committed. The rea
 |---|---|---|
 | Customer | `customer@priveo.test` | Customer home |
 | Crew | `9000000002` | Crew home |
-| Admin | `priveopapa` | Admin quick-actions home |
+| Admin | `ADMIN_LOGIN_ID` | Admin quick-actions home |
 
 A wrong ID or password shows the API's error message.
 
@@ -120,7 +120,7 @@ For each phase: what is built (modules, screens, endpoints), the requirement are
 
 | Item | Detail |
 |---|---|
-| Backend | PostgreSQL and Alembic migrations. `identity` module (customer, crew and admin sign-in, passwords with Argon2, tokens, sessions, lockout, sign out of all devices). `directory` module (societies, plans, vehicle catalogue, services, working slots, checklists, could-not-complete reasons, settings). Seeded admin `priveopapa` with the password from `.env` |
+| Backend | PostgreSQL and Alembic migrations. `identity` module (customer, crew and admin sign-in, passwords with Argon2, tokens, sessions, lockout, sign out of all devices). `directory` module (societies, plans, vehicle catalogue, services, working slots, checklists, could-not-complete reasons, settings). Seeded admin `ADMIN_LOGIN_ID` with the password from `.env` |
 | Mobile | The mock sign-in is replaced by real sign-in. Session handling and refresh. The homes stay on mock data until their modules exist |
 | Web portal | React and Vite skeleton, cookie sign-in with CSRF, layout, theme from the tokens, screens for societies, plans, catalogue, services, slots, checklists, settings |
 | Requirements | `ADM-ACC`, `ADM-SET`, `ADM-SVS`, `ADM-REF`, `CRW-ACC`, `AUTH-11` to `AUTH-17` |

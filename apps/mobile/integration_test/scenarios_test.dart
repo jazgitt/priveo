@@ -152,7 +152,7 @@ void main() {
       ),
       (
         'A01 admin home',
-        'priveopapa',
+        'test-admin-id',
         _adminPassword,
         (t) async {
           await _waitFor(t, find.text('Payments to confirm'));

@@ -20,7 +20,7 @@ const _logins = [
   ),
   ('9000000002', String.fromEnvironment('LIVE_CREW_PASSWORD'), 'Total'),
   (
-    'priveopapa',
+    String.fromEnvironment('LIVE_ADMIN_ID', defaultValue: 'test-admin-id'),
     String.fromEnvironment('LIVE_ADMIN_PASSWORD'),
     'Payments to confirm',
   ),

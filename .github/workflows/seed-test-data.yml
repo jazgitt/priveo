@@ -34,6 +34,7 @@ jobs:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
           ENVIRONMENT: test
+          ADMIN_LOGIN_ID: ${{ vars.ADMIN_LOGIN_ID }}
           SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
         run: |
           python scripts/seed_shared_test_data.py --output ../../.local/test-data/hosted-manifest.json
@@ -48,6 +49,7 @@ jobs:
         env:
           TEST_DATA_PASSWORD: ${{ secrets.TEST_DATA_PASSWORD }}
           TEST_DATA_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_LOGIN_ID: ${{ vars.ADMIN_LOGIN_ID }}
           API_TEST_URL: ${{ vars.API_URL }}
           SYNC_PASSWORDS: ${{ inputs.sync_passwords }}
         run: |

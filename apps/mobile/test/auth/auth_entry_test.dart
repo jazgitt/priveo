@@ -83,7 +83,7 @@ void main() {
     expect(find.text('Customer'), findsOneWidget);
     expect(find.text('Crew'), findsOneWidget);
     // An admin user ID is not a number: no question.
-    await tester.enterText(find.byType(TextField), 'priveopapa');
+    await tester.enterText(find.byType(TextField), 'test-admin-id');
     await tester.pumpAndSettle();
     expect(find.text('Sign in as'), findsNothing);
   });

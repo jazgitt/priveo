@@ -119,12 +119,12 @@ describe("portal shell", () => {
       return json(404, { code: "not_found", message: "no", fields: {}, request_id: "" });
     });
     renderAt("/crew");
-    await userEvent.type(await screen.findByLabelText("User ID"), "priveopapa");
+    await userEvent.type(await screen.findByLabelText("User ID"), "test-admin-id");
     await userEvent.type(screen.getByLabelText("Password"), "secret-pw1");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("heading", { name: "Crew" })).toBeInTheDocument();
     const login = fetchMock.mock.calls.find((c) => c[0] === "/v1/web/login")!;
-    expect(JSON.parse(login[1].body)).toEqual({ login_id: "priveopapa", password: "secret-pw1" });
+    expect(JSON.parse(login[1].body)).toEqual({ login_id: "test-admin-id", password: "secret-pw1" });
   });
 
   it("shows the API's message for a wrong password", async () => {
@@ -136,7 +136,7 @@ describe("portal shell", () => {
       });
     });
     renderAt("/");
-    await userEvent.type(await screen.findByLabelText("User ID"), "priveopapa");
+    await userEvent.type(await screen.findByLabelText("User ID"), "test-admin-id");
     await userEvent.type(screen.getByLabelText("Password"), "wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The ID or password is not correct.");

@@ -62,7 +62,7 @@
 | Media | One private S3 bucket. Signed upload and download URLs. CloudFront in front for the app's reads | Customers see only their own visit media |
 | Environments | `dev`, `staging`, `prod` with separate databases and buckets | |
 | CI/CD | GitHub Actions: Flutter analyse and test, Python lint and test, build and deploy | |
-| Seed data | The admin account (user ID `priveopapa`, password from `.env`), seller invoice details, plans, societies, vehicle catalogue, checklists | Admin account and invoice details are seeded by decision (`ADM-ACC-05`, `ADM-SET-04`). The password never goes in the repository |
+| Seed data | The admin account (user ID `ADMIN_LOGIN_ID`, password from `.env`), seller invoice details, plans, societies, vehicle catalogue, checklists | Admin account and invoice details are seeded by decision (`ADM-ACC-05`, `ADM-SET-04`). The password never goes in the repository |
 | Observability | CloudWatch logs and alarms, Sentry or Crashlytics for errors | |
 
 ## 3. Requirement areas and the pieces that serve them

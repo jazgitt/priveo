@@ -56,7 +56,7 @@ class FakeAuthRepository implements AuthRepository {
   static const _accounts = {
     'customer:9000000001': customerSession,
     'crew:9000000002': crewSession,
-    'admin:priveopapa': adminSession,
+    'admin:test-admin-id': adminSession,
   };
 
   int logoutCalls = 0;

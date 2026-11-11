@@ -6,7 +6,7 @@ The manual `seed-test-data` GitHub Actions workflow uses
 `services/api/scripts/seed_shared_test_data.py` to add the same 40 families to
 the configured dev PostgreSQL database. It uses the existing `DATABASE_URL`
 secret and a separate `TEST_DATA_PASSWORD` secret. It requires schema revision
-0028 and the existing single `priveopapa` Admin. It adds synthetic societies,
+0028 and the existing single `ADMIN_LOGIN_ID` Admin. It adds synthetic societies,
 plans and scenarios atomically, without resetting existing data, directory
 settings or Admin credentials. It records scenario snapshots in
 `shared_test_data_manifest`; repeat runs preserve existing scenario edits and
@@ -38,7 +38,7 @@ Your vehicle counts needed one correction: case 14 now has **five vehicles: two 
 
 ## Seeded families
 
-There are **40 scenario families**. Each has a synthetic customer, its own society and a Manager, Member and paired Trainee. R03/R04 have extra crew for attendance/account variants. These dependencies make each scenario independently refreshable. Names start with `TEST`, customer emails use `priveo.test`, and registrations/mobile numbers are synthetic. There is exactly **one Admin login: `priveopapa`**.
+There are **40 scenario families**. Each has a synthetic customer, its own society and a Manager, Member and paired Trainee. R03/R04 have extra crew for attendance/account variants. These dependencies make each scenario independently refreshable. Names start with `TEST`, customer emails use `priveo.test`, and registrations/mobile numbers are synthetic. There is exactly **one Admin login: `ADMIN_LOGIN_ID`**.
 
 | IDs | Seeded data | Manual checks / future UI assertions |
 |---|---|---|
@@ -156,7 +156,7 @@ This exercises real HTTP login/role reads, vehicles/calendar/visits/payments, Cr
 
 ## Two-society seed for Mani Bond (local PostgreSQL)
 
-`services/api/scripts/seed_two_societies.py` adds two synthetic societies, **TEST S1** and **TEST S2**, to a *local* development PostgreSQL database and removes them again. It is separate from the 40 families above and does not touch them. Use it to try Mani Bond (Walk) against a busy, realistic day. It needs a database already migrated with Alembic (it never creates application tables) and the single Admin `priveopapa`.
+`services/api/scripts/seed_two_societies.py` adds two synthetic societies, **TEST S1** and **TEST S2**, to a *local* development PostgreSQL database and removes them again. It is separate from the 40 families above and does not touch them. Use it to try Mani Bond (Walk) against a busy, realistic day. It needs a database already migrated with Alembic (it never creates application tables) and the single Admin `ADMIN_LOGIN_ID`.
 
 ```bash
 cd services/api

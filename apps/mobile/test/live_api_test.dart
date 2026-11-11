@@ -13,19 +13,22 @@ import 'package:priveo/features/auth/data/auth_repository.dart';
 
 const _url = String.fromEnvironment('LIVE_API_URL');
 const _password = String.fromEnvironment('LIVE_PASSWORD');
+// The admin's ID is environment configuration (ADMIN_LOGIN_ID), passed in.
+const _adminId =
+    String.fromEnvironment('LIVE_ADMIN_ID', defaultValue: 'test-admin-id');
 const _passwords = {
   '9000000001':
       String.fromEnvironment('LIVE_CUSTOMER_PASSWORD', defaultValue: _password),
   '9000000002':
       String.fromEnvironment('LIVE_CREW_PASSWORD', defaultValue: _password),
-  'priveopapa':
+  _adminId:
       String.fromEnvironment('LIVE_ADMIN_PASSWORD', defaultValue: _password),
 };
 
 const _roles = {
   '9000000001': 'customer',
   '9000000002': 'crew',
-  'priveopapa': 'admin',
+  _adminId: 'admin',
 };
 
 void main() {
@@ -47,7 +50,7 @@ void main() {
 
     test('wrong password gives the API message', () async {
       await expectLater(
-        auth.login('priveopapa', 'definitely-wrong', 'admin'),
+        auth.login(_adminId, 'definitely-wrong', 'admin'),
         throwsA(isA<ApiFailure>().having(
             (e) => e.message, 'message', 'The ID or password is not correct.')),
       );
@@ -64,7 +67,7 @@ void main() {
     });
 
     test('admin', () async {
-      expect((await signIn('priveopapa')).role, Role.admin);
+      expect((await signIn(_adminId)).role, Role.admin);
       final h = await api.adminHome();
       expect(h.paymentsToConfirm, isNotEmpty);
     });
