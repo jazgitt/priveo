@@ -199,13 +199,17 @@ _store: ObjectStore | None = None
 def get_object_store() -> ObjectStore:
     """The one store for this process: Vercel Blob when BLOB_READ_WRITE_TOKEN is
     set (and MEDIA_STORE is not "local"), with BLOB_ACCESS naming the store's
-    access mode ("public" by default), otherwise files on local disk. A
+    access mode ("private" by default), otherwise files on local disk. A
     deployment with S3 will return an S3 store here."""
     global _store
     if _store is None:
         token = os.environ.get("BLOB_READ_WRITE_TOKEN", "").strip()
         if token and os.environ.get("MEDIA_STORE", "").strip().lower() != "local":
-            access = os.environ.get("BLOB_ACCESS", "").strip().lower() or "public"
+            # Private unless the store is said to be public: a missing setting must
+            # never expose files. Public is an explicit choice (and refused in prod).
+            access = os.environ.get("BLOB_ACCESS", "").strip().lower() or "private"
+            if access == "public" and os.environ.get("ENVIRONMENT", "").strip().lower() == "prod":
+                raise ValueError("BLOB_ACCESS=public is not allowed when ENVIRONMENT=prod.")
             _store = BlobObjectStore(token, access=access)
         else:
             _store = LocalObjectStore()
