@@ -180,9 +180,9 @@ it("opens every queue on the current month and drops the Reason column from Sche
   expect(screen.getByLabelText("From date")).toHaveValue(from);
 });
 
-it("offers the tabs Scheduled work, Missed jobs and Completed, in that order, and opens on Scheduled work", async () => {
+it("offers the tabs Scheduled work, Missed jobs, Completed and Cutoff reports, in that order, and opens on Scheduled work", async () => {
   page("/operations");
   await screen.findByRole("tab", { name: "Scheduled work" });
-  expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Scheduled work", "Missed jobs", "Completed"]);
+  expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Scheduled work", "Missed jobs", "Completed", "Cutoff reports"]);
   expect(screen.getByRole("tab", { name: "Scheduled work" })).toHaveAttribute("aria-selected", "true");
 });

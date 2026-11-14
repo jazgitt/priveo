@@ -11,6 +11,7 @@ import { DetailList, EmptyState, ErrorState, PageHeader } from "@/blocks/layout"
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
 import { currentMonth } from "./monthRange";
+import { CutoffReport } from "./CutoffReport";
 import { StatusReport } from "./StatusReport";
 import { Tabs } from "@/components";
 import { showDate } from "@/components/format";
@@ -41,6 +42,7 @@ const QUEUES = [
   { id: "scheduled", label: "Scheduled work" },
   { id: "missed", label: "Missed jobs" },
   { id: "reports", label: "Completed" },
+  { id: "cutoffs", label: "Cutoff reports" },
 ] as const;
 
 const shownStatus = (j: OperationJob) => (j.status === "Could not complete" ? "Missed" : j.status);
@@ -77,7 +79,7 @@ export function OperationsPage() {
   if (to) params.set("date_to", to);
   if (reason && queue !== "scheduled") params.set("reason_key", reason);
   if (unresolved && queue === "missed") params.set("unresolved", "true");
-  const jobs = useQuery({ queryKey: ["operations", params.toString()], enabled: queue !== "reports", queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
+  const jobs = useQuery({ queryKey: ["operations", params.toString()], enabled: queue !== "reports" && queue !== "cutoffs", queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
   const reasons = useQuery({ queryKey: ["operations-reasons"], queryFn: () => api<Reason[]>("/v1/admin/operations/reasons") });
   const options = useQuery({ queryKey: ["operations-completion-options"], enabled: queue === "scheduled",
     queryFn: () => api<CompletionOptions>("/v1/admin/operations/completion-options") });
@@ -96,7 +98,7 @@ export function OperationsPage() {
       <PageHeader title="Operations" site={site.name || undefined}
                   description="Decide what happens to jobs the crew could not do, skip work by operations, and see what was completed." />
       <Tabs tabs={QUEUES} active={queue} label="Queues" onChange={(q) => { setQueue(q); setOpenId(null); setPicked([]); }}>
-        {queue === "reports" ? <StatusReport /> : <>
+        {queue === "reports" ? <StatusReport /> : queue === "cutoffs" ? <CutoffReport /> : <>
         {(jobs.isError || reasons.isError) && <div className="mb-4"><ErrorState message={errorMessage(jobs.error ?? reasons.error)} /></div>}
         <DataTable
           rows={shown}

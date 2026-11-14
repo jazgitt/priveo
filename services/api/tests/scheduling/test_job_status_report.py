@@ -64,3 +64,21 @@ def test_operations_job_list_keeps_only_visits_inside_the_dates(world, api, admi
     after = ids(date_from=(day + timedelta(days=1)).isoformat())
     assert after and min(after) > day.isoformat()
     assert ids(date_to=(day - timedelta(days=1)).isoformat()) == set()
+
+
+def test_cutoff_report_lists_active_vehicles_as_they_stand_today(world, api, admin):
+    from datetime import time
+    a = world.add_vehicle(cutoff=time(8, 30), interior_day="Sunday")
+    b = world.add_vehicle()
+    world.add_vehicle(status="Cancelled", cutoff=time(7, 0))
+    world.db.commit()
+    r = api.get("/v1/admin/operations/cutoff-report", headers=admin)
+    assert r.status_code == 200, r.text
+    rows = r.json()["rows"]
+    assert [x["registration"] for x in rows] == [a.registration, b.registration]
+    assert rows[0]["exterior_cutoff"] == "08:30" and rows[0]["interior_preferred_day"] == "Sunday"
+    assert rows[0]["model"] == "Hyundai Creta"
+    assert rows[1]["exterior_cutoff"] == "" and rows[1]["interior_preferred_day"] == ""
+    other = "00000000-0000-0000-0000-000000000001"
+    assert api.get("/v1/admin/operations/cutoff-report", headers=admin,
+                   params={"society_id": other}).json()["rows"] == []

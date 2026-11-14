@@ -4124,6 +4124,62 @@ class CutoffChangeIn {
       };
 }
 
+class CutoffReport {
+  const CutoffReport({
+    required this.asOf,
+    required this.rows,
+  });
+
+  final DateTime asOf;
+  final List<CutoffRow> rows;
+
+  factory CutoffReport.fromJson(Map<String, dynamic> j) => CutoffReport(
+        asOf: DateTime.parse(j['as_of'] as String),
+        rows: [for (final x in j['rows'] as List) CutoffRow.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'as_of': _date(asOf),
+        'rows': [for (final x in rows) x.toJson()],
+      };
+}
+
+class CutoffRow {
+  const CutoffRow({
+    required this.vehicleId,
+    required this.customerName,
+    required this.model,
+    required this.registration,
+    required this.exteriorCutoff,
+    required this.interiorPreferredDay,
+  });
+
+  final String vehicleId;
+  final String customerName;
+  final String model;
+  final String registration;
+  final String exteriorCutoff;
+  final String interiorPreferredDay;
+
+  factory CutoffRow.fromJson(Map<String, dynamic> j) => CutoffRow(
+        vehicleId: j['vehicle_id'] as String,
+        customerName: j['customer_name'] as String,
+        model: j['model'] as String,
+        registration: j['registration'] as String,
+        exteriorCutoff: j['exterior_cutoff'] as String,
+        interiorPreferredDay: j['interior_preferred_day'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'vehicle_id': vehicleId,
+        'customer_name': customerName,
+        'model': model,
+        'registration': registration,
+        'exterior_cutoff': exteriorCutoff,
+        'interior_preferred_day': interiorPreferredDay,
+      };
+}
+
 class DailyCleaner {
   const DailyCleaner({
     required this.cleanerId,

@@ -4163,6 +4163,73 @@
         }
       }
     },
+    "/v1/admin/operations/cutoff-report": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Cutoff Report",
+        "description": "Each active vehicle with its Exterior cutoff and Interior preferred day, as they\nstand on the day the report is run.",
+        "operationId": "cutoff_report_v1_admin_operations_cutoff_report_get",
+        "parameters": [
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CutoffReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/operations/completion-options": {
       "get": {
         "tags": [
@@ -27051,6 +27118,67 @@
           "cutoff_time"
         ],
         "title": "CutoffChangeIn"
+      },
+      "CutoffReport": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CutoffRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "rows"
+        ],
+        "title": "CutoffReport"
+      },
+      "CutoffRow": {
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "exterior_cutoff": {
+            "type": "string",
+            "title": "Exterior Cutoff"
+          },
+          "interior_preferred_day": {
+            "type": "string",
+            "title": "Interior Preferred Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vehicle_id",
+          "customer_name",
+          "model",
+          "registration",
+          "exterior_cutoff",
+          "interior_preferred_day"
+        ],
+        "title": "CutoffRow"
       },
       "DailyCleaner": {
         "properties": {
