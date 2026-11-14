@@ -53,6 +53,9 @@ test.describe("Crew (scenarios R04, R06)", () => {
     await expect(page).toHaveURL(/\/crew\/[0-9a-f-]{36}$/);
 
     const sameY = async (a: string, b: string) => {
+      // boundingBox() does not wait, so wait for both fields to be on screen first.
+      await expect(page.getByLabel(a, { exact: true })).toBeVisible();
+      await expect(page.getByLabel(b, { exact: true })).toBeVisible();
       const boxA = await page.getByLabel(a, { exact: true }).boundingBox();
       const boxB = await page.getByLabel(b, { exact: true }).boundingBox();
       expect(boxA).not.toBeNull();
