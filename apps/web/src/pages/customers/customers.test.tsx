@@ -866,3 +866,29 @@ it("ADM-CUS-24: the edit dialog saves with an empty last name and caps the mobil
   await userEvent.click(within(edit).getByRole("button", { name: "Save customer" }));
   await waitFor(() => expect(bodyOf("/v1/admin/customers/c1", "PATCH")).toMatchObject({ last_name: "", mobile: "9876543210" }));
 });
+
+it("adds a make, model and variant that is not in the list, saves it to the catalogue and uses it", async () => {
+  const entry = { id: "cat2", make: "Kia", model: "Seltos", variant: "HTX", category: "Compact SUV", active: true };
+  const original = fetchMock.getMockImplementation()!;
+  let saved = false;
+  fetchMock.mockImplementation(async (path: string, o?: RequestInit) => {
+    if (path === "/v1/admin/directory/vehicle-catalogue" && o?.method === "POST") { saved = true; return reply(entry, 201); }
+    if (path === "/v1/admin/directory/vehicle-catalogue") return reply(saved ? [catalogue, entry] : [catalogue]);
+    return original(path, o);
+  });
+  page(); await userEvent.click(screen.getByRole("button", { name: "Create customer" }));
+  for (const [label, value] of [["First name", "Asha"], ["Mobile number", "9876543210"]]) await userEvent.type(screen.getByLabelText(label), value);
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await choose("Society", "DLF Meadows"); await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await userEvent.click(screen.getByRole("button", { name: /not in the list/ }));
+  const save = screen.getByRole("button", { name: "Save to list" });
+  expect(save).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("New make"), "Kia"); await userEvent.type(screen.getByLabelText("New model"), "Seltos");
+  await userEvent.type(screen.getByLabelText("New variant"), "HTX"); await userEvent.type(screen.getByLabelText("New vehicle category"), "Compact SUV");
+  await userEvent.click(save);
+  await waitFor(() => expect(bodyOf("/v1/admin/directory/vehicle-catalogue", "POST")).toEqual({ make: "Kia", model: "Seltos", variant: "HTX", category: "Compact SUV" }));
+  await waitFor(() => expect(screen.getByRole("combobox", { name: "Variant" })).toHaveTextContent("HTX"));
+  expect(screen.getByRole("combobox", { name: "Make" })).toHaveTextContent("Kia");
+  await userEvent.type(screen.getByLabelText("Registration"), "hr01zz1234");
+  expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
+});

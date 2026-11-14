@@ -16,6 +16,7 @@ import { Switch } from "@/ui/switch";
 
 import { CUSTOM_DAY, interiorDays, newVehicle, PARKING_NUMBER_MAX, parkingOk, parkingText, times, uploadCustomerAsset, type VehicleInput } from "./api";
 import { useCatalogue, usePlans, useSocietyList, useZones } from "./dialogs";
+import { NewVehicleEntry } from "./NewVehicleEntry";
 
 const LABELS = { first_name: "First name", last_name: "Last name", mobile: "Mobile number", email: "Email", flat: "Flat" } as const;
 
@@ -152,6 +153,8 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
             {(p) => <SelectBox {...p} value={vehicle.catalogue_id} disabled={!model} onChange={(id) => set("catalogue_id", id)}
                                choices={active.filter((c) => c.make === make && c.model === model).map((c) => ({ value: c.id, label: c.variant || "Standard" }))} />}
           </Field>
+          <NewVehicleEntry initial={{ make, model }} makes={[...new Set(active.map((c) => c.make))]} categories={[...new Set((catalogue.data ?? []).map((c) => c.category))].sort()}
+                           onAdded={(c) => { setMake(c.make); setModel(c.model); set("catalogue_id", c.id); }} />
           <Field label="Registration" hint="For example HR26EC4321" className="sm:col-span-3">
             {(p) => <Input {...p} className="reg uppercase" value={vehicle.registration}
                            onChange={(e) => set("registration", e.target.value.toUpperCase().replaceAll(" ", ""))} />}
