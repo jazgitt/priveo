@@ -4077,6 +4077,92 @@
         }
       }
     },
+    "/v1/admin/operations/job-status-report": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Job Status Report",
+        "operationId": "job_status_report_v1_admin_operations_job_status_report_get",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "society_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Society Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/operations/completion-options": {
       "get": {
         "tags": [
@@ -33307,6 +33393,63 @@
           "embedding_model"
         ],
         "title": "StatusOut"
+      },
+      "StatusReport": {
+        "properties": {
+          "dates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Dates"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/StatusReportRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dates",
+          "rows"
+        ],
+        "title": "StatusReport"
+      },
+      "StatusReportRow": {
+        "properties": {
+          "vehicle_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vehicle Id"
+          },
+          "registration": {
+            "type": "string",
+            "title": "Registration"
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name"
+          },
+          "cells": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Cells"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vehicle_id",
+          "registration",
+          "customer_name",
+          "cells"
+        ],
+        "title": "StatusReportRow"
       },
       "SubscriptionEdit": {
         "properties": {

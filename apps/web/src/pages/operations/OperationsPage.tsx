@@ -4,12 +4,14 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { api } from "@/api/client";
 import { useConfirm } from "@/blocks/confirm";
-import { DataTable } from "@/blocks/DataTable";
+import { DataTable, Pager } from "@/blocks/DataTable";
 import { Field, NONE, SelectBox } from "@/blocks/fields";
 import { BusyButton, FormDialog } from "@/blocks/FormDialog";
 import { DetailList, EmptyState, ErrorState, PageHeader } from "@/blocks/layout";
 import { errorMessage, useAppMutation } from "@/blocks/mutation";
 import { StatusBadge } from "@/blocks/status";
+import { currentMonth } from "./monthRange";
+import { StatusReport } from "./StatusReport";
 import { Tabs } from "@/components";
 import { showDate } from "@/components/format";
 import { useSite } from "@/site/SiteContext";
@@ -30,14 +32,15 @@ export interface OperationJob {
   visit_outcome?: string; partial?: boolean; planned_services?: string[]; delivered_services?: string[];
   outcome_summary?: string; reported_by?: string | null; reported_at?: string | null;
 }
+const PAGE_SIZE = 20;
 type Reason = { key: string; label: string };
 /** The statuses the crew app sets, and the could-not-complete reasons with whether each defers the job. */
 type CompletionOptions = { statuses: string[]; reasons: (Reason & { defers: boolean })[] };
 
 const QUEUES = [
-  { id: "missed", label: "Missed jobs" },
   { id: "scheduled", label: "Scheduled work" },
-  { id: "history", label: "Resolution history" },
+  { id: "missed", label: "Missed jobs" },
+  { id: "reports", label: "Completed" },
 ] as const;
 
 const shownStatus = (j: OperationJob) => (j.status === "Could not complete" ? "Missed" : j.status);
@@ -54,9 +57,11 @@ export function OperationsPage() {
   const site = useSite();
   // The dashboard links here with the queue and a day in the address (A-02).
   const [linked] = useSearchParams();
-  const [queue, setQueue] = useState(QUEUES.some((q) => q.id === linked.get("queue")) ? linked.get("queue")! : "missed");
-  const [from, setFrom] = useState(linked.get("date_from") ?? "");
-  const [to, setTo] = useState(linked.get("date_to") ?? "");
+  const [queue, setQueue] = useState(QUEUES.some((q) => q.id === linked.get("queue")) ? linked.get("queue")! : "scheduled");
+  // Every queue opens on the current month. The admin can change or clear the dates.
+  const [month] = useState(currentMonth);
+  const [from, setFrom] = useState(linked.get("date_from") ?? month.from);
+  const [to, setTo] = useState(linked.get("date_to") ?? month.to);
   const [reason, setReason] = useState("");
   const [unresolved, setUnresolved] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -70,12 +75,18 @@ export function OperationsPage() {
   if (site.id) params.set("society_id", site.id);
   if (from) params.set("date_from", from);
   if (to) params.set("date_to", to);
-  if (reason) params.set("reason_key", reason);
+  if (reason && queue !== "scheduled") params.set("reason_key", reason);
   if (unresolved && queue === "missed") params.set("unresolved", "true");
-  const jobs = useQuery({ queryKey: ["operations", params.toString()], queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
+  const jobs = useQuery({ queryKey: ["operations", params.toString()], enabled: queue !== "reports", queryFn: () => api<OperationJob[]>(`/v1/admin/operations/jobs?${params}`) });
   const reasons = useQuery({ queryKey: ["operations-reasons"], queryFn: () => api<Reason[]>("/v1/admin/operations/reasons") });
   const options = useQuery({ queryKey: ["operations-completion-options"], enabled: queue === "scheduled",
     queryFn: () => api<CompletionOptions>("/v1/admin/operations/completion-options") });
+  // Scheduled work shows 20 jobs at a time. The page goes back to the first when the queue or a filter changes.
+  const [paging, setPaging] = useState({ key: "", page: 0 });
+  const paged = queue === "scheduled";
+  const total = jobs.data?.length ?? 0;
+  const page = Math.min(paging.key === params.toString() ? paging.page : 0, Math.max(0, Math.ceil(total / PAGE_SIZE) - 1));
+  const shown = paged && jobs.data ? jobs.data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) : jobs.data;
   const open = jobs.data?.find((j) => j.id === openId) ?? null;
   const pickedRows = (jobs.data ?? []).filter((j) => picked.includes(j.id));
   const pickedVisitIds = [...new Set(pickedRows.map((j) => j.visit_id))];
@@ -83,11 +94,12 @@ export function OperationsPage() {
   return (
     <>
       <PageHeader title="Operations" site={site.name || undefined}
-                  description="Decide what happens to jobs the crew could not do, and skip work by operations." />
+                  description="Decide what happens to jobs the crew could not do, skip work by operations, and see what was completed." />
       <Tabs tabs={QUEUES} active={queue} label="Queues" onChange={(q) => { setQueue(q); setOpenId(null); setPicked([]); }}>
+        {queue === "reports" ? <StatusReport /> : <>
         {(jobs.isError || reasons.isError) && <div className="mb-4"><ErrorState message={errorMessage(jobs.error ?? reasons.error)} /></div>}
         <DataTable
-          rows={jobs.data}
+          rows={shown}
           loading={jobs.isPending}
           rowKey={(j) => `${j.id}:${j.resolved_at ?? "open"}`}
           onRowClick={(j) => setOpenId(j.id)}
@@ -96,20 +108,18 @@ export function OperationsPage() {
             <div className="flex flex-wrap items-end gap-3">
               <Field label="From date" className="w-44">{(p) => <Input {...p} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />}</Field>
               <Field label="To date" className="w-44">{(p) => <Input {...p} type="date" value={to} onChange={(e) => setTo(e.target.value)} />}</Field>
-              <Field label="Failure reason" className="w-56">
+              {queue !== "scheduled" && <Field label="Failure reason" className="w-56">
                 {(p) => <SelectBox {...p} value={reason || NONE} onChange={(v) => setReason(v === NONE ? "" : v)}
                                    choices={[{ value: NONE, label: "All reasons" }, ...(reasons.data ?? []).map((r) => ({ value: r.key, label: r.label }))]} />}
-              </Field>
+              </Field>}
               {queue === "scheduled" && (
                 <Button type="button" variant="outline" disabled={pickedRows.length === 0} onClick={() => setStatusFor({ jobs: pickedRows, bulk: true })}>
                   Set status ({pickedRows.length})
                 </Button>
               )}
-              {queue !== "history" && (
-                <Button type="button" variant="destructive" disabled={pickedVisitIds.length === 0} onClick={() => setBulkOpen(true)}>
-                  Skip selected ({pickedVisitIds.length})
-                </Button>
-              )}
+              <Button type="button" variant="destructive" disabled={pickedVisitIds.length === 0} onClick={() => setBulkOpen(true)}>
+                Skip selected ({pickedVisitIds.length})
+              </Button>
               {queue === "missed" && (
                 <label className="flex items-center gap-2 pb-2 text-sm">
                   <Switch aria-label="Only Interior/Spa jobs awaiting an outcome" checked={unresolved} onCheckedChange={setUnresolved} />
@@ -118,19 +128,23 @@ export function OperationsPage() {
               )}
             </div>
           )}
+          footer={paged && total > 0 ? (
+            <Pager page={page} size={PAGE_SIZE} count={shown?.length ?? 0} total={total}
+                   onPage={(n) => setPaging({ key: params.toString(), page: n })} />
+          ) : undefined}
           empty={<EmptyState title="No jobs match these filters" />}
           columns={[
-            ...(queue === "history" ? [] : [{ key: "sel", header: "", width: "3rem", cell: (j: OperationJob) => (
+            { key: "sel", header: "", width: "3rem", cell: (j: OperationJob) => (
               <Checkbox aria-label={`Select ${j.registration} ${j.service}`} checked={picked.includes(j.id)}
                         onCheckedChange={(on) => setPicked((p) => (on ? [...new Set([...p, j.id])] : p.filter((v) => v !== j.id)))} />
-            ) }]),
+            ) },
             { key: "date", header: "Date", width: "7rem", cell: (j) => showDate(j.date) },
             { key: "veh", header: "Vehicle", width: "17%", cell: (j) => (
               <div className="min-w-0"><span className="reg block truncate">{j.registration}</span>
                 <span className="block truncate text-xs text-muted-foreground">{j.customer_name}</span></div>) },
             { key: "svc", header: "Service", width: "10rem", cell: (j) => j.service },
             { key: "crew", header: "Crew", width: "9rem", cell: (j) => j.crew_name || "Unassigned" },
-            { key: "why", header: "Reason", wrap: true, cell: (j) => (j.reason || j.note ? <>{j.reason}{j.reason && j.note ? " · " : ""}<span className="text-muted-foreground">{j.note}</span></> : "-") },
+            ...(queue === "scheduled" ? [] : [{ key: "why", header: "Reason", wrap: true, cell: (j: OperationJob) => (j.reason || j.note ? <>{j.reason}{j.reason && j.note ? " · " : ""}<span className="text-muted-foreground">{j.note}</span></> : "-") }]),
             { key: "status", header: "Status", width: "11rem", wrap: true, cell: (j) => (
               <span className="flex flex-wrap gap-1.5"><StatusBadge status={shownStatus(j)} />{j.partial && <StatusBadge status="Partially Completed" tone="warn" />}{j.resolved_at && <StatusBadge status={j.outcome ?? "Resolved"} tone="ok" />}</span>) },
             { key: "act", header: "", width: queue === "scheduled" ? "11rem" : "6rem", align: "right", cell: (j) => (
@@ -143,6 +157,7 @@ export function OperationsPage() {
               </span>) },
           ]}
         />
+        </>}
       </Tabs>
       {bulkOpen && <BulkSkipDialog visitIds={pickedVisitIds} reasons={reasons.data ?? []} onClose={() => setBulkOpen(false)}
                                    onDone={() => { setBulkOpen(false); setPicked([]); }} />}

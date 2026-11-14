@@ -8920,6 +8920,54 @@ class StatusOut {
       };
 }
 
+class StatusReport {
+  const StatusReport({
+    required this.dates,
+    required this.rows,
+  });
+
+  final List<DateTime> dates;
+  final List<StatusReportRow> rows;
+
+  factory StatusReport.fromJson(Map<String, dynamic> j) => StatusReport(
+        dates: [for (final x in j['dates'] as List) DateTime.parse(x as String)],
+        rows: [for (final x in j['rows'] as List) StatusReportRow.fromJson(x as Map<String, dynamic>)],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'dates': [for (final x in dates) _date(x)],
+        'rows': [for (final x in rows) x.toJson()],
+      };
+}
+
+class StatusReportRow {
+  const StatusReportRow({
+    required this.vehicleId,
+    required this.registration,
+    required this.customerName,
+    required this.cells,
+  });
+
+  final String vehicleId;
+  final String registration;
+  final String customerName;
+  final Map<String, dynamic> cells;
+
+  factory StatusReportRow.fromJson(Map<String, dynamic> j) => StatusReportRow(
+        vehicleId: j['vehicle_id'] as String,
+        registration: j['registration'] as String,
+        customerName: j['customer_name'] as String,
+        cells: j['cells'] as Map<String, dynamic>,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'vehicle_id': vehicleId,
+        'registration': registration,
+        'customer_name': customerName,
+        'cells': cells,
+      };
+}
+
 class SubscriptionEdit {
   const SubscriptionEdit({
     required this.planId,
