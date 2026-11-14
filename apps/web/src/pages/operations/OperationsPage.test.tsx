@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../components";
 import { withSite } from "../../site/testSite";
 import { choose, confirmWith, PortalProviders } from "../../test/portal";
+import { currentMonth } from "./monthRange";
 import { OperationsPage } from "./OperationsPage";
 
 const fetchMock = vi.fn();
@@ -33,9 +34,9 @@ beforeEach(() => {
   });
 });
 afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockReset(); });
-function page() {
+function page(entry = "/operations?queue=missed") {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-    <MemoryRouter><ToastProvider><PortalProviders>{withSite(<OperationsPage />)}</PortalProviders></ToastProvider></MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}><ToastProvider><PortalProviders>{withSite(<OperationsPage />)}</PortalProviders></ToastProvider></MemoryRouter>
   </QueryClientProvider>);
 }
 const resolved = (action: string) => fetchMock.mock.calls.some(([path, options]) =>
@@ -81,8 +82,8 @@ it("filters the server queue by the chosen site, queue and failure reason", asyn
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("society_id=s1") && path.includes("reason_key=other"))).toBe(true));
   await userEvent.click(screen.getByRole("switch", { name: "Only Interior/Spa jobs awaiting an outcome" }));
   await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("unresolved=true"))).toBe(true));
-  await userEvent.click(screen.getByRole("tab", { name: "Resolution history" }));
-  await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("queue=history"))).toBe(true));
+  await userEvent.click(screen.getByRole("tab", { name: "Scheduled work" }));
+  await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path.includes("queue=scheduled"))).toBe(true));
 });
 
 it("skips selected visits in bulk with a reason, after asking (S-12)", async () => {
@@ -149,4 +150,39 @@ it("lists a partially completed visit for follow-up with planned and delivered s
   expect(screen.getByText(/Planned Cleaning-External, Cleaning-Internal\. Delivered Cleaning-External\./)).toBeInTheDocument();
   expect(screen.getByText(/Exterior done\. Interior not done today: Other\./)).toBeInTheDocument();
   expect(screen.getByText("Recorded by")).toBeInTheDocument();
+});
+
+it("pages Scheduled work 20 jobs at a time", async () => {
+  fetchMock.mockImplementation(async (path: string) => new Response(JSON.stringify(path.includes("/operations/jobs?")
+    ? Array.from({ length: 45 }, (_, i) => ({ id: `j${i}`, visit_id: `v${i}`, date: "2026-11-15", customer_id: "c1",
+      customer_name: "Asha", society: "Meadows", registration: `HR01AA${String(i).padStart(4, "0")}`, vehicle: "Nexon",
+      service: "Cleaning-Internal", status: "Scheduled", note: "", reason: "", resolved_at: null, crew_name: "Ravi" }))
+    : path.includes("/reasons") ? [] : {})));
+  page();
+  await userEvent.click(await screen.findByRole("tab", { name: "Scheduled work" }));
+  expect(await screen.findByText(/1-20 of 45/)).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Open" })).toHaveLength(20);
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByText(/21-40 of 45/)).toBeInTheDocument();
+});
+
+it("opens every queue on the current month and drops the Reason column from Scheduled work", async () => {
+  const { from, to } = currentMonth();
+  page();
+  await screen.findByText("Car unavailable");
+  expect(screen.getByLabelText("From date")).toHaveValue(from);
+  expect(screen.getByLabelText("To date")).toHaveValue(to);
+  expect(fetchMock.mock.calls.some(([p]) => String(p).includes(`/operations/jobs?queue=missed`) && String(p).includes(`date_from=${from}`) && String(p).includes(`date_to=${to}`))).toBe(true);
+  expect(screen.getByRole("columnheader", { name: "Reason" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "Scheduled work" }));
+  await waitFor(() => expect(screen.queryByRole("columnheader", { name: "Reason" })).not.toBeInTheDocument());
+  expect(screen.queryByLabelText("Failure reason")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("From date")).toHaveValue(from);
+});
+
+it("offers the tabs Scheduled work, Missed jobs, Completed and Cutoff reports, in that order, and opens on Scheduled work", async () => {
+  page("/operations");
+  await screen.findByRole("tab", { name: "Scheduled work" });
+  expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Scheduled work", "Missed jobs", "Completed", "Cutoff reports"]);
+  expect(screen.getByRole("tab", { name: "Scheduled work" })).toHaveAttribute("aria-selected", "true");
 });
