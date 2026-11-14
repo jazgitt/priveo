@@ -3346,6 +3346,12 @@ abstract class AppLocalizations {
   /// **'Registration number'**
   String get addVehicleRegistration;
 
+  /// No description provided for @addVehicleRegistrationTip.
+  ///
+  /// In en, this message translates to:
+  /// **'If the registration number is not known yet, enter 0000.'**
+  String get addVehicleRegistrationTip;
+
   /// No description provided for @addVehiclePhoto.
   ///
   /// In en, this message translates to:

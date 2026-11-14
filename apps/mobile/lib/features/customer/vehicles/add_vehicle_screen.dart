@@ -155,9 +155,8 @@ class _State extends ConsumerState<AddVehicleScreen> {
     0 => societyId.isNotEmpty,
     1 =>
       catalogueId.isNotEmpty &&
-          RegExp(
-            r'^(?:[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}|\d{2}BH\d{4}[A-Z]{1,2})$',
-          ).hasMatch(_registration.text.replaceAll(' ', '').toUpperCase()) &&
+          // Any number is accepted, and 0000 when it is not known (ONB-10).
+          _registration.text.replaceAll(RegExp(r'\s'), '').isNotEmpty &&
           photoId != null,
     // The number is free text, up to 60 characters (owner, 3 Nov 2026).
     2 =>
@@ -165,7 +164,8 @@ class _State extends ConsumerState<AddVehicleScreen> {
           _parking.text.trim().isNotEmpty &&
           _parking.text.trim().length <= 60,
     3 => planId.isNotEmpty,
-    4 => true, // The interior care day is optional at onboarding (Needs Attention on the portal).
+    4 =>
+      true, // The interior care day is optional at onboarding (Needs Attention on the portal).
     _ => true,
   };
 
@@ -185,7 +185,10 @@ class _State extends ConsumerState<AddVehicleScreen> {
                     data: {
                       'society_id': societyId,
                       'catalogue_id': catalogueId,
-                      'registration': _registration.text,
+                      'registration': _registration.text.replaceAll(
+                        RegExp(r'\s'),
+                        '',
+                      ),
                       'parking_basement': basement,
                       'parking_number': _parking.text.trim(),
                       'plan_id': planId,
@@ -365,12 +368,17 @@ class _State extends ConsumerState<AddVehicleScreen> {
                         Text('${entry['category']} · ${l.addVehicleAuto}'),
                       TextField(
                         controller: _registration,
-                        inputFormatters: [TextInputFormatter.withFunction((old, value) =>
-                            value.copyWith(text: value.text.toUpperCase()))],
+                        inputFormatters: [
+                          TextInputFormatter.withFunction(
+                            (old, value) =>
+                                value.copyWith(text: value.text.toUpperCase()),
+                          ),
+                        ],
                         textCapitalization: TextCapitalization.characters,
                         decoration: InputDecoration(
                           labelText: l.addVehicleRegistration,
                           hintText: 'HR26EC4321',
+                          helperText: l.addVehicleRegistrationTip,
                         ),
                         onChanged: (_) => setState(() {}),
                       ),

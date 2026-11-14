@@ -189,15 +189,23 @@ def valid_email(email):
     return value
 
 
+NO_REGISTRATION = "0000"  # the one special number: the real one is not known yet (ONB-10)
+
+
 def registration(db, raw, vehicle_id=None):
-    value = re.sub(r"\s", "", raw).upper()
-    if not re.fullmatch(r"(?:[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}|\d{2}BH\d{4}[A-Z]{1,2})", value):
+    """Spaces of any kind are removed and the rest is kept as one upper-case string. There is
+    no format check. 0000 may be used by any number of vehicles; any other number belongs to
+    one vehicle only."""
+    value = re.sub(r"\s", "", raw or "").upper()
+    if not value or len(value) > 20:
         raise ApiError(
             "validation_failed",
-            "Enter a registration such as HR26EC4321.",
+            "Enter the registration number (up to 20 characters), or 0000 if it is not known.",
             422,
-            {"registration": "Invalid registration."},
+            {"registration": "Required."},
         )
+    if value == NO_REGISTRATION:
+        return value
     found = db.scalar(select(Vehicle.id).where(Vehicle.registration == value))
     if found is not None and found != vehicle_id:
         raise ApiError("registration_in_use", "This vehicle is already registered.", 409)

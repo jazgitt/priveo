@@ -179,7 +179,7 @@ export function CarDialog({ v, customerId, onClose }: { v: Vehicle; customerId: 
                   ...(catalogueId !== NONE ? { catalogue_id: catalogueId } : {}),
                 } })}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Registration" hint="For example HR26EC4321">
+        <Field label="Registration" hint="For example HR26EC4321. If the registration number is not known yet, enter 0000.">
           {(p) => <Input {...p} className="reg uppercase" value={reg} onChange={(e) => setReg(e.target.value.toUpperCase().replaceAll(" ", ""))} />}
         </Field>
         <Field label="Make, model and variant" hint={`Now ${v.make} ${v.model} ${v.variant}`.trim()}>

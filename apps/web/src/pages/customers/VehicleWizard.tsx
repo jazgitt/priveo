@@ -155,7 +155,7 @@ export function VehicleWizard({ customerId, onClose, onSaved }: {
           </Field>
           <NewVehicleEntry initial={{ make, model }} makes={[...new Set(active.map((c) => c.make))]} categories={[...new Set((catalogue.data ?? []).map((c) => c.category))].sort()}
                            onAdded={(c) => { setMake(c.make); setModel(c.model); set("catalogue_id", c.id); }} />
-          <Field label="Registration" hint="For example HR26EC4321" className="sm:col-span-3">
+          <Field label="Registration" hint="For example HR26EC4321. If the registration number is not known yet, enter 0000." className="sm:col-span-3">
             {(p) => <Input {...p} className="reg uppercase" value={vehicle.registration}
                            onChange={(e) => set("registration", e.target.value.toUpperCase().replaceAll(" ", ""))} />}
           </Field>
