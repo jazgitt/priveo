@@ -1,7 +1,21 @@
 import uuid
 from datetime import date, datetime, time
 
-from sqlalchemy import JSON, Boolean, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint, Uuid, false
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    Time,
+    UniqueConstraint,
+    Uuid,
+    false,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db import Base, UtcDateTime, utcnow
@@ -48,6 +62,11 @@ class Customer(Base):
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
+    __table_args__ = (
+        Index("ux_vehicles_registration", "registration", unique=True,
+              postgresql_where=text("registration <> '0000'"),
+              sqlite_where=text("registration <> '0000'")),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"), index=True)
@@ -60,7 +79,8 @@ class Vehicle(Base):
     rc_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     # Upper case, no spaces. Empty only for migrated vehicles whose number
     # was missing or incomplete; the admin fills it in.
-    registration: Mapped[str | None] = mapped_column(String(20), unique=True)
+    # "0000" stands for a number not known at onboarding (ONB-10), so it may repeat.
+    registration: Mapped[str | None] = mapped_column(String(20))
     make: Mapped[str] = mapped_column(String(60), default="")
     model: Mapped[str] = mapped_column(String(80))
     variant: Mapped[str] = mapped_column(String(80), default="")

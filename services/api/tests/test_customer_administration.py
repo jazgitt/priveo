@@ -475,3 +475,36 @@ def test_new_customer_with_first_service_today_is_not_due_and_ignores_old_field(
     assert vehicle["payments"][0]["status"] == "Not Due"
     row = db.scalar(select(Payment).where(Payment.vehicle_id == uuid.UUID(vehicle["id"])))
     assert row.status == "Open" and row.cycle_start == today_ist()
+
+
+def test_registration_has_no_format_check_and_only_0000_may_repeat(client, directory, db):
+    import pytest
+
+    from app.customers.administration import registration
+    from app.platform.errors import ApiError
+
+    assert registration(db, " hr 26 ec 4321 ") == "HR26EC4321"  # middle spaces removed
+    assert registration(db, "Delhi-7") == "DELHI-7"  # no format check
+    assert registration(db, "0000") == "0000" and registration(db, " 00 00 ") == "0000"
+    for bad in ("", "   ", "X" * 21):
+        with pytest.raises(ApiError) as e:
+            registration(db, bad)
+        assert e.value.status == 422
+
+    admin = auth(login(client, "admin")["access_token"])
+    first, body = create(client, directory, admin)
+    taken = body["vehicle"]["registration"]
+    with pytest.raises(ApiError) as e:
+        registration(db, taken.lower())
+    assert e.value.status == 409
+    assert registration(db, taken, vehicle_id=uuid.UUID(first["vehicles"][0]["id"])) == taken
+
+    # Two vehicles can be saved with 0000, but not with the same real number.
+    from app.customers.models import Vehicle
+    db.add_all([Vehicle(customer_id=uuid.UUID(first["id"]), model="A", registration="0000"),
+                Vehicle(customer_id=uuid.UUID(first["id"]), model="B", registration="0000")])
+    db.commit()
+    db.add(Vehicle(customer_id=uuid.UUID(first["id"]), model="C", registration=taken))
+    with pytest.raises(Exception):  # noqa: B017 (the database refuses the duplicate)
+        db.commit()
+    db.rollback()

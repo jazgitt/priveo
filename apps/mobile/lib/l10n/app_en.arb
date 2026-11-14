@@ -927,6 +927,7 @@
   "addVehicleStandard": "Standard",
   "addVehicleAuto": "Auto-detected",
   "addVehicleRegistration": "Registration number",
+  "addVehicleRegistrationTip": "If the registration number is not known yet, enter 0000.",
   "addVehiclePhoto": "Add vehicle photo (required)",
   "addVehicleReplacePhoto": "Replace vehicle photo",
   "addVehicleRc": "Upload RC document (optional)",

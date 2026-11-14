@@ -1807,6 +1807,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addVehicleRegistration => 'Registration number';
 
   @override
+  String get addVehicleRegistrationTip =>
+      'If the registration number is not known yet, enter 0000.';
+
+  @override
   String get addVehiclePhoto => 'Add vehicle photo (required)';
 
   @override
